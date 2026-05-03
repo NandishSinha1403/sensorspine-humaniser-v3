@@ -15,4 +15,10 @@ Text is first converted into an **Abstract Meaning Representation (AMR)** graph.
 Fission (splitting) and Fusion (merging) of sentences are performed at the **Semantic Graph level** before regeneration. This ensures extreme variance in sentence length (burstiness) while maintaining perfect grammatical integrity.
 
 ---
-Related: [[architecture-v3]], [[roadmap]]
+## Hardware-Aware Implementation (v3.1)
+Due to MacBook M2 (8GB RAM) limitations, the architecture has been split:
+*   **Local Frontend:** Next.js dashboard for user interaction.
+*   **Cloud Backend:** Google Colab (T4 GPU) hosting Llama-3 8B (4-bit), GPT-2, and AMR models.
+*   **Bridge:** `ngrok` tunnel connecting the local UI to the cloud engine.
+
+Related: [[architecture-v3]], [[roadmap]], [[troubleshooting-v3]]
