@@ -12,4 +12,22 @@ During the v2.2 maintenance phase, we identified that heuristic, rule-based evas
 We decided to build a brand new project from scratch, moving away from "fixing AI text" to **"regenerating human text from AI concepts."** This requires a clean-slate repository built on PyTorch and HuggingFace, focusing on Contrastive Decoding and Semantic Graph Fusion.
 
 ---
-Related: [[context]], [[architecture-v3]]
+## Current State: May 4, 2026 - 01:00 AM
+**Status:** Implementation complete, deployment in progress.
+**Key Issues Resolved:**
+- **CORS:** Added middleware to `main.py` to allow the Next.js frontend to talk to the ngrok tunnel.
+- **Colab Sync:** Optimized `backend_runner.ipynb` and `change.txt` for clean clones and module discovery.
+- **AMR Models:** Fixed 404 links for STOG/GTOS models in `change.txt` and updated `amr_handler.py` to recognize new folder names.
+
+**Current Blockers:**
+- **GitHub Push:** Local `git push` is currently timing out on the Mac. **User must run `git push` manually when the connection is stable.**
+- **Model Download:** The previous 404 error was due to malformed release URLs; corrected links are now in `change.txt`.
+
+**Files Created/Modified:**
+- `backend/engine/amr_handler.py` (updated paths)
+- `change.txt` (corrected setup code)
+- `Obsidian-Memory/sensorspine-humaniser-v3/troubleshooting-v3.md` (new)
+- `Obsidian-Memory/sensorspine-humaniser-v3/context.md` (updated)
+- `Obsidian-Memory/sensorspine-humaniser-v3/roadmap.md` (updated)
+
+Related: [[context]], [[architecture-v3]], [[troubleshooting-v3]]
