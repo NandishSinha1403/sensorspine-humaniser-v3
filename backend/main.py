@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import os
@@ -7,6 +8,16 @@ from engine.contrastive_decoder import HumanizerEngine
 from engine.diagnostic_judge import DiagnosticJudge
 
 app = FastAPI(title="ScholarAI v3 SOTA Backend")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 amr_handler = AMRHandler()
 # Lazy initialize engines
 humanizer_engine = None
