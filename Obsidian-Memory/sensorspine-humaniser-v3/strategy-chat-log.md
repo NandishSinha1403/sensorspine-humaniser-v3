@@ -1,4 +1,4 @@
-# Strategy Log: The Pivot to v3 SOTA
+a# Strategy Log: The Pivot to v3 SOTA
 
 ## The Decision (2026-05-03)
 During the v2.2 maintenance phase, we identified that heuristic, rule-based evasion (spaCy inversions, Unicode jitter) was increasingly vulnerable to enterprise-grade statistical detectors. 
