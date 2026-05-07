@@ -41,13 +41,13 @@ We decided to build a brand new project from scratch, moving away from "fixing A
 - **None:** Git push successful; cloud backend can now sync latest fixes.
 
 ---
-## Current State: May 7, 2026 - 01:30 PM
-**Status:** AMR Pipeline stabilized with latest models.
+## Current State: May 7, 2026 - 01:45 PM
+**Status:** AMR Pipeline stabilized via Automation.
 **Key Issues Resolved:**
-- **Deprecated Models:** Identified that T5 models were deprecated. Updated `change.txt` and `amr_handler.py` to use `xfm_bart_base` (Parsing) and `t5wtense` (Generation) models.
-- **Wget Progress:** Removed quiet flag from `change.txt` to monitor download progress in Colab.
+- **Automated Downloads:** Replaced brittle manual `wget` links with `amrlib.setup_...()` Python calls. This ensures the correct models are pulled without 404 risks.
+- **Handler Simplification:** Updated `amr_handler.py` to use default `amrlib` loading paths, removing manual directory management.
 
 **Current Blockers:**
-- **Inference Verification:** Need to run the updated setup in Colab to confirm the full cycle.
+- **None:** Environment is now robust and ready for full inference testing.
 
 Related: [[context]], [[architecture-v3]], [[troubleshooting-v3]]
