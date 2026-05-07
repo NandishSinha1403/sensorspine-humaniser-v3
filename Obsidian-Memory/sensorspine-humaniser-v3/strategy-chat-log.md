@@ -41,13 +41,14 @@ We decided to build a brand new project from scratch, moving away from "fixing A
 - **None:** Git push successful; cloud backend can now sync latest fixes.
 
 ---
-## Current State: May 7, 2026 - 01:45 PM
-**Status:** AMR Pipeline stabilized via Automation.
+## Current State: May 7, 2026 - 02:00 PM
+**Status:** AMR Pipeline definitively stabilized.
 **Key Issues Resolved:**
-- **Automated Downloads:** Replaced brittle manual `wget` links with `amrlib.setup_...()` Python calls. This ensures the correct models are pulled without 404 risks.
-- **Handler Simplification:** Updated `amr_handler.py` to use default `amrlib` loading paths, removing manual directory management.
+- **Exact URLs:** Identified the 404 cause (release tag naming mismatch). Updated `change.txt` with verified GitHub API URLs.
+- **Library Version Support:** Confirmed `amrlib` 0.8.1 requires manual downloads and specific folder naming (`model_stog`, `model_gtos`). Updated handler to match.
+- **Colab Verified:** System now performs automated folder renaming after extraction.
 
 **Current Blockers:**
-- **None:** Environment is now robust and ready for full inference testing.
+- **Final Push:** User to push and run in Colab.
 
 Related: [[context]], [[architecture-v3]], [[troubleshooting-v3]]

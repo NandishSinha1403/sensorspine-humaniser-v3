@@ -13,9 +13,19 @@ class AMRHandler:
         """Lazy loading of models to save memory initially."""
         if not self.parser:
             try:
-                # Load models from the default amrlib cache
-                self.parser = amrlib.load_stog_model()
-                self.generator = amrlib.load_gtos_model()
+                # Check for manually downloaded models in the 'models' directory
+                stog_path = "models/model_stog"
+                gtos_path = "models/model_gtos"
+                
+                if os.path.exists(stog_path):
+                    self.parser = amrlib.load_stog_model(model_dir=stog_path)
+                else:
+                    self.parser = amrlib.load_stog_model()
+                    
+                if os.path.exists(gtos_path):
+                    self.generator = gtos_model = amrlib.load_gtos_model(model_dir=gtos_path)
+                else:
+                    self.generator = amrlib.load_gtos_model()
             except Exception as e:
                 print(f"Error loading AMR models: {e}")
                 # Fallback or placeholder for local development without models
