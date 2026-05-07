@@ -11,11 +11,12 @@
 **Fix:** Moved model downloads into a direct `python3 -c` call or `importlib.reload(amrlib)` to force environment refresh.
 
 ### 3. AMR Model Download 404s
-**Problem:** The previous links to `amrlib` models on GitHub releases were incorrect or outdated, causing `wget` to return 404 errors.
-**Status:** Updated `change.txt` with correct links:
-*   StoG: `parse_t5-v0_2_0`
-*   GtoS: `generate_t5-v0_1_0`
-**Next Step:** User needs to run the updated "Final Stable Version v2" from `change.txt` in Colab after pushing local fixes to GitHub.
+**Problem:** The previous links to `amrlib` models on GitHub releases were incorrect or outdated (T5 models were deprecated), causing `wget` to return 404 errors.
+**Status:** **RESOLVED (2026-05-07)**
+**Fix:** Updated `change.txt` and `amr_handler.py` to use the current Transformer-based models.
+*   New StoG Model: `model_parse_xfm_bart_base-v0_1_0`
+*   New GtoS Model: `model_generate_t5wtense-v0_1_0`
+**Note:** Verified these links are active on `bjascob/amrlib-models` and `backend/engine/amr_handler.py` correctly references the extracted folders in the `models/` directory.
 
 ### 4. Directory Structure Sync
 **Problem:** Repeated `git clone` commands in Colab were creating nested directory structures (e.g., `.../backend/sensorspine-humaniser-v3/backend`).

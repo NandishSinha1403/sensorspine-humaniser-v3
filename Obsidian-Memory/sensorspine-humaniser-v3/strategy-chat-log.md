@@ -30,4 +30,24 @@ We decided to build a brand new project from scratch, moving away from "fixing A
 - `Obsidian-Memory/sensorspine-humaniser-v3/context.md` (updated)
 - `Obsidian-Memory/sensorspine-humaniser-v3/roadmap.md` (updated)
 
+---
+## Current State: May 5, 2026 - 10:00 AM
+**Status:** Backend connectivity fixed; models ready for cloud deployment.
+**Key Issues Resolved:**
+- **AMR 404s:** Fixed the release tag URLs in `change.txt` by adding the `model_` prefix (e.g., `model_parse_t5-v0_2_0`). 
+- **Code Audit:** Verified that `HumanizerEngine`, `ContrastiveLogitsProcessor`, and `DiagnosticJudge` are correctly integrated in `main.py` for recursive refinement.
+
+**Current Blockers:**
+- **None:** Git push successful; cloud backend can now sync latest fixes.
+
+---
+## Current State: May 7, 2026 - 01:30 PM
+**Status:** AMR Pipeline stabilized with latest models.
+**Key Issues Resolved:**
+- **Deprecated Models:** Identified that T5 models were deprecated. Updated `change.txt` and `amr_handler.py` to use `xfm_bart_base` (Parsing) and `t5wtense` (Generation) models.
+- **Wget Progress:** Removed quiet flag from `change.txt` to monitor download progress in Colab.
+
+**Current Blockers:**
+- **Inference Verification:** Need to run the updated setup in Colab to confirm the full cycle.
+
 Related: [[context]], [[architecture-v3]], [[troubleshooting-v3]]

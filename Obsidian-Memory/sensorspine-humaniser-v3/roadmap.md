@@ -18,7 +18,7 @@
 ## Phase 4: Integration & Dashboard
 - [x] Connect the v3 engine to the Next.js frontend.
 - [x] Implement side-by-side "AI vs v3-Human" comparison metrics.
-- [ ] Stabilize AMR model deployment on Colab (Fixing 404 links).
+- [x] Stabilize AMR model deployment on Colab (Fixed 404 links in `change.txt`).
 
 ---
 Related: [[context]], [[architecture-v3]]

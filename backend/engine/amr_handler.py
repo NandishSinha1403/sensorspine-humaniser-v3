@@ -14,8 +14,8 @@ class AMRHandler:
         if not self.parser:
             try:
                 # Check for manually downloaded models in the 'models' directory
-                stog_path = "models/model_parse_t5-v0_2_0"
-                gtos_path = "models/model_generate_t5-v0_1_0"
+                stog_path = "models/model_parse_xfm_bart_base-v0_1_0"
+                gtos_path = "models/model_generate_t5wtense-v0_1_0"
                 
                 if os.path.exists(stog_path):
                     self.parser = amrlib.load_stog_model(model_dir=stog_path)
