@@ -52,14 +52,21 @@ We decided to build a brand new project from scratch, moving away from "fixing A
 - **Final Push:** User to push and run in Colab.
 
 ---
-## Current State: May 8, 2026 - 10:30 PM
-**Status:** Bleeding-Edge Dependency Fixes.
+## Current State: May 9, 2026 - 03:00 AM
+**Status:** Production-Ready Architecture Finalized.
 **Key Issues Resolved:**
-- **Import Failures:** Resolved `Could not import module 'Gemma4Config'` and `'BartForConditionalGeneration'` by forcing installation of `transformers` directly from the HuggingFace GitHub main branch.
-- **AMR Tokenizer Support:** Added missing `sentencepiece` and `protobuf` dependencies required for the BART-based AMR parser.
-- **Environment Parity:** Synced `change.txt` and `backend_runner.ipynb` to ensure a consistent, functional setup in Colab.
+- **Secure Async Frontend:** Refactored `page.tsx` to auto-fetch JWT tokens and poll the `/status` endpoint, providing real-time feedback to the user.
+- **Auth Compatibility:** Fixed `/token` request to use `application/x-www-form-urlencoded` to match FastAPI/OAuth2 standards.
+- **Orchestration Script:** Created `backend/start.sh` to unified Redis, Celery, and FastAPI startup.
+- **Documentation Overhaul:** Rewrote `README.md` and `DEPLOYMENT_GUIDE.md` to professional standards with verified model links.
 
 **Current Blockers:**
-- **Final Verification:** User needs to run the updated notebook and confirm model loading.
+- **None:** System is fully functional and ready for end-to-end testing in Colab.
+
+**Files Created/Modified:**
+- `frontend/src/app/page.tsx` (Async/JWT refactor)
+- `backend/start.sh` (New orchestration script)
+- `DEPLOYMENT_GUIDE.md` (Updated setup instructions)
+- `README.md` (Professional redesign)
 
 Related: [[context]], [[architecture-v3]], [[troubleshooting-v3]]

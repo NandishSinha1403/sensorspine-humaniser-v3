@@ -20,6 +20,10 @@
   - Verify Flash Attention 2 is enabled in `contrastive_decoder.py`.
   - Ensure `torch.compile` successfully initialized on the base model (GPT-2).
 
-## 5. AMR Fusion Warnings
-- **Problem:** `CRITICAL WARNING: Structural AMR Fusion failed`.
-- **Solution:** This occurs if `penman` cannot reconcile variables even with remapping. The system will fall back to returning the first graph to avoid crashing the pipeline. Check the logs for specific variable collision details.
+## 6. 422 Unprocessable Entity on /token
+- **Problem:** FastAPI returns 422 when the frontend sends JSON to the `/token` endpoint.
+- **Solution:** The `/token` endpoint (OAuth2 standard) expects `application/x-www-form-urlencoded`. Ensure the frontend uses `URLSearchParams` and the correct header.
+
+## 7. Missing Redis or Celery on Startup
+- **Problem:** Worker doesn't pick up tasks or "Connection Refused" errors.
+- **Solution:** Use the `start.sh` orchestration script to ensure Redis and the Celery worker are initialized before the FastAPI gateway. Run `./start.sh` from the `backend` directory.
