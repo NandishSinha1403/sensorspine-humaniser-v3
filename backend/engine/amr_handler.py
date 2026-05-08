@@ -23,13 +23,13 @@ class AMRHandler:
                     self.parser = amrlib.load_stog_model()
                     
                 if os.path.exists(gtos_path):
-                    self.generator = gtos_model = amrlib.load_gtos_model(model_dir=gtos_path)
+                    self.generator = amrlib.load_gtos_model(model_dir=gtos_path)
                 else:
                     self.generator = amrlib.load_gtos_model()
             except Exception as e:
-                print(f"Error loading AMR models: {e}")
-                # Fallback or placeholder for local development without models
-                pass
+                print(f"CRITICAL ERROR: Failed to load AMR models: {e}")
+                # Raise exception so the service doesn't start in a broken state if models are required
+                raise RuntimeError(f"AMR Model initialization failed: {e}") from e
 
     def text_to_graphs(self, text):
         self._initialize_models()

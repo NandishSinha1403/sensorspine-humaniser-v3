@@ -1,25 +1,25 @@
-# ScholarAI v3 SOTA: Troubleshooting & Deployment Notes
+# Troubleshooting & Known Issues
 
-## Current Deployment State (May 4, 2026)
+## 1. Memory Issues (OOM)
+- **Problem:** CUDA Out of Memory on 15GB/16GB cards.
+- **Solution:** Ensure `llm_int8_enable_fp32_cpu_offload=True` is set in `BitsAndBytesConfig`. This allows the overflow of the 16GB Gemma weights to be stored in system RAM.
 
-### 1. CORS (Cross-Origin Resource Sharing) Issue
-**Problem:** The Next.js frontend (`localhost:3000`) could not communicate with the `ngrok` tunneled backend in Google Colab, resulting in "Failed to fetch" errors.
-**Fix:** Added `CORSMiddleware` to `backend/main.py` allowing `allow_origins=["*"]`.
+## 2. AMR Model Loading
+- **Problem:** `No module named 'word2number'`.
+- **Solution:** This dependency is required by `amrlib`. Ensure it is installed via `pip install word2number`. It is included in the latest `change.txt`.
 
-### 2. Google Colab Module Discovery
-**Problem:** `pip install amrlib` in Colab cells often failed to register the `amrlib.setup_utils` module immediately for following shell commands.
-**Fix:** Moved model downloads into a direct `python3 -c` call or `importlib.reload(amrlib)` to force environment refresh.
+## 3. Task Status "Pending" Forever
+- **Problem:** The API returns `task_id` but status never changes.
+- **Solution:** Ensure the Celery worker is running.
+  - Command: `celery -A tasks worker --loglevel=info --concurrency=1`
+  - Note: `--concurrency=1` is recommended for single-GPU environments.
 
-### 3. AMR Model Download 404s
-**Problem:** The previous links to `amrlib` models on GitHub releases were incorrect or outdated (T5 models were deprecated), causing `wget` to return 404 errors.
-**Status:** **RESOLVED (2026-05-07)**
-**Fix:** Pivoted to `amrlib`'s built-in automated downloaders in `change.txt`.
-*   Command: `!python3 -c "import amrlib; amrlib.setup_sentence_to_amr(); amrlib.setup_amr_to_sentence()"`
-**Note:** This is the most robust method as it fetches the current default models directly into the `amrlib` cache, bypassing brittle manual URLs. `backend/engine/amr_handler.py` was simplified to use default loading paths.
+## 4. Contrastive Decoding Latency
+- **Problem:** Generation is slow despite KV-caching.
+- **Solution:** 
+  - Verify Flash Attention 2 is enabled in `contrastive_decoder.py`.
+  - Ensure `torch.compile` successfully initialized on the base model (GPT-2).
 
-### 4. Directory Structure Sync
-**Problem:** Repeated `git clone` commands in Colab were creating nested directory structures (e.g., `.../backend/sensorspine-humaniser-v3/backend`).
-**Fix:** Updated `change.txt` to include `%cd /content` and `!rm -rf` at the start of the setup block to ensure a clean, consistent root.
-
----
-Related: [[context]], [[roadmap]]
+## 5. AMR Fusion Warnings
+- **Problem:** `CRITICAL WARNING: Structural AMR Fusion failed`.
+- **Solution:** This occurs if `penman` cannot reconcile variables even with remapping. The system will fall back to returning the first graph to avoid crashing the pipeline. Check the logs for specific variable collision details.

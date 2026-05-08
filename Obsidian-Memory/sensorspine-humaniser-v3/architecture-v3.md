@@ -1,26 +1,37 @@
-# ScholarAI v3 SOTA: Architecture
+# ScholarAI v3 SOTA: System Architecture
 
-## Technical Stack
-*   **Language:** Python 3.10+
-*   **Core Frameworks:** 
-    *   **PyTorch**: For tensor operations and model hosting.
-    *   **HuggingFace Transformers/Accelerate**: For LLM orchestration and inference.
-    *   **AMRLib**: For Abstract Meaning Representation parsing and generation.
-*   **API Layer:** FastAPI (High-performance async routing).
-*   **Hardware Target:** GPU-accelerated (CUDA/MPS) for real-time contrastive decoding.
+## 1. High-Level Design
+ScholarAI v3 SOTA is a distributed AI-humanization service designed to bypass state-of-the-art AI detectors. It uses a multi-layered approach involving structural graph manipulation (AMR) and token-level contrastive decoding.
 
-## Component Map
+## 2. Core Components
 
-### 1. Semantic Parser (AMR)
-Converts input text into semantic graphs. Handles the "Fission/Fusion" of ideas at the graph level to ensure natural burstiness.
+### A. FastAPI Gateway
+- **Role:** Handles HTTP requests, authentication, and task management.
+- **Security:** JWT-based Bearer authentication and `slowapi` rate limiting.
+- **Async Pattern:** Returns `task_id` immediately; clients poll for results.
 
-### 2. Inference Engine (The "Humanizer")
-A locally hosted **Gemma-4 E4B** model (4 Billion parameters). Despite its size, it offers SOTA intelligence density (MMLU Pro ~69.4%) and is optimized for instruction following. Quantized to 4-bit/8-bit to run efficiently on T4 GPUs alongside the AMR pipeline.
-### 3. Contrastive Validator
-A parallel GPT-2/3 model used to calculate the "AI Probability" of tokens during generation, feeding the penalty values back into the Inference Engine's logits.
+### B. Celery + Redis Task Queue
+- **Role:** Decouples long-running ML inference (5-20s) from the web tier.
+- **Worker:** A persistent background process that maintains model weights in VRAM.
 
-### 4. Recursive Diagnostic Judge
-A streamlined version of the legacy 9-channel detector used to score the final output and trigger regeneration if the "Human Confidence" threshold isn't met.
+### C. Humanization Pipeline (The "Engine")
+1. **AMR Structural Surgery:**
+   - Parses text into Abstract Meaning Representation (AMR) graphs using BART/T5.
+   - Applies "Burstiness" via structural Fission/Fusion.
+   - **Remapping:** Uses `penman` library to perform variable remapping, preventing variable name collisions during graph merge.
+   - **Generation:** Converts modified graphs back to natural language.
+2. **Contrastive Decoding (Gemma 4B + GPT-2):**
+   - **Generator:** Gemma 4 E4B (Quantized 4-bit).
+   - **Base:** GPT-2 (serving as the "AI-predictability" baseline).
+   - **Logic:** Penalizes tokens that are highly predictable by the base model.
+   - **Optimization:** KV-Caching implementation ($O(1)$ complexity) and Flash Attention 2.
 
----
-Related: [[context]], [[roadmap]]
+### D. Diagnostic Judge (DeBERTa-v3)
+- **Role:** Discriminative AI detection classifier.
+- **Placement:** Runs on **CPU** to save GPU VRAM for the main LLMs.
+- **Loop:** Provides a feedback signal for recursive refinement of humanized text.
+
+## 3. Infrastructure & Deployment
+- **Containerization:** Docker with CUDA 12.1 runtime support.
+- **Optimization:** `torch.compile` for base model forward passes.
+- **Memory Management:** 4-bit quantization with CPU offloading enabled to fit on 15GB T4 GPUs.
