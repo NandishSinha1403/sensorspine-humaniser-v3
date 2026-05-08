@@ -20,11 +20,11 @@ git push
 Paste and run this to install dependencies and download the AMR models into the correct directory structure.
 
 ```python
-# 1. Reset & Install Core Dependencies
+# 1. Reset & Install System + Python Dependencies
 %cd /content
 !rm -rf sensorspine-humaniser-v3
-!pip install --upgrade amrlib fastapi uvicorn pydantic torch accelerate bitsandbytes python-multipart pyngrok penman unidecode huggingface_hub sentencepiece protobuf word2number celery redis flash-attn python-jose[cryptography] passlib[bcrypt] slowapi
-!pip install git+https://github.com/huggingface/transformers.git
+!apt-get install -y redis-server > /dev/null
+!pip install --upgrade amrlib fastapi uvicorn pydantic torch accelerate bitsandbytes python-multipart pyngrok penman unidecode huggingface_hub sentencepiece protobuf word2number celery redis flash-attn python-jose[cryptography] passlib[bcrypt] slowapi git+https://github.com/huggingface/transformers.git
 
 # 2. HuggingFace Login (Using Colab Secrets)
 from google.colab import userdata
