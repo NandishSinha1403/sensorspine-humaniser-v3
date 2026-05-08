@@ -52,14 +52,14 @@ We decided to build a brand new project from scratch, moving away from "fixing A
 - **Final Push:** User to push and run in Colab.
 
 ---
-## Current State: May 8, 2026 - 10:00 PM
-**Status:** Major Pivot to Gemma 4 E4B.
+## Current State: May 8, 2026 - 10:30 PM
+**Status:** Bleeding-Edge Dependency Fixes.
 **Key Issues Resolved:**
-- **Performance Leap:** Pivoted from Llama 3 8B to Gemma 4 E4B. MMLU Pro increased from ~40% to ~69% while cutting parameters in half.
-- **Hardware Optimization:** Gemma 4 E4B (4B parameters) significantly reduces VRAM pressure on Colab T4, allowing for higher precision and faster inference.
-- **Secrets Management:** Implemented automated authentication via Colab Secrets (`userdata`). Replaced `getpass` prompts with `HF_TOKEN` and `NGROK_TOKEN` fetch logic.
+- **Import Failures:** Resolved `Could not import module 'Gemma4Config'` and `'BartForConditionalGeneration'` by forcing installation of `transformers` directly from the HuggingFace GitHub main branch.
+- **AMR Tokenizer Support:** Added missing `sentencepiece` and `protobuf` dependencies required for the BART-based AMR parser.
+- **Environment Parity:** Synced `change.txt` and `backend_runner.ipynb` to ensure a consistent, functional setup in Colab.
 
 **Current Blockers:**
-- **Testing:** User needs to save tokens in Colab Secrets and run the new setup.
+- **Final Verification:** User needs to run the updated notebook and confirm model loading.
 
 Related: [[context]], [[architecture-v3]], [[troubleshooting-v3]]
