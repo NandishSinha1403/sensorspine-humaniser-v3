@@ -24,7 +24,7 @@ class ContrastiveLogitsProcessor(LogitsProcessor):
         return scores
 
 class HumanizerEngine:
-    def __init__(self, generator_id="meta-llama/Meta-Llama-3-8B", base_id="gpt2"):
+    def __init__(self, generator_id="google/gemma-4-e4b-it", base_id="gpt2"):
         self.generator_id = generator_id
         self.base_id = base_id
         self.generator = None

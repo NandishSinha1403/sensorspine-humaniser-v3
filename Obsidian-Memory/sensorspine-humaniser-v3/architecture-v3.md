@@ -15,8 +15,7 @@
 Converts input text into semantic graphs. Handles the "Fission/Fusion" of ideas at the graph level to ensure natural burstiness.
 
 ### 2. Inference Engine (The "Humanizer")
-A locally hosted Llama-3 8B model fine-tuned on pre-2020 (100% human) academic corpora. 
-
+A locally hosted **Gemma-4 E4B** model (4 Billion parameters). Despite its size, it offers SOTA intelligence density (MMLU Pro ~69.4%) and is optimized for instruction following. Quantized to 4-bit/8-bit to run efficiently on T4 GPUs alongside the AMR pipeline.
 ### 3. Contrastive Validator
 A parallel GPT-2/3 model used to calculate the "AI Probability" of tokens during generation, feeding the penalty values back into the Inference Engine's logits.
 

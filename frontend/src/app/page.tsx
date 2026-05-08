@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function Home() {
   const [text, setText] = useState("");
   const [intensity, setIntensity] = useState(1.0);
-  const [backendUrl, setBackendUrl] = useState("");
+  const [backendUrl, setBackendUrl] = useState("https://broodless-suzan-nonprohibitively.ngrok-free.dev");
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
