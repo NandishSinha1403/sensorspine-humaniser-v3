@@ -25,10 +25,10 @@ fi
 # We use --concurrency=1 to prevent multiple processes from fighting for the GPU.
 # Logs will still be visible in the terminal.
 echo "[2/3] Starting Celery Worker (Gemma/AMR/Judge)..."
-celery -A tasks worker --loglevel=info --concurrency=1 &
+python3 -m celery -A tasks worker --loglevel=info --concurrency=1 &
 
 # 3. Start FastAPI/Uvicorn (Foreground)
 # This will keep the process alive and show the web gateway logs.
 echo "[3/3] Starting FastAPI Gateway at http://0.0.0.0:8000"
 echo "--------------------------------------------------------"
-uvicorn main:app --host 0.0.0.0 --port 8000
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
