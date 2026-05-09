@@ -26,7 +26,8 @@ class DiagnosticJudge:
         # this acts as a placeholder for a specific AI-detector fine-tune.
         self.model = AutoModelForSequenceClassification.from_pretrained(
             self.model_id, 
-            num_labels=2
+            num_labels=2,
+            ignore_mismatched_sizes=True
         ).to(self.device)
         self.model.eval()
 
