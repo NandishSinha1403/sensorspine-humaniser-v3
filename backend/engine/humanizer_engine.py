@@ -47,23 +47,28 @@ class HumanizerEngine:
         if not self.generator:
             self.load_models()
 
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.generator.device)
+        # Senior Architect: Use apply_chat_template to prevent prompt leakage and gibberish loops
+        # Gemma-4 IT models require structured turn delimiters to separate prompt from response.
+        chat = [{"role": "user", "content": prompt}]
+        formatted_inputs = self.tokenizer.apply_chat_template(
+            chat, 
+            add_generation_prompt=True, 
+            return_tensors="pt"
+        ).to(self.generator.device)
         
-        # Senior Architect Pivot: Aggressive Sampling for Evasion
-        # We drop Contrastive Decoding (CD) due to massive latency and tokenizer mismatches.
-        # Instead, we use hyper-optimized sampling parameters to flatten the token distribution.
+        input_len = formatted_inputs.shape[-1]
         
         # Clamp intensity to valid range 0.0 - 1.0
         intensity = max(0.0, min(1.0, intensity))
         
-        # Formula-driven aggressive parameters
-        gen_temperature = 1.1 + (intensity * 0.5)          # Range: 1.1 -> 1.6
+        # Recalibrated formulas for stable evasion (preventing distribution collapse)
+        gen_temperature = 0.8 + (intensity * 0.4)          # Range: 0.8 -> 1.2
         gen_top_p = 0.90 + (intensity * 0.05)              # Range: 0.90 -> 0.95
-        gen_repetition_penalty = 1.1 + (intensity * 0.1)   # Range: 1.1 -> 1.2
+        gen_repetition_penalty = 1.05 + (intensity * 0.1)  # Range: 1.05 -> 1.15
 
         outputs = self.generator.generate(
-            **inputs,
-            max_new_tokens=256,
+            formatted_inputs,
+            max_new_tokens=512, # Increased for longer academic passages
             do_sample=True,
             temperature=gen_temperature,
             top_p=gen_top_p,
@@ -71,4 +76,6 @@ class HumanizerEngine:
             use_cache=True
         )
 
-        return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Senior Architect: Slice output to return ONLY the newly generated tokens
+        generated_tokens = outputs[0][input_len:]
+        return self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
