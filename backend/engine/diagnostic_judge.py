@@ -8,7 +8,7 @@ def patched_check_torch_load_is_safe():
 import_utils.check_torch_load_is_safe = patched_check_torch_load_is_safe
 
 class DiagnosticJudge:
-    def __init__(self, model_id="microsoft/deberta-v3-small", device="cpu"):
+    def __init__(self, model_id="cross-encoder/nli-deberta-v3-small", device="cpu"):
         """
         Uses a DeBERTa-based classifier for AI detection.
         In a full production setup, you would point this to a fine-tuned 
