@@ -25,6 +25,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_ngrok_skip_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["ngrok-skip-browser-warning"] = "true"
+    return response
+
 class HumanizeRequest(BaseModel):
     text: str = Field(..., max_length=3000)
     intensity: float = Field(default=1.0, ge=0, le=2.0)
