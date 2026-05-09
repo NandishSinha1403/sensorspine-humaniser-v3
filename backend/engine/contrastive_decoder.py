@@ -47,22 +47,31 @@ class HumanizerEngine:
             llm_int8_enable_fp32_cpu_offload=True
         )
 
-        print(f"Loading generator: {self.generator_id}")
+        # Determine attention implementation based on availability
+        attn_impl = "sdpa"
+        try:
+            import importlib
+            if importlib.util.find_spec("flash_attn"):
+                attn_impl = "flash_attention_2"
+        except ImportError:
+            pass
+
+        print(f"Loading generator: {self.generator_id} using {attn_impl}")
         self.generator = AutoModelForCausalLM.from_pretrained(
             self.generator_id,
             quantization_config=bnb_config,
             device_map="auto",
             torch_dtype=torch.float16,
-            attn_implementation="flash_attention_2"
+            attn_implementation=attn_impl
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.generator_id)
 
-        print(f"Loading base model: {self.base_id}")
+        print(f"Loading base model: {self.base_id} using {attn_impl}")
         self.base_model = AutoModelForCausalLM.from_pretrained(
             self.base_id,
             device_map="auto",
             torch_dtype=torch.float16,
-            attn_implementation="flash_attention_2"
+            attn_implementation=attn_impl
         )
         self.base_tokenizer = AutoTokenizer.from_pretrained(self.base_id)
         
