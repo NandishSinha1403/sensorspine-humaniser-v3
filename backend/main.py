@@ -33,7 +33,7 @@ async def add_ngrok_skip_header(request: Request, call_next):
 
 class HumanizeRequest(BaseModel):
     text: str = Field(..., max_length=3000)
-    intensity: float = Field(default=1.0, ge=0, le=2.0)
+    intensity: float = Field(default=0.5, ge=0.0, le=1.0)
 
 class Token(BaseModel):
     access_token: str
