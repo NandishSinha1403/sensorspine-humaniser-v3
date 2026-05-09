@@ -11,7 +11,7 @@ def patched_check_torch_load_is_safe():
 import_utils.check_torch_load_is_safe = patched_check_torch_load_is_safe
 
 from engine.amr_handler import AMRHandler
-from engine.contrastive_decoder import HumanizerEngine
+from engine.humanizer_engine import HumanizerEngine
 from engine.diagnostic_judge import DiagnosticJudge
 
 # Initialize Celery

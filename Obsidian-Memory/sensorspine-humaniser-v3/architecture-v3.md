@@ -1,7 +1,7 @@
 # ScholarAI v3 SOTA: System Architecture
 
 ## 1. High-Level Design
-ScholarAI v3 SOTA is a distributed AI-humanization service designed to bypass state-of-the-art AI detectors. It uses a multi-layered approach involving structural graph manipulation (AMR) and token-level contrastive decoding.
+ScholarAI v3 SOTA is a distributed AI-humanization service designed to bypass state-of-the-art AI detectors. It uses a multi-layered approach involving structural graph manipulation (AMR) and hyper-optimized generative sampling.
 
 ## 2. Core Components
 
@@ -20,14 +20,15 @@ ScholarAI v3 SOTA is a distributed AI-humanization service designed to bypass st
    - Applies "Burstiness" via structural Fission/Fusion.
    - **Remapping:** Uses `penman` library to perform variable remapping, preventing variable name collisions during graph merge.
    - **Generation:** Converts modified graphs back to natural language.
-2. **Contrastive Decoding (Gemma 4B + GPT-2):**
+2. **Aggressive Sampling (Gemma 4B):**
    - **Generator:** Gemma 4 E4B (Quantized 4-bit).
-   - **Base:** GPT-2 (serving as the "AI-predictability" baseline).
-   - **Logic:** Penalizes tokens that are highly predictable by the base model.
-   - **Optimization:** KV-Caching implementation ($O(1)$ complexity) and Flash Attention 2.
+   - **Mechanism:** Instead of Contrastive Decoding (which was dropped due to latency and tokenizer mismatches), the system uses hyper-optimized sampling parameters.
+   - **Logic:** Dynamically scales `temperature` (1.1-1.6), `top_p` (0.90-0.95), and `repetition_penalty` based on user-defined `intensity`.
+   - **Optimization:** SDPA (Scaled Dot Product Attention) fallback for Colab compatibility and `torch.compile` for speed.
 
 ### D. Diagnostic Judge (DeBERTa-v3)
 - **Role:** Discriminative AI detection classifier.
+- **Model:** `cross-encoder/nli-deberta-v3-small` (Safetensors version).
 - **Placement:** Runs on **CPU** to save GPU VRAM for the main LLMs.
 - **Loop:** Provides a feedback signal for recursive refinement of humanized text.
 
