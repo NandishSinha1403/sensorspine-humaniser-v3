@@ -63,7 +63,7 @@ def process_humanization(text, intensity):
         # Step 2: Recursive Refinement
         for attempt in range(2):
             prompt = f"Rewrite this text to be more natural and human-like: {final_text if attempt > 0 else amr_processed_text}"
-            candidate_text = engine.generate_humanized(prompt, alpha=intensity * 0.5)
+            candidate_text = engine.generate_humanized(prompt, intensity=intensity)
             
             is_human, score = judge.judge(candidate_text, threshold=0.7)
             final_text = candidate_text
