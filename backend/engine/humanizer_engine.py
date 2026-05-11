@@ -32,9 +32,13 @@ class HumanizerEngine:
             quantization_config=bnb_config,
             device_map="auto",
             torch_dtype=torch.float16,
-            attn_implementation=attn_impl
+            attn_implementation=attn_impl,
+            trust_remote_code=True
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(self.generator_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.generator_id,
+            trust_remote_code=True
+        )
         
         # Performance Optimization: torch.compile
         try:
