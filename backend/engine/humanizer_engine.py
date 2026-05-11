@@ -17,15 +17,8 @@ class HumanizerEngine:
             llm_int8_enable_fp32_cpu_offload=True
         )
 
-        # Determine attention implementation based on availability
+        # Senior Architect: Use SDPA for maximum stability on T4 GPUs
         attn_impl = "sdpa"
-        try:
-            import importlib
-            if importlib.util.find_spec("flash_attn"):
-                attn_impl = "flash_attention_2"
-        except ImportError:
-            pass
-
         print(f"Loading generator: {self.generator_id} using {attn_impl}")
         self.generator = AutoModelForCausalLM.from_pretrained(
             self.generator_id,
