@@ -1,25 +1,30 @@
-# Troubleshooting & Known Issues
+# Troubleshooting & Known Issues (v3 SOTA)
 
-## 1. Memory Issues (OOM)
-- **Problem:** CUDA Out of Memory on 15GB/16GB cards.
-- **Resolution:** Dropped the GPT-2 base model (VRAM saving ~1.5GB). Added NF4 4-bit quantization + CPU offloading for Gemma-4.
+## 1. RuntimeError: CUDA Major Version Mismatch
+- **Problem:** `Detected that PyTorch and torchvision were compiled with different CUDA major versions (13.0 vs 12.8).`
+- **Root Cause:** A general `pip install --upgrade` command was overwriting the CUDA 12.1-specific PyTorch binaries with default PyPi versions.
+- **Resolution:** Removed `torch` and `torchvision` from the upgrade command. Explicitly installed them via the `--index-url https://download.pytorch.org/whl/cu121` index.
 
-## 2. CUDA Device-Side Assert (Root Cause: Tokenizer Mismatch)
-- **Problem:** `index out of bounds: 0 <= tmp4 < 50257` during generation.
-- **Root Cause:** GPT-2 (50k vocab) cannot be element-wise subtracted from Gemma-4 (256k vocab). The indices represent different semantic tokens.
-- **Resolution:** Removed the Contrastive Decoding loop. Pivoted to single-model Aggressive Sampling (Option 3).
+## 2. ModuleNotFoundError: 'Gemma4Config'
+- **Problem:** `transformers` library failing to load the Gemma-4 configuration class.
+- **Root Cause:** Gemma-4 is a multimodal model. Recent environment downgrades broke `pillow` and `torchvision` dependencies. Because the model class is multimodal, the loader crashes if vision libraries are in an inconsistent state.
+- **Resolution:** Pinned `numpy<2.1` and `pillow<12.0` in the Colab setup cell to satisfy the multimodal imports.
 
-## 3. Prompt Leakage & Output Gibberish
-- **Problem:** "Rewrite this text..." appears in output; model repeats fragments like "findingsitt...".
-- **Root Cause:** Missing Chat Template delimiters (`<start_of_turn>user`) and aggressive sampling (temp=1.6) without proper sequence anchoring.
-- **Resolution:** Implemented `tokenizer.apply_chat_template` with `add_generation_prompt=True` and output slicing. Recalibrated temperature to `0.8-1.2`.
+## 3. AttributeError: 'Qwen2ForCausalLM' has no len()
+- **Problem:** Crash during the generation loop on T4 GPUs.
+- **Root Cause:** `torch.compile` optimization introduced internal attribute mismatches with the Qwen2 model architecture in the `transformers` dev branch.
+- **Resolution:** Disabled `torch.compile` in `humanizer_engine.py`. Stability prioritized over marginal speed gains for pitch delivery.
 
-## 4. torch.load Security Block (CVE-2025-32434)
-- **Problem:** `ValueError` citing CVE-2025-32434 prevents loading `.bin` models on Torch < 2.6.
-- **Resolution:** 
-    - Migrated Diagnostic Judge to `cross-encoder/nli-deberta-v3-small` (Safetensors).
-    - Applied surgical monkeypatch to `transformers.modeling_utils` for local AMR models.
+## 4. AttributeError: 'BatchEncoding' object has no attribute 'shape'
+- **Problem:** Crash when calculating `input_len`.
+- **Root Cause:** Incorrectly attempting to access `.shape` on the `BatchEncoding` object returned by `tokenizer.apply_chat_template` instead of accessing the underlying `.input_ids.shape`.
+- **Resolution:** Updated `humanizer_engine.py` to use `formatted_inputs.input_ids.shape[-1]`.
 
-## 5. Frontend "Failed to Fetch"
-- **Problem:** ngrok interstitial warning page blocks browser API requests.
-- **Resolution:** Added custom middleware in `main.py` to inject `ngrok-skip-browser-warning: true` header into all responses.
+## 5. 403 Client Error: Gated Repo (Llama-3)
+- **Problem:** Access denied when trying to pull `meta-llama/Meta-Llama-3-8B-Instruct`.
+- **Resolution:** Pivoted to `Qwen/Qwen2-7B-Instruct`. It is a non-gated, high-performance SOTA alternative that requires no manual permissions.
+
+## 6. Frontend JSON Parsing Errors (ngrok)
+- **Problem:** Frontend failing to connect to backend via ngrok tunnel.
+- **Root Cause:** ngrok "Browser Warning" interstitial page intercepting API calls and returning HTML.
+- **Resolution:** Injected `ngrok-skip-browser-warning: true` headers into both the FastAPI middleware and all frontend `fetch()` requests.

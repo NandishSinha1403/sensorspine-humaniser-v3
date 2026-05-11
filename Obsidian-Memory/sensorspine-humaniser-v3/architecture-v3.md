@@ -1,38 +1,35 @@
-# ScholarAI v3 SOTA: System Architecture
+# ScholarAI v3 SOTA: System Architecture (Post-Pitch Pivot)
 
 ## 1. High-Level Design
-ScholarAI v3 SOTA is a distributed AI-humanization service designed to bypass state-of-the-art AI detectors. It uses a multi-layered approach involving structural graph manipulation (AMR) and hyper-optimized generative sampling.
+ScholarAI v3 SOTA is a distributed AI-humanization service. Following the May 11th emergency audit, the architecture was pivoted for maximum stability on T4 GPU hardware, moving away from experimental multimodal models to a high-performance, pure-text instruction-following engine.
 
 ## 2. Core Components
 
 ### A. FastAPI Gateway
-- **Role:** Handles HTTP requests, authentication, and task management.
-- **Security:** JWT-based Bearer authentication and `slowapi` rate limiting.
-- **Async Pattern:** Returns `task_id` immediately; clients poll for results.
+- **Role:** Handles HTTP requests, JWT authentication, and task management.
+- **Pitch Optimization:** Custom middleware injects `ngrok-skip-browser-warning: true` headers to ensure seamless frontend connection.
 
 ### B. Celery + Redis Task Queue
-- **Role:** Decouples long-running ML inference (5-20s) from the web tier.
-- **Worker:** A persistent background process that maintains model weights in VRAM.
+- **Role:** Decouples ML inference from the web tier. 
+- **Stability Fix:** Workers are configured with `--concurrency=1` to prevent VRAM contention on T4 GPUs.
 
 ### C. Humanization Pipeline (The "Engine")
-1. **AMR Structural Surgery:**
-   - Parses text into Abstract Meaning Representation (AMR) graphs using BART/T5.
+1. **AMR Structural Surgery (amrlib):**
+   - Parses text into Abstract Meaning Representation (AMR) graphs.
    - Applies "Burstiness" via structural Fission/Fusion.
-   - **Remapping:** Uses `penman` library to perform variable remapping, preventing variable name collisions during graph merge.
-   - **Generation:** Converts modified graphs back to natural language.
-2. **Aggressive Sampling (Gemma 4B):**
-   - **Generator:** Gemma 4 E4B (Quantized 4-bit).
-   - **Mechanism:** Instead of Contrastive Decoding (which was dropped due to latency and tokenizer mismatches), the system uses hyper-optimized sampling parameters.
-   - **Logic:** Dynamically scales `temperature` (1.1-1.6), `top_p` (0.90-0.95), and `repetition_penalty` based on user-defined `intensity`.
-   - **Optimization:** SDPA (Scaled Dot Product Attention) fallback for Colab compatibility and `torch.compile` for speed.
+   - **Remapping:** Uses `penman` library to perform variable remapping.
+2. **Qwen2 Generator (SOTA Pivot):**
+   - **Model:** `Qwen/Qwen2-7B-Instruct` (Pivoted from Gemma-4 and Llama-3 for stability/non-gated access).
+   - **Quantization:** 4-bit NF4 with CPU offloading enabled.
+   - **Attention:** Hardcoded to `SDPA` (Scaled Dot Product Attention). `Flash Attention` and `torch.compile` were removed to prevent attribute-level attribute errors (`len()` mismatch).
+   - **Sampling:** Dynamic scaling of `temperature` (0.8-1.2) and `top_p` (0.9-0.95) based on user-defined `intensity`.
 
 ### D. Diagnostic Judge (DeBERTa-v3)
 - **Role:** Discriminative AI detection classifier.
-- **Model:** `cross-encoder/nli-deberta-v3-small` (Safetensors version).
-- **Placement:** Runs on **CPU** to save GPU VRAM for the main LLMs.
-- **Loop:** Provides a feedback signal for recursive refinement of humanized text.
+- **Model:** `cross-encoder/nli-deberta-v3-small` (Safetensors).
+- **Placement:** Runs on **CPU** to preserve GPU VRAM for the Qwen2 model.
 
 ## 3. Infrastructure & Deployment
-- **Containerization:** Docker with CUDA 12.1 runtime support.
-- **Optimization:** `torch.compile` for base model forward passes.
-- **Memory Management:** 4-bit quantization with CPU offloading enabled to fit on 15GB T4 GPUs.
+- **Target:** Google Colab T4 (15GB VRAM).
+- **Environment:** CUDA 12.1 with pinned `numpy<2.1` and `pillow<12.0` to satisfy implicit multimodal dependency requirements in the `transformers` loader.
+- **Networking:** `ngrok` tunnel with specialized frontend headers.

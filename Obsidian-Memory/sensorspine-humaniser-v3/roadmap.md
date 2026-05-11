@@ -1,24 +1,24 @@
 # ScholarAI v3 SOTA: Refactoring Roadmap
 
-## Phase 1: Critical Hotfixes (Immediate)
-- [x] **Dependency Fix:** Add `word2number` to requirements.
+## Phase 1: Critical Hotfixes (Complete)
+- [x] **Dependency Fix:** Add `word2number` and pin `numpy`/`pillow`.
 - [x] **Concurrency Fix:** Unblock FastAPI event loop using `asyncio.to_thread`.
-- [x] **Input Validation:** Implement 500-word limit on humanize requests.
-- [x] **KV-Caching:** Fix $O(N^2)$ bottleneck in `ContrastiveLogitsProcessor`.
-- [x] **State Management:** Remove `global` models in `main.py` and move to FastAPI lifespan/dependencies.
-- [x] **AMR Initialization:** Remove silent exception swallowing.
+- [x] **Input Validation:** Implement 3000-char limit on humanize requests.
+- [x] **KV-Caching:** Fix $O(N^2)$ bottleneck.
+- [x] **State Management:** Remove `global` models and use worker state persistence.
+- [x] **CUDA Stability:** Resolved major version mismatch between PyTorch and torchvision.
 
 ## Phase 2: Architectural Overhaul (Complete)
-- [x] **AMR Graph Surgery:** Replace string manipulation in `graph_manipulator.py` with `penman` objects and variable remapping.
-- [x] **Containerization:** Create `Dockerfile` for backend.
-- [x] **DeBERTa Judge:** Migrated to Safetensors to bypass security version blocks.
-- [x] **Single-Model Pivot:** Dropped GPT-2 base model to resolve tokenizer mismatches and CUDA asserts.
+- [x] **AMR Graph Surgery:** Implemented `penman` objects and variable remapping for collision-free graph fusion.
+- [x] **Model Pivot:** Migrated from Gemma-4 -> Llama-3 -> **Qwen2-7B-Instruct** for pitch stability and non-gated access.
+- [x] **DeBERTa Judge:** Migrated to Safetensors and CPU placement.
+- [x] **Frontend Bridge:** Implemented `ngrok-skip-browser-warning` across frontend and backend.
 
 ## Phase 3: Scaling & Production (1-3 Months)
-- [x] **Task Queue:** Implement Celery/Redis for asynchronous humanization processing.
-- [x] **Auth & Security:** Implement JWT authentication and per-user rate limiting using `slowapi`.
-- [x] **HF Inference Optimization:** Implement Flash Attention 2 (SDPA fallback) and `torch.compile` for speedup.
-- [x] **Prompt Engineering:** Implemented strict Chat Templates to prevent prompt leakage and gibberish loops.
+- [ ] **Multi-User Auth:** Replace mock JWT with real DB authentication.
+- [ ] **GPU Load Balancing:** Scaling to multiple T4 workers.
+- [ ] **Feedback Loop:** Implementing real-time human evaluation of judge accuracy.
+- [ ] **Mobile Interface:** Responsive Next.js UI for mobile demos.
 
 ---
-*Last Updated: 2026-05-10*
+*Last Updated: 2026-05-11 (Pitch Prep Session)*
