@@ -46,7 +46,7 @@ class HumanizerEngine:
             return_tensors="pt"
         ).to(self.generator.device)
         
-        input_len = formatted_inputs.shape[-1]
+        input_len = formatted_inputs.input_ids.shape[-1]
         
         # Clamp intensity to valid range 0.0 - 1.0
         intensity = max(0.0, min(1.0, intensity))
@@ -57,7 +57,7 @@ class HumanizerEngine:
         gen_repetition_penalty = 1.05 + (intensity * 0.1)  # Range: 1.05 -> 1.15
 
         outputs = self.generator.generate(
-            formatted_inputs,
+            **formatted_inputs,
             max_new_tokens=512, # Increased for longer academic passages
             do_sample=True,
             temperature=gen_temperature,
