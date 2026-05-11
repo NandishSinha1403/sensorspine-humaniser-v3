@@ -26,7 +26,10 @@ export default function Home() {
       // 1. Fetch JWT Token
       const tokenResponse = await fetch(`${backendUrl}/token`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: { 
+          "Content-Type": "application/x-www-form-urlencoded",
+          "ngrok-skip-browser-warning": "true"
+        },
         body: new URLSearchParams(), // Sends empty form-urlencoded body
       });
       
@@ -39,7 +42,8 @@ export default function Home() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${access_token}`
+          "Authorization": `Bearer ${access_token}`,
+          "ngrok-skip-browser-warning": "true"
         },
         body: JSON.stringify({ text, intensity }),
       });
@@ -64,7 +68,10 @@ export default function Home() {
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         const statusResponse = await fetch(`${backendUrl}/status/${task_id}`, {
-          headers: { "Authorization": `Bearer ${access_token}` }
+          headers: { 
+            "Authorization": `Bearer ${access_token}`,
+            "ngrok-skip-browser-warning": "true"
+          }
         });
 
         if (!statusResponse.ok) throw new Error("Status check failed");
