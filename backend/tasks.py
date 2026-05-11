@@ -54,23 +54,30 @@ def process_humanization(text, intensity):
     judge = worker_state["judge"]
     
     try:
+        print(f"Worker: Processing humanization for text: {text[:50]}...")
         # Step 1: AMR Processing
+        print("Worker: Starting AMR Stage...")
         amr_processed_text = amr_handler.humanize_via_amr(text)
+        print(f"Worker: AMR Stage Complete. Intermediate text: {amr_processed_text[:50]}...")
         
         final_text = amr_processed_text
         confidence_score = 0.85
         
         # Step 2: Recursive Refinement
         for attempt in range(2):
+            print(f"Worker: Starting LLM Refinement Stage (Attempt {attempt+1})...")
             prompt = f"Rewrite this text to be more natural and human-like: {final_text if attempt > 0 else amr_processed_text}"
-            # Senior Architect: Pass raw intensity (0.0-1.0); engine handles scaling to temperature/top_p ranges
             candidate_text = engine.generate_humanized(prompt, intensity=intensity)
+            print(f"Worker: LLM Stage Complete. Candidate: {candidate_text[:50]}...")
             
+            print("Worker: Starting Judge Stage...")
             is_human, score = judge.judge(candidate_text, threshold=0.7)
             final_text = candidate_text
             confidence_score = score
+            print(f"Worker: Judge Stage Complete. Score: {score}")
             
             if is_human:
+                print("Worker: Human threshold met.")
                 break
                 
         return {
@@ -81,4 +88,7 @@ def process_humanization(text, intensity):
             "confidence_score": round(confidence_score, 2)
         }
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        import traceback
+        err_msg = f"{str(e)}\n{traceback.format_exc()}"
+        print(f"CRITICAL WORKER ERROR:\n{err_msg}")
+        return {"status": "error", "message": err_msg}
