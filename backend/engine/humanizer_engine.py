@@ -33,13 +33,6 @@ class HumanizerEngine:
             trust_remote_code=True
         )
         
-        # Performance Optimization: torch.compile
-        try:
-            print("Compiling model for faster inference...")
-            self.generator = torch.compile(self.generator)
-        except Exception as e:
-            print(f"Warning: torch.compile failed (not supported on this system): {e}")
-
     def generate_humanized(self, prompt, intensity=0.5):
         if not self.generator:
             self.load_models()
