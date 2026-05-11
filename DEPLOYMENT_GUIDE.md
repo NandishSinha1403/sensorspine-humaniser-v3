@@ -32,7 +32,7 @@ The "Brain" of the system runs on Google's T4 GPUs to handle high-performance ML
 !rm -rf sensorspine-humaniser-v3
 !apt-get install -y redis-server > /dev/null
 !pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-!pip install --upgrade amrlib fastapi uvicorn pydantic accelerate bitsandbytes python-multipart pyngrok penman unidecode huggingface_hub sentencepiece protobuf word2number celery redis python-jose[cryptography] passlib[bcrypt] slowapi
+!pip install --upgrade amrlib fastapi uvicorn "pydantic<=2.12.3" torch torchvision accelerate bitsandbytes python-multipart pyngrok penman unidecode huggingface_hub sentencepiece protobuf word2number celery redis flash-attn python-jose[cryptography] passlib[bcrypt] slowapi "numpy<2.1" "pillow<12.0"
 !pip install git+https://github.com/huggingface/transformers.git
 
 # 2. Authenticate & Clone
