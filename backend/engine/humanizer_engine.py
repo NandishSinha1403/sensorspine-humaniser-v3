@@ -2,7 +2,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 class HumanizerEngine:
-    def __init__(self, generator_id="meta-llama/Meta-Llama-3-8B-Instruct"):
+    def __init__(self, generator_id="Qwen/Qwen2-7B-Instruct"):
         self.generator_id = generator_id
         self.generator = None
         self.tokenizer = None
