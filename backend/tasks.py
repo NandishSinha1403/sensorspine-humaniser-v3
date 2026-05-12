@@ -1,5 +1,6 @@
 import os
 import re
+import random
 from celery import Celery
 import asyncio
 import transformers.utils.import_utils as import_utils
@@ -14,6 +15,111 @@ import_utils.check_torch_load_is_safe = patched_check_torch_load_is_safe
 from engine.amr_handler import AMRHandler
 from engine.humanizer_engine import HumanizerEngine
 from engine.diagnostic_judge import DiagnosticJudge
+
+class AdversarialPostProcessor:
+    """
+    Applies lightweight, deterministic NLP passes to disrupt AI detection heuristics
+    (perplexity and burstiness) without altering the semantic meaning of the text.
+    """
+    
+    # Target "Thesaurus Syndrome" words the LLM overuses when acting academic
+    PHRASE_REPLACEMENTS = {
+        "furthermore": ["also", "additionally", "moreover", "in addition"],
+        "commendable": ["notable", "positive", "favorable"],
+        "pivotal": ["important", "central", "key"],
+        "pinnacle positions": ["leading positions", "prominent roles"],
+        "flourish": ["grow", "develop", "expand"],
+        "substantial dedication": ["significant effort", "considerable practice"],
+        "dramatic": ["significant", "notable", "measurable"],
+        "it is worth noting": ["notably", "importantly", "of note"],
+        "delve into": ["examine", "investigate", "explore"],
+    }
+
+    # Programmatic verb-to-noun conversion to break AI conciseness patterns
+    VERB_TO_NOUN = {
+        "analyzed": "conducted an analysis of", "analyze": "perform an analysis of",
+        "examined": "carried out an examination of", "examine": "conduct an examination of",
+        "investigated": "undertook an investigation of", "investigate": "carry out an investigation of",
+        "reviewed": "performed a review of", "review": "conduct a review of",
+        "discussed": "provided a discussion of", "discuss": "offer a discussion of",
+        "concluded": "reached a conclusion regarding", "conclude": "formulate a conclusion about",
+        "evaluated": "made an evaluation of", "evaluate": "perform an evaluation of",
+        "identified": "achieved the identification of", "identify": "complete the identification of",
+    }
+    
+    @staticmethod
+    def pass_phrase_replacement(text: str) -> str:
+        """Replace overly flowery words with dry academic equivalents."""
+        new_text = text
+        for phrase, replacements in AdversarialPostProcessor.PHRASE_REPLACEMENTS.items():
+            pattern = re.compile(rf"\b{re.escape(phrase)}\b", re.IGNORECASE)
+            def replace_fn(match):
+                original = match.group(0)
+                replacement = random.choice(replacements)
+                if original[0].isupper():
+                    return replacement[0].upper() + replacement[1:]
+                return replacement
+            new_text = pattern.sub(replace_fn, new_text)
+        return new_text
+
+    @staticmethod
+    def pass_morphological_shifting(text: str) -> str:
+        """Convert high-frequency verbs to noun phrases to disrupt AI conciseness."""
+        new_text = text
+        for verb, noun_phrase in AdversarialPostProcessor.VERB_TO_NOUN.items():
+            pattern = re.compile(rf"\b{re.escape(verb)}\b", re.IGNORECASE)
+            # Apply with 70% probability to maintain academic flow
+            if random.random() < 0.7:
+                new_text = pattern.sub(noun_phrase, new_text)
+        return new_text
+
+    @staticmethod
+    def pass_invisible_padding(text: str) -> str:
+        """Inject Hair Spaces (U+200A) in common bigrams to destroy token predictability."""
+        common_bigrams = [
+            ("of", "the"), ("in", "the"), ("to", "the"),
+            ("on", "the"), ("and", "the"),
+        ]
+        new_text = text
+        for b1, b2 in common_bigrams:
+            pattern = re.compile(rf"\b{b1}\s+{b2}\b", re.IGNORECASE)
+            if random.random() < 0.5:
+                new_text = pattern.sub(f"{b1}\u200A{b2}", new_text)
+        return new_text
+
+    @staticmethod
+    def pass_zwj_jitter(text: str) -> str:
+        """Inject Zero-Width Non-Joiner (\\u200C) inside AI trigger words."""
+        triggers = ["therefore", "consequently", "essential", "crucial", "however"]
+        new_text = text
+        for t in triggers:
+            pattern = re.compile(rf"\b{re.escape(t)}\b", re.IGNORECASE)
+            if random.random() < 0.4:
+                mid = len(t) // 2
+                jittered = t[:mid] + "\u200C" + t[mid:]
+                new_text = pattern.sub(jittered, new_text)
+        return new_text
+
+    @staticmethod
+    def pass_adversarial_punctuation(text: str) -> str:
+        """Upgrade commas to semicolons and em-dashes to mimic human academic density."""
+        if random.random() < 0.5:
+            pattern = re.compile(r"([^,;]+),\s*([^,;]+),\s*and\s+([^,;.]+)")
+            text = pattern.sub(r"\1; \2; and \3", text)
+            
+        pattern2 = re.compile(r",\s*(which|who|that|namely)\s+([^,.]+),")
+        text = pattern2.sub(r" — \1 \2 — ", text)
+        return text
+        
+    @classmethod
+    def apply_all(cls, text: str) -> str:
+        """Run the full adversarial post-processing pipeline."""
+        text = cls.pass_phrase_replacement(text)
+        text = cls.pass_morphological_shifting(text)
+        text = cls.pass_zwj_jitter(text)
+        text = cls.pass_adversarial_punctuation(text)
+        text = cls.pass_invisible_padding(text)
+        return text
 
 def extract_acronyms(text):
     """
@@ -108,11 +214,15 @@ Text: {final_text if attempt > 0 else amr_processed_text}"""
                 print("Worker: Human threshold met.")
                 break
                 
+        # --- NEW: V1 Adversarial Post-Processing ---
+        print("Worker: Applying Adversarial Post-Processing (v1 passes)...")
+        final_evaded_text = AdversarialPostProcessor.apply_all(final_text)
+                
         return {
             "status": "completed",
             "original": text,
             "amr_intermediate": amr_processed_text,
-            "humanized": final_text,
+            "humanized": final_evaded_text,
             "confidence_score": round(confidence_score, 2)
         }
     except Exception as e:
