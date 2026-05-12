@@ -19,37 +19,38 @@ from engine.diagnostic_judge import DiagnosticJudge
 class AdversarialPostProcessor:
     """
     Applies lightweight, deterministic NLP passes to disrupt AI detection heuristics
-    (perplexity and burstiness) without altering the semantic meaning of the text.
+    (perplexity and burstiness) by simplifying language and unpacking dense noun phrases.
     """
     
-    # Target "Thesaurus Syndrome" words the LLM overuses when acting academic
+    # QuillBot Strategy: Simplify smart-sounding AI words to "boring" human words
     PHRASE_REPLACEMENTS = {
-        "furthermore": ["also", "additionally", "moreover", "in addition"],
-        "commendable": ["notable", "positive", "favorable"],
-        "pivotal": ["important", "central", "key"],
-        "pinnacle positions": ["leading positions", "prominent roles"],
-        "flourish": ["grow", "develop", "expand"],
-        "substantial dedication": ["significant effort", "considerable practice"],
-        "dramatic": ["significant", "notable", "measurable"],
-        "it is worth noting": ["notably", "importantly", "of note"],
-        "delve into": ["examine", "investigate", "explore"],
+        "paradigm shift": ["paradigm change", "major shift"],
+        "enables": ["allows", "permits", "lets"],
+        "cumulating to circa": ["amounting to about", "totaling some"],
+        "per annum": ["a year", "annually"],
+        "demonstrate remarkable effectiveness": ["prove to be very successful", "work quite well"],
+        "furthermore": ["and", "also", "plus"],
+        "moreover": ["also", "besides"],
+        "it is worth noting": ["notably", "of note"],
+        "significant": ["major", "real", "big"],
+        "substantial": ["large", "significant", "major"],
+        "incident": ["case", "occurrence"],
+        "utilizing": ["using", "employing"],
+        "facilitating": ["allowing", "helping"],
     }
 
-    # Programmatic verb-to-noun conversion to break AI conciseness patterns
-    VERB_TO_NOUN = {
-        "analyzed": "conducted an analysis of", "analyze": "perform an analysis of",
-        "examined": "carried out an examination of", "examine": "conduct an examination of",
-        "investigated": "undertook an investigation of", "investigate": "carry out an investigation of",
-        "reviewed": "performed a review of", "review": "conduct a review of",
-        "discussed": "provided a discussion of", "discuss": "offer a discussion of",
-        "concluded": "reached a conclusion regarding", "conclude": "formulate a conclusion about",
-        "evaluated": "made an evaluation of", "evaluate": "perform an evaluation of",
-        "identified": "achieved the identification of", "identify": "complete the identification of",
+    # QuillBot Strategy: Unpack dense clinical noun chunks into prepositional phrases
+    NOUN_PHRASE_UNPACKER = {
+        "infection incidence": "the infection rate",
+        "procedural complexity": "the complexity of the procedure",
+        "optical fiberoptic arthosopes": "optical devices like fiberoptic arthroscopes",
+        "learning curve progression": "progress along the learning curve",
+        "vital function": "essential bodily functions",
     }
     
     @staticmethod
     def pass_phrase_replacement(text: str) -> str:
-        """Replace overly flowery words with dry academic equivalents."""
+        """Replace overly flowery words with dry, simple equivalents (QuillBot style)."""
         new_text = text
         for phrase, replacements in AdversarialPostProcessor.PHRASE_REPLACEMENTS.items():
             pattern = re.compile(rf"\b{re.escape(phrase)}\b", re.IGNORECASE)
@@ -63,14 +64,12 @@ class AdversarialPostProcessor:
         return new_text
 
     @staticmethod
-    def pass_morphological_shifting(text: str) -> str:
-        """Convert high-frequency verbs to noun phrases to disrupt AI conciseness."""
+    def pass_de_jargonization(text: str) -> str:
+        """Unpack dense noun chunks into prepositional phrases (QuillBot style)."""
         new_text = text
-        for verb, noun_phrase in AdversarialPostProcessor.VERB_TO_NOUN.items():
-            pattern = re.compile(rf"\b{re.escape(verb)}\b", re.IGNORECASE)
-            # Apply with 70% probability to maintain academic flow
-            if random.random() < 0.7:
-                new_text = pattern.sub(noun_phrase, new_text)
+        for jargon, simple in AdversarialPostProcessor.NOUN_PHRASE_UNPACKER.items():
+            pattern = re.compile(rf"\b{re.escape(jargon)}\b", re.IGNORECASE)
+            new_text = pattern.sub(simple, new_text)
         return new_text
 
     @staticmethod
@@ -115,7 +114,7 @@ class AdversarialPostProcessor:
     def apply_all(cls, text: str) -> str:
         """Run the full adversarial post-processing pipeline."""
         text = cls.pass_phrase_replacement(text)
-        text = cls.pass_morphological_shifting(text)
+        text = cls.pass_de_jargonization(text)
         text = cls.pass_zwj_jitter(text)
         text = cls.pass_adversarial_punctuation(text)
         text = cls.pass_invisible_padding(text)
@@ -188,16 +187,15 @@ def process_humanization(text, intensity):
         for attempt in range(2):
             print(f"Worker: Starting LLM Refinement Stage (Attempt {attempt+1})...")
             
-            # Use the advanced academic evasion prompt
-            prompt = f"""Paraphrase the following technical text to read like a human-authored academic paper.
+            # Use the advanced QuillBot-style simplification prompt
+            prompt = f"""Rewrite the following technical text to read naturally and simply, as a human researcher would write it. 
 
-Instructions:
-1. Employ high structural burstiness: aggressively mix very short declarative sentences (4-8 words) with complex, multi-clause sentences (30-40 words). The rhythm must feel unpredictable.
-2. Retain all original facts, metrics, and technical jargon intact. Do NOT alter or paraphrase the following terms: {acronym_list}
-3. Use formal academic vocabulary. Avoid predictable AI transition phrases: "Furthermore", "In conclusion", "It is worth noting", "It is important to", "Delve", "Moreover" — replace these with less common academic connectives.
-4. Do not insert em-dashes mid-sentence, rhetorical framing ("— and this is key —"), or fake disfluencies. These are detectable patterns.
-5. Under no circumstances use casual language, metaphors, or address the reader directly.
-6. Do not start more than 2 consecutive sentences with the same grammatical structure (e.g. avoid three sentences starting with "The").
+CRITICAL INSTRUCTIONS:
+1. Lexical Simplification: Do NOT use a thesaurus. Avoid flowery, overly formal, or rare words (e.g., avoid "circumvent", "paradigm shift", "per annum", "demonstrate remarkable effectiveness"). Use simple, boring, everyday English equivalents (e.g., "avoid", "paradigm change", "per year", "are very successful").
+2. Structural Decompression: Do NOT write long, breathless, multi-clause run-on sentences. LLMs string together endless clauses using participles ("categorized as...", "hovering at..."). You must chop long thoughts into shorter, distinct sentences with hard periods.
+3. De-Jargonizing Noun Phrases: Unpack dense, clinical "noun chunks" into conversational prepositional phrases (e.g., change "infection incidence" to "the infection rate", or "given procedural complexity" to "depending on the complexity of the procedure").
+
+Retain all original facts, metrics, and technical jargon intact. Do NOT alter or paraphrase the following core technical terms: {acronym_list}
 
 Text: {final_text if attempt > 0 else amr_processed_text}"""
 
