@@ -121,7 +121,7 @@ def train():
     trainer = SFTTrainer(
         model=model,
         train_dataset=dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         args=sft_config,
         peft_config=peft_config,
     )

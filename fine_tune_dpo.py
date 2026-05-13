@@ -170,7 +170,7 @@ def train_dpo():
         ref_model=None,
         args=dpo_config,
         train_dataset=dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
     )
 
     # 8. Execute DPO
