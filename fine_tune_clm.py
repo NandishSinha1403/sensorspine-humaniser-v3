@@ -1,19 +1,34 @@
 import os
 import sys
+import types
 
-# MOCK WANDB COMPLETELY to bypass the TRL/Transformers import crash on Kaggle.
-# Kaggle's pre-installed protobuf/wandb combo is fundamentally broken right now.
-# By injecting a dummy module into sys.modules, is_wandb_available() will return True
-# but not crash when trying to access telemetry protobufs.
-class DummyWandb:
-    __version__ = "9.9.9"
-    def init(self, *args, **kwargs): pass
-    def log(self, *args, **kwargs): pass
-    def finish(self, *args, **kwargs): pass
-    class sdk:
+# --- HARD MOCK WANDB ---
+# Kaggle's system wandb/protobuf is broken. This mock satisfies all internal 
+# Python import checks (including __spec__) to prevent hard crashes.
+def mock_wandb():
+    m = types.ModuleType("wandb")
+    m.__version__ = "9.9.9"
+    m.__path__ = []
+    m.__file__ = "mock_wandb.py"
+    
+    class SDK:
         pass
+    m.sdk = SDK()
+    
+    def dummy(*args, **kwargs): return None
+    m.init = dummy
+    m.log = dummy
+    m.finish = dummy
+    m.login = dummy
+    
+    # Satisfy importlib / PEP 451
+    import importlib.machinery
+    m.__spec__ = importlib.machinery.ModuleSpec("wandb", None)
+    
+    sys.modules["wandb"] = m
 
-sys.modules['wandb'] = DummyWandb()
+mock_wandb()
+# -----------------------
 
 import torch
 from datasets import load_dataset, Dataset

@@ -1,16 +1,26 @@
 import os
 import sys
+import types
 
-# MOCK WANDB COMPLETELY to bypass the TRL/Transformers import crash on Kaggle.
-class DummyWandb:
-    __version__ = "9.9.9"
-    def init(self, *args, **kwargs): pass
-    def log(self, *args, **kwargs): pass
-    def finish(self, *args, **kwargs): pass
-    class sdk:
-        pass
+# --- HARD MOCK WANDB ---
+def mock_wandb():
+    m = types.ModuleType("wandb")
+    m.__version__ = "9.9.9"
+    m.__path__ = []
+    m.__file__ = "mock_wandb.py"
+    class SDK: pass
+    m.sdk = SDK()
+    def dummy(*args, **kwargs): return None
+    m.init = dummy
+    m.log = dummy
+    m.finish = dummy
+    m.login = dummy
+    import importlib.machinery
+    m.__spec__ = importlib.machinery.ModuleSpec("wandb", None)
+    sys.modules["wandb"] = m
 
-sys.modules['wandb'] = DummyWandb()
+mock_wandb()
+# -----------------------
 
 import torch
 from datasets import Dataset
