@@ -127,7 +127,7 @@ def train_dpo():
         model = PeftModel.from_pretrained(model, ADAPTER_PATH, is_trainable=True)
     else:
         print("Warning: Phase 3 adapter not found. Starting DPO from base model.")
-        # If no adapter, we need to wrap it in a new LoRA config
+        # If no adapter, the trainer will apply this configuration
         peft_config = LoraConfig(
             r=8,
             lora_alpha=16,
@@ -136,7 +136,6 @@ def train_dpo():
             bias="none",
             task_type="CAUSAL_LM",
         )
-        model = get_peft_model(model, peft_config)
 
     # 4. Load Detector Judge (Runs on CPU to save VRAM)
     judge = DiagnosticJudge(device="cpu")

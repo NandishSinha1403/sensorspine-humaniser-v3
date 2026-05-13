@@ -98,7 +98,8 @@ def train():
         bias="none",
         task_type="CAUSAL_LM",
     )
-    model = get_peft_model(model, peft_config)
+    # NOTE: Do NOT call get_peft_model(model, peft_config) manually. 
+    # SFTTrainer handles this internally.
 
     # 6. SFTConfig (The modern way to pass arguments to SFTTrainer)
     sft_config = SFTConfig(
