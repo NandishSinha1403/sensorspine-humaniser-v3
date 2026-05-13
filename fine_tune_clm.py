@@ -104,7 +104,7 @@ def train():
     sft_config = SFTConfig(
         output_dir=OUTPUT_DIR,
         dataset_text_field="text",
-        max_seq_length=BLOCK_SIZE,
+        max_length=BLOCK_SIZE,
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
         learning_rate=2e-4,
