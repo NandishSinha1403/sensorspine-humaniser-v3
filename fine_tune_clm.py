@@ -1,12 +1,19 @@
 import os
-import subprocess
+import sys
 
-# Fix for Kaggle/Colab TRL/Transformers import error related to WandB
-try:
-    import wandb
-except ImportError:
-    pass
-subprocess.run(["pip", "install", "--upgrade", "wandb"], check=True)
+# MOCK WANDB COMPLETELY to bypass the TRL/Transformers import crash on Kaggle.
+# Kaggle's pre-installed protobuf/wandb combo is fundamentally broken right now.
+# By injecting a dummy module into sys.modules, is_wandb_available() will return True
+# but not crash when trying to access telemetry protobufs.
+class DummyWandb:
+    __version__ = "9.9.9"
+    def init(self, *args, **kwargs): pass
+    def log(self, *args, **kwargs): pass
+    def finish(self, *args, **kwargs): pass
+    class sdk:
+        pass
+
+sys.modules['wandb'] = DummyWandb()
 
 import torch
 from datasets import load_dataset, Dataset

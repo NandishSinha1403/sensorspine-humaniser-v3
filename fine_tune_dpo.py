@@ -1,4 +1,17 @@
 import os
+import sys
+
+# MOCK WANDB COMPLETELY to bypass the TRL/Transformers import crash on Kaggle.
+class DummyWandb:
+    __version__ = "9.9.9"
+    def init(self, *args, **kwargs): pass
+    def log(self, *args, **kwargs): pass
+    def finish(self, *args, **kwargs): pass
+    class sdk:
+        pass
+
+sys.modules['wandb'] = DummyWandb()
+
 import torch
 from datasets import Dataset
 from transformers import (
