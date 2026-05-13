@@ -1,4 +1,13 @@
 import os
+import subprocess
+
+# Fix for Kaggle/Colab TRL/Transformers import error related to WandB
+try:
+    import wandb
+except ImportError:
+    pass
+subprocess.run(["pip", "install", "--upgrade", "wandb"], check=True)
+
 import torch
 from datasets import load_dataset, Dataset
 from transformers import (
