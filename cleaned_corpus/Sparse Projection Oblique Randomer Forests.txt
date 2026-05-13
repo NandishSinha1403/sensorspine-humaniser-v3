@@ -1,0 +1,812 @@
+Sparse Projection Oblique Randomer Forests
+Tyler M. Tomita∗, James Browne†, Cencheng Shen‡, Jaewon Chung§, Jesse L. Patsolic§,
+Benjamin Falk§, Jason Yim¶, Carey E. Priebe(cid:107), Randal Burns†, Mauro Maggioni(cid:107), and Joshua T.
+Vogelstein#
+Decisionforests,includingRandomForestsandGradientBoostingTrees,haverecentlydemon-
+strated state-of-the-art performance in a variety of machine learning settings. Decision forests
+are typically ensembles of axis-aligned decision trees; that is, trees that split only along fea-
+ture dimensions. In contrast, many recent extensions to decision forests are based on axis-
+obliquesplits. Unfortunately,theseextensionsforfeitoneormoreofthefavorablepropertiesof
+decision forests based on axis-aligned splits, such as robustness to many noise dimensions,
+interpretability, or computational efficiency. We introduce yet another decision forest, called
+“SparseProjectionObliqueRandomerForests”( ). SPORFusesverysparserandompro-
+jections, i.e., linear combinations of a small subset of features. significantly improves
+accuracyoverexistingstate-of-the-artalgorithmsonastandardbenchmarksuiteforclassifica-
+tionwith> 100problemsofvaryingdimension,samplesize,andnumberofclasses. Toillustrate
+how addresses the limitations of both axis-aligned and existing oblique decision forest
+methods,weconductextensivesimulatedexperiments. typicallyyieldsimprovedperfor-
+mance over existing decision forests, while mitigating computational efficiency and scalability
+andmaintaininginterpretability. caneasilybeincorporatedintootherensemblemethods
+suchasboostingtoobtainpotentiallysimilargains.
+1 Introduction Overthelasttwodecades,ensemblemethodshaverisentoprominenceasthestate-
+of-the-artforgeneral-purposemachinelearningtasks. Oneofthemostpopularandconsistentlystrong
+ensemblemethodsisRandomForests( ),whichusesdecisiontreesasthebaselearners[1–3]. More
+recently, another tree ensemble method known as gradient boosted decision trees (GBTs) has seen a
+spike in popularity, largely due to the release of a fast and scalable cross-platform implementation,
+[4]. GBTs have been a key component of many Kaggle competition-winning solutions, and
+waspartoftheNetflixPrizewinningsolution[4].
+RF XGBoost
+and areensemblesof“axis-aligned”decisiontrees. Withsuchdecisiontrees,thefea-
+turespaceisrecursivelysplitalongdirectionsparalleltothecoordinateaxes. Thus,whenclassesseem
+inseparable along any single dimension, axis-aligned splits require very deep trees with complicated
+step-like decision boundaries, leading to increased variance and over-fitting. To address this, Breiman
+alsoproposedandcharacterizedForest-RC( ),whichsplitsonlinearcombinationsofcoordinates
+rather than individual coordinates [5]. These so-called “oblique” ensembles include the axis-aligned
+ensembles as a special case, and therefore have an increased expressive capacity, conferring po-
+tentially better learning properties. Perhaps because of this appeal, numerous other oblique decision
+forest methods have been proposed, including the Random Rotation Random Forest ( ) [6], and
+the Canonical Correlation Forest ( ) [7]. Unfortunately, these methods forfeit many of the desirable
+properties that axis-aligned trees possesses, such as computational efficiency, ease of tuning, insen-
+sitivity to a large proportion of irrelevant (noise) inputs, and interpretability. Furthermore, while these
+∗DepartmentofPsychologicalandBrainSciences,JohnsHopkinsUniversity(ttomita@jhu.edu)
+†DepartmentofComputerScience,JohnsHopkinsUniversity
+‡DepartmentofAppliedEconomicsandStatistics,UniversityofDelaware
+§CenterforImagingScience,JohnsHopkinsUniversity
+¶DeepMind,London,UK
+(cid:107)DepartmentofAppliedMathematicsandStatistics,JohnsHopkinsUniversity
+#Corresponding author; Department of Biomedical Engineering, Institute for Computational Medicine, Kavli Neuro-
+6v01430.6051:viXra
+methods perform much better than axis-aligned ensembles on some problems, they perform much
+worse than axis-aligned ensembles on some problems for which axis-aligned splits would in fact be
+highly informative. Therefore, there is a need for a method that combines the expressive capacity of
+obliqueensembleswiththebenefitsofaxis-alignedensembles.
+We propose Sparse Projection Oblique Randomer Forests ( ) for learning an ensemble of
+oblique, interpretable, and computationally efficient decision trees. At each node of each tree,
+searchesforsplitsoverasampleofverysparserandomprojections[8],ratherthanaxis-alignedsplits.
+Very sparse random projections preserve many of the desirable properties of axis-aligned decision
+trees,whilemitigatingtheirissues.
+Insection3.1,wedelineateasetofdesirablepropertiesofadecisionforestalgorithm,anddescribe
+how current axis-aligned and oblique decision forest algorithms each fail to possess at least one of
+these. This motivates a flavor of Sparse Random Projections for randomly sampling candidate split
+directions. In Section 4, we show on simulated data settings how our method possesses all of these
+desirable properties, while other methods do not. In Section 5 we find that, in practice, our method
+tendstobemoreaccuratethanRFandexistingmethodsonmanyrealdatasets. Last,inSection6we
+demonstratehowaremethodiscomputationallyexpedientandscalable.
+//neurodata.io/sporf/inbothRandPython. OurRpackageisavailableontheComprehensiveRArchive
+2 Background&RelatedWork
+2.1 RandomForests Theoriginalrandomforest( )procedurepopularizedbyLeoBreimanisone
+of the most commonly employed classification learning algorithms [5]. proceeds by building T
+decision trees via a series of recursive binary splits of the training data. The nodes in a tree are
+split into two daughter nodes by maximizing some notion of information gain, which typically reflects
+the reduction in class impurity of the resulting partitions. A common measure of information gain in
+decision trees is the decrease in Gini impurity, I(S), for a set of observations S. The Gini impurity for
+classificationisdefinedasI(S) = (cid:80)K f (1−f ),wheref = 1 (cid:80) I[y = c ].
+k=1 k k k |S| i∈S i k
+More concretely, let θ = (j,τ), where j is an index selecting a dimension and τ is a splitting
+threshold. Furthermore,letSL = {i : x (j) ≤ τ,∀i ∈ S}andSR = {i : x (j) > τ,∀i ∈ S}bethesubsets
+of S to the left and right of the splitting threshold, respectively. Here, x denotes the value of the jth
+featurefortheithobservation. Letn ,n ,andn denotethenumberofpointsintheparent,left,and
+rightchildnodes,repsectively. Asplitismadeona"best"θ∗ = (j∗,τ∗)viathefollowingoptimization:
+This optimization is carried out by exhaustively searching for the best split threshold τ∗ over a random
+subset of the features. Specifically, a random subset of the p features is sampled. For each feature
+in this subset, the observations are sorted from least to greatest, and the split objective function is
+evaluatedateachmidwaypointbetweenadjacentpairsofobservations.
+Nodesarerecursivelysplituntilastoppingcriteriaisreached. Commonly,therecursionstopswhen
+eitheramaximumtreedepthisreached,aminimumnumberofobservationsinanodeisreached,ora
+nodeiscompletelypurewithrespecttoclasslabel. Theresultofthetreeinductionalgorithmisasetof
+splitnodesandleafnodes. TheleafnodesaredisjointpartitionsofthefeaturespaceX,andeachone
+is associated with a local prediction function. Let l be the mth leaf node of an arbitrary classification
+tree,andletS(l ) = {i : x ∈ l ∀i ∈ [n]}bethesubsetofthetrainingdatacontainedinl . Thelocal
+leafpredictionis:
+h(l ) = argmax I[y = c ]
+Atreemakesapredictionforanewobservationxbypassingtheobservationdownthetreeaccording
+tothesplitfunctionsassociatedwitheachsplitnodeuntilaterminalleafnodeisreached. Lettingm(x)
+be the index of the leaf node that x falls into, the tree prediction is h(l ). Let y(t) be the prediction
+madebythetth tree. Thenthepredictionofthe RF isthepluralityvoteofthepredictionsmadebyeach
+tree:
+y = argmax I[y(t) = c ]
+(cid:98) (cid:98) k
+Breiman [5] proved that the misclassification rate of a tree ensemble is bounded above by a function
+inversely proportional to the strength and diversity of its trees. decorrelates (diversifies) the trees
+via two mechanisms: (1) constructing each tree on a random bootstrap sample of the original training
+data, and (2) restricting the optimization of the splitting dimension j over a random subset of the to-
+tal p dimensions. The combination of these two randomizing effects typically leads to generalization
+performancethatismuchbetterthanthatofanyindividualtree[5].
+2.2 ObliqueExtensionstoRandomForest Varioustacticshavebeenemployedtofurtherpromote
+thestrengthanddiversityoftrees. Onefeatureof thatlimitsbothstrengthanddiversityisthatsplits
+mustbealongthecoordinateaxesofthefeaturespace. Therefore,onemainfocusforimproving is
+tosomehowrelaxthisrestriction. Theresultingforestsaresometimesreferredtoas“oblique”decision
+forests, since the splits can be along directions oblique to the coordinate axes. This type of tree was
+originally developed for computer graphics applications, and is also known as binary space partition-
+ing (BSP) trees. Statistical consistency of BSP trees has been proven for a simplified data-agnostic
+BSP tree procedure [9]. Various approaches have been proposed for constructing oblique forests.
+Breiman[5]proposedtheForest-RC( )algorithm,whichconstructsdunivariateprojections,each
+projection a linear combination of L randomly chosen dimensions. The weights of each projection are
+independently sampled uniformly over the interval [−1,1]. Strangely, Breiman’s never garnered
+thepopularitythat hasacquired;bothBreiman[5]andTomitaetal.[10]indicatethat tendsto
+empirically outperform on a wide variety of datasets. Heath et al. [11] sample a randomly oriented
+hyperplane at each split node, then iteratively perturb the orientation of the hyperplane to achieve a
+good split. Rodriguez et al. [12] attempted to find discriminative split directions via PCA. Menze et al.
+[13] perform supervised learning of linear discriminative models at each node. Blaser and Fryzlewicz
+[6]proposedtheRandomRotationRandomForest( )method,whichuniformlyrandomlyrotates
+the data prior to inducing each tree. Trees are then learned via the typical axis-aligned procedure on
+the rotated data. Rainforth and Wood [7]’s Canonical Correlation Forests ( ) employ canonical cor-
+relationanalysisateachsplitnodeinordertodirectlycomputesplitdirectionsthatmaximallycorrelate
+with the class labels. Lee et al. [14]’s Random Projection Forests (RPFs) generates a discriminative
+image filter bank for head-pose estimation at each split node and compresses the responses using
+random projections. The key thing to note is that all of these aforementioned oblique methods utilize
+someflavorofrandomprojections,whichwebrieflyintroducenext.
+2.3 Random Projections Given a data matrix X ∈ Rn×p, one can construct a random projection
+matrixA ∈ Rp×d andmultiplyitbyXtoobtain:
+X(cid:101) = XA ∈ Rn×d, d (cid:28) min(n,p).
+Iftherandommatrixentriesa arei.i.d. withzeromeanandconstantvariance,thenthemuchsmaller
+matrixX(cid:101) preservesallpairwisedistancesofXwithsmalldistortionandhighprobability1.
+1Inclassification,preservationofpairwiseinterpointdistancesisnotimportant. Rather,minimizingwithin-classdistances
+whilemaximizingbetween-classdistancesiswhatisimportant.However,weintroducethetopicbecauseofitsrelevanceand
+useinmanydecisiontreealgorithms,asisdiscussedinSection3.1.
+Due to theoretical guarantees, random projections are commonly employed as a dimensionality
+reduction tool in machine learning applications [15–19]. Different probability distributions over the en-
+tries lead to different average errors and error tail bounds. Li et al. [8] demonstrates that very sparse
+randomprojections,inwhichalargefractionofentriesinAarezero,canmaintainhighaccuracyand
+significantly speed up the matrix multiplication by a factor of p or more. Specifically, a very sparse
+random projection matrix is constructed by sampling entries a with the following probability distribu-
+tion:
++1 withprob. 1
+a ij = 0 withprob. 1− 1 s , typicallys (cid:29) 3
+−1 withprob. 1
+Dasgupta and Freund [20] proposed Random Projection Trees, in which they sampled dense ran-
+dom projections in an unsupervised fashion to approximate low dimensional manifolds, and later for
+vector quantization [21] and nearest neighbor search [22]. Our work is inspired by this work, but in a
+supervisedsetting.
+2.4 Gradient Boosted Trees Gradient boosted trees (GBTs) are another tree ensemble method
+commonly used for regression and classification tasks. Unlike in , GBTs are learned in an itera-
+tivestage-wisemannerbydirectlyminimizingacostfunctionviagradientdescent[23,24]. Despitethe
+obviousdifferencesinthelearningproceduresbetweenGBTand ,theytendtoperformcomparably.
+AstudybyWyneretal.[25]arguesthat andGBTarebothsuccessfulforthesamereason—namely
+bothareweightedensemblesofinterpolatingclassifiersthatlearnlocaldecisionrules.
+GBTs have recently seen a marked surge in popularity, and were used as components in many
+recent Kaggle competitions. This is in part due to their tendency to be accurate over a wide range of
+settings. Theirpopularityandsuccesscanalsobeattributedtotherecentreleaseof [4]and
+[26], both extremely fast and scalable open-source software implementations. Due to the
+success of GBTs in many data science applications, we compare the implementation to our
+methods.
+3.1 SparseProjectionObliqueRandomerForests Extensionsof areoftenfocusedonchanging
+theprocedureforfindingsuitablesplits,suchasemployingasupervisedlinearprocedureorsearching
+over a set of randomly oriented hyperplanes. Such extensions, along with , simply differ from each
+other by defining different random projection distributions from which candidate split directions are
+sampled. Thus,theyaredifferentspecialcasesofageneralrandomprojectionforest.
+Specifically, let X ∈ Rn×p be the observed feature matrix of n samples at a split node, each p-
+dimensional. Randomly sample a matrix A ∈ Rp×d from distribution f , possibly in a data-dependent
+or supervised fashion. This matrix is used to randomly project the feature matrix, yielding X(cid:101) = XA ∈
+Rn×d, where d is the dimensionality of the projected space. The search for the best split is then
+performed over the dimensions in the projected space. As an example, in , A is a random matrix in
+which each of the d columns has only one nonzero entry, and every column is required to be unique.
+Searchingforthebestsplitovereachdimensioninthisprojectedsubspaceamountstosearchingover
+arandomsubsetoftheoriginalfeatures.
+While the best specification of a distribution over random projections (if one exists) is dataset-
+dependent, it is unreasonable and/or undesirable to try more than a handful of different cases. There-
+fore, for general purpose classification we advocate for a default projection distribution based on the
+followingdesiderata:
+• RandomSearchforSplits. Theuseofguided(supervised)linearsearchproceduresforcomputing
+split directions, such as linear discriminant analysis (LDA), canonical correlation analysis (CCA), or
+logistic regression (LR), can result in failure to learn good split directions on certain classification
+problems (for example, the XOR problem). On the other hand, searching over a random set of
+split directions can identify good splits in many of such cases. Furthermore, supervised procedures
+run the risk of being overly greedy and reduce tree diversity, causing the model to overfit noise
+(we demonstrate this in high-dimensional settings in Section 5.3). This is akin to why in it is
+typically better to evaluate a random subset of features to split on, rather than exhaustively evaluate
+allfeatures. Lastly,supervisedproceduresbecomecostlyifperformedateverysplitnode.
+• Flexible Sparsity. s search for splits over fully sparse, or axis-aligned, projections. Thus, it
+may perform poorly when no single feature is informative. On the other hand, methods that search
+for splits within a fully dense randomly projected space, such as s, perform poorly in high-
+dimensional settings for which the signal is contained in a small subset of the features. This is
+because the large space renders the probability of sampling discriminative random projections very
+small(wereferthereadertopages49-50ofVershynin[27]forrelevanttheoryofrandomprojections).
+However,inducinganappropriateamountofsparsityintherandomprojectionsincreasestheproba-
+bilityofsamplingdiscriminativeprojectionsinsuchcases. Tomitaetal.[10]demonstratedthat ,
+whichallowscontroloverthesparsityofrandomprojections,empiricallyperformedmuchbetterthan
+• EaseofTuning. stendtoworkfairlywellout-of-the-box,duetotheirrelativeinsensitivitytohyper-
+parametersettings[28]. Unfortunately,existingobliqueforestsintroduceadditionalhyperparameters
+towhichtheyaresensitiveto.
+• Data Insight. Often times the goal is not simply to produce accurate predictions, but to gain insight
+into a process or phenomenon being studied. While models can have complicated decision
+rules, Gini importance [29] has been proposed as a computationally efficient way to assess the
+relative contribution (importance) of each feature to the learned model. As is explained in Section
+4.5,existingobliqueforestsdonotlendthemselveswelltocomputationofGiniimportance.
+• Expediency and Scalability. Existing oblique forest algorithms typically involve expensive compu-
+tationstoidentifyandselectsplits,renderingthemlessspaceandtimeefficientthan ,and/orlack
+parallelizedimplementations.
+Withtheseconsiderationsinmind,weproposeanewdecisiontreeensemblemethodcalledSparse
+Projection Oblique Randomer Forests ( ). Our proposed method searches for splits over sparse
+randomprojections[8]. Ratherthansamplingdnon-zeroelementsofAandenforcingthateachcolumn
+gets a single non-zero number (without replacement), as does, we relax these constraints and
+sample(cid:100)λpd(cid:101)non-zeronumbersfrom{−1,+1}withequalprobabilities,whereλ ∈ (0,1]isthedensity
+(fraction of nonzeros) of A and (cid:100)·(cid:101) is the ceiling function rounding up to the nearest integer.2 These
+nonzeros are then distributed uniformly at random in A. See Algorithms 1 and 2 for details on how to
+growa decisiontree.
+addressestheallofthedesideratalistedabove. Theuseofsparserandomprojectionswith
+control over the sparsity via λ addresses the first two. Additionally, λ is the only new hyperparameter
+to tune relative to . Breiman’s has an analogous hyperparameter L, which fixes the number
+of variables in every linear combination. However, we show later that is less sensitive to the
+choice in λ than is to the choice in L. By keeping the random projections sparse with only two
+discreteweightingsof±1,Giniimportanceofprojectionscanbecomputedinastraightforwardfashion.
+Last, sparse random projections are cheap to compute, which allows us to maintain computational
+expediencyandscalabilitysimilartothatof .
+3.2 Training and Hyperparameter Tuning Unless otherwise stated, model training and tuning for
+XGBoost CCF
+all algorithms except for and is performed in the following way. Each algorithm uses
+500 trees, which was empirically determined to be sufficient for convergence of out-of-bag error in for
+all methods. The split objective is to maximize the reduction in Gini impurity. In all methods, classi-
+fication trees are fully grown unpruned (i.e. nodes are split until pure). While fully grown trees often
+causeasingletreetooverfit,averagingovermanyuncorrelatedtreestendstoalleviateoverfitting. Are-
+2Whileλcanrangefromzerotoone,weonlytryvaluesfrom1/pupto5/pinourexperiments.
+centstudysuggeststhat isrelativelyinsensitivetoitshyperparameterscomparedtoothermachine
+learning algorithms. Furthermore, tuning tree depth is shown to be much less critical than tuning the
+number of variables sampled at each split node [28]. Two hyperparameters are tuned via minimization
+of out-of-bag error. The first parameter tuned is d, the number of candidate split directions evaluated
+at each split node. Each algorithm is trained for d = p1/4, p1/2, p3/4, and p. Additionally, Sporf and
+F-RC are trained for d = p2. For RF , d is restricted to be no greater than p by definition. The second
+hyperparameter tuned is λ, the average sparsity of univariate projections sampled at each split node.
+Sporf F-RC RF
+The values optimized over for and are {1/p,...,5/p}. Note, for λ is fixed to 1/p by
+definition,sincetheunivariateprojectionsareconstrainedtobealongoneofthecoordinateaxesofthe
+data.
+For ,thenumberoftreesis500,treesarefullygrown,andthesplitobjectiveistomaximizethe
+reduction in class entropy (this is the default objective found to perform best by the authors). The only
+hyperparametertunedisthenumberoffeaturessubsampledpriortoperformingCCA.Weoptimizethis
+hyperparameterovertheset{p1/4,p1/2,p3/4,p}. CCF usesadifferentobservationsubsamplingproce-
+dure called projection boostrapping instead of the standard bootstrap procedure. Briefly, in projection
+bootstrapping, all trees are trained on the full set of training observations. Bootstrapping is instead
+performed at the node level when computing the canonical correlation projections at each node. Once
+the projections are computed, the projection and corresponding split threshold that maximizes the re-
+duction in Gini impurity is found using all of the node observations (i.e. not just the bootstrapped node
+observations). Since there are no out-of-bag samples for each tree, we base the selection of the best
+valueonminimizationofafive-foldcross-validationerrorrateinstead.
+Hyperparameters in are tuned via grid search using the R caret package (see Appendix
+Afordetails).
+4 Simulated Data Empirical Performance In this section we demonstrate, using synthetic classifi-
+Sporf Sporf
+cation problems, that addresses the statistical issues listed above. In a sense, bridges
+thegapbetween andexistingobliquemethods.
+4.1 and Other Oblique Forests are “More Consistent” Than Typically, a proposed
+oblique forest method is motivated through purely empirical examples. Moreover, the geometric in-
+tuition behind the proposed method is rarely clearly provided. Here we take a step towards a more
+theoreticalperspectiveontheadvantageofobliquesplitsintreeensembles.
+Although we do not yet have a proof of the consistency of or other oblique forests, we do
+propose that they are ”more” consistent than Breiman’s original . Biau et al. [30] proposed a binary
+classification problem for which Breiman’s is inconsistent. The joint distribution of (X,Y) is as
+follows: X ∈ R2 has a uniform distribution on [0,1]×[0,1]∪[1,2]×[1,2]∪[2,3]×[2,3]. The class
+label Y is a deterministic function of X, that is f(X) ∈ {0,1}. The [0,1] × [0,1] square is divided
+intocountablyinfiniteverticalstripes,and[2,3]×[2,3]squareissimilarlydividedintocountablyinfinite
+horizontalstripes. Inbothsquares,thestripeswithf(X) = 0andf(X) = 1alternate. The[1,2]×[1,2]
+squareisa2×2checkerboard. Figure1(A)showsaschematicillustration(becausewecannotshow
+countably infinite rows or columns). On this problem, Biau et al. [30] show that cannot achieve an
+error lower than 1/6. This is because will always choose to split either in the lower left square or
+top right square and never in the center square. On the other hand, Figure 1(B) shows that ,
+, and approach perfect classification. This is due to the fact that, although it is also greedy
+(i.e. optimizes locally rather than globally), it will choose with some probability oblique splits of the
+middlesquaretoenablelowererror. Therefore, andotherobliquemethodsareempiricallymore
+consistentonatleastsomesettingsonwhich isneitherempiricallyortheoreticallyconsistent.
+To our knowledge, this is the first result comparing the statistical consistency of to an oblique
+forest method. More generally, this result suggests that relaxing the constraint of axis-alignment of
+splitsmayallowobliqueforeststobeconsistentacrossonawidersetofclassificationproblems. Italso
+highlightswhy,fromatheoreticalstandpoint,obliqueforestsareadvantageous.
+0.1 1 5 10
+n (in thousands)
+Figure1: Classificationperformanceontheconsistency(p = 2)problemasafunctionofthenumberoftraining
+samples. The consistency problem is designed such that has a theoretical lower bound of error of 1/6. (A)
+Thejointdistributionof(X,Y). X isuniformlydistributedinthethreeunitsquares. Thelowerleftandupperright
+squares have countably infinite stripes (a finite number of stripes are shown), and the center square is a 2×2
+checkerboard. The white areas represent f(X) = 0 and gray areas represent f(X) = 1. (B) Error rate as a
+functionofn. Thedashedlinerepresentsthelowerboundoferrorfor RF ,whichis1/6. Sporf andotheroblique
+methodsachieveanerrorratedramaticallylowerthanthelowerboundfor .
+4.2 Simulated datasets In the sections that follow, we perform a variety of experiments on three
+carefully constructed simulated classification problems, refered to as Sparse Parity, Orthant, and
+Trunk. These constructions were chosen to highlight various properties of different algorithms and
+gaininsightintotheirbehavior.
+Sparse Parity is a multivariate generalization of the noisy XOR problem. It is a p-dimensional
+two-class problem in which the class label Y is 0 if the number of dimensions having positive values
+amongst the first p∗ < p dimensions is even and Y = 1 otherwise. Thus, only the first p∗ dimensions
+carryinformationabouttheclasslabel,andnosubsetsofdimensionscontainsanyinformation. Specif-
+ically, let X = (X ,...,X ) be a p-dimensional feature vector, where each X ,...,X ∼ U(−1,1).
+Furthermore,letQ = (cid:80)p∗ I(X > 0),wherep∗ < pandI(X > 0)istheindicatorthatthejth feature
+hasavaluegreaterthanzero. Asample’sclasslabelY isequaltotheparityofQ. Thatis,Y = odd(Q),
+where odd returns 1 if its argument is odd, and 0 otherwise. The Bayes optimal decision boundary for
+this problem is a union of hyperplanes aligned along the first p∗ dimensions. For the experiments pre-
+sentedinthefollowingsections,p∗ = 3andp = 20. Figure2(A,B)showcross-sectionsofthefirsttwo
+dimensions taken at two different locations along the third dimension. This setting is designed to be
+relativelyeasyfor ,butrelativelydifficultfor .
+Orthant is a multi-class problem in which the class label is determined by the orthant in which a
+datapointresides. AnorthantinRp isageneralizationofaquadrantinR2. Inotherwords,eachorthant
+is a subset of Rp defined by constraining each of the p coordinates to be positive or negative. For
+instance,inR2,therearefoursuchsubsets: X = (X ,X )caneitherbein1)R+×R+,2)R−×R+,
+3)R−×R−,or4)R+×R−. Notethatthenumberoforthantsinpdimensionsis2p. Akeycharacteristic
+of this problem is that the individual dimensions are strongly and equally informative. Specifically for
+ourexperiments,wesampleeachX ,...,X ∼ U(−1,1). Associateauniqueintegerindexfrom1to
+2p with each orthant, and let O(X) be the index of the orthant in which X resides. The class label is
+Y = O(X). Thus,thereare2p classes. TheBayesoptimaldecisionboundaryinthissettingisaunion
+of hyperplanes aligned along each of the p dimensions. We set p = 6 in the following experiments.
+Figure 2 (D,E) show cross-sections of the first two dimensions taken at two different locations along
+the third dimension. This setting is designed to be relatively easy for because all optimal splits are
+axis-aligned.
+Trunk is a balanced, two-class problem in which each class is distributed as a p-dimensional mul-
+tivariate Gaussian with identity covariance matrices [31]. Every dimension is informative, but each
+subsequent dimension is less informative than the last. The class 1 mean is µ 1 = (1, √1 2 , √1 3 ,..., √ 1 p ),
+and µ = −µ . The Bayes optimal decision boundary is the hyperplane (µ −µ )TX = 0. We set
+p = 10inthefollowingexperiments.
+4.3 CombinestheBestofExistingAxis-AlignedandAxis-ObliqueMethods Wecompare
+RF Sporf F-RC CCF
+errorratesof , , ,and onthesparseparityandorthantproblems. Trainingandtuning
+areperformedasdescribedinSection3.2. Errorratesareestimatedbytakingarandomsampleofsize
+n,trainingtheclassifiers,andcomputingthefractionmisclassifiedinatestsetof10,000samples. This
+is repeated ten times for each value of n. The reported error rate is the mean over the ten repeated
+experiments.
+performsaswellasorbetterthantheotheralgorithmsonboththesparseparity(Figure2C)
+andorthantproblems(Figure2F). performsrelativelypoorlyonthesparseparityproblem. Although
+the optimal decision boundary is a union of axis-aligned hyperplanes, each dimension is completely
+uninformativeonitsown. Sinceaxis-alignedpartitionsarechosenoneatatimeinagreedyfashion,the
+trees in struggle to learn the correct partitioning. On the other hand, oblique splits are informative,
+Sporf F-RC F-RC
+which substantially improves the generalizability of and . While performs well on
+the sparse parity problem, it performs much worse than and on the orthant problem. On
+the orthant problem, in which is is designed to do exceptionally well, performs just as well.
+performs poorly on both problems, which may be because CCA is not optimal for the particular
+data distributions. For instance, in the sparse parity problem, the projection found by CCA at the first
+node is approximately the difference in class-conditional means, which is zero. Furthermore, only
+evaluates d = min(l,C − 1) projections at each split node, where l is the number of dimensions
+subsampledandC isthenumberofclasses. Ontheotherhand, evaluatesdrandomprojections,
+anddcouldbeaslargeas3p (eachofthepelementscanbeeither0or±1. Overall, Sporf istheonly
+methodofthefourthatperformsrelativelywellonallofthesimulateddatasettings.
+4.4 is Robust to Hyperparameter Selection One key difference between the random pro-
+Sporf F-RC F-RC
+jection distribution of and is that requires that a hyperparameter be specified to fix
+the sparsity of the sampled univariate projections (i.e., individual linear combinations). Breiman de-
+noted this hyperparameter as L. on the other hand, requires that sparsity be specified on the
+entire random matrix A, and hence, only an average sparsity on the univariate projections (details are
+in Section 3.1). In other words, induces a probability distribution with positive variance on the
+sparsityofunivariateprojections,whereasin thatdistributionisapointmass. IftheBayesoptimal
+decision boundary is locally sparse, mis-specification of the hyperparameter controlling the sparsity of
+F-RC Sporf
+Amaybemoredetrimentalto than . Therefore,weexaminethesensitivityofclassification
+Sporf F-RC
+performanceof and tothesparsityhyperparameterλonthesimulateddatasetsdescribed
+Sporf F-RC
+previously. For , λ is defined as in Section 3.1. For , we note that λ = L/p (i.e. density of
+a univariate projection is the number of features to combine, divided by the total number of features).
+For each of λ ∈ {2,..., 5}, the best performance for each algorithm is selected with respect to the
+hyperparameterbasedonminimumout-of-bagerror. Errorrateonthetestsetiscomputedforeachof
+the four hyperparameter values for the two algorithms. Figure 3 shows the dependence of error rates
+Sporf F-RC
+of and on λ for the Sparse Parity (n = 5,000) and Orthant (n = 400) settings. The n =
+F-RC Sporf
+5,000settingforSparseParitywaschosenbecauseboth and performwellabovechance
+(see Figure 2C). The n = 400 setting for Orthant was chosen for the same reason and also because
+it displays the largest difference in classification performance in Figure 2F. In both settings, is
+morerobusttothechoiceofsparsitylevelthan .
+4.5 Learns Important Features For many data science applications, understanding which
+features are important is just as critical as finding an algorithm with excellent predictive performance.
+One of the reasons is so popular is that it can learn good predictive models that simultaneously
+lend themselves to extracting suitable feature importance measures. One such measure is the mean
+decreaseofGiniimportance(hereaftercalledGiniimportance)[9]. Thismeasureofimportanceispop-
+l l l l l l ll ll l l l ll l l l l l l ll l l l l l l l l l l l ll l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l ll l l ll l l l l l l l l ll l l l l l l l l l l l l l l l l l l l ll l l l l l l l l l l l l l l l l l l l l l l ll l l l l ll l l l l ll l l l ll l l l l l l l l l l lll l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l
+esrapS 1 0 −1
+X ˛ - 1, 0 (B)
+− 0 1 1 l l l l l l l l l l l l l l ll l l l l l l l l l l l l ll l l l l l l l l l l l l l l l l l l l l l l l ll l ll l l l l l l l l l l l l l l l l ll l l l l l l l l ll l l l l ll l l l ll l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l ll l l l ll l l l l ll l l l l l l l l l l l l l l l l l l l l l l l l ll l l l l l l l l l l l ll l l l l l l l l l l ll l l l l l l l l l
+l l l l l l l l l l ll l l l l l ll l l l l l l l l l l l l l l l l l l l l l l l l l l ll l l l l l l l l l l l l ll ll l l l l l l l l l l l l l ll l l l l l l ll l l l l l l ll l l l l l l l l l ll l l ll l l l l l l l ll l l l l l l ll l l l l l l l l l ll l l l l l ll l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l ll l l l l l ll l l l l l l ll l l l l l l l l l tnahtrO 1 0 −1
+X ˛ - 1, 0 (E)
+− 0 1 1 ll l ll l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l l ll l l l ll l l l l ll l l l l l l l l l ll l l l l l l l l l l ll l l l l l ll l l l ll l l l ll l l l ll l l l l l l l l l l l l l l ll ll l ll l l ll l l l ll l l ll l l l l l ll l l l l l ll l l ll ll l l l l ll l ll l l l l l l l l l l l l l l l ll l l l l ll l l l l l l l l l ll l ll l
+0.40 0.20 0.00
+n (in thousands)
+etaR rorrE
+0.15 0.10 0.05 0.00
+n (in thousands)
+etaR rorrE
+Figure 2: Classification performance on the sparse parity (p = 20) and orthant (p = 6) problems for various
+numbersoftrainingsamples. Inbothcase,wesampleX ,...,X i ∼ id U(−1,1). F-RC hasbeenknowntoperform
+much better than on the sparse parity problem [10]. The orthant problem is designed for to perform well
+becausetheoptimalsplitsareaxis-aligned. (A)Across-sectionofthefirsttwodimensionsofsparseparitywhen
+X ∈ (−1,0). Only the first three dimensions are informative w.r.t. class label. (B) The same as (A), except
+that the cross-section is taken over X ∈ (0,1). (C) Error rate plotted against the number of training samples
+forsparseparity. Errorrateistheaverageovertenrepeatedexperiments. Errorbarsindicatethestandarderror
+ofthemean. (D)-(F)Sameas(A)-(C)exceptfortheorthantproblem. istheonlymethodofthefourthat
+performswellacrossallsimulateddatasettings.
+2/p 3/p 4/p 5/p
+1 − Sparsity
+Sparse Parity (B)
+2/p 3/p 4/p 5/p
+1 − Sparsity
+F−RC SPORF
+Figure 3: Dependence of error rate on the hyperparameter λ, which controls the average density (1 - sparsity)
+of projections for two different simulation settings. (A) Error rate as a function of λ on sparse parity (n = 5000,
+p = 20). (B) The same as (A) except on orthant (n = 400, p = 6). In both cases, Sporf is less sensitive to
+differentvaluesofλthanis F-RC .
+ularbecauseofitscomputationalefficiency: itcanbecomputedduringtrainingwithminimaladditional
+computation. For a particular feature, it is defined as the sum of the reduction in Gini impurity over all
+splitsofalltreesmadeonthatfeature. Withthismeasure,featuresthattendtoyieldsplitswithrelatively
+pure nodes will have large importance scores. When using , features with low marginal information
+about the class label, but high pairwise or other higher-order joint distributional information, will likely
+receive relatively low importance scores. Since splits in are linear combinations of the original
+features, such features have a better chance of being identified. For , we compute Gini impor-
+tanceforeachuniqueunivariateprojection(i.e. singlelinearcombination). Ofnote,twoprojectionsthat
+differonlybyasign,projectintothesamesubspace. However,intheexperimentthatfollowswedonot
+checkwhetheranytwoprojectionsusedinthegrownforestdifferonlybyasign.
+Another measure of feature importance which we do not consider here is the permutation impor-
+tance. Permutation importance of a particular feature is computed by shuffling the values along that
+feature and subsequently assessing how much the error rate increases using the shuffled feature to
+predict (relative to intact). This measure is considerably slower to compute than is Gini importance in
+high-dimensional settings because predictions are made for each permuted feature. Furthermore, it is
+uncleartoushowtoappropriatelycomputepermutationimportanceforlinearcombinationsoffeatures.
+Sporf F-RC RR-RF CCF
+Anotheradvantageof isthatmethodssuchas , and donotlendthemselves
+to computation of Gini importance. The reason for this is that a particular univariate projection must
+be sampled and chosen many times over many trees in order to compute a stable estimate of its
+Gini importance. Since the aforementioned algorithms randomly sample continuous coefficients, it is
+extremelyimprobablethatthesameexactunivariateprojectionswillbesampledmorethanonceacross
+trees. On the other hand, the projections sampled in are sparse and only contain coefficients
+of ±1, making it much more likely to sample any given univariate projection repeatedly. Furthermore,
+and splitondenseunivariateprojections,whichtendtobeuninterpretable.
+Gini importance was computed for each feature for both and on the Trunk problem with
+n = 1,000. Figure 4 depicts the features that define each of the top ten split node projections for
+(A) and (B). Projections are sorted from highest to lowest Gini importance. The top ten
+projectionsin arealllinearcombinationsofdimensions,whereasin theprojectionscanonly
+bealongsingledimensions. Thelinearcombinationsin tendtoincludethefirstfewdimensions,
+which contain most of the “true” signal. The best possible projection that could sample is the
+vector of all ones. However, since λ = 1/2 for this experiment, the probability of sampling such a
+denseprojectionisalmostnegligible. Figure4(C)showsthenormalizedGiniimportanceofthetopten
+projections for each algorithm. The top ten most important features according to are all more
+important(intermsofGini)thananyofthe features,excepttheveryfirstone. Figure4(D)showsthe
+Bayes error rate of the top ten projections for each algorithm. Again, the top ten features according to
+Sporf RF Sporf
+are more informative than any of those according to . In other words, learns features
+thataremoreimportantthananyoftheobservedfeatures,andthosefeaturesareinterpretable,asthey
+aresparselinearcombinationsoftheobservedfeatures. Theabilityof tolearnnewidentifiable
+featuresdistinguishesitfrom ,whichcannotlearnnewfeatures.
+5 RealDataEmpiricalPerformance
+5.1 Exhibits Best Overall Classification Performance on a Large Suite of Benchmark
+Sporf RF XGBoost RR-RF CCF
+Datasets compares favorably to , , , and on a suite of 105 benchmark
+datasets from the UCI machine learning repository (Figure 5). This benchmark suite is a subset of
+the same problem sets previously used to conclude that outperformed >100 other algorithms [1]
+(16 were excluded for various reasons such as lack of availability; see Appendix B for preprocessing
+details).
+RF Sporf XGBoost RR-RF
+Figure 5(A) shows pairwise comparisons of with (red), (yellow), (pur-
+ple), and (green) on the UCI datasets. Specifically, let κ(·) denote Cohen’s kappa (fractional
+decrease in error rate over the chance error rate) for a particular classification algorithm. Here, error
+rates are estimated for each algorithm for each dataset via five-fold cross-validation. Error rates for
+each data set are reported in Appendix F. Let ∆(A) = κ(RF)−κ(A) be the difference between κ for
+somealgorithmA—either Sporf , XGBoost , RR-RF ,or CCF —withκ(RF). Eachbeeswarmplotin5(A)
+1 2 3 4 5 6 7 8 910
+Projection
+Top 10 Projections
+1 2 3 4 5 6 7 8 910
+Projection
+1 2 3 4 5 6 7 8 910
+Projection
+Top 10 Projections
+coefficient −1 0 +1
+ecnatropmI
+0.1 l l l l l l l
+1 2 3 4 5 6 7 8 910
+Projection
+classifier l SPORF l RF
+Figure 4: The ten projections with the highest Gini importance found by and on the Trunk problem
+with p = 10,n = 1000. (A) Visual representation of the top 10 projections identified by Sporf . The x-axis
+indicates the projection. The y-axis indicates the index of the ten canonical dimensions. The colors in the heat
+map indicate the linear coefficients of each canonical dimension that define each of the projections. (B) The
+same as (A), except for . (C) Comparison of the Gini importances of the 10 best projections found by each
+algorithm. (D) Comparison of the Bayes error rate of the 10 best projections found by each algorithm. The
+top10projectionsusedin allhavesubstantiallylowerBayeserrorthanthoseusedin ,indicatingthat
+learnsinterpretableinformativefeatures.
+represents the distribution of ∆(A), denoted "Effect Size," over data sets. Comparisons are shown for
+the 65 numeric datasets (top), the 40 datasets having at least one categorical feature (middle), and
+all 105 datasets (bottom). A positive value on the x-axis indicates that performed better than the
+algorithm it is being compared to on a particular dataset, while a negative value indicates it performed
+worse. Valuesonthey-axisgreaterthan10%weresquashedto10%andvalueslessthan-10%were
+squashed to -10% in order to improve visualization. Mean values are indicated by a black "x." As in-
+dicated by the downward skewing distribution, tends to outperform over all datasets, due in
+particular to its relative performance on the numeric datasets. and also tend to perform
+RF Sporf RF
+similar to or better than on the numeric datasets, but unlike they perform worse than on
+thecategoricaldatasets;theobliquemethodsarelikelysensitivetotheone-hotencodingofcategorical
+features. κvaluesforindividualdatasetsandalgorithmscanbefoundinTable1.
+Additionally,weexaminedhowfrequentlyeachalgorithmrankedintermsofκacrossthedatasets.
+A rank of one indicates first place (best) on a particular dataset and a rank of five indicates last place
+(worst). Histograms (in fraction of data sets) of the relative ranks are shown in Figure 5(B). Overall,
+Sporf XGBoost
+tends to outperform the other algorithms. This is despite the fact that is tuned signif-
+icantly more than in these comparisons (see Section 3.2 for details). Surprisingly, we find that
+, one of the most recent methods to be proposed, has a strong tendency to perform the worst.
+One-sidedWilcoxonsigned-ranktestswereperformedtodeterminewhether performedsignifi-
+cantly better than each of the other algorithms. Specifically, the null hypothesis was that the median κ
+valueof isgreaterthanthatofeachalgorithmbeingcomparedto. P-valuesareshownforeach
+algorithm compared with to the right of each histogram in Figure 5(B). Over all data sets, we
+foundthatp-valueswere< 0.005foreveryalgorithmcomparedwith .
+5.2 IdentifyingDefaultHyperparameterSettings Whilethehyperparametersλanddof were
+tuned in this comparison, default hyperparameters can be of great value to researchers who use
+out of the box. This is especially true for those not familiar with the details of a particular
+algorithmorthosehavinglimitedtimeandcomputationalbudget. Therefore,wesoughtsuitabledefault
+valuesforλanddbasedonclassificationperformanceontheUCIdatasets. Foreachdataset,foreach
+foldthehyperparametersettingsarerankedbasedonCohen’skappacomputedontheheldoutset. A
+rankofnindicatesnth place(i.e. firstplaceindicateslargestkappa). Tiesintherankingprocedureare
+handled by assigning all ties the same averaged rank. For example, consider the set of real numbers
+{a ,a ,a } such that a > a = a . Then a would be assigned a rank of three and a and a would
+1 2 3 1 2 3 1 2 3
+bothbeassignedarankof(1+2)/2 = 1.5. Therankofeachhyperparameterpairwasaveragedover
+the five folds. Finally, for each hyperparameter pair, the median rank is computed over the datasets.
+ThemedianrankforeachhyperparametersettingisdepictedinFigure6. Theresultsheresuggestthat
+d = p2 and λ = 4/p is the best default setting for Sporf with respect to classification performance.
+However, we choose the setting d = p and λ = 3/p as the default values in our implementation be-
+causeitrequiressubstantiallylesstrainingtimeformoderatetolargepattheexpenseofonlyaslightly
+greatertendencytoperformworseontheUCIdatasets.
+5.3 isRobusttoHigh-DimensionalNoise Next,weinvestigatedtheeffectofaddingavary-
+ing number of noise dimensions to the UCI benchmark datasets. For each of the 105 UCI datasets
+used in the previous experiment, D standard Gaussian dimensions were appended to the input
+matrix, for D ∈ {10,100,1000}. Algorithm comparisons were then performed in the same way as
+before.
+Sporf RF XGBoost CCF
+Figure 7 shows the overall classification performance of , , , and for each
+value of D . Each of the points plotted represents the mean Cohen’s kappa (± SEM) over all
+datasets. ForallvaluesofD , tiesforbestclassificationperformance. Notably, performs
+aboutaswellas whenthereislittleornoadditionalnoise,butdegradessubstantiallywhenmany
+noise dimensions are added. This suggests that using supervised linear procedures to compute splits
+may lead to poor out-of-sample performance, likely because the learned features have overfit to the
+noisedimensions. degradesevenmorerapidlythandoes withincreasingnumbersofnoise
+dimensions. This can be explained by the fact that features derived from random rotations, which are
+dense linear projections, have very low probability of being informative in the presence of many noise
+dimensions.
+6 ComputationalEfficiencyandScalabilityof Computationalefficiencyandscalabilityare
+oftenasimportantasaccuracyinthechoiceofmachinelearningalgorithms,especiallyforbigdata. In
+thissectionwedemonstratethat ,withanappropriatechoiceofhyperparametersettings,scales
+similarly to with respect to sample size and number of features. Furthermore, we show that our
+open source implementation is computationally competitive with leading implementations of decision
+treeensemblealgorithms.
+6.1 Theoretical Time Complexity The time complexity of an algorithm characterizes how the theo-
+retical processing time for a given input relies on both the hyper-parameters of the algorithm and the
+characteristics of the input. Let T be the number of trees, n the number of training samples, p the
+number of features in the training data, and d the number of features sampled at each split node. The
+5 RF better
+−5 RF worse
+SPORF XGBoost RR−RF CCF
+Alg Compared to RF
+SPORF XGBoost RR−RF CCF
+Alg Compared to RF
+lacirogetaC
+SPORF XGBoost RR−RF CCF
+Alg Compared to RF
+RF p = 4.2e−11
+XGBoost p = 3.4e−07
+RR−RF p = 6.0e−15
+CCF p = 2.5e−01
+RF p = 4.6e−02
+XGBoost p = 6.3e−02
+RR−RF p = 4.3e−15
+CCF p = 8.3e−04
+RF p = 3.6e−10
+XGBoost p = 9.2e−07
+RR−RF p = 4.7e−29
+CCF p = 1.7e−03
+0.2 0.4 0.6
+RF Sporf XGBoost RR-RF CCF
+Figure 5: Pairwise comparisons of with , , , and on the numeric datasets (top),
+categoricaldatasets(middle),andalldatasets(numericandcategoricalcombined;bottom)fromtheUCIMachine
+Learning Repository (105 datasets total). (A) Beeswarm plots showing the distributions of classification perfor-
+mancerelativeto forvariousdecisionforestalgorithms. Classificationperformanceismeasuredbyeffectsize,
+which is defined as κ(RF)−κ(A), where κ is Cohen’s kappa and A is one of the algorithms compared to RF .
+Eachpointcorrespondstoaparticulardataset. Meaneffectsizesareindicatedbyablack”x.” Anegativevalue
+on the y-axis indicates performed worse than a particular algorithm. (B) Histograms of the relative ranks of
+thedifferentalgorithms,wherearankof1indicatesbestrelativeclassificationperformanceand5indicatesworst.
+RF XGBoost RR-RF
+Colorindicatesfrequency,asfractionofdatasets. P-valuescorrespondtotestingthat , , ,and
+CCF Sporf Sporf
+performedworsethan ,usingone-sidedWilcoxonsigned-ranktests. Overall, tendstoperform
+betterthantheotheralgorithms.
+average case time complexity of constructing an RF is O(Tdnlog2n) [32]. The dnlogn accounts for
+the sorting of d features at each node. The additional logn accounts for both the reduction in node
+sizeatlowerlevelsofthetreeandtheaveragenumberofnodesproduced. ’snearlinearcomplexity
+5 15 14.2 12.5 12.2 12
+4 14.5 12.9 13 12.6 11.2
+3 15 13.2 12.5 11.9 12.4
+2 14.4 14 12.4 12.2 12.2
+1 15.2 13.7 12.8 12.1 12.7
+p1 4 p1 2 p3 4 p1 p2
+No. of Projections Sampled
+noitcejorP
+Median Rank of Hyperparameter Pairs
+Figure6: Medianrankof Sporf ’s(d,λ)hyperparameterpairsontheUCIclassificationdatasets(lowerisbetter).
+Although (p2,4/p) is the best performance-wise, we select (p,3/p) as the default because of a good balance
+betweenaccuracyandtrainingtime.
+showsthatagoodimplementationwillscalenicelywithlargeinputsizes,makingitasuitablealgorithm
+toprocessbigdata. ’saveragecasetimecomplexityissimilarto ’s,theonlydifferencebeing
+thatthereisanadditionaltermrepresentingasparsematrixmultiplicationthatisrequiredineachnode.
+This makes Sporf ’s complexity O(Tdnlog2n+Tdnpλ)), where λ is the fraction of nonzeros in the
+p×drandomprojectionmatrix. Wegenerallyletλbecloseto1/p,givingacomplexityofO(Tdnlog2n),
+whichisthesameasfor .Ofnote,in disconstrainedtobenogreaterthanp,thedimensionalityof
+thedata. ,ontheotherhand,doesnothavethisrestrictionond. Therefore,ifdisselectedtobe
+greaterthanp, maytakelongertotrain. However,d > poftenresultsinimprovedclassification
+performance.
+6.2 Theoretical Space Complexity The space complexity of an algorithm describes how the theo-
+reticalmaximummemoryusageduringruntimescaleswiththenumberofinputsandhyperparameters.
+Let c be the number of classes and T, p, and n be defined as in Section 6.1. Building a single tree
+requires the data matrix to be kept in memory, which is O(np). During an attempt to split a node, two
+c-length arrays store the counts of each class to the left and to the right of the candidate split point.
+These arrays are used to evaluate the decrease in Gini impurity or entropy. Additionally, a series of
+random sparse projection vectors are sequentially assessed. Each vector has less than p nonzeros.
+Therefore this term is dominated by the np term. Assuming trees are fully grown, meaning each leaf
+node contains a single data point, the tree has 2n nodes in total. This term gets dominated by the np
+term as well. Therefore, the space complexity to build a is O(T(np+c)). This is the same as
+thatof .
+6.3 TheoreticalStorageComplexity Storagecomplexityisthediskspacerequiredtostoreaforest,
+given the inputs and hyperparameters. Assume that trees are fully grown. For each leaf node, only
+the class label of the training data point contained within the node is stored, which is O(1). For each
+0 10 100 1000
+# of Noise Dimensions
+Figure 7: Comparison of classification performance on the UCI benchmark datasets with a varying number of
+Gaussian noise dimensions added. The x-axis represents the number of noise dimensions added. The y-axis
+represents the average of Cohen’s kappa value over all datasets (±SEM). Sporf is always tied for the best
+performance. and aremoresensitivetoadditionalnoisedimensions.
+splitnode,thesplitdimensionindexandthresholdarestored,whicharealsobothO(1). Therefore,the
+storagecomplexityofa isO(Tn).
+For a , the only aspect that differs is that a (sparse) vector is stored at each split node
+rather than a single split dimension index. Let z denote the average number of nonzero entries in a
+vector projection stored at each split node. Storage of this vector at each split node requires O(z)
+memory. Therefore,thestoragecomplexityofa isO(Tnz). z isarandomvariablewhoseprior
+isgovernedbyλ,whichistypicallysetto1/p. Theposteriormeanofz isdeterminedalsobythedata;
+empirically it is close to z = 1. Therefore, in practice, the storage complexity of is close to that
+of .
+6.4 EmpiricalComputationalEfficiencyandScalability
+RF Sporf F-RC
+6.5 ImplementationDetails WeuseourownRimplementationforevaluationsof , , ,
+and [33]. Itwasmoredifficulttomodifyoneoftheexistingpopulartreelearningimplementations
+duetotheparticularwayinwhichtheyoperateontheinputdata. Inallofthepopularaxis-alignedtree
+learning implementations, each feature in the input data matrix is sorted just once prior to inducing
+a tree, and the tree induction procedure operates directly on this presorted data. Since trees in a
+include splitting on new features consisting of linear combinations of the original features, pre-
+sorting the data is not an option. Therefore our implementation is written from scratch in mostly native
+R.Thecodehasbeenextensivelyprofiledandoptimizedforspeedandmemoryperformance. Profiling
+revealed the primary performance bottleneck to be the portion of code responsible for finding the best
+split. In order to improve speed, this portion of code was implemented in C++ and integrated into R
+using the Rcpp package [34]. Further speedup is achieved through multicore parallelization of tree
+constructionandbyte-compilationviatheRcompilerpackage.
+XGBoost CCF
+isevaluatedusingtheRimplementationavailableonCRAN[35]. isevaluatedusing
+theauthors’openlyavailableMATLABimplementation[7].
+Comparison of Algorithms Using the Same Implementation Figure 8(A) shows the training
+RF F-RC Sporf
+times of , , and on the sparse parity problem. The reported training times correspond
+to the best hyperparameter settings for each algorithm. Experiments are run using an Intel Xeon E5-
+2650 v3 processors clocked at 2.30GHz with 10 physical cores, 20 threads, and 250 GB DDR4-2133
+F-RC RF Sporf
+RAM. The operating system is Ubuntu 16.04. is the slowest, is the fastest, and is
+in between. While not shown, we note that a similar trend holds for the orthant problem. Figure 8(B)
+Sporf F-RC RF
+showsthatwhenthehyperparameterdof and isthesameasthatfor ,trainingtimesare
+Sporf F-RC
+comparable. However, training time continues to increase as d exceeds p for and , which
+largely accounts for the trend seen in Figure 8(A). Figure 8(C) indicates that this additional training
+time comes with the benefit of substantially improved accuracy. Restricting d to be no greater than p
+for in this setting would still perform noticeably better than at no additional cost in training
+time. Therefore, does not trade off accuracy for time. Rather, for a fixed computational budget,
+itachievesbetteraccuracy,andifallowedtousemorecomputation,furtherimprovesaccuracy.
+Sparse Parity
+n (in thousands)
+Algorithm RF F−RC SPORF
+RF Sporf F-RC
+Figure8: Comparisonoftrainingtimesof , ,and onthe20-dimensionalsparseparitysetting. (A)
+Dependencyoftrainingtimeusingthebestsetofhyperparameters(y-axis)onthenumberoftrainingsamples(x-
+axis)forthesparseparityproblem. (B)Dependencyoftrainingtime(y-axis)onthenumberofprojectionssampled
+at each split node (x-axis) for the sparse parity problem with n = 5000. (C) Dependency of error rate (y-axis)
+on the number of projections sampled at each split node (x-axis) for the sparse parity problem with n = 5000.
+Sporf and F-RC cansamplemanymorethanpprojections,unlike RF .Asseeninpanels(B)and(C),increasing
+d above p meaningfully improves classification performance at the expense of larger training times. However,
+comparingerrorratesandtrainingtimesatd=20, Sporf canclassifysubstantiallybetterthan RF evenwithno
+additionalcostintrainingtime.
+Comparison of Training and Prediction Times for Different Implementations We developed
+and maintain an open multi-core R implementation of , which is hosted on CRAN [33]. We
+compare both speed of training and strong scaling of our implementation to those of the R Ranger
+[36] and [35] packages, which are currently two of the fastest, parallelized decision tree
+ensemblesoftwarepackagesavailable. Strongscalingisthetimeneededtotrainaforestwithonecore
+divided by the time needed to train a forest with multiple cores. Ranger offers a fast multicore version
+RF XGBoost
+of that has been extensively optimized for runtime performance. offers a fast multicore
+version of gradient boosted trees, and computational performance is optimized for shallow trees. Both
+XGBoost Sporf
+Rangerand areC++implementationswithRwrappers,whereasour implementation
+is almost entirely native R. Hyperparameters are chosen for each implementation so as to make the
+comparisonsfair. Forallimplementations,treesaregrowntofulldepth,100treesareconstructed,and
+d = p features sampled at each node. For , λ = 1/p. Experiments are run using four Intel
+Xeon E7-4860 v2 processors clocked at 2.60GHz, each processor having 12 physical cores and 24
+threads. Theamountofavailablememoryis1TBDDR3-1600. TheoperatingsystemisUbuntu16.04.
+Comparisonsusethreeopenlyavailablelargedatasets:
+MNIST The MNIST dataset [37] has 60,000 training observations and 784 (28x28) features. For a
+Sporf XGBoost
+small number of cores, is faster than but slower than Ranger (Figure 9(A)).
+Sporf XGBoost
+However,when48coresareused, isasfastasRangerandstillfasterthan .
+Sporf XGBoost
+and 31 features. is as fast as ranger and faster than when using 48 cores
+vations and 5,409 features. Figure 9(C) shows a similar trend as for MNIST. For this dataset,
+utilizing additional resources with does not provide as much benefit due to the classi-
+fication task being too easy (all algorithms achieve perfect classification accuracy)—the trees
+are shallow, causing the overhead cost of multithreading to outweigh the speed increase as a
+resultofparallelism.
+Strong scaling is the relative increase in speed of using multiple cores over that of using a single
+core. In the ideal case, the use of N cores would produce a factor N speedup. has the best
+strong scaling on MNIST (Figure 9(D)) and Higgs (Figure 9(E)), while it has strong scaling in between
+that of Ranger and on the p53 data set (Figure 9(F)). This is due to the simplicity of the p53
+dataset,asdiscussedabove.
+Prediction times can be just as, or even more important than training times in certain applications.
+Forexample,electronmicroscopy-basedconnectomicscanacquiremulti-petabytedatasetsthatrequire
+classification of each voxel [38]. Moreover, recent automatic hyperparameter tuning suites incorporate
+runtimeintheirevaluations,whichleverageout-of-samplepredictionaccuracy[39]. Thus,accelerating
+predictiontimescanimprovetheeffectivenessofhyperparametersweeps.
+Figure 10 compares the prediction times of the various implementations on the same three data-
+sets. Inadditiontoourstandard predictionimplementation,wealsocomparea"ForestPacking"
+prediction implementation [40]. Briefly, Forest Packing is a procedure performed after a forest has
+been grown that reduces prediction latency by reorganizing and compacting the forest data structure.
+The number of test points used for the Higgs, MNIST, and p53 datasets is 50,000, 10,000, and 6,000,
+respectively. Predictions were made sequentially without batching using a single core. is sig-
+nificantly faster than Ranger on the Higgs and MNIST datasets, and only marginally slower on the
+XGBoost Sporf
+p53 dataset. is much faster than both and Ranger, which is due to the fact that the
+algorithm constructs much shallower trees than the other methods. Most notably, the Forest
+Packing procedure, which "packs" the trees learned by , makes predictions roughly ten times
+XGBoost Sporf
+fasterthan andover100timesfasterthanthestandard onallthreedatasets.
+7 Conclusion In this work we showed that existing oblique splitting extensions to forfeit some
+of the nice properties of , while achieving improved performance in certain settings. We therefore
+introdced which was designed to preserve the desirable properties of both and oblique
+forest methods, rendering it statistically robust, computationally efficient, scalable, and interpretable.
+This work only focused on classification; we also have a preliminary implementation for regression,
+which seems to perform similarly to on a suite of regression benchmark data sets. Future work will
+investigatethebehaviorandperformanceof onunivariateandmultivariateregressiontasks.
+Onelimitationofusingsparserandomprojectionstogeneratethecandidateobliquesplitsisthatit
+will never find informative splits in cases for which the signal is contained in a dense linear combina-
+tion of features or nonlinear combinations of features. In such cases, supervised computation of split
+directionsmaybemoresuitable. Perhapsadecisionforestmethodthatevaluatesbothsparserandom
+projections and dense supervised projections at each split node could further improve performance in
+suchsettings.
+Onamoretheoreticalnote,wedemonstratedthat achievesempiricalstatisticalconsistency
+on a classification problem for which Biau et al. [30] proved that cannot achieve better than an
+MNIST (60000x784) Higgs(250000x31) p53(31159x5409)
+0 10 20 30 40 0 10 20 30 40 0 10 20 30 40
+Number of Threads
+Parallel Execution Time
+MNIST (60000x784) Higgs(250000x31) p53(31159x5409)
+0 10 20 30 40 0 10 20 30 40 0 10 20 30 40
+Number of Threads
+ecnamrofreP
+Strong Scaling
+Ideal Ranger SPORF XGBoost
+Figure 9: (A-C) The per-tree training time for three large real world datasets. Training was performed using
+matching parameters where possible, and default parameters otherwise. ’s performance—even though
+it is written mostly in native R, as compared to the other optimized C++ codes—is comparable to the highly
+XGBoost XGBoost
+optimized andRangerandevenoutperforms ontwoofthedatasets. (D-F):Strongscalingis
+thetimeneededtotrainaforestwithonecoredividedbythetimeneededtotrainaforestwithmultiplecores. This
+isameasurementofasystem’sabilitytoefficientlyutilizeadditionalresources. isabletoscalewellover
+theentirerangeoftestedcores,whereas hassharpdropsinscalabilityduringwhichitisunabletouse
+additionalthreadsduetocharacteristicsofthegivendatasets. Thep53dataset,despitehavingalargenumberof
+dimensions,iseasilyclassifiable,whichleadstoshorttrees. Thep53strongscalingplotshowsthatwhentrees
+areshort,theoverheadofmultithreadingprevents fromefficientlyusingtheadditionalresources.
+error rate of 1/6, even though the Bayes optimal error rate is zero in this setting. This raises a ques-
+tion as to whether it is possible to construct a problem in which is consistent and is not.
+Or could it be the case that is always consistent when is? The consistency theorems in
+Biau et al. [41] for in the case of additive regression models should be extendable to with
+some minor modifications—their proofs rely on clever adaptations of classical consistency results for
+data-independent partitioning classifiers, which are agnostic to whether the splits are axis-aligned or
+not. Another factor that dictates the lower bound of error rate, as Breiman [5] proved, is the relative
+balance between the strength and correlation of trees. Our investigation of strength and correlation on
+the Sparse Parity, Orthant, and Trunk simulations is offered in Appendix C. The results suggest that
+canoutperformotheralgorithmsbecauseofstrongertreesand/orlesscorrelatedtrees. There-
+fore, perhapsoffersmoreflexiblecontroloverthebalancebetweentreestrengthandcorrelation,
+1e+03 llllllllll
+llll llllll
+lll l llllll lllll lllll llllll llll
+llll llll ll 1e+01
+1e+00 l l lllll l l l ll l l lllll llllllllll
+Higgs MNIST p53
+noitciderP
+SPORF−Pack
+Figure 10: Comparison of test set prediction times. Forest Packing results show a 10x speed up in real time
+predictionscenarios. Testsetsizes: Higgs,50,000observations;MNIST,10,000observations;p53,6,000obser-
+vations. Predictionsweremadesequentiallywithoutbatching.
+therebyallowingittoadaptbettertodifferentproblems.
+Our implementation of is as computationally efficient and scalable or more so than existing
+treeensembleimplementations. Additionally,ourimplementationcanrealizemanypreviouslyproposed
+tree ensemble methods by allowing the user to define how random projections are generated. Open
+andaC++versionwithbothRandPythonbindingsthatweareactivelydeveloping.
+Acknowledgments This work is graciously supported by the Defense Advanced Research Projects
+Agency(DARPA)SIMPLEXprogramthroughSPAWARcontractN66001-15-C-4041,DARPAGRAPHS
+N66001-14-1-4028, and DARPA Lifelong Learning Machines program through contract FA8650-18-2-
+7834.

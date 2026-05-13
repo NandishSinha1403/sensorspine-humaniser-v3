@@ -1,0 +1,351 @@
+Use of Computer Vision to Detect Tangles in Tangled
+Paritosh Parmar
+Robotics Lab
+SRM University
+Chennai, India
+paritosh_parmar@srmuniv.edu.in
+Abstract—Untangling of structures like ropes and wires by cameras (which output RGB-D data). Therefore a method
+autonomous robots can be useful in areas such as personal needs to be developed to detect tangles in a tangled mass of
+robotics, industries and electrical wiring & repairing by robots. wires and also identify which wire is passing over the other
+This problem can be tackled by using computer vision system in
+wires using RGB images from 2-D camera. This information
+robot. This paper proposes a computer vision based method for
+can then be used by robots to untangle the tangled mass.
+analyzing visual data acquired from camera for perceiving the
+In this paper, an algorithm to detect tangles is proposed.
+overlap of wires, ropes, hoses i.e. detecting tangles. Information
+Given an image, following presented algorithm, tangles can be
+obtained after processing image according to the proposed
+method comprises of position of tangles in tangled object and detected, and position (X, Y coordinates) of tangle can be
+which wire passes over which wire. This information can then be found out. Also, which wire passes over other wire/s at a
+used to guide robot to untangle wire/s. Given an image, pre- particular tangle can be found out using this algorithm.
+processing is done to remove noise. Then edges of wire are Deciding which wire passes over others requires an algorithm.
+detected. After that, the image is divided into smaller blocks and An algorithm was developed for making this decision. This
+each block is checked for wire overlap/s and finding other
+algorithm is important because the decision to be made is
+relevant information. TANGLED-100 dataset was introduced,
+regarding the third coordinate axis i.e. Z-axis from available
+which consists of images of tangled linear deformable objects.
+2D data (RGB data from camera). The presented algorithm
+Method discussed in here was tested on the TANGLED-100
+does not rely on or use any markers.
+dataset. Accuracy achieved during experiments was found to be
+74.9%. Robotic simulations were carried out to demonstrate the The method introduced in this paper was tested on 100
+use of the proposed method in applications of robot. Proposed images. Test images had noise in them. Test images had “real
+method is a general method that can be used by robots working world” background. Many images had multiple wires of
+in different situations. different colors. Accuracy of 74.9% was achieved with the
+proposed method.
+Keywords—computer vision; detecting tangles; robot vision;
+personal robots; untangling linear deformable objects
+I. INTRODUCTION
+Automation and use of robots in personal space as well as
+industries is increasing every day. Some of the examples of
+personal robots are Roomba which can clean house on its own,
+robotic window cleaners, robotic lawn mower, and companion
+robots. A personal robot can be used to untangle structures Fig. 1. Tangle/overlap indicated in a tangled mass of wire (left). Tangled mass
+like wires, threads, ropes and flexible pipes, hoses. Another of wires (right).
+usage of robots on similar line can be: electrical wiring and
+The remaining paper is organized in the following
+repairing on electric poles by robots. One of the main
+manner. Section II describes the overview of the methodology.
+problems to be addressed in these cases is to detect tangles.
+Section III describes pre-processing. Section IV describes
+This paper is the first to address detection of tangles in wires1
+edge detection and thresholding. Then in Section V
+using computer vision.
+windowing approach and contour tracing are described. Post-
+In a tangled mass of wires, wire/s pass over (or overlap)
+processing and decision making process are presented in
+other wire/s or there may be one or more knots. Knots can also
+Section VI. Experiments and results are presented in Section
+be taken as special case of overlap. Consider that wires are
+VII. Section VIII concludes the paper.
+placed in X-Y plane. Consider for e.g. that in one tangle, wire
+A is passing over wire B. Therefore wire A is placed at a II. OVERVIEW OF THE METHODOLOGY
+higher place along Z direction than wire B. But the difference
+Images of tangled wires are acquired from a camera. In
+in placements along Z direction is very small. Such a small
+real world scenario, more than one wire can be tangled
+difference can’t be measured by currently available 3D
+Note: In this paper, words wire, pipe/hose, ropes, threads would
+equivalently be used for tangled objects.
+together. These wires can be of different colors. Out of these height h is w x h x 3 array which stores blue, red, and green
+wires only one or some wires may be of interest. In that case, components for each and every pixel. Color of a pixel is the
+wire of interest is separated from others by using color result of the superimposition of green, red and blue colors
+separation technique. Separation of wire of interest is present at that pixel position. Pure red color has red intensity
+explained in detail in Section III. After separating out wire of of 255, pure green color has green intensity of 255 and
+interest, image is pre-processed for removing noise likewise pure blue color has blue intensity of 255. For e.g.
+(smoothing). Removal of noise is important for edge detection brown color has red color intensity of 185, green color
+and thresholding, to be carried out in subsequent steps. intensity of 122, and blue color intensity of 87. Therefore for
+Removal of noise is explained in detail in Section III. differentiating wire of the desired color, each pixel is checked
+After pre-processing images, edge detection is carried out for desired red, green, and blue color intensities. Value of only
+on the image as a result of which boundaries of wire/s are the matching pixels is set more than that of the black color.
+detected. Edge detection is done by convolving the image with Hence, desired color, and consequently wire is differentiated.
+the kernel. In this method the image is convolved with 8 Fig. 2 shows a case in which multiple wire of different colors
+different kernels, one by one. Following steps are repeated for were present, of which only blue colored wire was of interest.
+each kernel. The resultant image is then thresholded to obtain Blue colored was differentiated from other wires.
+a binary image in which the edges are above the threshold
+value. In this way, the edges are separated out. Edge detection
+process and thresholding are explained in detail in Section IV.
+After thresholding, ‘sliding window’ approach is taken.
+As a result of sliding window approach, small patches of
+edges are ‘captured’ in the sliding window. More than one
+patch of edges can be captured into the window. If only one
+patch is captured then there is no tangle in the area covered by Fig. 2. Multiple wires of different colors (left image). Blue colored wire
+the window. If two or more patches are obtained then there is differentiated from rest of the wires (second image). Red colored wire
+differentiated (right image) from three wires (third image).
+a chance of a tangle in the nearby area. However, decisions
+regarding tangle are taken in subsequent steps. Following
+Once the color filtering is done, the image is smoothened
+steps are repeated for every window. After patches of edge/s
+to remove noise from the image. In the later stages, edge
+are captured into the window, contours are traced around those
+detection will be carried out. It is therefore, very necessary to
+patches. Section V provides the details regarding window
+remove noise from the image. During edge detection,
+approach and contour tracing.
+derivatives of images will be taken. Any noise present in the
+Contours developed are a sequence of n - 1 points around
+image will get amplified when its derivative is taken [1]. To
+the patches. Now first & (n-2)th point, second & (n-3)th i.e. ith
+get rid of noise amplification problem, image is blurred [1],
+and (n-2-i)th points are considered as pairs. Mid-point of two
+using Gaussian blur. In Gaussian smoothing, transformation to
+elements of each pair is calculated. Mean of these mid-points
+be applied to each and every pixel is calculated using two-
+is calculated. A polynomial of degree m, fitting mid-points
+dimensional Gaussian function. If x is the horizontal distance
+previously calculated, is formed. This process is carried out
+with respect to origin, and y is the vertical distance with
+for every patch. Now, if more than one patch is present in a
+respect to origin, then two-dimensional Gaussian function is
+window, point of intersection of polynomials associated with
+defined as:
+these patches is calculated. Point of intersection gives the
+position of tangle i.e. coordinates at which two or more wires
+overlap which is nothing but a tangle. Distance of mean of (cid:16)(cid:13)(cid:17) (cid:18)(cid:13) (1)
+mid-points from point of intersection, d, is calculated. (cid:1)(cid:2)(cid:3),(cid:5)(cid:6)= (cid:10)(cid:11)
+(cid:12)(cid:13)(cid:14)
+(cid:15) (cid:13)(cid:19)(cid:13)
+Distance, d, is calculated for every patch present in a window. σ2 is variance [2] [3]. A kernel is built from the values
+Now, which wire passes over other wire/s is decided.
+obtained from Gaussian distribution. Amount of blurring
+Section VI explains in detail about contour development, and
+produced is proportional to the dimensions of the kernel.
+decision making process. Blurred image is obtained by convolving image with the
+kernel. New value of a pixel is the weighted average of that
+III. PRE-PROCESSING
+pixel and its neighbors. Highest weightage is given to the pixel
+In some cases, multiple wires each with different color under consideration. Weightage given to the neighboring
+may be present. Of these multiple wires only one or some pixels decreases as their distance from the pixel under
+wires may be of interest. In such cases, further processing consideration increases. Compared to uniform smoothing,
+should be focused on wire/s of interest. For this, wire of Gaussian smoothing is more suitable for the proposed method
+interest is differentiated from the other wires based on its because it preserves edges in a more effective manner.
+color. Images are acquired from a RGB digital camera. Since Preservation of the boundaries and the edges is essential for
+RGB is an additive color model, a wide range of colors are subsequent steps.
+reproduced by superimposition (addition) of primary (red,
+blue, green) colors. An RGB image having width w and
+Image blurring is more useful when tangled object has introduced by Otsu, in which, histogram shape-based image
+very rough texture or is made by plying (twisting together thresholding is automatically performed [8]. The algorithm
+multiple strands). Fig. 3 shows a rope which is made by assumes that the image to be thresholded contains two classes
+twisting together multiple single strands. of pixels or bi-modal histogram. Two classes of pixels
+represent background and foreground. The algorithm
+calculates the threshold which optimally separates two classes
+of pixels such that their combined spread is minimized [9].
+Within-class variance is defined as:
+(cid:10) (cid:10)
+where, (cid:26)(cid:27)(cid:28)(cid:29)(cid:30)(cid:28)(cid:31)(cid:2) (cid:6)= !"(cid:2) (cid:6)(cid:26)"(cid:2) (cid:6)+ !$(cid:2) (cid:6)(cid:26)$(cid:2) (cid:6)
+Fig. 3. First image is the original image. Second is the result blurring on the ((cid:15)(cid:9) (3)
+first image. Third and fourth images show edges detected in first and second !"(cid:2) (cid:6)= ∑(cid:28))* &(cid:2)'(cid:6)
+image respectively.
+From the case showed in Fig. 3, it is clear that blurring
+T is threshold level. is variance of pixels which are
+decreases the number of edges detected. When blurring is not (cid:10)
+above threshold, (cid:26) "is(cid:2) th(cid:6)e variance of the pixels which are
+applied in case of rough objects, unnecessary & increased (cid:10)
+below threshold.(cid:26) "I(cid:2)n te(cid:6)nsity levels range from 0 to N-1.
+number of edges would be detected.
+Between-class variance is defined as:
+IV. EDGE DETECTION AND THRESHOLDING (5)
+(cid:10) (cid:10) (cid:10)
+After the pre-processing is completed, edge detection is (cid:26),-(cid:29)(cid:27)--(cid:31)(cid:2) (cid:6)= (cid:26) − (cid:26)(cid:27)(cid:28)(cid:29)(cid:30)(cid:28)(cid:31)(cid:2) (cid:6)
+carried out on the image. Edge detection is accomplished by where, is the combined variance.
+convolving the pre-processed image with the eight Robinson (cid:26)
+compass masks. Robinson compass masks have 0, 1, and 2 as For each potential threshold T, following steps are carried out:
+their coefficients [4]. Eight Robinson compass masks are
+obtained by taking a single a mask and rotating it to eight 1) Pixels are separated into two groups.
+different directions, namely South (S), West (W), North (N), 2) Mean of each group is found out.
+East (E), South-West (SW), North-East (NE), South-East
+3) Difference between the means is found out.
+(SE), and North-West (NW) [5] [6]. Table 1 shows eight
+4) Number of pixels in one group is multiplied by the
+Robinson Compass Masks.
+number of pixels in the other group.
+TABLE 1: 8 ROBINSON COMPASS MASKS
+At optimum threshold level, between-class variance is
+−1−2−1 1 2 1 maximized.
+(cid:20) 0 0 0(cid:25) (cid:20) 0 0 0(cid:25)
+1 0 −1 −1 0 1
+(cid:20)2 0 −2(cid:25) (cid:20)−2 0 2(cid:25)
+1 (1E ) − 2 −1(W 0) 1
+0 −1 −2 −2 −1 0
+(cid:20)1 0 −1(cid:25) (cid:20)−1 0 1(cid:25)
+2 ( N 1E ) 0 0(N W 1) 2
+Fig. 4. First image shows original image. Second image shows the result of
+2 1 0 0 1 2 edge detection using N compass and thresholding performed on first image.
+(cid:20)1 0 −1(cid:25) (cid:20)−1 0 1(cid:25) Third image shows result of edge detection using E compass mask and
+0 −(S1E )− 2 −2(S −W1) 0 thresholding performed on first image. Differences in the edges detected are
+clearly visible. Some of the wire overlapping (tangles) occurring in third image
+but not in second image are clearly marked by green colored circles.
+Each mask is sensitive to edges oriented along only one of the
+eight directions [7]. The wire/s forming tangles would be V. WINDOWING AND CONTOUR TRACING
+oriented along different directions. Since each mask is
+A. Windowing
+sensitive to one direction, it helps in developing edge for
+certain segments of wire with each mask. Since each one of Now, that the edges are detected and separated from their
+the eight masks is convolved with the given image, in all 8 background, we will move on to detect tangles. For detecting
+resultant images would be obtained. Following procedure is tangles, we will search for two or more patches of the
+carried out for each of the 8 resultant images. thresholded edges and determine if they intersect (and equally,
+After edge detection, the image is thresholded to a overlap) when they are extrapolated. Some of the e.g. of
+threshold level. Thresholding is done according to the method patches and probable overlaps are shown in Fig. 5. Since
+analyzing the whole image at one go will not be fruitful a) (direction + 3) modulo 4. Refer Fig. 7(c).
+therefore windowing approach is taken. b) (direction + 6) modulo 8 if direction is odd.
+Refer Fig. 7(e). (direction + 7) modulo 8 if
+direction is even. Refer Fig. 7(d).
+The first pixel whose value is equal to current
+pixel is a contour element; P . Value of
+direction is updated.
+3) Stop if P = P and P = P , else go to step 2.
+Cn C1 C(n-1) C0
+Pixels starting from P to P constitute a contour.
+Fig. 5. Images show patches of detected & thresholded edges. Gaps marked C0 C(n-2)
+by circles show position of probable overlap of wires i.e. a probable tangle.
+Windowing approach can be explained as follows. A window
+of width, w and height, h is considered. Length of the diagonal
+is d . Starting from the top-left corner of image, the window is
+slide in right direction in a manner similar to raster scan.
+Fig. 7. Four-connectivity direction notification (a), eight-connectivity
+direction notification (b), pixel neighborhood search sequence in eight-
+connectivity (c), pixel neighborhood search sequence in eight-connectivity
+Fig. 6. Window and its sliding are shown (left image). Part of the image
+(d), pixel search sequence in four-connectivity (e), contour tracing in eight-
+captured in the window (right image).
+connectivity (dashed lines show pixels tested during the contour tracing) (f).
+The image is subdivided into a sequence of horizontal
+strips known as ‘scan rows’. The window sweeps/slides VI. POST-PROCESSING AND DECISION MAKING
+horizontally left-to-right, then stops when window reaches
+horizontal limit of the image and rapidly moves back to the At this stage, we have contour points, starting from P to
+left, where it turns back on and sweeps out the next row. P , for each of the contour present in the window. Now,
+While the window slides, it ‘captures’ a small part of the following steps are carried out for each of the patches:
+whole image. Parts of image ‘captured’ in window are
+processed further. Following steps (i.e. contour formation and 1) ith and (n-2-i)th points are paired together. i ranges
+post-processing (Section VI)) are performed for each part of
+from 0 to . In all, ( ) pairs are obtained.
+the image captured by the window. (cid:31)(cid:15)(cid:10) (cid:31)(cid:15)(cid:10)
+2) Mid-points (cid:10)of pairs obta(cid:10)ined in step 1 are calculated.
+Hence, mid-points will be obtained. Let the
+(cid:31)(cid:15)(cid:10)
+B. Contour Formation
+mid-poin(cid:10)t o f + kth 1 pair be represented by (x k , y k).
+For each of the patches ‘captured’ in a window, contours m m
+3) Mean of the points obtained in step 2 is calculated.
+are traced around them. A contour is a list of points that define
+a tr a c c u in rv g e c i o n n t a o n u r i s m a a r g o e u n [ d 1 0 p ] a . t c F h o e l s lo : wing algorithm was used for Let mean be represented by X m = ∑ 0 1 4 2 (cid:13) 5 (cid:13) (cid:17) 3 ./ 0 , Y m =
+12(cid:13)
+(cid:13) (cid:17)3
+12(cid:13)
+1) Start to search the image from top-left pixel until a ∑ 04 (cid:13) 5 (cid:17) 3 6/ 0.
+pixel, P C0 belonging to a patch (new region) is 4) A 1 p 2 (cid:13)o (cid:13) l (cid:17) y 3 nomial of degree m is fitted to the points
+encountered. To store the direction of the previous
+obtained in step 2 using Method of Least Squares.
+move along the contour from previous move along
+Following algorithm is used for determining
+the contour to the current contour element, a variable,
+optimum value of m:
+direction is defined. direction is assigned following
+values:
+a) Take m = 5.
+a) If the contour is detected in four-connectivity,
+b) If the polynomial of degree m fits the data,
+direction = 0. Refer Fig. 7(a).
+go to step d, else go to step c.
+b) If the contour is detected in eight-connectivity,
+c) If m = 1 go to step d, else decrease m by 1
+direction = 7. Refer Fig. 7(b).
+and go to step b.
+2) The 3 by 3 neighborhood of the pixel under
+d) End.
+consideration is searched in counter-clockwise
+direction. Start the search at the pixel positioned in
+This algorithm is used to avoid polynomial wiggle [11].
+the direction:
+Now, point of intersection of the polynomials found in 4 B. Tools
+is calculated. Since patches are associated the wires, point of
+intersection safely provides position of the tangle. Distance, d j , MATLAB 7.10.0.499, OpenCV 2.4.2 library, Visual
+of mean of mid-points of jth patch, from point of intersection is Studio 2010, and ABB RobotStudio 5.15 were used in
+calculated. Now, which wire passes over other wire/s at the carrying out experiments.
+position of tangle is to be decided. Patch corresponding to the
+wire overlapping other wires is nearest to the point of
+intersection (refer Fig. 5). Therefore patch whose C. Edge Detection and Thresholding Results
+corresponding d is least among all the patches present in a
+window is taken (decided) to be patch belonging wire which Images were pre-processed as described in Section III to
+overlaps the other wire/s. A confidence level is associated remove noise. Level of blurring used for outdoor images is
+with every decision made. Confidence level is equal to the higher than that used for indoor images.
+ratio of d - d to d (refer Section V. A for d ). Remember the
+whole process is repeated 8 times, each time with different
+kernel (starting from convolution with different kernel for
+edge detection). So, there will be at most 8 decisions
+(assuming a tangle is detected in every iteration), each with a
+confidence level, for a tangle. Decision with the highest
+confidence level is chosen as the final decision.
+VII. EXPERIMENTS AND RESULTS
+A dataset named TANGLED-100, consisting of images
+tangled linear objects was introduced. The method presented
+in this paper was tested on TANGLED-100 dataset. Images in
+the dataset were acquired from a digital RGB camera. The
+dataset can be subdivided into two classes on the basis of the
+size of images: first class contained 70 images of size 640 x
+480 pixels and the other class contained 30 images of size
+1280x720 pixels. Images in the dataset have the following
+variations among themselves: (c) (f)
+Fig. 9. (a) (b) (c) are indoor images. (d) (e) (f) are outdoor images. (a) (d) pre-
+• Images were acquired in different environments; processed images, (b) (e) edges detected, (c) (f) images (b) (e) are
+thresholded.
+indoor and outdoor therefore have different levels of
+lighting and different background. D. Windowing and Contour Formation Results
+• Images contain different tangled objects such as
+wires, ropes, pipes/hoses. Thickness & length of
+these objects also varied.
+• Multiple objects of different colors are present in
+images.
+The dataset will be available from
+purposes.
+Fig. 8. Indoor image of a tangled wire (a), outdoor image of tangled
+pipes/hoses (b), indoor image of a tangled rope (c).
+TABLE 2: ACCURACY OF ALGORITHM
+TP TN FP FN Accuracy
+0.479 0.270 0.175 0.075 0.749
+F. Robotic Application Simulation
+Fifteen basic robotic simulations were carried out using
+ABB RobotStudio 5.15. In these simulations, arm of IRB1600
+Type A robot was made to travel to the position of the tangle.
+Fig. 10. Window sliding over the image (first column), patches captured by VIII. CONCLUSION
+sliding window (second column), and contours traced around patches (marked
+In this paper, a method for detecting tangles, determining
+in red color) (third column). Since two patches are captured in the last row, it
+indicates a possibility of tangle in the nearby area, which indeed is the case. position of the tangle, and which wire passes over other wire
+at the tangle was proposed. The tangled objects we considered
+E. Post-processing and Decision Making Results were wires, ropes, pipes/hoses, threads. The proposed method
+was tested on TANGLED-100 dataset, which was introduced
+with this method. The data set contained images of different
+objects having different properties and placed in different
+environments. Accuracy of 74.9% was achieved with this
+method. Finally, robot simulations were carried out to
+demonstrate the usage of this method in the field of robotics.
+In this paper, it is shown that it is important to use Robinson
+masks for edge detection and take a windowing approach. The
+information which is output from this method can be used by
+personal robots such as the PR2 by Willow Garage for
+untangling tangled objects. This can be very useful in assisting
+people as well as in industrial application. However,
+parallelizing this method can make this method faster.

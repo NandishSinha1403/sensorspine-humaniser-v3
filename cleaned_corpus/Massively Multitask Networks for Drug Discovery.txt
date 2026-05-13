@@ -1,0 +1,1107 @@
+Massively Multitask Networks for Drug Discovery
+BharathRamsundar*,†,◦ RBHARATH@STANFORD.EDU
+StevenKearnes*,† KEARNES@STANFORD.EDU
+PatrickRiley◦ PFR@GOOGLE.COM
+DaleWebster◦ DRW@GOOGLE.COM
+DavidKonerding◦ DEK@GOOGLE.COM
+VijayPande† PANDE@STANFORD.EDU
+(*Equalcontribution,†StanfordUniversity,◦GoogleInc.)
+Abstract After a suitable target has been identified, the first step in
+the drug discovery process is “hit finding.” Given some
+Massivelymultitaskneuralarchitecturesprovide
+druggable target, pharmaceutical companies will screen
+a learning framework for drug discovery that millions of drug-like compounds in an effort to find a
+synthesizes information from many distinct bi-
+few attractive molecules for further optimization. These
+ological sources. To train these architectures at
+screens are often automated via robots, but are expensive
+scale,wegatherlargeamountsofdatafrompub-
+to perform. Virtual screening attempts to replace or aug-
+lic sources to create a dataset of nearly 40 mil-
+ment the high-throughput screening process by the use of
+lion measurements across more than 200 bio-
+computational methods (Shoichet, 2004). Machine learn-
+logical targets. We investigate several aspects
+ingmethodshavefrequentlybeenappliedtovirtualscreen-
+of the multitask framework by performing a se-
+ingbytrainingsupervisedclassifierstopredictinteractions
+ries of empirical studies and obtain some in-
+betweentargetsandsmallmolecules.
+teresting results: (1) massively multitask net-
+works obtain predictive accuracies significantly There are a variety of challenges that must be overcome
+better than single-task methods, (2) the pre- to achieve effective virtual screening. Low hit rates in
+dictive power of multitask networks improves experimental screens (often only 1–2% of screened com-
+as additional tasks and data are added, (3) the pounds are active against a given target) result in im-
+total amount of data and the total number of balanced datasets that require special handling for effec-
+tasks both contribute significantly to multitask tive learning. For instance, care must be taken to guard
+improvement,and(4)multitasknetworksafford against unrealistic divisions between active and inactive
+limitedtransferabilitytotasksnotinthetraining compounds (“artificial enrichment”) and against informa-
+set. Our results underscore the need for greater tion leakage due to strong similarity between active com-
+data sharing and further algorithmic innovation pounds (“analog bias”) (Rohrer & Baumann, 2009). Fur-
+toacceleratethedrugdiscoveryprocess. thermore,thepaucityofexperimentaldatameansthatover-
+fittingisaperennialthorn.
+The overall complexity of the virtual screening problem
+1.Introduction has limited the impact of machine learning in drug dis-
+covery. To achieve greater predictive power, learning al-
+Discovering new treatments for human diseases is an im-
+gorithms must combine disparate sources of experimental
+mensely complicated challenge. Prospective drugs must
+dataacrossmultipletargets. Deeplearningprovidesaflex-
+attack the source of an illness, but must do so while sat-
+ible paradigm for synthesizing large amounts of data into
+isfying restrictive metabolic and toxicity constraints. Tra-
+predictive models. In particular, multitask networks facil-
+ditionally,drugdiscoveryisanextendedprocessthattakes
+itate information sharing across different experiments and
+yearstomovefromstarttofinish,withhighratesoffailure
+compensateforthelimiteddataassociatedwithanypartic-
+alongtheway.
+ularexperiment.
+In this work, we investigate several aspects of the multi-
+Preliminarywork. UnderreviewbytheInternationalConference tasklearningparadigmasappliedtovirtualscreening. We
+onMachineLearning(ICML).Copyright2015bytheauthor(s).
+gather a large collection of datasets containing nearly 40
+1v27020.2051:viXra
+MassivelyMultitaskNetworksforDrugDiscovery
+million experimental measurements for over 200 targets. Whilewewerepreparingthiswork,aworkshoppaperwas
+Wedemonstratethatmultitasknetworkstrainedonthiscol- released that also used massively multitask networks for
+lectionachievesignificantimprovementsoverbaselinema- virtual screening (Unterthiner et al.). That work curated
+chine learning methods. We show that adding more tasks a dataset of 1,280 biological targets with 2 million asso-
+and more data yields better performance. This effect di- ciated data points and trained a multitask network. Their
+minishes as more data and tasks are added, but does not network has more tasks than ours (1,280 vs. 259) but far
+appear to plateau within our collection. Interestingly, we fewer data points (2 million vs. nearly 40 million). The
+find that the total amount of data and the total number of emphasisofourworkisconsiderablydifferent;whiletheir
+tasksbothhavesignificantrolesinthisimprovement. Fur- report highlights the performance gains due to multitask
+thermore,thefeaturesextractedbythemultitasknetworks networks, ours is focused on disentangling the underly-
+demonstrate some transferability to tasks not contained in ingcausesoftheseimprovements. Anothercloselyrelated
+thetrainingset. Finally,wefindthatthepresenceofshared work proposed the use of collaborative filtering for vir-
+active compounds is moderately correlated with multitask tual screening and employed both multitask networks and
+improvement,butthebiologicalclassofthetargetisnot. kernel-basedmethods(Erhanetal.,2006). Theirmultitask
+networks,however,didnotconsistentlyoutperformsingle-
+taskmodels.
+2.RelatedWorks
+Within the greater context of deep learning, we draw
+Machine learning has a rich history in drug discovery.
+upon various strands of recent thought. Prior work has
+Early work combined creative featurizations of molecules
+used multitask deep networks in the contexts of language
+with off-the-shelf learning algorithms to predict drug ac-
+understanding (Collobert & Weston, 2008) and multi-
+tivity (Varnek & Baskin, 2012). The state of the art has
+language speech recognition (Deng et al., 2013). Our
+movedtomorerefinedmodels, suchastheinfluencerele-
+best-performingnetworksdrawupondesignpatternsintro-
+vancevotingmethodthatcombineslow-complexityneural
+ducedbyGoogLeNet(Szegedyetal.,2014),thewinnerof
+networksandk-nearestneighbors(Swamidassetal.,2009),
+ILSVRC2014.
+andBayesianbeliefnetworksthatrepurposetextualinfor-
+mationretrievalmethodsforvirtualscreening(Abdoetal.,
+2010). Otherrelatedwork usesdeeprecursive neuralnet-
+works to predict aqueous solubility by extracting features
+3.1.DatasetConstructionandDesign
+from the connectivity graphs of small molecules (Lusci
+etal.,2013). Models were trained on 259 datasets gathered from pub-
+licly available data. These datasets were divided into
+Deep learning has made inroads into drug discovery in
+four groups: PCBA, MUV, DUD-E, and Tox21. The
+recent years, most notably in 2012 with the Merck Kag-
+PCBA group contained 128 experiments in the PubChem
+gle competition (Dahl, November 1, 2012). Teams were
+BioAssay database (Wang et al., 2012). The MUV group
+given pre-computed molecular descriptors for compounds
+contained 17 challenging datasets specifically designed to
+with experimentally measured activity against 15 targets
+avoidcommonpitfallsinvirtualscreening(Rohrer&Bau-
+and were asked to predict the activity of molecules in a
+mann, 2009). The DUD-E group contained 102 datasets
+held-outtestset. Thewinningteamusedensemblemodels
+that were designed for the evaluation of methods to pre-
+including multitask deep neural networks, Gaussian pro-
+dict interactions between proteins and small molecules
+cess regression, and dropout to improve the baseline test
+(Mysinger et al., 2012). The Tox21 datasets were used
+set R2 by nearly 17%. The winners of this contest later
+released a technical report that discusses the use of mul-
+nih.gov/tox21/challenge/)and containedexper-
+titask networks for virtual screening (Dahl et al., 2014).
+imentaldatafor12targetsrelevanttodrugtoxicitypredic-
+Additional work at Merck analyzed the choice of hyper-
+tion. We used only the training data from this challenge
+parameters when training single- and multitask networks
+because the test set had not been released when we con-
+andshowedimprovementoverrandomforestmodels(Ma
+structedourcollection. Intotal,our259datasetscontained
+et al., 2015). The Merck Kaggle result has been received
+37.8Mexperimentaldatapointsfor1.6Mcompounds. De-
+withskepticismbysomeinthecheminformaticsanddrug
+tails for the dataset groups are given in Table 1. See the
+discoverycommunities(Lowe,December11,2012,andas-
+Appendix for details on individual datasets and their bio-
+sociatedcomments). Twomajorconcernsraisedwerethat
+logicaltargetcategorization.
+thesamplesizewastoosmall(agoodresultacross15sys-
+temsmaywellhaveoccurredbychance)andthatanygains It should be noted that we did not perform any prepro-
+inpredictiveaccuracyweretoosmalltojustifytheincrease cessing of our datasets, such as removing potential ex-
+incomplexity. perimental artifacts. Such artifacts may be due by com-
+MassivelyMultitaskNetworksforDrugDiscovery
+community (Jain & Nicholls, 2008), we used metrics de-
+Table1.Detailsfordatasetgroups.Valuesforthenumberofdata
+rived from the receiver operating characteristic (ROC)
+points per dataset and the percentage of active compounds are
+curvetoevaluatemodelperformance. RecallthattheROC
+reportedasmeans,withstandarddeviationsinparenthesis.
+curveforabinaryclassifieristheplotoftruepositiverate
+(TPR) vs. false positive rate (FPR) as the discrimination
+Group Datasets DataPoints/ea. %Active
+threshold is varied. For individual datasets, we are inter-
+PCBA 128 282K(122K) 1.8(3.8) ested in the area under the ROC curve (AUC), which is
+DUD-E 102 14K(11K) 1.6(0.2) a global measure of classification performance (note that
+MUV 17 15K(1) 0.2(0)
+AUC must lie in the range [0,1]). More generally, for a
+Tox21 12 6K(500) 7.8(4.7)
+collectionofN datasets,weconsiderthemeanandmedian
+K-fold-averageAUC:
+pounds whose physical properties cause interference with (cid:40) 1 (cid:88) K (cid:12) (cid:12) (cid:41)
+experimental measurements or allow for promiscuous in- Mean/Median AUC (D )(cid:12)n=1,...,N ,
+teractions with many targets. A notable exception is the K k n (cid:12) (cid:12)
+MUVgroup,whichhasbeenprocessedwithconsideration
+where AUC (D ) is defined as the AUC of a classifier
+ofthesepathologies(Rohrer&Baumann,2009). k n
+trainedonfolds{1,...,K}\kofdatasetD andtestedon
+fold k. For completeness, we include in the Appendix an
+3.2.SmallMoleculeFeaturization
+alternative metric called “enrichment” that is widely used
+We used extended connectivity fingerprints (ECFP4) in the cheminformatics literature (Jain & Nicholls, 2008).
+(Rogers & Hahn, 2010) generated by RDKit (Landrum) We note that many other performance metrics exist in the
+to featurize each molecule. The molecule is decomposed literature;thelackofstandardmetricsmakesitdifficultto
+into a set of fragments—each centered at a non-hydrogen dodirectcomparisonswithpreviouswork.
+atom—where each fragment extends radially along bonds
+toneighboringatoms. Eachfragmentisassignedaunique 3.4.MultitaskNetworks
+identifier,andthecollectionofidentifiersforamoleculeis
+Aneuralnetworkisanonlinearclassifierthatperformsre-
+hashedintoafixed-lengthbitvectortoconstructthemolec-
+peated linear and nonlinear transformations on its input.
+ular “fingerprint”. ECFP4 and other fingerprints are com-
+Let x represent the input to the i-th layer of the network
+monly used in cheminformatics applications, especially i
+(wherex issimplythefeaturevector).Thetransformation
+to measure similarity between compounds (Willett et al., 0
+performedis
+1998). A number of molecules (especially in the Tox21
+group)failedthefeaturizationprocessandwerenotusedin x =σ(W x +b )
+trainingournetworks. SeetheAppendixfordetails.
+where W and b are respectively the weight matrix and
+biasforthei-thlayer,andσisanonlinearity(inourwork,
+3.3.ValidationSchemeandMetrics
+the rectified linear unit (Nair & Hinton, 2010)). After L
+The traditional approach for model evaluation is to have such transformations, the final layer of the network x L is
+fixed training, validation, and test sets. However, the im- then fed to a simple linear classifier, such as the softmax,
+balance present in our datasets means that performance
+whichpredictstheprobabilitythattheinputx
+haslabelj:
+varieswidelydependingontheparticulartraining/testsplit. e(wj)TxL
+e(wm)TxL ,
+tive/inactiveproportionpresentintheunsplitdata. Forthe where M is the number of possible labels (here M = 2)
+remainderofthepaper,weuseK =5. andw1,··· ,wM areweightvectors. W ,b ,andwmare
+learned during training by the backpropagation algorithm
+Notethatwedidnotchooseanexplicitvalidationset. Sev-
+(Rumelhartetal.,1988). AmultitasknetworkattachesN
+eraldatasetsinourcollectionhaveveryfewactives(∼ 30
+softmaxclassifiers,oneforeachtask,tothefinallayerx .
+each for the MUV group), and we feared that selecting a L
+(A “task” corresponds to the classifier associated with a
+specificvalidationsetwouldskewourresults. Asaconse-
+particular dataset in our collection, although we often use
+quence,wesuspectthatourchoiceofhyperparametersmay
+“task”and“dataset”interchangeably. SeeFigure1.)
+beaffectedbyinformationleakageacrossfolds. However,
+ournetworksdonotappeartobehighlysensitivetohyper-
+4.ExperimentalSection
+parameterchoice(seeSection4.1), sowedonotconsider
+leakagetobeaseriousissue.
+In this section, we seek to answer a number of questions
+Following recommendations from the cheminformatics abouttheperformance,capabilities,andlimitationsofmas-
+MassivelyMultitaskNetworksforDrugDiscovery
+withthenetworksoverfittingthedata.AsdiscussedinSec-
+Softmax nodes, one per dataset
+tion 3.1, our datasets had a very small fraction of positive
+examples. For the single hidden layer multitask network
+in Table 2, each dataset had 1200 associated parameters.
+With a total number of positives in the tens or hundreds,
+Hidden layers overfitting this number of parameters is a major issue in
+1-4 layers with 50-3000 nodes
+theabsenceofstrongregularization.
+Fully connected to layer below, rectified linear activation
+Reducingthenumberofparametersspecifictoeachdataset
+is the motivation for the pyramidal architecture. In our
+Input Layer
+1024 binary nodes pyramidal networks, the first hidden layer is very wide
+(2000 nodes) with a second narrow hidden layer (100
+nodes). This dimensionality reduction is similar in moti-
+Figure1. Multitaskneuralnetwork. vation and implementation to the 1x1 convolutions in the
+GoogLeNet architecture (Szegedy et al., 2014). The wide
+lower layer allows for complex, expressive features to be
+sivelymultitaskneuralnetworks: learned while the narrow layer limits the parameters spe-
+cifictoeachtask. Addingdropoutof0.25toourpyramidal
+1. Do massively multitask networks provide a perfor- networks improved performance. We also trained single-
+manceboostoversimplemachinelearningmethods? taskversionsofourbestpyramidalnetworktounderstand
+If so, what is the optimal architecture for massively whetherthisdesignpatternworkswellwithlessdata. Ta-
+multitasknetworks? ble2indicatesthatthesemodelsoutperformvanillasingle-
+task networks but do not substitute for multitask training.
+2. Howdoestheperformanceofamultitasknetworkde-
+Results for a variety of alternate models are presented in
+pend on the number of tasks? How does the perfor-
+theAppendix.
+mancedependonthetotalamountofdata?
+3. Do massively multitask networks extract generaliz- We investigated the sensitivity of our results to the sizes
+ableinformationaboutchemicalspace? ofthepyramidallayersbyrunningnetworkswithallcom-
+binations of hidden layer sizes: (1000,2000,3000) and
+4. Whendodatasetsbenefitfrommultitasktraining?
+(50,100,150). Acrossthearchitectures,meansandmedi-
+ansshiftedby≤ .01AUCwithonlyMUVshowinglarger
+The following subsections detail a series of experiments
+changeswitharangeof.038. Wenotethatperformanceis
+thatseektoanswerthesequestions.
+sensitive to the choice of learning rate and the number of
+trainingsteps. SeetheAppendixfordetailsanddata.
+4.1.ExperimentalExplorationofMassivelyMultitask
+4.2.Relationshipbetweenperformanceandnumberof
+Weinvestigatetheperformanceofmultitasknetworkswith
+various hyperparameters and compare to several standard
+The previous section demonstrated that massively multi-
+machine learning approaches. Table 2 shows some of the
+tasknetworksimproveperformanceoversingle-taskmod-
+highlights of our experiments. Our best multitask archi-
+els. In this section, we seek to understand how multitask
+tecture (pyramidal multitask networks) significantly out-
+performanceisaffectedbyincreasingthenumberoftasks.
+performedsimplermodels,includingahypotheticalmodel
+Apriori,therearethreereasonable“growthcurves”(visu-
+whoseperformanceoneachdatasetmatchesthatofthebest
+allyrepresentedinFigure2):
+single-taskmodel(Max{LR,RF,STNN,PSTNN}).
+Every model we trained performed extremely well on the Overthehill: performanceinitiallyimproves,hitsamax-
+DUD-E datasets (all models in Table 2 had median 5- imum,thenfalls.
+fold-averageAUCs≥0.99),makingcomparisonsbetween Plateau: performanceinitiallyimproves,thenplateaus.
+models on DUD-E uninformative. For that reason, we
+Stillclimbing: performance improves throughout, but
+exclude DUD-E from our subsequent statistical analysis.
+withadiminishingrateofreturn.
+However,wedidnotremoveDUD-Efromthetrainingalto-
+getherbecausedoingsoadverselyaffectedperformanceon
+We constructed and trained a series of multitask networks
+theotherdatasets(datanotshown);wetheorizethatDUD-
+on datasets containing 10,20,40,80,160, and 249 tasks.
+Ehelpedtoregularizetheclassifierandavoidoverfitting.
+Thesedatasetsallcontainafixedsetoften“held-in”tasks,
+During our first explorations, we had consistent problems which consists of a randomly sampled collection of five
+MassivelyMultitaskNetworksforDrugDiscovery
+Table2.Median 5-fold-average AUCs for various models. For each model, the sign test in the last column estimates the fraction of
+datasets(excludingtheDUD-Egroup,forreasonsdiscussedinthetext)forwhichthatmodelissuperiortothePMTNN(bottomrow).
+WeusetheWilsonscoreintervaltoderivea95%confidenceintervalforthisfraction. Non-neuralnetworkmethodsweretrainedusing
+scikit-learn(Pedregosaetal.,2011)implementationsandbasichyperparameteroptimization. Wealsoincluderesultsforahypothetical
+“best”single-taskmodel(Max{LR,RF,STNN,PSTNN})toprovideastrongerbaseline. Detailsforourcross-validationandtraining
+proceduresaregivenintheAppendix.
+PCBA MUV Tox21 SignTest
+LogisticRegression(LR) .801 .752 .738 [.04,.13]
+RandomForest(RF) .800 .774 .790 [.06,.16]
+Single-TaskNeuralNet(STNN) .795 .732 .714 [.04,.12]
+Pyramidal(2000,100)STNN(PSTNN) .809 .745 .740 [.06,.16]
+Max{LR,RF,STNN,PSTNN} .824 .781 .790 [.12,.24]
+1-Hidden(1200)LayerMultitaskNeuralNet(MTNN) .842 .797 .785 [.08,.18]
+Pyramidal(2000,100)MultitaskNeuralNet(PMTNN) .873 .841 .818
+0.12 Tox21
+NR−Aromatase
+PCBA 651768
+l ll ll ll l l l l l l ll lll l lM M P
+0.00 ll lllllll l l llll l l ll l l l l l l lll l l ll
+−0.04 PCBA 899
+Figure2. Potentialmultitaskgrowthcurves
+1020 40 80 160 249
+# of Tasks
+PCBA,threeMUV,andtwoTox21datasets.Thesedatasets
+correspondtouniquetargetsthatdonothaveanyobvious
+analogs in the remaining collection. (We also excluded a
+similarlychosensetoften“held-out”tasksforuseinSec-
+tion4.4). Eachtrainingcollectionisasupersetofthepre-
+cedingcollection,withtasksaddedrandomly.Foreachnet-
+workintheseries,wecomputedthemean5-fold-average-
+AUC for the tasks in the held-in collection. We repeated
+thisexperimenttentimeswithdifferentchoicesofrandom
+seed.
+Figure 3 plots the results of our experiments. The shaded
+region emphasizes the average growth curve, while black
+dots indicate average results for different experimental
+runs. The figure also displays lines associated with each
+held-indataset. Notethatseveraldatasetsshowinitialdips
+inperformance.However,alldatasetsshowsubsequentim-
+provement, andallbutoneachievesperformancesuperior
+tothesingle-taskbaseline. Withinthelimitsofourcurrent
+dataset collection, the distribution in Figure 3 agrees with
+eitherplateauorstillclimbing. Themeanperformanceon
+theheld-insetisstillincreasingat249tasks,sowehypoth-
+Figure3.Held-in growth curves. The y-axis shows the change
+inAUCcomparedtoasingle-taskneuralnetworkwiththesame
+architecture (PSTNN). Each colored curve is the multitask im-
+provementforagivenheld-indataset.Blackdotsrepresentmeans
+across the 10 held-in datasets for each experimental run, where
+additionaltaskswererandomlyselected. Theshadedcurveisthe
+meanacrossthe100combinationsofdatasetsandexperimental
+runs.
+esizethatperformanceisstillclimbing. Itispossiblethat
+ourcollectionistoosmallandthatanalternatepatternmay
+eventuallyemerge.
+4.3.Moretasksormoredata?
+In the previous section we studied the effects of adding
+moretasks,buthereweinvestigatetherelativeimportance
+of the total amount of data vs. the total number of tasks.
+Namely,isitbettertohavemanytaskswithasmallamount
+ofassociateddata,orasmallnumberoftaskswithalarge
+amountofassociateddata?
+MassivelyMultitaskNetworksforDrugDiscovery
+We constructed a series of multitask networks with
+10,15,20,30,50and82tasks. Asintheprevioussection,
+the tasks are randomly associated with the networks in a
+cumulativemanner(i.e.,the82-tasknetworkcontainedall 0.03
+tasks present in the 50-task network, and so on). All net-
+workscontainedthetenheld-intasksdescribedinthepre- l
+vious section. The 82 tasks chosen were associated with 0.02
+thelargestdatasetsinourcollection,eachcontaining300K- l l
+500Kdatapoints. Notethatallofthesetasksbelongedto l l l
+thePCBAgroup. 0.01 l l
+Wethentrainedthisseriesofnetworksmultipletimeswith l l
+1.6M, 3.3M, 6.5M, 13M, and 23M data points sampled
+fromthenon-held-intasks. Weperformthesamplingsuch 0.00
+that for a given task, all data points present in the first 5 10 20 40 72
+# Additional Tasks
+stage(1.6M)appearedinthesecond(3.3M),alldatapoints
+present in the second stage appeared in the third (6.5M),
+and so on. We decided to use larger datasets so we could
+sample meaningfully across this entire range. Some com-
+binations of tasks and data points were not realized; for
+instance, we did not have enough data to train a 20-task
+networkwith23Madditionaldatapoints. Werepeatedthis
+experimenttentimesusingdifferentrandomseeds.
+Figure4showstheresultsofourexperiments. Thex-axis
+tracksthenumberofadditionaltasks,whilethey-axisdis-
+plays the improvement in performance for the held-in set
+relativetoamultitasknetworktrainedonlyontheheld-in
+data. Whenthetotalamountofdataisfixed,havingmore
+tasksconsistentlyyieldsimprovement. Similarly,whenthe
+number of tasks is fixed, adding additional data consis-
+tently improves performance. Our results suggest that the
+totalamountofdataandthetotalnumberoftasksbothcon-
+tributesignificantlytothemultitaskeffect.
+4.4.Domassivelymultitasknetworksextract
+generalizablefeatures?
+Thefeaturesextractedbythetoplayerofthenetworkrep-
+resentinformationusefultomanytasks. Consequently,we
+soughttodeterminethetransferabilityofthesefeaturesto
+tasksnotinthetrainingset. Weheldouttendatasetsfrom
+the growth curves calculated in Section 4.2 and used the
+learnedweightsfrompointsalongthegrowthcurvestoini-
+tializesingle-tasknetworksfortheheld-outdatasets,which
+wethenfine-tuned.
+The results of training these networks (with 5-fold strat-
+ified cross-validation) are shown in Figure 5. First, note
+thatmanyofthedatasetsperformedworsethanthebaseline
+when initialized from the 10-held-in-task networks. Fur-
+ther,somedatasetsneverexhibitedanypositiveeffectdue
+to multitask initialization. Transfer learning can be nega-
+tive.
+Second, note that the transfer learning effect became
+# Additional
+Input Examples
+Figure4.Multitask benefit from increasing tasks and data inde-
+pendently. AsinFigure2,weaddedrandomlyselectedtasks(x-
+axis)toafixedheld-inset. Astratifiedrandomsamplingscheme
+wasappliedtotheadditionaltasksinordertoachievefixedtotal
+numbers of additional input examples (color, line type). White
+pointsindicatethemeanover10experimentalrunsof∆mean-
+AUCovertheinitialnetworktrainedonthe10held-indatasets.
+Color-filledareasanderrorbarsdescribethesmoothed95%con-
+fidenceintervals.
+strongerasmultitasknetworksweretrainedonmoredata.
+Large multitask networks exhibited better transferability,
+but the average effect even with 249 datasets was only
+∼ .01 AUC. We hypothesize that the extent of this gen-
+eralizability is determined by the presence or absence of
+relevantdatainthemultitasktrainingset.
+4.5.Whendodatasetsbenefitfrommultitasktraining?
+The results in Sections 4.2 and 4.4 indicate that some
+datasets benefit more from multitask training than others.
+Inanefforttoexplainthesedifferences,weconsiderthree
+specificquestions:
+1. Do shared active compounds explain multitask im-
+provement?
+2. Dosomebiologicaltargetclassesrealizegreatermul-
+titaskimprovementthanothers?
+3. Dotasksassociatedwithduplicatedtargetshavearti-
+ficiallyhighmultitaskperformance?
+4.5.1.SHAREDACTIVECOMPOUNDS
+The biological context of our datasets implies that active
+compounds contain more information than inactive com-
+pounds; while an inactive compound may be inactive for
+many reasons, active compounds often rely on similar
+physical mechanisms. Hence, shared active compounds
+shouldbeagoodmeasureofdatasetsimilarity.
+MassivelyMultitaskNetworksforDrugDiscovery
+PCBA 602233
+Tox21 SR−ATAD5
+0.00 ll lll l ll l l l lll l ll l l l l l l l l l l l l ll l lll llll ll ll ll lll l lll l llll l lM P P P P To C C C C U x B B B B 2 V A A A A 1 8 N 1 2 6 6 4 4 6 2 5 6 R 6 7 4 2 − 1 5 4 1 A 1 0 h 7 6 R
+−0.05 MUV 548
+1020 40 80 160 249
+# of Tasks/Datasets
+NN ksat elgnis
+There isa moderate correlation betweenAOR and ∆ log-
+odds-mean-AUC(r2 =.33);wenotethatthiscorrelationis
+notpresentwhenweuse∆mean-AUCasthey-coordinate
+(r2 =.09). Wehypothesizethatsomeportionofthemulti-
+taskeffectisdeterminedbysharedactivecompounds.That
+is,adatasetismostlikelytobenefitfrommultitasktraining whenitsharesmanyactivecompoundswithotherdatasets inthecollection.
+Figure5.Held-outgrowthcurves. They-axisshowsthechange
+inAUCcomparedtoasingle-taskneuralnetworkwiththesame
+architecture(PSTNN).Eachcoloredcurveistheresultofinitializ-
+ingasingle-taskneuralnetworkfromtheweightsofthenetworks
+fromSection4.2andcomputingthemeanacrossthe10experi-
+mentalruns. Thesedatasetswerenotincludedinthetrainingof
+theoriginalnetworks. Theshadedcurveisthemeanacrossthe
+Figure6.Multitaskimprovementcomparedtoactiveoccurrence
+100 combinations of datasets and experimental runs, and black
+rate(AOR).Eachpointinthefigurerepresentsaparticulardataset
+dotsrepresentmeansacrossthe10held-outdatasetsforeachex-
+D . The x-coordinate is the mean AOR across all active com-
+perimentalrun,whereadditionaltaskswererandomlyselected.
+poundsinD ,andthey-coordinateisthedifferenceinlog-odds-
+mean-AUCbetweenmultitaskandsingle-taskmodels. Thegray
+barsindicatestandarddeviationsaroundtheAORmeans. There
+Figure6plotsmultitaskimprovementagainstameasureof
+is a moderate correlation (r2 = .33). For reasons discussed in
+dataset similarity we call “active occurrence rate” (AOR).
+Section4.1,weexcludedDUD-Efromthisanalysis. (Including
+Foreachactivecompoundα indatasetD i , AOR i,α isde- DUD-Eresultsinasimilarcorrelation,r2 =.22.)
+fined as the number of additional datasets in which this
+compoundisalsoactive:
+4.5.2.TARGETCLASSES
+Figure 7 shows the relationship between multitask im-
+d(cid:54)=i
+provement and target classes. As before, we report mul-
+EachpointinFigure6correspondstoasingledatasetD . titask improvement in terms of log-odds and exclude the
+Thex-coordinateis DUD-E datasets. Qualitatively, no target class benefited
+more than any other from multitask training. Nearly ev-
+AOR i = Mean (AOR i,α ), erytargetclassrealizedgains,suggestingthatthemultitask
+frameworkisapplicabletoexperimentaldatafrommultiple
+andthey-coordinate(∆log-odds-mean-AUC)is targetclasses.
+logit (cid:32) K 1 (cid:88) K AUC ( k M)(D i ) (cid:33) −logit (cid:32) K 1 (cid:88) K AUC ( k S)(D i ) (cid:33) , 4.5.3.DUPLICATETARGETS
+AsmentionedinSection3.1,therearemanycasesoftasks
+withidenticaltargets.Wecomparedthemultitaskimprove-
+whereAUC(M)(D )andAUC(S)(D )arerespectivelythe mentofduplicatevs. uniquetasks. Thedistributionshave
+AUC values for the k-th fold of dataset i in the multitask substantialoverlap(seetheAppendix),buttheaveragelog-
+and single-task models, and logit(p) = log(p/(1−p)). oddsimprovementwasslightlyhigherforduplicatedtasks
+Theuseoflog-oddsreducestheeffectofoutliersandem- (.531 vs. .372; a one-sided t-test between the duplicate
+phasizeschangesinAUCwhenthebaselineishigh. Note anduniquedistributionsgavep = .016). Sinceduplicated
+that for reasons discussed in Section 4.1, DUD-E was ex- targetsarelikelytosharemanyactivecompounds,thisim-
+cludedfromthisanalysis. provement is consistent with the correlation seen in Sec-
+MassivelyMultitaskNetworksforDrugDiscovery
+We observed that the multitask effect was stronger for
+some datasets than others. Consequently, we investigated
+possible explanations for this discrepancy and found that
+the presence of shared active compounds was moderately
+correlated with multitask improvement, but the biological
+classofthetargetwasnot. Itisalsopossiblethatmultitask
+improvementresultsfromaccuratelymodelingexperimen-
+talartifactsratherthanspecificinteractionsbetweentargets
+andsmallmolecules. Wedonotbelievethistobethecase,
+aswedemonstratedstrongimprovementonthethoroughly-
+cleanedMUVdatasets.
+The efficacy of multitask learning is directly related to
+the availability of relevant data. Hence, obtaining greater
+amounts of data is of critical importance for improving
+thestateoftheart. Majorpharmaceuticalcompaniespos-
+Figure7.Multitask improvement across target classes. The x- sessvastprivatestoresofexperimentalmeasurements;our
+coordinate lists a series of biological target classes represented workprovidesastrongargumentthatincreaseddatashar-
+inourdatasetcollection,andthey-coordinateisthedifferencein ingcouldresultinbenefitsforall.
+log-odds-mean-AUC between multitask and single-task models.
+NotethattheDUD-Edatasetsareexcluded. Classesareordered Moredatawillmaximizethebenefitsachievableusingcur-
+bytotalnumberoftargets(inparenthesis),andtargetclasseswith rent architectures, but in order for algorithmic progress to
+fewerthanfivemembersaremergedinto“miscellaneous.” occur,itmustbepossibletojudgetheperformanceofpro-
+posedmodelsagainstpreviouswork. Itisdisappointingto
+notethatallpublishedapplicationsofdeeplearningtovir-
+tion4.5.1. However,signtestsforsingle-taskvs. multitask tual screening (that we are aware of) use distinct datasets
+models for duplicate and unique targets gave significant that are not directly comparable. It remains to future re-
+and highly overlapping confidence intervals ([0.04,0.24] searchtoestablishstandarddatasetsandperformancemet-
+and [0.06,0.17], respectively; recall that the meaning of ricsforthisfield.
+theseintervalsisgiveninthecaptionforTable2).Together,
+Another direction for future work is the further study of
+these results suggest that there is not significant informa-
+small molecule featurization. In this work, we use only
+tionleakagewithinmultitasknetworks. Consequently,the
+one possible featurization (ECFP4), but there exist many
+results of our analysis are unlikely to be significantly af-
+others. Additional performance may also be realized by
+fected by the presence of duplicate targets in our dataset
+considering targets as well as small molecules in the fea-
+collection.
+turization. Yetanotherlineofresearchcouldimproveper-
+formancebyusingunsupervisedlearningtoexploremuch
+5.DiscussionandConclusion
+largersegmentsofchemicalspace.
+Inthiswork,weinvestigatedtheuseofmassivelymultitask Although deep learning offers interesting possibilities for
+networksforvirtualscreening. Wegatheredalargecollec- virtual screening, the full drug discovery process remains
+tion of publicly available experimental data that we used immenselycomplicated. Candeeplearning—coupledwith
+to train massively multitask neural networks. These net- large amounts of experimental data—trigger a revolution
+works achieved significant improvement over simple ma- in this field? Considering the transformational effect that
+chinelearningalgorithms. these methods have had on other fields, we are optimistic
+aboutthefuture.
+We explored several aspects of the multitask framework.
+First, we demonstrated that multitask performance im-
+proved with the addition of more tasks; our performance Acknowledgments
+wasstillclimbingat259tasks.Next,weconsideredtherel-
+B.R. was supported by the Fannie and John Hertz Foun-
+ativeimportanceofintroducingmoredatavs. moretasks.
+dation. S.K.wassupportedbyaSmithStanfordGraduate
+We found that additional data and additional tasks both
+Fellowship. We also acknowledge support from NIH and
+contributed significantly to the multitask effect. We next
+NSF,inparticularNIHU54GM072970andNSF0960306.
+discovered that multitask learning afforded limited trans-
+ThelatterawardwasfundedundertheAmericanRecovery
+ferabilitytotasksnotcontainedinthetrainingset. Thisef-
+andReinvestmentActof2009(PublicLaw111-5).
+fectwasnotuniversal, andrequiredlargeamountsofdata
+evenwhenitdidapply.
+MassivelyMultitaskNetworksforDrugDiscovery
+References Nair,VinodandHinton,GeoffreyE. Rectifiedlinearunits
+improverestrictedboltzmannmachines. InProceedings
+Abdo, Ammar, Chen, Beining, Mueller, Christoph, Salim,
+ofthe27thInternationalConferenceonMachineLearn-
+Naomie,andWillett,Peter. Ligand-basedvirtualscreen-
+ing(ICML-10),pp.807–814,2010.
+ingusingbayesiannetworks. Journalofchemicalinfor-
+mationandmodeling,50(6):1012–1020,2010.
+Pedregosa, Fabian, Varoquaux, Gae¨l, Gramfort, Alexan-
+dre, Michel, Vincent,Thirion, Bertrand, Grisel, Olivier,
+Collobert,RonanandWeston,Jason.Aunifiedarchitecture
+Blondel, Mathieu, Prettenhofer, Peter, Weiss, Ron,
+for natural language processing: Deep neural networks
+Dubourg,Vincent,etal. Scikit-learn: Machinelearning
+withmultitasklearning.InProceedingsofthe25thinter-
+inpython. TheJournalofMachineLearningResearch,
+nationalconferenceonMachinelearning,pp.160–167.
+12:2825–2830,2011.
+ACM,2008.
+Dahl, George. Deep Learning How I Did It: Merck 1st Rogers,DavidandHahn,Mathew. Extended-connectivity
+placeinterview. NoFreeHunch,November1,2012. fingerprints. Journalofchemicalinformationandmod-
+eling,50(5):742–754,2010.
+Dahl, GeorgeE,Jaitly, Navdeep, andSalakhutdinov, Rus-
+lan. Multi-task neural networks for QSAR predictions. Rohrer, Sebastian G and Baumann, Knut. Maximum un-
+arXivpreprintarXiv:1406.1231,2014. biased validation (MUV) data sets for virtual screening
+basedonpubchembioactivitydata. Journalofchemical
+Deng, Li, Hinton, Geoffrey, and Kingsbury, Brian. New
+informationandmodeling,49(2):169–184,2009.
+typesofdeepneuralnetworklearningforspeechrecog-
+nition and related applications: An overview. In
+Rumelhart, David E, Hinton, Geoffrey E, and Williams,
+Acoustics, Speech and Signal Processing (ICASSP),
+RonaldJ. Learningrepresentationsbyback-propagating
+2013IEEEInternationalConferenceon,pp.8599–8603.
+errors. Cognitivemodeling,1988.
+IEEE,2013.
+Shoichet,BrianK. Virtualscreeningofchemicallibraries.
+Erhan, Dumitru, L’Heureux, Pierre-Jean, Yue, ShiYi, and
+Nature,432(7019):862–865,2004.
+Bengio, Yoshua. Collaborative filtering on a family of
+biologicaltargets. Journalofchemicalinformationand
+Swamidass,SJoshua,Azencott,Chloe´-Agathe,Lin,Ting-
+modeling,46(2):626–635,2006.
+Wan, Gramajo, Hugo, Tsai, Shiou-Chuan, and Baldi,
+Jain, Ajay N and Nicholls, Anthony. Recommenda- Pierre.Influencerelevancevoting:anaccurateandinter-
+tionsforevaluationofcomputationalmethods. Journal pretablevirtualhighthroughputscreeningmethod.Jour-
+of computer-aided molecular design, 22(3-4):133–139, nal of chemical information and modeling, 49(4):756–
+2008. 766,2009.
+Landrum, Greg. RDKit: Open-source cheminformatics. Szegedy, Christian, Liu, Wei, Jia, Yangqing, Sermanet,
+mitru, Vanhoucke, Vincent, and Rabinovich, Andrew.
+Lowe,Derek. DidKagglePredictDrugCandidateActivi-
+Going deeper with convolutions. arXiv preprint
+ties? OrNot? InthePipeline,December11,2012.
+arXiv:1409.4842,2014.
+Lusci, Alessandro, Pollastri, Gianluca, and Baldi, Pierre.
+Unterthiner,Thomas,Mayr,Andreas,u¨nterKlambauer,G,
+Deeparchitecturesanddeeplearninginchemoinformat-
+Steijaert, Marvin, Wenger, Jo¨rg, Ceulemans, Hugo, and
+ics: the prediction of aqueous solubility for drug-like
+Hochreiter, Sepp. Deep learning as an opportunity in
+molecules. Journal of chemical information and mod-
+virtualscreening.
+eling,53(7):1563–1575,2013.
+Ma, Junshui, Sheridan, Robert P, Liaw, Andy, Dahl, Varnek, Alexandre and Baskin, Igor. Machine learning
+George, and Svetnik, Vladimir. Deep neural nets as a methods for property prediction in chemoinformatics:
+method for quantitative structure-activity relationships. quovadis? Journalofchemicalinformationandmodel-
+JournalofChemicalInformationandModeling,2015. ing,52(6):1413–1437,2012.
+Mysinger,MichaelM,Carchia,Michael,Irwin,JohnJ,and Wang, Yanli, Xiao, Jewen, Suzek, Tugba O, Zhang, Jian,
+Shoichet,BrianK.Directoryofusefuldecoys,enhanced Wang, Jiyao, Zhou, Zhigang, Han, Lianyi, Karapetyan,
+(DUD-E): better ligands and decoys for better bench- Karen, Dracheva, Svetlana, Shoemaker, Benjamin A,
+marking. Journalofmedicinalchemistry,55(14):6582– etal. PubChem’sBioAssaydatabase. Nucleicacidsre-
+6594,2012. search,40(D1):D400–D412,2012.
+MassivelyMultitaskNetworksforDrugDiscovery
+Willett, Peter, Barnard, John M, and Downs, Geoffrey M.
+Chemical similarity searching. Journal of chemical in-
+formationandcomputersciences,38(6):983–996,1998.
+Massively Multitask Networks for Drug Discovery: Appendix
+February10,2015
+A.DatasetConstructionandDesign
+ThePCBAdatasetsare dose-responseassaysperformedbythe NCATSChemicalGenomicsCenter(NCGC)anddown-
+loaded from PubChem BioAssay using the following search limits: TotalSidCount from 10000, ActiveSidCount from
+30, Chemical, Confirmatory, Dose-Response, Target: Single, NCGC. These limits correspond to the search query:
+(10000[TotalSidCount]: 1000000000[TotalSidCount])AND(30[ActiveSidCount]: 1000000000[ActiveSidCount])AND
+“small molecule”[filt] AND “doseresponse”[filt] AND 1[TargetCount] AND “NCGC”[SourceName]. We note that the
+DUD-E datasets are especially susceptible to “artificial enrichment” (unrealistic divisions between active and inactive
+compounds)asanartifactofthedatasetconstructionprocedure. Eachdatapointinourcollectionwasassociatedwitha
+binarylabelclassifyingitaseitheractiveorinactive.
+Adescriptionofeachofour259datasetsisgiveninTableA1.Thesedatasetscoverawiderangeoftargetclassesandassay
+types,includingbothcell-basedandinvitroexperiments.Datasetswithduplicatedtargetsaremarkedwithanasterisk(note
+thatonlythenon-DUD-Eduplicatetargetdatasetswereusedintheanalysisdescribedinthetext). ForthePCBAdatasets,
+compoundsnotlabeled“Active”wereconsideredinactive(includingcompoundsmarked“Inconclusive”). Duetomissing
+datainPubChemBioAssayand/orfeaturizationerrors,somedatapointsandcompoundswerenotusedforevaluationof
+ourmodels;failureratesforeachdatasetgroupareshowninTableA.2. TheTox21groupsufferedespeciallyhighfailure
+rates,likelyduetotherelativelylargenumberofmetallicorotherwiseabnormalcompoundsthatarenotsupportedbythe
+RDKitpackage. ThecountsgiveninTableA1donotincludethesemissingdata. Agraphicalbreakdownofthedatasets
+bytargetclassisshowninFigureA.1. Thedatasetsusedfortheheld-inandheld-outanalysesarerepeatedinTableA.3
+andTableA.4,respectively.
+Asanextensionofourtreatmentoftasksimilarityinthetext,wegeneratedtheheatmapinFigureA.2toshowthepairwise
+intersectionbetweenalldatasetsinourcollection. Afewcharacteristicsofourdatasetsareimmediatelyapparent:
+• ThedatasetsintheDUD-Egrouphaveverylittleintersectionwithanyotherdatasets.
+• The PCBA and Tox21 datasets have substantial self-overlap. In contrast, the MUV datasets have relatively little
+self-overlap.
+• TheMUVdatasetshavesubstantialoverlapwiththedatasetsinthePCBAgroup.
+• TheTox21datasetshaveverysmallintersectionswithdatasetsinothergroups.
+FigureA.3showsthe∆log-odds-mean-AUCfordatasetswithduplicateanduniquetargets.
+Dataset Actives Inactives TargetClass Target
+pcba-aid411* 1562 69734 otherenzyme luciferase
+pcba-aid875 32 73870 protein-protein brca1-bach1
+interaction
+pcba-aid881 589 106656 otherenzyme 15hLO-2
+pcba-aid883 1214 8170 otherenzyme CYP2C9
+pcba-aid884 3391 9676 otherenzyme CYP3A4
+pcba-aid885 163 12904 otherenzyme CYP3A4
+MassivelyMultitaskNetworksforDrugDiscovery
+Dataset Actives Inactives TargetClass Target
+pcba-aid887 1024 72140 otherenzyme 15hLO-1
+pcba-aid891 1548 7836 otherenzyme CYP2D6
+pcba-aid899 1809 7575 otherenzyme CYP2C19
+pcba-aid902* 1872 123512 viability H1299-p53A138V
+pcba-aid903* 338 54175 viability H1299-neo
+pcba-aid904* 528 53981 viability H1299-neo
+pcba-aid912 445 68506 miscellaneous anthraxLF-PAinternalization
+pcba-aid914 218 10619 transcription fac- HIF-1
+pcba-aid915 436 10401 transcription fac- HIF-1
+pcba-aid924* 1146 122867 viability H1299-p53A138V
+pcba-aid925 39 64358 miscellaneous EGFP-654
+pcba-aid926 350 71666 GPCR TSHR
+pcba-aid927* 61 59108 protease USP2a
+pcba-aid938 1775 70241 ionchannel CNG
+pcba-aid995* 699 70189 signalling path- ERK1/2cascade
+pcba-aid1030 15963 200920 otherenzyme ALDH1A1
+pcba-aid1379* 562 198500 otherenzyme luciferase
+pcba-aid1452 177 151634 otherenzyme 12hLO
+pcba-aid1454* 536 130788 signalling path- ERK1/2cascade
+pcba-aid1457 722 204859 otherenzyme IMPase
+pcba-aid1458 5805 202680 miscellaneous SMN2
+pcba-aid1460* 5662 261757 protein-protein K18
+interaction
+pcba-aid1461 2305 218561 GPCR NPSR
+pcba-aid1468* 1039 270371 protein-protein K18
+interaction
+pcba-aid1469 169 276098 protein-protein TRb-SRC2
+interaction
+pcba-aid1471 288 223321 protein-protein huntingtin
+interaction
+pcba-aid1479 788 275479 miscellaneous TRb-SRC2
+pcba-aid1631 892 262774 otherenzyme hPK-M2
+pcba-aid1634 154 263512 otherenzyme hPK-M2
+pcba-aid1688 2374 218200 protein-protein HTTQ103
+interaction
+pcba-aid1721 1087 291649 otherenzyme LmPK
+pcba-aid2100* 1159 301145 otherenzyme alpha-glucosidase
+pcba-aid2101* 285 321268 otherenzyme glucocerebrosidase
+pcba-aid2147 3477 223441 otherenzyme JMJD2E
+pcba-aid2242* 715 198459 otherenzyme alpha-glucosidase
+pcba-aid2326 1069 268500 miscellaneous influenzaANS1
+pcba-aid2451 2008 285737 otherenzyme FBPA
+pcba-aid2517 1136 344762 otherenzyme APE1
+pcba-aid2528 660 347283 otherenzyme BLM
+pcba-aid2546 10550 293509 transcription fac- VP16
+pcba-aid2549 1210 233706 otherenzyme RECQ1
+MassivelyMultitaskNetworksforDrugDiscovery
+Dataset Actives Inactives TargetClass Target
+pcba-aid2551 16666 288772 transcription fac- RORgamma
+pcba-aid2662 110 293953 miscellaneous MLL-HOX-A
+pcba-aid2675 99 279333 miscellaneous MBNL1-CUG
+pcba-aid2676 1081 361124 GPCR RXFP1
+pcba-aid463254* 41 330640 protease USP2a
+pcba-aid485281 254 341253 miscellaneous apoferritin
+pcba-aid485290 942 343503 otherenzyme TDP1
+pcba-aid485294* 148 362056 otherenzyme AmpC
+pcba-aid485297 9126 311481 promoter Rab9
+pcba-aid485313 7567 313119 promoter NPC1
+pcba-aid485314 4491 329974 otherenzyme DNApolymerasebeta
+pcba-aid485341* 1729 328952 otherenzyme AmpC
+pcba-aid485349 618 321745 proteinkinase ATM
+pcba-aid485353 603 328042 protease PLP
+pcba-aid485360 1485 223830 protein-protein L3MBTL1
+interaction
+pcba-aid485364 10700 345950 otherenzyme TGR
+pcba-aid485367 557 330124 otherenzyme PFK
+pcba-aid492947 80 330601 GPCR beta2-AR
+pcba-aid493208 342 43647 proteinkinase mTOR
+pcba-aid504327 759 380820 otherenzyme GCN5L2
+pcba-aid504332 30586 317753 otherenzyme G9a
+pcba-aid504333 15670 341165 protein-protein BAZ2B
+interaction
+pcba-aid504339 16857 367661 protein-protein JMJD2A
+interaction
+pcba-aid504444 7390 353475 transcription fac- Nrf2
+pcba-aid504466 4169 325944 viability HEK293T-ELG1-luc
+pcba-aid504467 7647 322464 promoter ELG1
+pcba-aid504706 201 321230 miscellaneous p53
+pcba-aid504842 101 329517 otherenzyme Mm-CPN
+pcba-aid504845 104 385400 miscellaneous RGS4
+pcba-aid504847 3515 390525 transcription fac- VDR
+pcba-aid504891 34 383652 otherenzyme Pin1
+pcba-aid540276* 4494 279673 miscellaneous Marburgvirus
+pcba-aid540317 2126 381226 protein-protein HP1-beta
+interaction
+pcba-aid588342* 25034 335826 otherenzyme luciferase
+pcba-aid588453* 3921 382731 otherenzyme TrxR1
+pcba-aid588456* 51 386206 otherenzyme TrxR1
+pcba-aid588579 1987 393298 otherenzyme DNApolymerasekappa
+pcba-aid588590 3936 382117 otherenzyme DNApolymeraseiota
+pcba-aid588591 4715 383994 otherenzyme DNApolymeraseeta
+pcba-aid588795 1308 384951 otherenzyme FEN1
+pcba-aid588855 4894 398438 transcription fac- Smad3
+pcba-aid602179 364 387230 otherenzyme IDH1
+pcba-aid602233 165 380904 otherenzyme PGK
+MassivelyMultitaskNetworksforDrugDiscovery
+Dataset Actives Inactives TargetClass Target
+pcba-aid602310 310 402026 protein-protein Vif-A3G
+interaction
+pcba-aid602313 762 383076 protein-protein Vif-A3F
+interaction
+pcba-aid602332 70 415773 promoter GRP78
+pcba-aid624170 837 404440 otherenzyme GLS
+pcba-aid624171 1239 402621 transcription fac- Nrf2
+pcba-aid624173 488 406224 otherenzyme PYK
+pcba-aid624202 3968 372045 promoter BRCA1
+pcba-aid624246 101 367273 miscellaneous ERG
+pcba-aid624287 423 334388 signalling path- Gsgsp
+pcba-aid624288 1356 336077 signalling path- Gsgsp
+pcba-aid624291 222 345619 promoter a7
+pcba-aid624296* 9841 333378 miscellaneous DNAre-replication
+pcba-aid624297* 6214 336050 miscellaneous DNAre-replication
+pcba-aid624417 6388 398731 GPCR GLP-1
+pcba-aid651635 3784 387779 promoter ATXN
+pcba-aid651644 748 361115 miscellaneous Vpr
+pcba-aid651768 1677 362320 otherenzyme WRN
+pcba-aid651965 6422 331953 protease ClpP
+pcba-aid652025 238 364365 signalling path- IL-2
+pcba-aid652104 7126 396566 miscellaneous TDP-43
+pcba-aid652105 4072 324774 otherenzyme PI5P4K
+pcba-aid652106 496 368281 miscellaneous alpha-synuclein
+pcba-aid686970 5949 358501 viability HT-1080-NT
+pcba-aid686978* 62746 354086 viability DT40-hTDP1
+pcba-aid686979* 48816 368048 viability DT40-hTDP1
+pcba-aid720504 10170 353881 proteinkinase Plk1PBD
+pcba-aid720532* 945 14532 miscellaneous Marburgvirus
+pcba-aid720542 733 363349 protein-protein AMA1-RON2
+interaction
+pcba-aid720551* 1265 342387 ionchannel KCHN23.1
+pcba-aid720553* 3260 338810 ionchannel KCHN23.1
+pcba-aid720579* 1913 304815 miscellaneous orthopoxvirus
+pcba-aid720580* 1508 324844 miscellaneous orthopoxvirus
+pcba-aid720707 268 364332 otherenzyme EPAC1
+pcba-aid720708 661 363939 otherenzyme EPAC2
+pcba-aid720709 516 364084 otherenzyme EPAC1
+pcba-aid720711 290 364310 otherenzyme EPAC2
+pcba-aid743255 902 388656 protease USP1/UAF1
+pcba-aid743266 306 405368 GPCR PTHR1
+muv-aid466 30 14999 GPCR S1P1receptor
+muv-aid548 30 15000 proteinkinase PKA
+muv-aid600 30 14999 transcription fac- SF1
+muv-aid644 30 14998 proteinkinase Rho-Kinase2
+muv-aid652 30 15000 otherenzyme HIVRT-RNase
+muv-aid689 30 14999 otherreceptor Ephrec. A4
+MassivelyMultitaskNetworksforDrugDiscovery
+Dataset Actives Inactives TargetClass Target
+muv-aid692 30 15000 transcription fac- SF1
+muv-aid712* 30 14997 miscellaneous HSP90
+muv-aid713* 30 15000 protein-protein ER-a-coact. bind.
+interaction
+muv-aid733 30 15000 protein-protein ER-b-coact. bind.
+interaction
+muv-aid737* 30 14999 protein-protein ER-a-coact. bind.
+interaction
+muv-aid810* 30 14999 proteinkinase FAK
+muv-aid832 30 15000 protease CathepsinG
+muv-aid846 30 15000 protease FXIa
+muv-aid852 30 15000 protease FXIIa
+muv-aid858 30 14999 GPCR D1receptor
+muv-aid859 30 15000 GPCR M1receptor
+tox-NR-AhR 768 5780 transcription fac- Arylhydrocarbonreceptor
+tox-NR-AR-LBD* 237 6520 transcription fac- Androgenreceptor
+tox-NR-AR* 309 6955 transcription fac- Androgenreceptor
+tox-NR-Aromatase 300 5521 otherenzyme Aromatase
+tox-NR-ER-LBD* 350 6604 transcription fac- Estrogenreceptoralpha
+tox-NR-ER* 793 5399 transcription fac- Estrogenreceptoralpha
+tox-NR-PPAR-gamma* 186 6263 transcription fac- PPARg
+tox-SR-ARE 942 4889 miscellaneous ARE
+tox-SR-ATAD5 264 6807 promoter ATAD5
+tox-SR-HSE 372 6094 miscellaneous HSE
+tox-SR-MMP 919 4891 miscellaneous mitochondrialmembranepotential
+tox-SR-p53 423 6351 miscellaneous p53signalling
+dude-aa2ar 482 31546 GPCR AdenosineA2areceptor
+dude-abl1 182 10749 proteinkinase Tyrosine-proteinkinaseABL
+dude-ace 282 16899 protease Angiotensin-convertingenzyme
+dude-aces 453 26240 otherenzyme Acetylcholinesterase
+dude-ada 93 5450 otherenzyme Adenosinedeaminase
+dude-ada17 532 35900 protease ADAM17
+dude-adrb1 247 15848 GPCR Beta-1adrenergicreceptor
+dude-adrb2 231 14997 GPCR Beta-2adrenergicreceptor
+dude-akt1 293 16441 proteinkinase Serine/threonine-protein kinase
+dude-akt2 117 6899 proteinkinase Serine/threonine-protein kinase
+dude-aldr 159 8999 otherenzyme Aldosereductase
+dude-ampc 48 2850 otherenzyme Beta-lactamase
+dude-andr* 269 14350 transcription fac- AndrogenReceptor
+dude-aofb 122 6900 otherenzyme MonoamineoxidaseB
+dude-bace1 283 18097 protease Beta-secretase1
+MassivelyMultitaskNetworksforDrugDiscovery
+Dataset Actives Inactives TargetClass Target
+dude-braf 152 9950 proteinkinase Serine/threonine-proteinkinaseB-
+dude-cah2 492 31168 otherenzyme CarbonicanhydraseII
+dude-casp3 199 10700 protease Caspase-3
+dude-cdk2 474 27850 proteinkinase Cyclin-dependentkinase2
+dude-comt 41 3850 otherenzyme CatecholO-methyltransferase
+dude-cp2c9 120 7449 otherenzyme CytochromeP4502C9
+dude-cp3a4 170 11800 otherenzyme CytochromeP4503A4
+dude-csf1r 166 12149 otherreceptor Macrophage colony stimulating
+factorreceptor
+dude-cxcr4 40 3406 GPCR C-X-Cchemokinereceptortype4
+dude-def 102 5700 otherenzyme Peptidedeformylase
+dude-dhi1 330 19350 otherenzyme 11-beta-hydroxysteroid dehydro-
+dude-dpp4 533 40943 protease DipeptidylpeptidaseIV
+dude-drd3 480 34037 GPCR DopamineD3receptor
+dude-dyr 231 17192 otherenzyme Dihydrofolatereductase
+dude-egfr 542 35047 otherreceptor Epidermal growth factor receptor
+dude-esr1* 383 20675 transcription fac- Estrogenreceptoralpha
+dude-esr2 367 20190 transcription fac- Estrogenreceptorbeta
+dude-fa10 537 28315 protease CoagulationfactorX
+dude-fa7 114 6250 protease CoagulationfactorVII
+dude-fabp4 47 2750 miscellaneous Fatty acid binding protein
+dude-fak1* 100 5350 proteinkinase FAK
+dude-fgfr1 139 8697 otherreceptor Fibroblastgrowthfactorreceptor1
+dude-fkb1a 111 5800 otherenzyme FK506-bindingprotein1A
+dude-fnta 592 51481 otherenzyme Protein farnesyltrans-
+ferase/geranylgeranyltransferase
+typeIalphasubunit
+dude-fpps 85 8829 otherenzyme Farnesyldiphosphatesynthase
+dude-gcr 258 14999 transcription fac- Glucocorticoidreceptor
+dude-glcm* 54 3800 otherenzyme glucocerebrosidase
+dude-gria2 158 11842 ionchannel Glutamatereceptorionotropic
+dude-grik1 101 6549 ionchannel Glutamate receptor ionotropic
+dude-hdac2 185 10299 otherenzyme Histonedeacetylase2
+dude-hdac8 170 10449 otherenzyme Histonedeacetylase8
+dude-hivint 100 6650 otherenzyme Human immunodeficiency virus
+type1integrase
+dude-hivpr 536 35746 protease Human immunodeficiency virus
+type1protease
+dude-hivrt 338 18891 otherenzyme Human immunodeficiency virus
+type1reversetranscriptase
+dude-hmdh 170 8748 otherenzyme HMG-CoAreductase
+dude-hs90a* 88 4849 miscellaneous HSP90
+dude-hxk4 92 4700 otherenzyme HexokinasetypeIV
+MassivelyMultitaskNetworksforDrugDiscovery
+Dataset Actives Inactives TargetClass Target
+dude-igf1r 148 9298 otherreceptor Insulin-likegrowthfactorIrecep-
+dude-inha 43 2300 otherenzyme Enoyl-[acyl-carrier-protein]
+dude-ital 138 8498 miscellaneous Leukocyte adhesion glycoprotein
+LFA-1alpha
+dude-jak2 107 6499 proteinkinase Tyrosine-proteinkinaseJAK2
+dude-kif11 116 6849 miscellaneous Kinesin-likeprotein1
+dude-kit 166 10449 otherreceptor Stemcellgrowthfactorreceptor
+dude-kith 57 2849 otherenzyme Thymidinekinase
+dude-kpcb 135 8700 proteinkinase ProteinkinaseCbeta
+dude-lck 420 27397 proteinkinase Tyrosine-proteinkinaseLCK
+dude-lkha4 171 9450 protease LeukotrieneA4hydrolase
+dude-mapk2 101 6150 proteinkinase MAP kinase-activated protein ki-
+dude-mcr 94 5150 transcription fac- Mineralocorticoidreceptor
+dude-met 166 11247 otherreceptor Hepatocytegrowthfactorreceptor
+dude-mk01 79 4549 proteinkinase MAPkinaseERK2
+dude-mk10 104 6600 proteinkinase c-JunN-terminalkinase3
+dude-mk14 578 35848 proteinkinase MAPkinasep38alpha
+dude-mmp13 572 37195 protease Matrixmetalloproteinase13
+dude-mp2k1 121 8149 proteinkinase Dualspecificitymitogen-activated
+proteinkinasekinase1
+dude-nos1 100 8048 otherenzyme Nitric-oxidesynthase
+dude-nram 98 6199 otherenzyme Neuraminidase
+dude-pa2ga 99 5150 otherenzyme PhospholipaseA2groupIIA
+dude-parp1 508 30049 otherenzyme Poly[ADP-ribose]polymerase-1
+dude-pde5a 398 27547 otherenzyme Phosphodiesterase5A
+dude-pgh1 195 10800 otherenzyme Cyclooxygenase-1
+dude-pgh2 435 23149 otherenzyme Cyclooxygenase-2
+dude-plk1 107 6800 proteinkinase Serine/threonine-protein kinase
+dude-pnph 103 6950 otherenzyme Purinenucleosidephosphorylase
+dude-ppara 373 19397 transcription fac- PPARa
+dude-ppard 240 12247 transcription fac- PPARd
+dude-pparg* 484 25296 transcription fac- PPARg
+dude-prgr 293 15648 transcription fac- Progesteronereceptor
+dude-ptn1 130 7250 otherenzyme Protein-tyrosinephosphatase1B
+dude-pur2 50 2698 otherenzyme GARtransformylase
+dude-pygm 77 3948 otherenzyme Muscleglycogenphosphorylase
+dude-pyrd 111 6450 otherenzyme Dihydroorotatedehydrogenase
+dude-reni 104 6958 protease Renin
+dude-rock1 100 6299 proteinkinase Rho-associatedproteinkinase1
+dude-rxra 131 6948 transcription fac- RetinoidXreceptoralpha
+dude-sahh 63 3450 otherenzyme Adenosylhomocysteinase
+dude-src 524 34491 proteinkinase Tyrosine-proteinkinaseSRC
+MassivelyMultitaskNetworksforDrugDiscovery
+Dataset Actives Inactives TargetClass Target
+dude-tgfr1 133 8500 otherreceptor TGF-betareceptortypeI
+dude-thb 103 7448 transcription fac- Thyroidhormonereceptorbeta-1
+dude-thrb 461 26999 protease Thrombin
+dude-try1 449 25967 protease TrypsinI
+dude-tryb1 148 7648 protease Tryptasebeta-1
+dude-tysy 109 6748 otherenzyme Thymidylatesynthase
+dude-urok 162 9850 protease Urokinase-type plasminogen acti-
+dude-vgfr2 409 24946 otherreceptor Vascularendothelialgrowthfactor
+dude-wee1 102 6150 proteinkinase Serine/threonine-protein kinase
+dude-xiap 100 5149 miscellaneous Inhibitorofapoptosisprotein3
+TableA.2. Featurizationfailures.
+Group Original Featurized FailureRate(%)
+PCBA 439879 437928 0.44
+DUD-E 1200966 1200406 0.05
+MUV 95916 95899 0.02
+Tox21 11764 7830 33.44
+MassivelyMultitaskNetworksforDrugDiscovery
+FigureA.1. Targetclassbreakdown.Classeswithfewerthanfivemembersweremergedintothe“miscellaneous”class.
+MassivelyMultitaskNetworksforDrugDiscovery
+TableA.3. Held-indatasets.
+Dataset Actives Inactives TargetClass Target
+pcba-aid899 1809 7575 otherenzyme CYP2C19
+pcba-aid485297 9126 311481 promoter Rab9
+pcba-aid651644 748 361115 miscellaneous Vpr
+pcba-aid651768 1677 362320 otherenzyme WRN
+pcba-aid743266 306 405368 GPCR PTHR1
+muv-aid466 30 14999 GPCR S1P1receptor
+muv-aid852 30 15000 protease FXIIa
+muv-aid859 30 15000 GPCR M1receptor
+tox-NR-Aromatase 300 5521 otherenzyme Aromatase
+tox-SR-MMP 919 4891 miscellaneous mitochondrialmembranepotential
+TableA.4. Held-outdatasets.
+Dataset Actives Inactives TargetClass Target
+pcba-aid1461 2305 218561 GPCR NPSR
+pcba-aid2675 99 279333 miscellaneous MBNL1-CUG
+pcba-aid602233 165 380904 otherenzyme PGK
+pcba-aid624417 6388 398731 GPCR GLP-1
+pcba-aid652106 496 368281 miscellaneous alpha-synuclein
+muv-aid548 30 15000 proteinkinase PKA
+muv-aid832 30 15000 protease CathepsinG
+muv-aid846 30 15000 protease FXIa
+tox-NR-AhR 768 5780 transcriptionfactor Arylhydrocarbonreceptor
+tox-SR-ATAD5 264 6807 promoter ATAD5
+MassivelyMultitaskNetworksforDrugDiscovery
+FigureA.2.Pairwisedatasetintersections. Thevalueoftheelementatposition(x,y)correspondstothefractionofdatasetxthatis
+containedindatasety.Thinblacklinesareusedtoindicatedivisionsbetweendatasetgroups.
+MassivelyMultitaskNetworksforDrugDiscovery
+FigureA.3.Multitask performance of duplicate and unique targets. Outliers are omitted for clarity. Notches indicate a confidence
+intervalaroundthemedian,computedas±1.57×IQR/ N (McGilletal.,1978).
+MassivelyMultitaskNetworksforDrugDiscovery
+B.Performancemetrics
+TableB.1.SigntestCIsforeachgroupofdatasets. EachmodeliscomparedtothePyramidal(2000,100)MultitaskNeuralNet,.25
+Dropoutmodel.
+PCBA MUV Tox21
+LogisticRegression(LR) [.3,.11] [.13,.53] [.00,.24]
+RandomForest(RF) [.05,.16] [.00,.18] [.14,.61]
+Single-TaskNeuralNet(STNN) [.02,.10] [.13,.53] [.00,.24]
+Pyramidal(2000,100)STNN,.25Dropout(PSTNN) [.05,.15] [.13,.53] [.00,.24]
+Max{LR,RF,STNN,PSTNN} [.09,.21] [.13,.53] [.14,.61]
+1-Hidden(1200)LayerMultitaskNeuralNet(MTNN) [.05,.15] [.22,.64] [.01,.35]
+TableB.2.EnrichmentscoresforallmodelsreportedinTable2. Eachvalueisthemedianacrossthedatasetsinagroupofthemean
+k-foldenrichmentvalues. Enrichmentisanalternatemeasureofmodelperformancecommoninvirtualdrugscreening. Weusethe
+“ROCenrichment”definitionfrom(Jain&Nicholls,2008),butroughlyenrichmentisthefactorbetterthanrandomthatamodel’stop
+X%predictionsare.
+Model PCBA MUV Tox21
+0.5% 1% 2% 5% 0.5% 1% 2% 5% 0.5% 1% 2% 5%
+LR 19.4 16.5 12.1 7.9 20.0 23.3 15.0 8.0 23.9 18.3 10.6 6.7
+RF 40.0 27.4 17.4 9.1 40.0 26.7 16.7 7.3 23.2 19.5 13.6 7.8
+STNN 19.0 15.6 11.8 7.7 26.7 20.0 11.7 8.0 16.2 14.4 9.8 6.1
+PSTNN 21.8 16.9 12.4 7.9 26.7 16.7 13.3 8.0 23.8 16.1 10.0 6.7
+MTNN 33.8 23.6 16.9 9.8 26.7 16.7 16.7 8.7 24.5 18.0 11.4 6.9
+PMTNN 43.8 29.6 19.7 11.2 40.0 23.3 16.7 10.0 23.5 18.5 13.7 8.1
+MassivelyMultitaskNetworksforDrugDiscovery
+FigureB.1.GraphicalrepresentationofdatafromTable2inthetext.Notchesindicateaconfidenceintervalaroundthemedian,computed
+as±1.57×IQR/ N (McGilletal.,1978). Occasionallythenotchlimitsgobeyondthequartilemarkers,producinga“foldeddown”
+effectontheboxplot.Pairedt-tests(2-sided)relativetothePMTNNacrossallnon-DUD-Edatasetsgavep≤1.86×10−15.
+MassivelyMultitaskNetworksforDrugDiscovery
+C.TrainingDetails
+ThemultitasknetworksinTable2weretrainedwithlearningrate.0003andbatchsize128for50Mstepsusingstochastic
+gradientdescent.Weightswereinitializedfromazero-meanGaussianwithstandarddeviation.01.Thebiaswasinitialized
+at.5. Weexperimentedwithhigherlearningrates,butfoundthatthepyramidalnetworkssometimesfailedtotrain(thetop
+hiddenlayerzeroeditselfout). However,thiseffectvanishedwiththelowerlearningrate. Mostofthemodelsweretrained
+with64simultaneousreplicassharingtheirgradientupdates,butinsomecasesweusedasmanyas256.
+The pyramidal single-task networks were trained with the same settings, but for 100K steps. The vanilla single-task
+networks were trained with learning rate .001 for 100K steps. The networks used in Figure 3 and Figure 4 were trained
+with learning rate 0.003 for 500 epochs plus a constant 3 million steps. The constant factor was introduced after we
+observedthatthesmallermultitasknetworksrequiredmoreepochsthanthelargernetworkstostabilize.
+The networks in Figure 5 were trained with a Pyramidal (1000, 50) Single Task architecture (matching the networks in
+Figure 3). The weights were initialized with the weights from the networks represented in Figure 3 and then trained for
+100Kstepswithalearningrateof0.0003.
+As we noted in the main text, the datasets in our collection contained many more inactive than active compounds. To
+ensuretheactivesweregivenadequateimportanceduringtraining,weweightedtheactivesforeachdatasettohavetotal
+weightequaltothenumberofinactivesforthatdataset(inactivesweregivenunitweight).
+TableC.1containstheresultsofourpyramidalmodelsensitivityanalysis. TablesC.2andC.3giveresultsforavarietyof
+additionalmodelsnotreportedinTable2.
+TableC.1.Pyramidsensitivityanalysis. Median5-fold-average-AUCvaluesaregivenforseveralvariationsofthepyramidalarchitec-
+ture.Inanattempttoavoidtheproblemoftrainingfailuresduetothetoplayerbecomingallzeroearlyinthetraining,thelearningrate
+wassetto0.0001forthefirst2Mstepsthento0.0003for28Msteps.
+PCBA MUV Tox21
+Pyramidal(1000,50)MTNN .846 .825 .799
+Pyramidal(1000,100)MTNN .845 .818 .796
+Pyramidal(1000,150)MTNN .842 .812 .798
+Pyramidal(2000,50)MTNN .846 .819 .794
+Pyramidal(2000,100)MTNN .846 .821 .798
+Pyramidal(2000,150)MTNN .845 .839 .792
+Pyramidal(3000,50)MTNN .848 .801 .796
+Pyramidal(3000,100)MTNN .844 .804 .799
+Pyramidal(3000,150)MTNN .843 .810 .789
+MassivelyMultitaskNetworksforDrugDiscovery
+TableC.2.Descriptionsforadditionalmodels. MTNN:multitaskneuralnet. “Auxiliaryheads”referstotheattachmentofindependent
+softmaxunitsforeachtasktohiddenlayers(seeSzegedyetal.,2014).Unlessotherwisemarked,assume10Mtrainingsteps.
+A 8-Hidden(300)LayerMTNN,auxiliaryheadsattachedtohiddenlayers3and6,6Msteps
+B 1-Hidden(3000)LayerMTNN,1Msteps
+C 1-Hidden(3000)LayerMTNN,1.5Msteps
+D Pyramidal(1800,100),2deep,reconnected(originalinputconcatenatedtofirstpyramidoutput)
+E Pyramidal(1800,100),3deep
+F 4-Hidden(1000)LayerMTNN,auxiliaryheadsattachedtohiddenlayer2,4.5Msteps
+G Pyramidal(2000,100)MTNN,10%connected
+H Pyramidal(2000,100)MTNN,50%connected
+I Pyramidal(2000,100)MTNN,.001learningrate
+J Pyramidal(2000,100)MTNN,50Msteps,.0003learningrate
+K Pyramidal(2000,100)MTNN,.25Dropout(firstlayeronly),50Msteps
+L Pyramidal(2000,100)MTNN,.25Dropout,.001learningrate
+TableC.3.Median5-fold-averageAUCvaluesforadditionalmodels. Signtestconfidenceintervalsandpairedt-test(2-sided)p-values
+arerelativetothePMTNNfromTable2andwerecalculatedacrossallnon-DUD-Edatasets.
+PCBA MUV Tox21
+Model SignTestCI Pairedt-Test
+A .836 .793 .786 [.01,.06] 9.37×10−43
+B .835 .855 .769 [.11,.22] 1.17×10−17
+C .837 .851 .765 [.12,.24] 2.60×10−16
+D .842 .842 .816 [.08,.18] 1.89×10−21
+E .842 .808 .789 [.02,.08] 9.25×10−43
+F .858 .836 .810 [.10,.22] 4.85×10−13
+G .831 .795 .774 [.03,.11] 1.15×10−31
+H .856 .827 .796 [.04,.13] 5.34×10−21
+I .860 .862 .824 [.07,.17] 6.23×10−14
+J .830 .810 .801 [.05,.14] 9.25×10−25
+K .859 .843 .803 [.24,.38] 3.25×10−9
+L .872 .837 .802 [.35,.50] 2.74×10−2
+MassivelyMultitaskNetworksforDrugDiscovery

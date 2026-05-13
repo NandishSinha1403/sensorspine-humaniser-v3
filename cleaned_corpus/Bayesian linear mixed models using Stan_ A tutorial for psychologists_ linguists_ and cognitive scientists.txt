@@ -1,0 +1,811 @@
+1v10260.6051:viXra
+Bayesian linear mixed models using Stan: A
+tutorial for psychologists, linguists, and cognitive
+scientists
+Tanner Sorensen1 and Shravan Vasishth1,2
+1: Department of Linguistics, University of Potsdam, Germany
+2: School of Mathematics and Statistics, Sheffield University, UK
+Correspondence to: {tanner.sorensen,vasishth}@uni-potsdam.de
+June 23, 2015
+With thearrival of theRpackages nlme and lme4, linear mixed mod-
+els (LMMs) have come to be widely used in experimentally-driven areas
+likepsychology,linguistics,andcognitivescience. Thistutorialprovidesa
+practicalintroductiontofittingLMMsinaBayesianframeworkusingthe
+probabilistic programming language Stan. We choose Stan (rather than
+WinBUGS or JAGS) because it provides an elegant and scalable frame-
+workforfittingmodelsinmostofthestandardapplicationsofLMMs. We
+easethereaderintofittingincreasinglycomplexLMMs,firstusingatwo-
+conditionrepeatedmeasuresself-pacedreadingstudy,followed byamore
+complex 2×2repeated measures factorial design thatcan begeneralized
+to much more complex designs.
+1 Introduction
+Linearmixedmodels,orhierarchical/multilevellinearmodels,havebecome the
+main workhorse of experimental research in psychology, linguistics, and cogni-
+tive science, where repeated measures designs are the norm. Within the pro-
+gramming environment R [24], the nlme package [22] and its successor, lme4
+[3] have revolutionized the use of linear mixed models (LMMs) due to their
+simplicity and speed: one can fit fairly complicated models relatively quickly,
+often with a single line of code. A great advantage of LMMs over traditional
+approaches such as repeated measures ANOVA and paired t-tests is that there
+is no needto aggregateoversubjects anditems to compute two sets ofF-scores
+(or several t-scores) separately; a single model can take all sources of variance
+intoaccountsimultaneously. Furthermore,comparisonsbetweenconditionscan
+easily be implemented in a single model through appropriate contrast coding.
+Other important developments related to LMMs have been unfolding in
+computational statistics. Specifically, probabilistic programming languageslike
+WinBUGS[18],JAGS[23]andStan[27],amongothers,havemadeitpossibleto
+fit Bayesian LMMs quite easily. However, one prerequisite for using these pro-
+gramming languages is that some background statistical knowledge is needed
+before one can define the model. This difficulty is well-known; for example,
+Spiegelhalter and colleagues [26, 4] write: “Bayesian statistics has a (largely
+deserved) reputation for being mathematically challenging and difficult to put
+into practice...”.
+The purpose of this paper is to facilitate a first encounter with model spec-
+ification in one of these programming languages, Stan. The tutorial is aimed
+primarily at psychologists, linguists, and cognitive scientists who have used
+lme4 to fit models to their data, but may have only a basic knowledge of the
+underlying LMM machinery. A diagnostic test is that they may not be able to
+answersomeor allofthese questions: what is a designmatrix; whatis contrast
+coding; what is a random effects variance-covariance matrix in a linear mixed
+model? Our tutorial is not intended for statisticians or psychology researchers
+whocould,forexample,writetheirownMarkovChainMonteCarlosamplersin
+R or C++ or the like; for them, the Stan manual is the optimal starting point.
+The presenttutorialattempts toeasethe beginner intotheir firststeps towards
+fitting Bayesian linear mixed models. More detailed presentations about linear
+mixed models are available in several textbooks; references are provided at the
+end of this tutorial.
+We have chosen Stan as the programming language of choice (over JAGS
+and WinBUGS) because it is possible to fit arbitrarily complex models with
+Stan. For example, it is possible (if time consuming) to fit a model with 14
+fixed effects predictors and two crossed random effects by subject and item,
+each involving a 14×14 variance-covariancematrix [2]; as far as we are aware,
+such models cannot, as far as we know, be fit in JAGS or WinBUGS.1
+Inthistutorial,wetakeitasagiventhatthereaderisinterestedinlearning
+how to fit Bayesian linear mixed models. We do not try to explain the advan-
+tages this approach affords beyond the classical frequentist approach; for such
+justification,thereaderisdirectedtotherichliteraturerelatingtoacomparison
+between Bayesian versus frequentist statistics (such as the provocatively titled
+paperby Lavine[15]; andthe highlyaccessibletextbook by Kruschke[14]). We
+also assume that the reader is aware of Bayes’ Theorem, which for our pur-
+poses amounts to the statement that the posterior distribution is proportional
+to the prior times the likelihood. For the purposes of this paper, the goal of a
+Bayesiananalysis is simply to derive the posterior distribution of each parame-
+ter of interest, given some data and prior beliefs about the distributions of the
+parameters.
+The tutorial is structured as follows. We begin by successively building up
+increasingly complex LMMs using the data-set reported by Gibson and Wu[8],
+1Whetheritmakessenseingeneraltofitsuchacomplexmodelisadifferentissue;see[5],
+and[2]forrecentdiscussion.
+whichhasasimpletwo-conditiondesign. Ateachstep,weexplainthestructure
+ofthe model. The nextsectiontakesup inference forthis two-conditiondesign.
+Thenwe demonstratehow one canfit a somewhatmore complex 2×2 factorial
+design.
+This paper was written using a literate programming tool, knitr [29]; this
+integratesdocumentationfortheaccompanyingcodewiththepaper. Theknitr
+file that generated this paper, as well as all the code and data used in this
+tutorial, can be downloaded from our website:
+Westartwiththetwo-conditionrepeatedmeasuresdata-set[8]asaconcrete
+running example. This simple example serves as a starter kit for fitting com-
+monly used LMMs in the Bayesiansetting. We assume that the reader has the
+relevant software installed; specifically, rstan in R. For detailed instructions,
+2 Example 1: A two-condition repeated mea-
+sures design
+This sectionmotivates the LMMwiththe self-pacedreadingdata-setofGibson
+and Wu [8]. We introduce the data-set, state our modeling goals here, and
+proceed to build up increasingly complex LMMs.
+Thescientificquestion Subjectandobjectrelativeclauseshavebeenwidely
+usedinreadingstudiestoinvestigatesentencecomprehensionprocesses. Asub-
+ject relative is a sentence like The senator who interrogated the journalist re-
+signed whereanoun(senator)ismodifiedbyarelativeclause(who interrogated
+the journalist), and the modified noun is the grammatical subject of the rela-
+tiveclause. Inanobjectrelative,thenounmodifiedbytherelativeclauseisthe
+grammatical object of the relative clause (e.g., The senator who the journalist
+interrogated resigned). In both cases, the noun that is modified (senator) is
+called the head noun.
+A typical finding for English is that subject relatives are easier to process
+than object relatives [12]. Natural languages generally have relative clauses,
+andthe subjectrelativeadvantagehasuntilrecentlybeenconsideredtobe true
+cross-linguistically. However, Chinese relative clauses apparently represent an
+interesting counter-example to this generalization; recent work by Hsiao and
+Gibson [10] has suggestedthat in Chinese, object relatives are easier to process
+than subject relatives at a particular point in the sentence (the head noun of
+the relative clause). We now present an analysis of a subsequently published
+data-set [8] that evaluates this claim.
+Thedata ThedependentvariableoftheexperimentofGibsonandWu[8]was
+the reading time rt of the head noun of the relative clause. This was recorded
+in two conditions (subject relative and object relative), with 37 subjects and
+15 items, presented in a standard Latin square design. There were originally
+16 items, but one item was removed, resulting in 37×15 = 555 data points.
+However, eight data points from one subject (id 27) were missing. As a conse-
+quence, we have a total of 555−8 = 547 data points. The first few lines from
+the data frame are shown in Table 1; “o” refers to object relative and “s” to
+subject relative.
+row subj item so rt
+1 1 13 o 1561
+2 1 6 s 959
+3 1 5 o 582
+4 1 9 o 294
+5 1 14 s 438
+6 1 4 s 286
+. . . .
+. . . .
+. . . .
+547 9 11 o 350
+Table 1: First six rows, and the last row, of the data-set of Gibson and Wu
+(2013), as they appear in the data frame.
+We build up the Bayesian LMM from a fixed effects model to a varying
+intercepts model and finally to a varying intercepts, varying slopes model (the
+“maximalmodel” of Barrand colleagues[1]). The result is a probability model
+that expresses how the dependent variable, the reading time labeled rt, was
+generated in the experiment of Gibson and Wu [8].
+Asmentionedabove,thegoalofBayesianmodelingistoderivetheposterior
+probability distribution of the model parameters from a prior probability distri-
+bution and a likelihood function. Stan makes it easy to compute this posterior
+distribution of each parameter of interest. The posterior distribution reflects
+what we should believe, given the data, regarding the value of that parameter.
+2.1 Fixed Effects Model (Simple Linear Model)
+We begin by making the working assumption that the dependent variable of
+readingtimertontheheadnounisapproximatelylog-normallydistributed[25].
+This assumes that the logarithm of rt is approximately normally distributed.
+The logarithm of the reading times, logrt, has some unknown grand mean
+β . The mean of the log-normal distribution of rt is the sum of β and an
+adjustment β ×so whose magnitude depends on the categorical predictor so,
+which has the value −1 when rt is from the subject relative condition, and +1
+when rt is from the object relative condition. One way to write the model in
+terms of the logarithm of the reading times is as follows:
+The index i represents the i-th row in the data-frame (in this case, i =
+1,...,547);the term ε representsthe errorin the i-throw. With the above±1
+contrast coding, β represents the grand mean of logrt, regardless of relative
+clause type. It can be estimated by simply taking the grand mean of logrt.
+The parameterβ is anadjustment to β so that the mean of logrt is β +1β
+when logrt is from the object relative condition, and β −1β when logrt is
+from the subject relative condition. Notice that 2×β will be the difference in
+the means between the object and subject relative clause conditions. Together,
+β and β make up the part of the model which characterizes the effect of the
+experimentalmanipulation,relativeclausetype(so),onthedependentvariable
+rt. We call this a fixed effects model because we estimate the β parameters,
+which are unvarying from subject to subject and from item to item. In R, this
+would correspond to fitting a simple linear model using the lm function, with
+so as predictor and logrt as dependent variable.
+The error ε is positive when logrt is greater than the expected value
+µ = β +β so and negative when logrt is less than the expected value µ .
+i 0 1 i i i
+Thus,the erroris the amountbywhichthe expectedvalue differs fromactually
+observed value. It is standardly assumed that the ε are independently and
+identically distributed as a normal distribution with mean zero and unknown
+standarddeviationσ . Stanparameterizesthenormaldistributionbythemean
+andstandarddeviation,andwe follow that conventionhere,by writing the dis-
+tributionofεasN(0,σ )(thestandardnotationinstatisticsisintermsofmean
+and variance). A consequence of the assumption that the errors are identically
+distributedis thatthe distributionofεshould,atleastapproximately,havethe
+same shape as the normaldistribution. Independence implies that there should
+be no correlationbetween the errors—this is not the case in the data, since we
+have multiple measurements from each subject, and from each item.
+Setting up the data We now fit the fixed effects Model 1. For the following
+discussion, please refer to the code in Listings 1 and 2 in the appendix. First,
+we read the Gibson and Wu [8] data into a data frame rDat in R, and then
+subset the critical region (Listing 1, lines 2 and 4). Next, we create a data list
+stanDatfor Stan, which contains the data (Listing 1,line 7). Stan requires the
+data to be of type list; this is different from the lm and lmer functions, which
+assume that the data are in of type data-frame.
+Defining the model The next step is to write the Stan model in a text file
+with extension .stan. A Stan model consists of several blocks. A block is a
+set of statements surrounded by brackets and preceded by the block name. We
+open up a file fixEf.stan in a text editor and write down the first block, the
+data block, which contains the declaration of the variables in the data object
+stanDat (Listing 2, lines 1-5). The strings real and int specify the data type
+for each variable. A real variable is a real number, and an int variable is an
+integer. For instance, N is the integer number of data points. The variables so
+and rt are arrays of length N whose entries are real. We constrain a variable
+to take only a subset of the values allowed by its type (e.g. int or real) by
+specifying in brackets lower and upper bounds (e.g. <lower=-1,upper=1>).
+Next, we turn to the parameters block, where the parameters are defined
+(Listing 2, lines 6-9). The fixed effects Model 1 has three parameters: the fixed
+interceptβ ,the fixedslopeβ ,andthestandarddeviationσ oftheerror. The
+fixed effects β and β are in the vector beta of length two; note that although
+we called our parameters β and β in Model 1, in Stan, these are contained in
+avectorwithindices1and2,soβ is inbeta[1]andβ inbeta[2]. The third
+parameter,thestandarddeviationσ oftheerror(sigma e),isalsodefinedhere,
+and is constrained to have lower bound 0 (Listing 2, line 8). Finally, the model
+block specifies the prior distribution and the likelihood (Listing 2, lines 10-15).
+To understand the Stan syntax, compare the Stan code above to the spec-
+ification of Model 1. The Stan code literally writes out this model. The block
+begins with a local variable declaration for mu, which is the mean of rt con-
+ditional on whether so is −1 for the subject relative condition or +1 for the
+object relative condition.
+Thepriordistributionsontheparametersbetaandsigma ewouldordinarily
+bedeclaredinthemodelblock. Ifwedon’tdeclareanyprior,itisassumedthat
+theyhaveauniformpriordistribution. Notethatthe distributionof sigma eis
+truncated at zero because sigma e is constrained to be positive (see the decla-
+rationreal<lower=0> sigma e; in the parametersblock). So, this means that
+the error has a uniform prior with lower bound 0.
+In the model block, the for-loop assigns to mu the mean for the log-normal
+distributionof rt[i],conditionalonthevalueofthepredictorso[i]forrelative
+clause type. The statement rt[i] ∼ lognormal(mu,sigma e) means that the
+logarithm of rt is normally distributed with mean mu and standard deviation
+sigma e. One could have equally well log-transformed the reading time and
+assumed a normal distribution instead of the lognormal.
+Runningthemodel WesavethefilefixEf.stanwhichwejustwroteandfit
+the modelin R with the function stanfromthe packagerstan(Listing 1, lines
+9 and 10). This call to the function stan will compile a C++ program which
+produces samplesfrom the joint posteriordistribution ofthe fixedintercept β ,
+thefixedslopeβ ,andthestandarddeviationσ oftheerror. Here,thefunction
+generates four chains of samples, each of which contains 2000 samples of each
+parameter. Samples 1 to 1000 are part of the warmup, where the chains settle
+into the posterior distribution. We analyze samples 1001 to 2000. The result is
+saved to an object fixEfFitof class StanFit.
+Evaluating model convergence and summarizing results Thefirststep
+after running the above function should be to look at the trace plot of each
+chain after warmup, using the command shown in Listing 1, lines 13 and 14.
+A trace plot has the chains plotted against the sample ID. In Figure 1, we see
+fourdifferentchainsplottedagainstsamplenumbergoingfrom1001to 2000. If
+the traceplot looks like a “fat, hairycaterpillar”[17] whichdoes notbend, this
+1000 1200 1400 1600 1800 2000
+Trace of beta[1]
+Iterations (without warmup)
+1000 1200 1400 1600 1800 2000
+Trace of beta[2]
+Iterations (without warmup)
+1000 1200 1400 1600 1800 2000
+Trace of sigma_e
+Iterations (without warmup)
+Figure 1: Trace plots of the fixed intercept β , the fixed slope β , and the
+standard deviation σ of the error for the fixed effects Model 1.
+suggests that the chains have convergedto the posterior distribution.
+The second diagnostic which we use to assess whether the chains have con-
+vergedtotheposteriordistributionisthestatisticRhat. Eachparameterhasthe
+Rhatstatisticassociatedwithit[7];thisisessentiallytheratioofbetween-chain
+variance to within-chain variance (analogous to ANOVA). The Rhat statistic
+should be approximately 1±0.1 if the chain has converged. This is shown in
+the rightmost column of the model summary, see Table 2.
+Havingsatisfiedourselvesthatthechainshaveconverged,weturntoexamine
+this posterior distribution. (If there is an indication that convergence has not
+happened, then, assuming that the model has no errors in it, increasing the
+number of samples usually resolves the issue.)
+parameter mean 2.5% 97.5% Rˆ
+βˆ 6.06 0.03 6.11 1
+βˆ -0.04 -0.09 0.01 1
+σˆ 0.60 0.56 0.64 1
+Table 2: Examining the credible intervals and the R-hat statistic in the Gibson
+and Wu data.
+TheresultoffittingthefixedeffectsModel1isthejoint posterior probability
+distribution of the parameters β , β , and σ . The distribution is joint because
+eachofthe (4 chains ×1000 post-warmup iterations =)4000posteriorsamples
+which the call to stan generates is a vector θ = (β ,β ,σ )⊺ of three model
+parameters. Thus,theobjectfixEfFitcontains4000parametervectorsθwhich
+6.00 6.05 6.10 6.15
+−0.10 −0.05 0.00 0.05
+−0.10 −0.05 0.00 0.05
+0.54 0.58 0.62 0.66
+0.54 0.58 0.62 0.66
+0.54 0.58 0.62 0.66
+Figure 2: Bivariate joint posterior probability distribution of each element of
+θ with each other element (lower diagonal) and marginal posterior probability
+distribution of each element of θ separately (diagonal). All parameters are on
+thelogscale,butnotethedifferenceinlengthscalebetweenβ ontheonehand
+and β and σ on the other.
+occupy a three dimensional space. Already in three dimensions, the posterior
+distribution becomes difficult to view in one graph. Figure 2 displays the joint
+posteriorprobabilitydistributionoftheelementsofθbyprojectingitdownonto
+planes. In each of the three planes (lower triangular scattergrams) we see how
+one parameter varies with respect to the other. In the diagonal histograms,
+we visualize the marginal probability distribution of each parameter separately
+from the other parameters.
+Of immediate interest is the marginal distribution of the slope β . Figure 2
+suggests that the posterior probability density of β is mainly spread over the
+interval (−∞,0). One quantitative way to assess the posterior probability dis-
+tribution is to examine its quantiles; see Table 2. Here, it is useful to define
+the concept of the credible interval. The (1−α)% credible interval contains
+(1−α)% of the posterior probability density. Unlike the (1−α)% confidence
+interval from the frequentist setting, the (1−α)% credible interval represents
+the range within which we are (1−α)% certain that the true value of the pa-
+rameterlies, giventhe priorand the data (see [21] for further discussiononCIs
+vs credible intervals). A commonconventionis to use the intervalrangingfrom
+the2.5to97.5percentiles. Wefollowthisconventionand95%credibleintervals
+in Table 2.
+The samples of β suggests that approximately 94% of the posterior proba-
+bility density is below zero, suggesting that there is some evidence that object
+relatives are easier to process than subject relatives in Chinese, given the Gib-
+son and Wu data. However, since the 95% credible interval includes 0, we may
+be reluctant to conclude that object relatives are easier to process. We will say
+more about the evaluation of researchhypotheses further on.
+2.2 Varying Intercepts Mixed Effects Model
+ThefixedeffectsModel1isinappropriatefortheGibsonandWudatabecauseit
+doesnottakeintoaccountthefactthatwehavemultiplemeasurementsforeach
+subject and item. As mentioned above, these multiple measurements lead to a
+violation of the independence of errors assumption. Moreover, the fixed effects
+coefficients β and β representmeans over all subjects and items, ignoring the
+fact that some subjects will be faster and some slower than average; similarly,
+some items will be read faster than average,and some slower.
+In linear mixed models, we take this by-subject and by-item variability into
+accountby addingadjustmentterms u andw , whichadjustβ forsubjectj
+and item k. This partially decomposes ε into a sum of the terms u and w ,
+whichareadjustmentstotheinterceptβ forthesubjectj anditemkassociated
+withrt . Ifsubjectj is slowerthanthe averageofallthe subjects, u wouldbe
+somepositivenumber,andifitemkisreadfasterthantheaveragereadingtime
+of all the items, then w would be some negative number. Each subject j has
+their own adjustment u , and each item its own w . These adjustments u
+and w are called random intercepts by Pinheiro and Bates [22] and varying
+intercepts by Gelman and Hill [6], and by adjusting β by these we account for
+the variability between speakers, and between items.
+It is standardly assumed that these adjustments are normally distributed
+aroundzerowithunknownstandarddeviation: u ∼N(0,σ )andw ∼N(0,σ );
+thesubjectanditemadjustmentsarealsoassumedtobemutuallyindependent.
+We now have three sources of variance in this model: the standard deviationof
+the errors σ , the standard deviation of the by-subject random intercepts σ ,
+and the standard deviation of the by-item varying intercepts σ . We will refer
+to these as variance components.
+We now express the logarithmof reading time, which was producedby sub-
+jects j =1,...,37readingitems k =1,...,15,inconditionsi=1,2(1refersto
+subjectrelatives,2toobjectrelatives),asthefollowingsum. Noticethatweare
+now using a slightly different way to describe the model, compared to the fixed
+effects model. We are using indices for subject, item, and condition to identify
+uniquerows. Also,insteadofwritingβ so,weindexβ bytheconditioni. This
+follows the notation used in the textbook on linear mixed models, written by
+the authors of nlme [22], the precursor to lme4.
+ijk 0 1i 0j 0k ijk
+Model 2 is an LMM, and more specifically a varying intercepts model. The
+coefficient β is the one of primary interest; it will have some mean value −β
+forsubjectrelativesand+β forobjectrelativesduetothecontrastcoding. So,
+ifour posteriormeanforβ is negative,this wouldsuggestthat objectrelatives
+are read faster than subject relatives.
+We fit the varying intercepts Model 2 in Stan in much the same way as the
+fixed effects Model 1. For the following discussion, please consult Listing 3 for
+the R code used to run the model, and Listing 4 for the Stan code.
+Setting up the data The data which we prepare for passing on to the func-
+tionstannow includes subjectanditem information(Listing 3, lines 2-8). The
+data block in the Stan code accordingly includes the number J, K of subjects
+and items, respectively; and the variable N records the number of rows in the
+data frame.
+Defining the model Model2,showninListing4,stillhasthefixedintercept
+β ,thefixedslopeβ ,andthestandarddeviationσ oftheerror,andwespecify
+these in the same way as we did for the fixed effects Model 1. In addition, the
+varyinginterceptsModel2hasby-subjectvaryinginterceptsu forj =1,...,J
+and by-item varying intercepts w for k = 1,...,K. The standard deviation
+of u is σ and the standard deviation of w is σ . We again constrain the
+standard deviations to be positive.
+The model block places normal distribution priors on the varying inter-
+cepts u and w . We implicitly place uniform priors on sigma u, sigma w, and
+sigma e by omitting them from the model block. As pointed out earlier for
+sigma e, these prior distributions have lower bound zero because of the con-
+straint <lower=0>in the variable declarations.
+The statement about how each row in the data is generated is shown in
+Listing 4, lines 26-29;here, both the fixed effects and the varying intercepts for
+subjects and items determine the expected value mu. The vector u has vary-
+ing intercepts for subjects. Likewise, the vector w has varying intercepts for
+items. The for-loop in lines 26-29 now adds u[subj[i]] + w[item[i]] to the
+meanbeta[1]ofthedistributionof rt[i]. Thesearesubject-anditem-specific
+adjustmentsto the fixed-effectsinterceptbeta[1]. Thetermu[subj[i]]iden-
+tifies the id of the subject for row i in the data-frame; thus, if i = 1, then
+subj[1]=1,and item[1]=13(see Table 1).
+Running the model We pass the list stanDat of data to stan, which com-
+piles a C++ program to sample from the posterior distribution of Model 2.
+Stan samples from the posterior distribution of the model parameters, includ-
+ing the varying intercepts u and w for each subject j = 1,...,J and item
+k =1,...,K.
+It may be helpful to rewrite the model in mathematical form following the
+Stansyntax([6]useasimilarnotation);theStanstatementsareslightlydifferent
+from the way that we expressed Model 2. Defining i as the row id in the data,
+i.e., i=1,...,547, we can write:
+Likelihood:
+i 0 [subj[i]] [item[i]] 1 i
+rt ∼LogNormal(µ ,σ )
+Priors: (3)
+u∼Normal(0,σ ) w ∼Normal(0,σ )
+Here, notice that the i-th row in the statement for µ identifies the subject
+id ranging from j =1,...,37, and the item id ranging from k =1,...,15.
+Summarizing the results The posteriordistributions ofeachofthe param-
+etersissummarizedinTable3. TheRˆ valuessuggestthatmodelhasconverged.
+Note also that compared to Model 1, the estimate of σ is smaller; this is be-
+causetheothertwovariancecomponentsarenowbeingestimatedaswell. Note
+thatthe95%credibleintervalfortheestimateβˆ includes0;thus,thereissome
+evidence that object relatives are easier than subject relatives, but we cannot
+exclude the possibility that there is no difference in the reading times between
+the two relative clause types.
+parameter mean 2.5% 97.5% Rˆ
+βˆ 6.06 5.92 6.20 1
+βˆ -0.04 -0.08 0.01 1
+σˆ 0.52 0.49 0.55 1
+σˆ 0.25 0.19 0.34 1
+σˆ 0.20 0.12 0.32 1
+Table 3: The quantiles and the Rˆ statistic in the Gibson and Wu data, the
+varying intercepts model.
+2.3 Varying Intercepts, Varying Slopes Mixed EffectsModel
+Consider now that subjects who are faster than average(i.e., who have a nega-
+tive varying intercept) may exhibit greater slowdowns when they read subject
+relatives compared to object relatives. Similarly, it is in principle possible that
+items which are read faster (i.e., which have a large negative varying intercept)
+may show a greater slowdown in subject relatives than object relatives. The
+opposite situation could also hold: faster subjects may show smaller SR-OR
+effects, or items read faster may show smaller SR-OR effects. Although such
+individual-level variability was not of interest in the original paper by Gibson
+andWu,itcouldbeoftheoreticalinterest(see,forexample,[13]). Furthermore,
+asBarrandcolleagues[1]pointout,itisinprincipledesirabletoincludeafixed
+effect factor in the randomeffects as a varying slope if the experiment designis
+such that subjects see both levels of the factor (cf. [2]).
+In order to express this structure in the LMM, we must make two changes
+in the varying intercepts Model 2.
+Adding varying slopes The first change is to let the size of the effect for
+the predictor so vary by subject and by item. The goal here is to express that
+some subjects exhibit greater slowdowns in the object relative condition than
+others. We leteffectsizevarybysubjectandbyitembyincludinginthe model
+by-subject and by-item varying slopes which adjust the fixed slope β in the
+same way that the by-subject and by-item varying intercepts adjust the fixed
+intercept β . This adjustment of the slope by subject and by item is expressed
+byadjustingβ byaddingtwotermsu andw . Thesearerandom orvarying
+slopes, andbyaddingthemwe accountfor howthe effectofrelativeclausetype
+varies by subject j and by item k. We now express the logarithm of reading
+time, which was produced by subject j reading item k, as the following sum.
+The subscript i indexes the conditions.
+ijk 0 0j 0k 1 1ij 1ik ijk
+varyingintercepts varyingslopes
+Defining a variance-covariance matrix for the random effects The
+second change which we make to Model 2 is to define a covariance relationship
+between by-subject varying intercepts and slopes, and between by-items inter-
+cepts and slopes. This amounts to adding an assumption that the by-subject
+slopesu couldinprinciplehavesomecorrelationwiththeby-subjectintercepts
+u ; and by-item slopes w with by-item intercept w . We explain this in detail
+below.
+Let us assume that the adjustments u and u are normally distributed
+with mean zero and some variances σ2 and σ2 , respectively; also assume
+that u and u have correlation ρ . It is standard to express this situation
+by defining a variance-covariance matrix Σ (sometime this is simply called a
+variancematrix). This matrixhasthe variancesofu andu respectivelyalong
+thediagonals,andthecovariancesontheoff-diagonals. (Thecovariancebetween
+two variables X, Y, Cov(X,Y) is defined as the product of their correlation ρ
+and their standard deviations σ and σ : Cov(X,Y)=ρσ σ .)
+Σ = u0 u u0 u1 (5)
+u ρ σ σ σ2
+(cid:18) u u0 u1 u1 (cid:19)
+Similarly,wecandefineavariance-covariancematrixΣ foritems,usingthe
+standard deviations σ , σ , and the correlationρ .
+Σ = w0 w w0 w1 (6)
+w ρ σ σ σ2
+(cid:18) w w0 w1 w1 (cid:19)
+Thestandardwaytoexpressthisrelationshipbetweenthesubjectintercepts
+u and slopes u , and the item intercepts w and slopes w , is to define a
+bivariate normal distribution as follows:
+u 0 u w 0 w
+(cid:18) (cid:19) (cid:18)(cid:18) (cid:19) (cid:19) (cid:18) (cid:19) (cid:18)(cid:18) (cid:19) (cid:19)
+Animportantpointto noticehereis thatanyn×n variance-covariancema-
+trix has associatedwith it ann×n correlationmatrix. Inthe subject variance-
+covariance matrix Σ , the correlation matrix is
+(cid:18) (cid:19)
+In a correlation matrix, the diagonal elements will always be 1, because a
+variable always has a correlation of 1 with itself. The off-diagonals will have
+the correlations between the variables. Note also that, given the variances σ2
+and σ2 , we can always recover the variance-covariance matrix, if we know
+the correlation matrix. This is because of the above-mentioned definition of
+covariance.
+A correlation matrix can be decomposed into a square root of the matrix,
+using the Cholesky decomposition. Thus, given a correlation matrix C, we can
+obtainits squarerootL; anobviousconsequence is thatwe cansquareLto get
+the correlationmatrixC back. This is easy to illustrate witha simple example.
+Suppose we have a correlation matrix:
+(cid:18) (cid:19)
+We can use the Cholesky decomposition function in R, chol, to derive the
+lower triangular square root L of this matrix. This gives us:
+−0.5 0.8660254
+(cid:18) (cid:19)
+We can confirm that this is a square root by multiplying L with itself to
+get the correlation matrix back (squaring a matrix is done by multiplying the
+matrix by its transpose):
+1 0 1 −0.5 1 −0.5
+−0.5 0.8660254 0 0.8660254 −0.5 1
+(cid:18) (cid:19)(cid:18) (cid:19) (cid:18) (cid:19)
+The reason that we bring up the Cholesky decomposition here is that we
+will use it to generate the by-subject and by-item adjustments to the intercept
+and slope fixed-effects parameters.
+−10 −5 0 5 10
+−10 −5 0 5 10
+Figure 3: Uncorrelated random variables z = (z ,z )⊺ (left) and correlated
+random variables x=(x ,x )⊺ (right).
+GeneratingcorrelatedrandomvariablesusingtheCholeskydecompo-
+sition Theby-subjectandby-itemadjustmentsaregeneratedusingthefollow-
+ingstandardprocedureforgeneratingcorrelatedrandomvariablesx=(x ,x ):
+1. Given a vector of standard deviances (e.g., σ ,σ ), create a diagonal
+matrix:
+(cid:18) (cid:19)
+2. Premultiply the diagonalized matrix τ with the Cholesky decomposition
+L of the correlation matrix C to get a matrix Λ.
+3. Generate values from a random variable z = (z ,z )⊺, where z and z
+each have independent N(0,1) distributions (left panel of Figure 3).
+4. Multiply Λwithz; thisgeneratesthecorrelatedrandomvariablesx(right
+panel of Figure 3).
+ThisdigressionintoCholeskydecompositionandthegenerationofcorrelated
+random variables is important to understand for building the Stan model. We
+will define a vague prior distribution on L, and a vague prior on the standard
+deviances. This allows us to generate the by-subject and by-item adjustments
+to the fixed effects intercepts and slopes.
+Defining the model With this background, implementing the varying in-
+tercepts, varying slope Model 4 is straightforward; see Listing 6 for the code.
+The data block is the same as before. The parameters block contains several
+new parameters. This time, we have vectors sigma u and sigma w which are
+(σ ,σ )⊺and(σ ,σ )⊺,insteadofscalarvaluesasinModel2. Thevariables
+u0 u1 w0 w1
+L u, L w, z u, and z w, which have been declared in the parameters block, play
+a role in the transformed parameters block, a block which we did not use in the
+earliermodels. Thetransformedparametersblockgeneratestheby-subjectand
+by-item varying intercepts and slopes using the parameters sigma u, sigma w,
+L u, L w, z u, and z w. The J pairs of by-subject varying intercepts and slopes
+are in the rows of the J × 2 matrix u, and the K pairs of by-item varying
+intercepts and slopes are in the rows of the K×2 matrix w.
+These varying intercepts and slopes are obtained through the statements
+diag pre multiply(sigma u, L u) * z u and diag pre multiply(sigma w,
+L w) * z w. This statement generates varying intercepts and slopes from the
+joint probability distribution of equation 7. The parameters L u, L w are the
+Cholesky decompositions of the subject and item correlation matrices, respec-
+tively, and z u, and z w are N(0,1) random variables.
+It is helpful to walk through steps 1 to 4 involved in generating the varying
+intercepts and slopes using the procedure described above for generating cor-
+related random variables. The statement diag pre multiply(sigma u,L u) *
+z ucomputesthe transposematrixproduct(steps 1and2). Therightmultipli-
+cationofthisproductbyz u,amatrixofnormallydistributedrandomvariables
+(step 3), yields the varying intercepts and slopes (step 4).
+ . . 02 1 . . 2 = diag(σ u0 ,σ u1 )L u z u ⊺
+. .
+σ 0 ℓ 0 z z ... z
+= u0 11 11 12 1J
+0 σ ℓ ℓ z z ... z
+(cid:18) 01 (cid:19)(cid:18) 21 22 (cid:19)(cid:18) 21 22 2J (cid:19)!
+Turningtothemodelblock,here,weplacepriorsontheparametersdeclared
+inthe parametersblock,anddefinehowthese parametersgeneratelogrt(List-
+ing6,lines 30-42). The definitionofthepriorL u ∼ lkj corr cholesky(2.0)
+implicitly places a so-called lkj prior with shape parameter η = 2.0 on the
+correlationmatrices
+u and w (14)
+(cid:18) (cid:19) (cid:18) (cid:19)
+where ρ is the correlation between the by-subject varying intercept σ and
+slope σ (cf. the covariance matrix of Equation 5) and ρ is the correlation
+between the by-item varying intercept σ and slope σ . The lkj distribution
+with shape parameter η = 1.0 is a uniform prior over all 2 × 2 correlation
+matrices; it scales up to larger correlation matrices. The parameter η has an
+effect on the shape of the lkj distribution. Our choice of η = 2.0 implies that
+thecorrelationsintheoff-diagonalsarenearzero,reflectingthepriorbeliefthat
+there is no correlationbetween intercepts and slopes.
+The statement to vector(z u) ∼ normal(0,1) places a normal distribu-
+tionwithmeanzeroandstandarddeviationone onz u. Thesamegoesforz w.
+The for-loop assigns to mu the mean of the log-normal distribution from which
+we draw rt[i], conditional on the value of the predictor so[i] for relative
+clause type and the subject and item identity.
+We can now fit the varying intercepts, varying slopes Model 4; see Listing 7
+for the code. We see in the model summary in Table 4 that the model has
+converged, and that the credible intervals of the parameter of interest, β , still
+include 0. In fact, the posterior probability of the parameter being less than 0
+is now 90%(this informationcanbe extractedas shownin Listing 5, lines 6-8).
+parameter mean 2.5% 97.5% Rˆ
+βˆ 6.06 5.92 6.21 1
+βˆ -0.04 -0.09 0.02 1
+σˆ 0.51 0.48 0.55 1
+σˆ 0.25 0.19 0.34 1
+σˆ 0.07 0.01 0.14 1
+σˆ 0.20 0.13 0.32 1
+σˆ 0.04 0.0 0.10 1
+Table 4: The quantiles and the Rˆ statistic in the Gibson and Wu data, the
+varying intercepts, varying slopes model.
+Figure 4 plots the varying slope’s posterior distribution against the varying
+intercept’s posterior distribution for each subject. The correlation between u
+and u is negative, as captured by the marginal posterior distributions of the
+correlation ρ between u and u . Thus, Figure 4 suggests that the slower a
+subject’s reading time is on average, the slower they read object relatives. In
+contrast,Figure4showsnoclearpatternfortheby-itemvaryinginterceptsand
+slopes. We briefly discuss inference next.
+3 Inference
+Havingfitavaryingintercepts,varyingslopesModel4,wenowexplainoneway
+to carry out statistical inference, using credible intervals. We have used this
+approach to draw inferences from data in previously published work (e.g., [4],
+[9]). There are of course other approaches possible for carrying out inference.
+Bayes Factors are an example; see Lee and Wagenmakers [16]. Another is
+to define a Region of Practical Equivalence [14]. The reader can choose the
+approachthey find the most appealing.
+3.1 Inference using credible intervals
+The result of fitting the varying intercepts, varying slopes Model 4 is the pos-
+terior distribution of the model parameters. As mentioned above in connection
+with Models 1-3, direct inference from the posterior distributions is possible.
+For instance, we can find the posterior probability with which the fixed inter-
+cept β or the correlation ρ between by-subject varying intercepts and slopes
+takeonanygivenvaluebyconsultingthemarginalposteriordistributionswhose
+−0.6 −0.4 −0.2 0.0 0.2 0.4 0.6
+−0.6 −0.4 −0.2 0.0 0.2 0.4 0.6
+−1.0 −0.5 0.0 0.5 1.0
+−1.0 −0.5 0.0 0.5 1.0
+Figure 4: The top row shows the relationship between the varying slopes (y-
+axis)andintercepts(x-axis)foreachsubject(leftpanel)anditem(rightpanel).
+Thebottomrowshowstheposteriordistributionoftheparameterofcorrelation
+betweenthe varyingslopesandinterceptsforeachsubject(left panel)anditem
+(right panel).
+−0.1 −0.05 0 0.05 0.1
+−1.0 −0.5 0.0 0.5 1.0
+Figure 5: Upper and lowerbounds on the credible intervals (dashedlines) plot-
+ted over the marginal posterior distribution of the fixed slope β (left) and of
+the correlationρ betweenthe by-subjectvaryingintercepts andvaryingslopes
+(right).
+histograms are shown in Figure 5. The information conveyed by such graphs
+can be sharpened by using the 95% credible interval, mentioned earlier. Ap-
+proximately 95% of the posterior density of β lies between the 2.5 percentile
+−0.092 and the 97.5 percentile 0.023. This leads us to conclude that the slope
+β for relative clause type so is less than zero with probability 90% (see line 8
+in Listing 5). Since 0 is included in the credible interval, it is difficult to draw
+the inference that object relative clauses are read faster than subject relative
+clauses. However, one could perhaps still make a weak claim to that effect, es-
+peciallyifalotofevidencehasaccumulatedinotherexperimentsthatsupports
+such a conclusion (see [28] for a more detailed discussion).
+What about the correlations between varying intercepts and varying slopes
+for subject and for item? What can we infer from the analysis about these
+relationships? The 95% credible interval for ρ is (−1,0.1). Our belief that ρ
+is less than zero is rather uncertain, although we can conclude that ρ is less
+thanzerowith probability90%. There is only weakevidence thatsubjects who
+read faster than average exhibit greater slowdowns at the head noun of object
+relative clauses than subjects who read slower than average. For the by-item
+varyinginterceptsandslopes,itisprettyclearthatwedonothaveenoughdata
+(15 items) to draw any conclusions. For these data, it probably makes sense to
+fit a simpler model [2], with only varying intercepts and slopes for subject, and
+only varying intercepts for items; although there is no harm done here if we fit
+a model with a full variance-covariancematrix for both subjects and items.
+In sum, regarding our main research question, our conclusion here is that
+wecannotsaythatobjectrelativesareharderto processthansubjectrelatives,
+because the credible interval for β includes 0. However, one could argue that
+there is some weak evidence in favor of the hypothesis, since the posterior
+probability of the parameter being negative is approximately 90%.
+4 Example 2: Generalizing the linear mixed model
+to factorial designs
+The Gibson and Wu [8] data-set has a two-condition design. This section
+presents a varying intercepts, varying slopes model for a 2 × 2 factorial de-
+sign. Because of the more general matrix formulation we use here, the Stan
+code can be deployed with minimal changes for much more complex designs,
+including correlational studies.
+Our example is the 2×2 repeated measures factorial design of Husain et
+al [11] (Experiment 1), also a self-paced reading study on relative clauses. The
+dependent variable was the reading time rt of the relative clause verb. The
+factorswererelativeclausetype, whichwecodewiththe predictorso(so=+1
+forobjectrelativesandso=−1forsubjectrelatives)anddistancebetweenthe
+head noun and the relative clause verb, which we code with the predictor dist
+(dist = +1 for far and dist = −1 for near). Their interaction is the product
+of the dist and so contrast vectors, and labeled as the predictor int. The 60
+subjects were speakers of Hindi, an Indo-Aryan language spoken primarily in
+India. The 24 items were presented in a standard, fully balanced Latin square
+design. This resulted in a total of 1440 data points (60×24=1440). The first
+few lines from the data frame are shown below.
+row subj item so dist rt
+1 1 14 s n 1561
+2 1 16 o n 959
+3 1 15 o f 582
+4 1 18 s n 294
+5 1 4 o n 438
+6 1 17 s f 286
+. . . . . .
+. . . . . .
+. . . . . .
+1440 9 13 s f 516
+Table 5: The first six rows, and the last row, of the data-set of Husain et al.
+(2014, Experiment 1), as they appear in the data frame.
+The theoretical interest is in determining whether relative clause type and
+distance influence reading time, and whether there is an interaction between
+these two factors. We use Stan to determine the posterior probability distribu-
+tionofthefixedeffectβ forrelativeclausetype,thefixedeffectβ fordistance,
+and their interaction β .
+We fitavaryingintercepts,varyingslopesmodeltothis data-set. Thisisan
+extension of Model 4. The grand mean β of logrt is adjusted by subject and
+by item through the varying intercepts u and w , which are unique values for
+each subject and item respectively. Likewise, the three fixed effects β , β , and
+β which areassociatedwith the predictorsso, dist, andint, respectively,are
+adjusted by the by-subject varying slopes u , u , and u and by-item varying
+slopes w , w , and w .
+It is more convenient to represent this model in matrix form. We build up
+the model specification by first noting that, for each subject, the by-subject
+varyingintercept u andslopes u , u , and u havea multivariate normalprior
+distributionwithmeanzeroandcovariancematrixΣ . Similarly,foreachitem,
+the by-itemvaryinginterceptw andslopesw , w ,andw havea multivariate
+normal prior distribution with mean zero and covariance matrix Σ . We can
+write this as follows:
+The error ε is assumed to have a normal distribution with mean zero and
+standarddeviationσ . Thus,the varyingintercepts,varyingslopes herewill be
+the same as Model 4, just with two additional predictors dist, int along with
+their associated fixed-effect slopes β , β and random-effect slopes u , u , w ,
+and w .
+We proceed to implement the model in Stan. First we read in the data-set
+(seeListing7). Insteadofpassingthe predictorsso, dist,andtheirinteraction
+int to stan as vectors, as we did with so earlier, we make so, dist, and int
+into a design matrix X using the function model.matrix available in R.2 The
+firstcolumnofthedesignmatrixXconsistsofallones. Thesecondcolumnisthe
+predictor so which codes the factor for relative clause type. The third column
+the predictor dist which codes the factor for distance. The fourth column is
+the predictor int which codes the interaction between relative clause type and
+distance. The model matrix thus consists of a fully factorial 2×2 design, with
+blocks of this design repeated for each subject. For the full data-set, we could
+write it very compactly in matrix form as follows:
+Here,XistheN×P modelmatrix(withN =1440,sincewehave1440data
+points; and P = 4 since we have the intercept plus three other fixed effects),
+β is a P × 1 vector of fixed effects parameters, Z and Z are the subject
+and item model matrices (N ×P), and u and w are the by-subject and by-
+itemadjustments tothe fixedeffects estimates; these areidenticaltothe design
+matrix X in the model with varying intercepts and varying slopes included.
+For more examples of similar model specifications in Stan, see the R package
+Having defined the model, we proceed to assemble the list stanDatof data,
+relying on the above matrix formulation; please refer to Listing 7. The number
+Nofobservations,thenumberJofsubjectsandKofitems,thereadingtimesrt,
+and the subject and item indicator variables subj and item are familiar from
+thepreviousmodelspresented. TheintegerPisthenumberoffixedeffects(four
+including the intercept). Model 16 includes a varying intercept u and varying
+slopes u , u , u for eachsubject, and so the number n u of by-subject random
+effectsequalsP.Likewise,Model16includesavaryinginterceptw andvarying
+slopesw ,w ,w foreachitem,andsothenumbern wofby-itemrandomeffects
+also equals P. The data block contains the corresponding variables. We declare
+thefixedeffects designmatrixXasanarrayof Nrowvectorswhosecomponents
+are the predictors associatedwith the N reading times. Likewise for the subject
+and item random effects design matrices Z u and Z w, which correspond to Z
+and Z respectively in Model 16. The vector beta contains the fixed effects
+β , β , β , and β . The matrices L u, L w and the arrays z u, z w of vectors
+(not to be confused with the design matrices Z u and Z w) will generate the
+varying intercepts and slopes u , ..., u and w , ..., w , using the procedure
+described for Model 4. The vector sigma u contains the standard deviations of
+theby-subjectvaryinginterceptsandslopesu ,..., u ,andthe vectorsigma w
+contains the standard deviations of the by-item varying intercepts and slopes
+2Here, we would like to acknowledge the contribution of Douglas Bates in specifying the
+modelinthisgeneral matrixform.
+grand mean
+6.50 6.60 6.70 6.80
+relative clause type
+−0.10 −0.05 0.00 0.05 0.10
+−0.10 −0.05 0.00 0.05 0.10
+interaction
+−0.10 −0.05 0.00 0.05 0.10
+Figure 6: Marginalposterior distributionand HPD intervals ofthe fixed effects
+grand mean β , slope β for relative clause type, slope β for distance, and
+interaction β . All fixed effects are on the log-scale.
+w , ..., w . The variable sigma e is the standard deviation σ of the error
+ε. The transformed parameters block generates the by-subject intercepts and
+slopes u , ..., u and the by-item intercepts and slopes w , ..., w .
+We place lkj priors on the random effects correlation matrices through the
+lkj corr cholesky(2.0) priors on their Cholesky factors L u and L w. We
+implicitly place uniform priors on the fixed effects β , ..., β , the random
+effects standard deviations σ , ..., σ , and σ , ..., σ and the error stan-
+u0 u3 w0 w3
+dard deviation σ by omitting any prior specifications for them in the model
+block. We specify the likelihood with the probability statement that rt[i] is
+distributed log-normally with mean X[i] * beta + Z u[i] * u[subj[i]] +
+Z w[i] * w[item[i]]andstandarddeviationsigma e. The next steptowards
+model-fittingistopasstheliststanDattostan,whichcompilesaC++program
+to sample from the posterior distribution of the model parameters.
+Figure 6 plots histogramsof the marginalposterior distribution of the fixed
+effects. TheHPDintervalofthefixedeffectβˆ forrelativeclausetypeisentirely
+below zero. This is evidence that object relatives are read faster than subject
+relatives. The HPD interval of the fixed effect βˆ for distance is also entirely
+below zero. This is evidence of a slowdown when the verb (where reading time
+wasmeasured)isclosertotheheadnounoftherelativeclause. TheHPDofthe
+interaction βˆ between relative clause type and distance is greater than zero,
+whichis evidencefor a greaterslowdownonsubjectrelativeswhenthe distance
+between the verb and head noun is short.
+A major advantage of the above matrix formulation is that we do not need
+to write a new Stan model for a future repeated measures factorial design. All
+we have to do now is define the design matrix X appropriately, and include it
+(alongwithappropriatelydefinedZ andZ forthesubjectsanditemsrandom
+effects) as part of the data specification that is passed to Stan.
+5 Concluding remarks, and further reading
+We hope thatthis tutorialhasgiventhe readera flavorofwhatitwouldbe like
+to fit Bayesian linear mixed models. There is of course much more to say on
+the topic, and we hope that the interested reader will take a look at some of
+the excellent books that have recently come out. We suggest below a sequence
+of reading that we found helpful. A good first general textbook is by Gelman
+and Hill [6]; it begins with the frequentist approach and only later transitions
+to Bayesian models. The forthcoming book by Mcelreath [20] is also excellent.
+Forthoselookingfora psychology-specificintroduction,the booksbyKruschke
+[14] and Lee and Wagenmakers [16] are to be recommended, although for the
+latter the going might be easier if the reader has already looked at Gelman
+and Hill [6]. As a second book, [17] is recommended; it provides many inter-
+esting and useful examples using the BUGS language, which are discussed in
+exceptionally clear language. Many of these books use the BUGS syntax [18],
+which the probabilistic programming language JAGS [23] also adopts; how-
+ever, Stan code for these books is slowly becoming available on the Stan home
+troductorycalculus,aslightlymoretechnicalintroductiontoBayesianmethods
+by Lynch [19] is an excellent choice. Finally, the textbook by Gelman and
+colleagues [5] is the definitive modern guide, and provides a more advanced
+treatment.
+Acknowledgements
+We are grateful to the developers of Stan (in particular, Andrew Gelman, Bob
+Carpenter) and members of the Stan mailing list for their advice regarding
+model specification. Douglas Bates and Reinhold Kliegl have helped consider-
+ablyoverthe yearsinimprovingourunderstandingofLMMsfromafrequentist
+perspective. We also thank Edward Gibson for releasing his published data.
+Titus von der Malsburg and Bruno Nicenboim provided useful comments on a
+draft.

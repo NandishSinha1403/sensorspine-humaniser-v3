@@ -1,0 +1,163 @@
+1v3926.0121:viXra
+Journal ofMachineLearningResearch 1(2012) 1-4 Submitted 9/12;Publishedx/12
+MLPACK: A Scalable C++ Machine Learning Library
+Ryan R. Curtin ryan.curtin@cc.gatech.edu
+James R. Cline james.cline@gatech.edu
+N. P. Slagle npslagle@gmail.com
+William B. March march@gatech.edu
+Parikshit Ram p.ram@gatech.edu
+Nishant A. Mehta niche@cc.gatech.edu
+Alexander G. Gray agray@cc.gatech.edu
+College of Computing
+Georgia Institute of Technology
+Atlanta, GA 30332
+Editor:
+MLPACK is a state-of-the-art, scalable, multi-platform C++ machine learning library re-
+leasedinlate2011offeringbothasimple,consistentAPIaccessibletonoviceusersandhigh
+performance and flexibility to expert users by leveraging modern features of C++. ML-
+PACK provides cutting-edge algorithms whose benchmarks exhibit far better performance
+than other leading machine learning libraries. MLPACK version 1.0.3, licensed under the
+1. Introduction and Goals
+Thoughseveralmachinelearninglibrariesarefreelyavailableonline,few,ifany,offerefficient
+algorithms to the average user. For instance, the popular Weka toolkit (Hall et al., 2009)
+emphasizes ease of use but scales poorly; the distributed Apache Mahout library offers scal-
+ability at a cost of higher overhead (such as clusters and powerful servers often unavailable
+to the average user). Also, few libraries offer breadth; for instance, libsvm (Chang and Lin,
+2011) and the Tilburg Memory-Based Learner (TiMBL) are highly scalable and accessible
+yet each offer only a single method.
+MLPACK, intended to be the machine learning analog to the general-purpose LAPACK
+linear algebra library, aims to combine efficiency and accessibility. Written in C++, ML-
+PACK uses the highly efficient Armadillo matrix library (Sanderson, 2010) and is freely
+available under the GNU Lesser General Public License (LGPL). Through the use of C++
+templates, MLPACK both eliminates unnecessary copying of datasets and performs expres-
+sion optimizations unavailable in other languages. Also, MLPACK is, to our knowledge,
+unique among existing libraries in using generic programming features of C++ to allow
+customization of the available machine learning methods without incurring performance
+penalties.
+In addition, users ranging from students to experts should find the consistent, intuitive
+interface of MLPACK to be highly accessible. Finally, the source code provides references
+and comprehensive documentation.
+(cid:13)c2012RyanR.Curtin,JamesR.Cline,N.P.Slagle,WilliamB.March,P.Ram,NishantA.Mehta,andA.G.Gray.
+Curtin, Cline, Slagle, March, Ram, Mehta, and Gray
+Four major goals of the development team of MLPACK are
+• to implement scalable, fast machine learning algorithms,
+• to design an intuitive, consistent, and simple API for non-expert users,
+• to implement a wide variety of machine learning methods, and
+• to provide cutting-edge machine learning algorithms unavailable elsewhere.
+This paper offers both an introduction to the simple and extensible API and a glimpse
+of the superior performance of the library.
+2. Package Overview
+Each algorithm available in MLPACK features both a set of C++ library functions and a
+standalone command-line executable. Version 1.0.3 includes the following methods:
+• nearest/furthest neighbor search with cover trees or kd-trees (k-nearest-neighbors)
+• range search with cover trees or kd-trees
+• Gaussian mixture models (GMMs)
+• hidden Markov models (HMMs)
+• LARS / Lasso regression
+• k-means clustering
+• fast hierarchical clustering (Euclidean MST calculation) (*) (March et al., 2010)
+• kernel PCA (and regular PCA)
+• local coordinate coding (*) (Yu et al., 2009)
+• sparse coding using dictionary learning
+• RADICAL (Robust, Accurate, Direct ICA aLgorithm)
+• maximum variance unfolding (MVU) via LRSDP (*) (Burer and Monteiro, 2003)
+• the naive Bayes classifier
+• density estimation trees (*) (Ram and Gray, 2011)
+(*): algorithm is not available in any other comparable software package
+The development team manages MLPACK with Subversion and the Trac bug reporting
+system, allowing easy downloads and simple bug reporting. The entire development process
+is transparent, so any interested user can easily contribute to the library. MLPACK can
+compile from source on Linux, Mac OS, and Windows; currently, different Linux distribu-
+tions are reviewing MLPACK forinclusion in their package managers, which will allow users
+to install MLPACK without needing to compile from source.
+3. A Consistent, Simple API
+MLPACK features ahighly accessibleAPI,bothinstyle(such asconsistentnaming schemes
+and coding conventions) and ease of use (such as templated defaults), as well as stringent
+documentation standards. Consequently, a new user can execute algorithms out-of-the-box
+often with little or no adjustment to parameters, while the seasoned expert can expect ex-
+treme flexibility in algorithmic tuning. For example, the following line initializes an object
+MLPACK: A Scalable C++ Machine Learning Library
+Dataset MLPACK Weka Shogun MATLAB mlpy sklearn
+wine 0.0003 0.0621 0.0277 0.0021 0.0025 0.0008
+cloud 0.0069 0.1174 0.5000 0.0210 0.3520 0.0192
+wine-qual 0.0290 0.8868 4.3617 0.6465 4.0431 0.1668
+isolet 13.0197 213.4735 37.6190 46.9518 52.0437 46.8016
+miniboone 20.2045 216.1469 2351.4637 1088.1127 3219.2696 714.2385
+yp-msd 5430.0478 >9000.0000 >9000.0000 >9000.0000 >9000.0000 >9000.0000
+corel 4.9716 14.4264 555.9600 60.8496 209.5056 160.4597
+covtype 14.3449 45.9912 >9000.0000 >9000.0000 >9000.0000 651.6259
+mnist 2719.8087 >9000.0000 3536.4477 4838.6747 5192.3586 5363.9650
+randu 1020.9142 2665.0921 >9000.0000 1679.2893 >9000.0000 8780.0176
+Table 1: k-NN benchmarks (in seconds).
+Dataset wine cloud wine-qual isolet miniboone
+UCI Name Wine Cloud Wine Quality ISOLET MiniBooNE
+Size 178x13 2048x10 6497x11 7797x617 130064x50
+Dataset yp-msd corel covtype mnist randu
+UCI Name YearPredictionMSD Corel Covertype N/A N/A
+Size 515345x90 37749x32 581082x54 70000x784 1000000x10
+Table 2: Benchmark dataset sizes.
+which will perform the standard k-means clustering in Euclidean space:
+However, an expert user could easily use the Manhattan distance, a different cluster
+initialization policy, and allow empty clusters:
+KMeans<ManhattanDistance, KMeansPlusPlusInitialization, AllowEmptyClusters> k();
+Users can implement these custom classes in their code, then simply link against the
+MLPACK library, requiring no modification within the MLPACK library. In addition to
+this flexibility, Armadillo 3.4.0 includes sparse matrix support; sparse matrices can be used
+in place of dense matrices for the appropriate MLPACK methods.
+4. Benchmarks
+TodemonstratetheefficiencyofthealgorithmsimplementedinMLPACK,wepresentacom-
+parison of the running times of k-nearest-neighbors and the k-means clustering algorithm
+fromMLPACK,Weka(Hall et al.,2009),MATLAB,theShogunToolkit(Sonnenburg et al.,
+2010), mlpy (Albanese et al., 2012), and scikit.learn (‘sklearn’) (Pedregosa et al., 2011), us-
+ing a modest consumer-grade workstation containing an AMD Phenom II X6 1100T proces-
+sor clocked at 3.3 GHz and 8 GB of RAM.
+Eight datasets from the UCI datasets repository (Frank and Asuncion, 2010) are used;
+the MNIST handwritten digit database is also used (‘mnist’) (LeCun et al., 2001), as well
+as a uniformly distributed random dataset (‘randu’). Information on the sizes of these ten
+datasets appears in Table 2. Dataset loading time is not included in the benchmarks. Each
+test was run 5 times; the average is shown in the results.
+Curtin, Cline, Slagle, March, Ram, Mehta, and Gray
+Dataset Clusters MLPACK Shogun MATLAB sklearn
+wine 3 0.0006 0.0073 0.0055 0.0064
+cloud 5 0.0036 0.1240 0.0194 0.1753
+wine-qual 7 0.0221 0.6030 0.0987 4.0407
+isolet 26 4.9762 8.5093 54.7463 7.0902
+miniboone 2 0.1853 8.0206 0.7221 memory
+yp-msd 10 34.8223 135.8853 269.7302 memory
+corel 10 0.4672 2.4237 1.6318 memory
+covtype 7 13.5997 71.1283 54.9034 memory
+mnist 10 80.2092 163.7513 133.9970 memory
+randu 75 727.1498 7443.2675 3117.5177 memory
+Table 3: k-means benchmarks (in seconds).
+k-NN was run with each library on each dataset, with k = 3. The results for each
+library and each dataset appears in Table 1. The k-means algorithm was run with the same
+starting centroids for each library, and 1000 iterations maximum. The number of clusters
+k was chosen to reflect the structure of the dataset. Benchmarks for k-means are given in
+Table 3. Weka and mlpy are excluded because they do not allow specification of the starting
+centroids. ‘memory’ indicates that the system ran out of memory during the test.
+MLPACK’s k-nearest neighbors and k-means are faster than the competitors in all test
+cases. Benchmarks for other methods, omitted due to space constraints, also show similar
+speedups over competing implementations.
+5. Future Plans and Conclusion
+The favorable benchmarks exhibited above are not necessarily the global optimum; ML-
+PACK’s active development team includes several core developers and many contributors.
+Because MLPACK is open-source, contributions from outsiders are welcome, including fea-
+ture requests and bug reports. Thus, the performance, extensibility, and breadth of algo-
+rithms within MLPACK are all certain to improve.
+The first releases of MLPACK lacked parallelism, but experimental parallel code using
+OpenMPiscurrentlyintesting. ThisparallelsupportmustmaintainasimpleAPIandavoid
+large,reverse-incompatibleAPIchanges. Otherusefulplannedfeaturesincludeusingon-disk
+databases (rather than requiring loading the dataset entirely into RAM) and validation of
+saved models (such as trees or distributions). Refactoring work continues on existing code,
+providing more flexible abstractions and greater extensibility. Nevertheless, MLPACK’s
+future growth will mostly be the addition of new machine learning methods; since the
+original release (1.0.0), there are five new methods.
+In conclusion, we have shown that MLPACK is a state-of-the-art C++ machine learning
+library which leverages the powerful C++ concept of generic programming to give excellent
+performance on large datasets.
+Acknowledgements
+A full list of developers and researchers (other than the authors) who have contributed
+significantly to MLPACK are Sterling Peet, Vlad Grantcharov, Ajinkya Kale, Dongryeol
+Lee, Chip Mappus, HuaOuyang, Long Quoc Tran, NoahKauffman, Rajendran Mohan, and
+Trironk Kiatkungwanglai.
+MLPACK: A Scalable C++ Machine Learning Library

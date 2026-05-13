@@ -1,0 +1,179 @@
+2v3641.2141:viXra
+On the String Kernel Pre-Image Problem with Applications in
+Drug Discovery
+Se´bastien Gigue`re,Ame´lieRolland1, Franc¸oisLaviolette,MarioMarchand
+Universite´ Laval
+De´partementd’informatiqueetdege´nielogiciel
+The pre-image problem has to be solved during inference by most structured output predictors.
+For string kernels, this problem correspondsto finding the string associated to a given input. An
+algorithmcapableofsolvingorfindinggoodapproximationstothisproblemwouldhavemanyap-
+plicationsincomputationalbiologyandotherfields. Thisworkusesarecentresultoncombinatorial
+optimizationoflinearpredictorsbasedonstringkernelstodevelop,forthepre-image,alowcom-
+plexityupperboundvalidformanystringkernels.Thisupperboundisusedwithsuccessinabranch
+andboundsearchingalgorithm. Applicationsandresultsinthediscoveryofdruggablepeptidesare
+presentedanddiscussed.
+1 Introduction
+Thisworkfocusesonthechallengesofusingregressionlearningalgorithmsinthedesignofhighlyactivepeptides.Let
+bethesetofallaminoacidsand ∗ bethesetofallpossiblepeptides. Throughoutthispaperwewillassumethat
+w A ehaveadataset = (x ,e ),... A ,(x ,e ) ∗ Rwherex istheaminoacidsequenceofthei-thpeptidein
+ande isitsbioactivity(whichcouldbeitsbindingaffinitytosometargetprotein,itsantimicrobialactivity,orsome
+other desirable activity for peptides). The regression approach consists of learning a predictor h from the training
+dataset . Leth(x)betheestimatedbioactivityofxaccordingtothepredictorh. Therearemanywaystorepresent
+suchapredictorbutthisworkfocusesonstringkernelbasedpredictors.Manylearningalgorithm,suchastheSupport
+VectorRegression,RidgeRegression,andGaussianProcesses,producepredictorshwhoseoutputh(x), oninputx,
+whereα istheweightonthei-thtrainingexample,K(x ,x)= φφφ(x),φφφ(x′) isastringkernel, , denotestheinner
+productbetweenfeaturevectors,andφφφisthefeaturemapassociatedtoK. Theweightvectorααα= (α ,α ,..,α )is
+obtainedbyminimizingthelearningalgorithmobjectivefunction.
+Forthediscoveryofpeptideinhibitorsandpeptidesthatcouldactasdrugprecursors,weareinterestedinfindingthe
+peptidexh maximizingthepredictedbioactivity:
+xh =argmaxh(x). (2)
+The complexity of this combinatorialproblem will obviously depend on the string kernel used to learn h. For few
+kernels like the Hamming kernel, solving Equation (2) is trivial [1]. However, this kernel is not well suited for
+peptides[2]. Onanotherhand,theGenericString(GS)kernel[2]iswellsuitedforpeptides.Itisdefinedasfollows:
+GS(x,x′,k,σ ,σ )d=ef
+p c 2σ2 2σ2
+X l=1 X i=0 X j=0 (cid:16) (cid:17) (cid:18) (cid:19)
+1Correspondingauthor:amelie.rolland.1@ulaval.ca
+Peer-reviewedandacceptedforpresentationatMachineLearninginComputationalBiology2014,Montre´al,Que´bec,Canada.
+wherekcontrolsthelengthofcomparedk-mers, ψψψk : k Rdkencodesthephysico-chemicalpropertiesofk-mers
+bymappingeachofthekaminoacidstoarealvaluedvectorcontainingdproperties,σ controlsthepenaltyincurred
+whenthephysico-chemicalpropertiesoftwok-mersdiffer,andσ controlsthepenaltyincurredwhentwok-mersare
+notsharingthesamepositionintheirrespectivepeptides. Dependingonthechosenhyper-parameters,thiskernelcan
+bespecializedtoeightknownkernels[2], namelytheHammingkernel,theBlendedSpectrum[3], the RadialBasis
+Function(RBF),theOligo[4],andtheWeighteddegree[5]. SincetheproposedapproachusestheGSkernelitisalso
+validforallofthesekernels.
+Itwasrecentlyshown[6]thatwhenK istheGenericString(GS)kernel,andwhenwerestrictpeptidestobeoflength
+l,thepeptidexh lcanbefoundinpolynomialtimeforanypredictorhintheformofEquation(1).Theirapproach
+mapsthe combinatorialproblemto a directedacyclic graph(DAG) thatis basically a de Bruijn graphwith weights
+onthearcs. Then,theyshowthatfindingthelongest(weighted)pathinthisgraphisequivalenttofindingxh l.
+Finally,thelongestpathcanbefoundinpolynomialtimebydynamicprogrammingsincethegraphisacyclic.
+However,with the GS kernel, giventwo peptidesx andx′ of the same length, the Euclideannormsof their feature
+vectors φφφ(x) and φφφ(x′) can differ substantially, i.e. we can have K(x,x) K(x′,x′). Let us first show,
+with a simple example, why this can be problematic. We will then show how to avoid this problemthroughkernel
+normalization. Such normalizationdoes not have any computationalimpact in the learning phase of the regression
+algorithm.Itdoeshoweverimpactsubstantiallythepredictionphase,leadingtoahardercombinatorialproblem.
+Hence,letusconsiderthestrings“AAAAA”and“ABCDE” andtheSpectrumkernel[7](alsoknownasthen-gram
+kernel) with k-mers of size two. The string “AAAAA” has a norm of √16 = 4, while “ABCDE” has a norm of
+√1+1+1+1 = 2. Hence the Spectrum kernel is sensitive to k-mers repetitions in the string. Note that this
+problem is shared by many other string kernels. In the case of the GS kernel, it is possible to avoid this problem
+by fixing the hyper-parameterσ to 0, which forces a constant norm, i.e. K(x,x) = c for all x l. However,
+K(x,x)willvarywheneverσ >0,asitisthecasefortheBlendedSpectrumandtheOligokernels ∈ ,fo A rexample. A
+consequenceofanon-constantnormisthath(x)willheavilydependonthenormofφφφ(x). Hence,xh willbemore
+likelya peptidehavinga featurevectorwith a largenorm,i.e., a peptidehavingmanyrepetitions. Thisisgenerally
+anundesiredbias. Itiseasytoovercomethisproblembynormalizingkernelvalues,inthatcasetheoutputfunction
+m K(x ,x) 1 m
+⋆ i K(x ,x )K(x,x) K(x,x) i i
+i=1 i i i=1
+. Inthatcaseweparenowinterestedinfindping
+xh⋆ =argmax β K(x ,x). (5)
+x∈A∗ K(x,x) i i
+This optimizationproblemis also a pre-imageproblpem, but written in a slightly differentform. We conjecturethat
+solvingEquation(5)is -HardwhenKistheGSkernel.GiventhesimilaritybetweentheproblemsofEquation(2)
+andEquation(5),thedifferenceintheircomputationalcomplexityisunexpected.
+Inthenextsection,wewillpresentalowcomplexityupperboundonEquation(4)thatmakesitagoodcandidatefor
+abranchandboundsearchtosolveEquation(5).
+Sincethenumberofpeptidesgrowsexponentiallywithitslength,itbecomesimpossibletoevaluateallsolutionsfor
+largepeptides,weproposeabranchandboundschemetoguidethissearch. Abranchandboundalgorithmstartsby
+dividingthe search space into disjoint subspaces. For example, one subspace couldbe all peptidesending with the
+string “DE”. For a maximization problem, an upper boundon the best achievable solution is computed for each of
+thesesubspaces. Then,thesubspacewiththehighestupperboundisfurtherdividedintosmallersubspaces. Finally,
+the search stops when a subspace can no longerbe divided(a leaf is reachedin the search tree), or when the upper
+boundvalueislowerthanthevalueofanalreadyachievedsolution(i.e.,analreadyreachedleafinthesearchtree).A
+branchandboundapproachcanthusavoidexploringalargepartofthesearchspace.
+Algorithm1givesthespecificsofthebranchandboundalgorithmappliedtoourcase. Thesearchalgorithmalternates
+between a greedyphase and a branchand boundphase. The greedyphase is importantto ensure that leaves of the
+search tree are quickly visited. This allows good but sub-optimal solutions to be returned by the algorithm if the
+allowedcomputationaltimeexpires. Wheneveranodeisvisited,theboundiscomputedforallitschildrenandthey
+areaddedtothepriorityqueueaccordingly.Thisgreedyprocessisrepeateduntilaleafisreached.Then,thenodewith
+thelargestboundisvisitedandthegreedyprocessstartsagain. Atalltime,thebestsolutionfoundsofariskeptand
+thesearchstopswhentheboundofthenodeontopofthepriorityqueueissmallerthanthevalueofthebestsolution.
+Algorithm1Branchandboundsearchformaximalstringoflengthl
+:emptypriorityqueueorderingboundsindescendingorder
+best node Node(empty string,0)
+do ⊲Addallk-merin
+.push(Node(s,F(s,l)))
+whilecurrent node .pop() & current node.bound>best node.bounddo ⊲Getmaximalnodein
+while current node.string <l & current node.bound>best node.bounddo
+best child Node(empty-string,0)
+foralla do ⊲Evaluateallchildrenofnode
+s′ ∈ Co A ncatenate(a,current node.string)
+ifF ← (s′,l)>best node.boundthen
+ifF(s′,l)>best child.boundthen
+best child Node(s′,F(s′,l)) ⊲Updatebest child
+.push(Node(s′,F(s′,l))) ⊲Addchildto
+current node best child
+.remove(best child) ⊲Removebest childfrom ifitwasadded
+if current node.string =l & current node.bound>best node.boundthen
+best node current node ⊲Updatebest node
+returnbest node.string,best node.bound ⊲Returnstringandmaximalbioactivity
+Let l−p x′,...,x′ bethesetofallpossiblestringsoflengthlthatendwithx′,...,x′,inotherwords, l−p
+A ×{ 1 p} 1 p A ×
+x′,...,x′ isasetofstringshavingtheirlastpcharactersfixed.OurgoalistohaveafunctionF thatupperbounds
+h forevery l−p x′,...,x′ . Inotherwords:
+Todoso,letF(x′,l)d=ef 1 g(x′,l),where p
+f(x′,l) min K(x,x) and g(x′,l) max β K(x ,x) (7)
+are,respectively,alowerandanupperbound.
+WhenK istheGSkernelwithhyper-parametersk,σ andσ ,thelowerboundf canbeobtainedasfollows:
+k,σp,σc p c p c p c
+p c x∈Ap 2σ p 2 2σ c 2
+X p=1 X i=1 X j=1 (cid:16) (cid:17) (cid:18) (cid:19)
+XX(x′,l,k,σ ,σ )=def exp
+p c 2σ2 2σ2
+X p=1 X i=1 X j=1 (cid:16) (cid:17) (cid:16) (cid:17)
+max ψψψ(a,a′) otherwise.
+Notethatthelowerboundf isnotattainedsinceitunder-estimatesthevalueofthestringx l−p x′,...,x′
+minimizingK(x,x). ∈ A ×{ 1 p}
+Forg(x′,l),notethat m β K(x ,x)iswhat[6]proposedtomaximize. Theirapproachusesadynamicprogram-
+mingtable to computethe longestpathin a graph. Itis relativelyeasy to modifytheir algorithmto returnthe table
+insteadofthelongestPpath. Inthatway,givenastringwithsuffixx′,itispossibletodetermineinconstanttime,by
+accessingthedynamicprogrammingtable,theprefixfrom l−pmaximizing m β K(x ,x). Thecomputationofg
+isthusveryefficient,thealgorithmof[6]onlyneedstobed A oneoncebeforetheb i= ra 1 nc i hand i boundsearch,theng(x′,l)
+canbecomputedinconstanttimeforanyx′. Finally,g istheleastupperboPund(orsuprema)sincethereisalwaysa
+stringx l−p x′,...,x′ withg(x,l)= m β K(x ,x). Inotherwords,therearenotighterbound.
+∈A ×{ 1 p} i=1 i i
+3 Results and Discussion
+Wefollowedtheprotocolsuggestedby[6]and,asaproofofconcept,weusedthesamedatasettheyused:101cationic
+antimicrobialpentadecapeptides(CAMPs) from the synthetic antibiotic peptidesdatabase [8]. Peptide antibacterial
+activities are expressed as the logarithm of bactericidal potency. As in [6], we used kernel ridge regression as the
+learningalgorithm. Exceptwhenstated otherwise, allhyper-parametersforthe GSkernel(k,σ ,σ ) andthekernel
+ridge regression(λ) were chosenby standardcross-validation. We learned two predictorsof antimicrobialpotency,
+one uses unnormalizedkernelvalues (thus, the same predictor used in [6]), the other was trained using normalized
+kernelvalues. Werefertothesepredictorsrespectivelyashandh .
+Themethodpresentedin[6]wasusedtoidentifythepeptidexh 15ofmaximalpredictedbioactivityaccordingto
+handthebranchandboundwasusedtoidentifyxh⋆ 15,the ∈ pe A ptidemaximizingh
+. Bothapproachesfoundthe
+samepeptide,whichis“WWKWWKRLRRLFLLV”.
+Notethatbothmethodsareabletooutputmorethanonesequence.Themethodof[6]usesak-longestpathalgorithm
+to obtain the k peptidesof maximalbioactivity. It is also possible for the branchand boundby stoppingthe search
+onlywhentheboundontopofthepriorityqueueislowerthanthek-thpeptidefound. Thesepeptidescanbeused,
+for example, for motif generation, for multiple peptide synthesis or in combinatorial chemistry. To highlight the
+differencesbetween the methods, they were used to list the top 1000 peptidesand the lists were compared: 70.5%
+of the 1000 peptides were found by both methods. Then, the Pearson correlation coefficient (PCC) was computed
+betweentherankofthe679peptidespresentinbothlists: aPCCof0.56wasobtained.Hence,therankingofpeptides
+foundbyhandbyh differsignificantly.
+The overlapin the lists is attributed to the value of σ that was chosen duringcross-validationfor h. As explained
+earlier,whenσ is0,theunnormalizedpredictorhwillnotsufferfromdifferencesinthenormofφφφ(x). Inthecaseof
+antimicrobialpeptides,σ = 0.8wasfoundtobetheoptimalvalueforh. Thissuggeststhatthemethodof[6]offers
+someresistancetovariationinnormwhenσ issmall. Indeed,forsmallσ ,allexampleshaveaboutthesamenorm.
+To further highlight the difference between the methods, we intentionally fixed σ to infinity and cross-validated
+all other parameters for h and h and compared the best peptides found. Situations were σ would have to be set
+to infinity are not at all unlikely. For example, cyclic peptides have no N-terminus and no C-terminus. For that
+reason, there is no origin from which we can expressthe positions of k-mers in these peptides. The method of [6]
+foundthepeptide“FKKIFKKIFKKIFKF”usingthepredictorhandthebranchandboundapproachfoundthepeptide
+“WKKIFKKIWKFRVFK”usingthepredictorh .Thepeptideidentifiedbyhsharesalmostnosimilaritywithpeptides
+ofthetrainingsetandisbasicallycomposedofrepetitionofthek-mer“FKK”.Incontrast,thepeptideidentifiedbyh
+sharesmanysubstructureswiththemostbioactivepeptidesofthetrainingset. Thistendstopointoutthatinsituation
+whereexamplenormsvaryalot,hclearlyfavorsexampleshavingalargenorm. However,thisbiasisunjustifiedand
+isnotrelatedtoabiologicalreality.
+4 Conclusion
+We proposeda boundfor maximizingthe inferencefunctionof kernelmethodsthat uses normalizedstring kernels.
+Moreover,theboundisalsovalidforsolvingthepre-imageofavarietyofstringkernels. Empiricalresultsshowthat
+themethodproposedby[6]cansufferfromadominanceofthenormforcertainstrings,aproblemwhichispresent
+with many string kernels. In these situations, the proposed method was shown to overcome this problem. Tighter
+boundsshouldtakeadvantageoftheproposedframeworkandallowthediscoveryofnovelpeptideinhibitors.Finally,
+applicationsfordrugsbasedoncyclicpeptidesandotherstructuredoutputapplicationsareexpected.
+Acknowledgments
+TheauthorswouldliketothankPrudencioTossuforhishelpintheexperimentations. Computationswereperformed
+on the Colosse supercomputer at Universite´ Laval (resource allocation project: avt-710-aa), under the auspices of
+Calcul Que´bec and Compute Canada. AR is recipient of a Master’s Scholarship from the Fonds de recherche du
+Que´bec-Natureettechnologies(FRQNT).ThisworkwassupportedbytheFRQNT(FL&MM;2013-PR-166708).

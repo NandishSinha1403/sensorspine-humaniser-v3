@@ -1,0 +1,127 @@
+Estimating the Potential Speedup of Computer
+Vision Applications on Embedded Multiprocessors
+V´ıtor Schwambach∗†, Se´bastien Cleyet-Merle†, Alain Issard†, Ste´phane Mancini∗
+∗ Univ. Grenoble Alpes, TIMA, F-38031 Grenoble, France
+CNRS, TIMA, F-38031 Grenoble, France
+† STMicroelectronincs, Grenoble, France
+Abstract—Computer vision applications constitute one of the Step1:PlatformCharacterization.Thefirststepistocharacter-
+key drivers for embedded multicore architectures. Although the ize the target multiprocessor platform and its parallel programming
+number of available cores is increasing in new architectures, de- frameworkinordertobuildacharacterizationdatabase.Thisdatabase
+signinganapplicationtomaximizetheutilizationoftheplatform contains statistical information of the measured overheads for the
+isstillachallenge.Inthissense,parallelperformanceprediction OpenMPdirectives,aswellasinherentcharacteristicsofthemultipro-
+tools can aid developers in understanding the characteristics of cessor platform, such as memory latency and bandwidth parameters
+an application and finding the most adequate parallelization foreachmemoryhierarchylevel.Forthis,anenrichedversionofthe
+strategy. In this work, we present a method for early paral- EPCC OpenMP micro-benchmarks[2] is used. The traces generated
+lel performance estimation on embedded multiprocessors from by a reference simulator or prototype are fed to a characterization
+sequential application traces. We describe its implementation tool that generates this database. The characterization database only
+in Parana, a fast trace-driven simulator targeting OpenMP needs to be generated once for a given multiprocessor platform and
+applications on the STMicroelectronics’ STxP70 Application- can be reused in later steps.
+SpecificMultiprocessor(ASMP).ResultsfortheFASTkeypoint Step 2: Application Trace Collection. In this phase we collect
+detector application show an error margin of less than 10% execution traces from the sequential application. Tasks are created
+compared to the reference cycle-approximate simulator, with from function calls in the application, which are annotated with
+lower modeling effort and up to 20x faster execution time. their timestamps and hierarchical information. Summary memory
+access statistics are also gathered for each task. This task trace
+I. INTRODUCTION can be enriched by user inserted instrumentation macros that (i)
+defineexplicittasksatlowergranularitylevelsand(ii)addadditional
+In recent years, multiprocessor architectures have become ubiqui-
+semantic information, such as if the tasks refer to loops, critical
+tousinnewembeddedsystems.Nonetheless,thedevelopmentofeffi-
+regions or array accesses, among others.
+cientandscalableparallelapplications,stillrepresentsachallenge[1].
+Step 3: Parallelization Directives Specification. This step con-
+Numerous factors can impact the parallel performance such as load
+sists in creating a file with the OpenMP parallelization directives
+imbalance,synchronizationandcommunicationoverheads[3],that,if
+the user wishes to evaluate, and a mapping of these directives onto
+not accurately modeled, can lead to significant mismatches between
+functions or user-defined code sections.
+simulation results and physical device measurements[8].
+Step4:ParallelizationAnalysis.Inthisfinalstep,Paranausesthe
+Differentparallelizationstrategiescanbeusedtooptimizeparallel
+platform characterization and application trace databases, as well as
+performance.Inordertoevaluatethem,developersoftenrelyontime-
+theparallelizationdirectives,topredicttheparallelperformanceofthe
+consumingcycle-accuratesimulations,orprototypes.Fastinstruction
+application.Itfirstbuildsadirectedacyclicgraphoftheapplication’s
+set simulators or dynamic binary translation simulators trade some
+tasks and generates multiple parallel schedules, according to the
+accuracy loss for faster simulation speeds. However, they all require
+parallelization directives. It acquires statistics from each parallel
+a working parallel version of the application for each strategy,
+schedule to produce a detailed parallelization report. The user can
+which can limit the exploration space due to the effort required to
+then refine the application and repeat the process to explore new
+produce them in the first place. On the other hand, existing parallel
+parallelization strategies.
+performance prediction tools – Kismet[5], Parallel Prophet[6], and
+IntelAdvisorXE[4]–focussolelyondesktop-classapplicationsand
+do not address embedded multiprocessors. III. RESULTS
+Our main idea is to acquire traces from a sequential application
+run on a reference simulator, then use a trace-driven simulator to A. Target Platform
+estimate the parallel performance of the application on the target
+Our target platform is the STxP70 ASMP. This multiprocessor
+multiprocessor.
+is similar to a single cluster of the STHORM platform[7]. It has a
+The contributions of this paper may be summarized as follows:
+configurable SMP architecture with up to 16 STxP70 cores – 32-
+(i) we propose a methodology for parallel application performance
+bitdual-issueRISCCPUs.Heterogeneitycanbeachievedbyhaving
+predictionfromsequentialcode;(ii)weimplementthismethodology
+multiple instances with particular configurations and instruction set
+inParana,andshowthatitcanpredicttheparallelperformanceupto
+extensions or by attaching dedicated HW IPs to DMA queues. The
+20xfasterthancycle-approximatesimulators,withamarginoferror
+STxP70 ASMP architectural template is depicted in Figure 1(b).
+in the order of 10% for the benchmarked application.
+II. PARALLELPERFORMANCEESTIMATION B. Execution Vehicles
+Our methodology consists in designing an abstract trace-driven GepopSimulator.Gepopisacycle-approximatesimulatorforthe
+simulator to estimate the performance of an embedded application STxP70 ASMP platform and constitutes our reference platform for
+foragivenparallelizationstrategy.Figure1(a)depictsthefoursteps the platform characterization.
+of the parallelization prediction and analysis flow using our Parana FPGAPrototype.AprototypeoftheSTxP70ASMPontheXilinx
+tool, which are detailed in the sequel. VC707 FPGA is used for comparison.
+Copyrightisheldbytheauthor/owner(s).
+DATEFridayWorkshoponHeterogeneousArchitecturesandDesignMethods 1
+forEmbeddedImageSystems(HIS2015),Grenoble,France,March13,2015.
+(a) Proposed parallel performance estimation flow (b) STxP70 ASMP
+1 PLATFORMfCHARACTERIZATION 4 PARALLELIZATION STxP70 BankedUL1
+ESTIMATIONfHfANALYSIS Cores SharedUMemory
+C1A1fSimulator
+μB PlatformfCharac1fDB Bank Parana #1
+Characterization Application
+Parallelization Bank
+2 APPLICATIONfTRACEfCOLLECTION Report #2
+I A ns p tr p u li m ca e t n io te n d C1A1fSimulator TracefDB TaskfGraph G G f f E Sp st e 1 e fr d u G n u f p time Ba .. n . k
+TracefCollection 1 GfPar1fefficiency
+n GfOverheads Bank GfOp1fIntensity #M
+3 PARALLELIZATIONfDIRECTIVES 111
+Par1fDirectives ParallelfSchedule DMA
+tcennocretnI
+CPU I$ #...
+Fig. 1: (a) Overview of the four steps of the proposed flow for parallel application performance prediction with Parana. (b)
+Architectural template of the STxP70 ASMP.
+FAST Corner Detector Results
+1 2 3 4 5 6 7 8
+30.0R Parana
+FPGA Gepop 20.0R
+AmdahltsILaw 10.0R
+1 2 3 4 5 6 7 8
+Number of Cores
+Parana 100R
+1 2 3 4 5 6 7 8
+Number of Cores
+LoadIImbalance
+OpenMPIRuntime ParallelIProcessing
+SequentialIProcessing
+Number of Cores
+Fig.2:ComparisonofspeedupestimateswithParanaandmeasurementswiththeGepopcycle-approximatesimulator(Parana’s
+characterization reference) and an FPGA prototype for the FAST Corner Detection application. Left: speedup results from 1
+to 8 cores. Center: speedup error wrt. Gepop. Right: Cycle stacks showing the impact of different overhead sources.
+Parana. The proposed tool is a trace-diven simulator that can oftheapplicationontheGepopcycle-approximatesimulatorandon
+estimatetheparallelperformanceofanapplicationfromitssequential an FPGA prototype of the STxP70 ASMP. We have demonstrated
+execution traces and a set of OpenMP directives. the accuracy of the solution in estimating the parallel speedup,
+within 10% of the reference simulator, as well as its interest in
+C. Application identifying the sources of scalability issues via the cycle stacks.
+FAST Corner Detection (FAST). We have ported a 9-16 FAST Future explorations will aim at improving design space exploration
+corner detector (from OpenCV 2.4.6) commonly used in computer capabilities,aswellasmodelingDMAtransfersandsharedmemory
+vision to select key points in a number of tracking and detection conflicts to increase the domain of addressable applications.
+applications.

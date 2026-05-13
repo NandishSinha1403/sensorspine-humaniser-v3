@@ -1,0 +1,395 @@
+State Estimation for Tensegrity Robots
+Ken Caluwaerts1,∗, Jonathan Bruce2,∗, Jeffrey M. Friesen3, and Vytas SunSpiral4
+Abstract—Tensegrity robots are a class of compliant robots
+that have many desirable traits when designing mass efficient
+systems that must interact with uncertain environments. Var-
+ious promising control approaches have been proposed for
+tensegritysystemsinsimulation.Unfortunately,stateestimation
+methods for tensegrity robots have not yet been thoroughly
+studied. In this paper, we present the design and evaluation
+of a state estimator for tensegrity robots. This state estimator
+will enable existing and future control algorithms to transfer
+from simulation to hardware. Our approach is based on the
+unscentedKalmanfilter(UKF)andcombinesinertialmeasure-
+ments, ultra wideband time-of-flight ranging measurements,
+and actuator state information. We evaluate the effectiveness
+ofourmethodontheSUPERball,atensegritybasedplanetary
+exploration robotic prototype. In particular, we conduct tests
+for evaluating both the robot’s success in estimating global
+positioninrelationtofixedrangingbasestationsduringrolling
+maneuvers as well as local behavior due to small-amplitude Fig.1:TheSUPERballprototype,asixstruttensegrityrobot
+deformations induced by cable actuation.
+with 12 actuated cables and 12 passive cables. Our state
+estimation algorithm is evaluated on this platform.
+I. INTRODUCTION
+Tensegrity robotics is a relatively young field of research
+wherein a robot is structured according to tensegrity princi-
+We focus on the use of low-cost ranging modules and
+ples.Wedefineatensegrityasastructurewithdiscontinuous
+inertial measurement units mounted to the rods of a tenseg-
+compression elements suspended within a web of tension
+rity robot as the sensor inputs to an unscented Kalman
+elements. In this class of robots, motion is often achieved
+filter (UKF). These ranging sensors can be purchased off-
+throughactuationofthetensileelementswithinthestructure.
+the-shelf and do not rely on any user-designed mechanical
+Tensegrity robots have highly coupled dynamics due to
+infrastructure to operate. We also use motor encoders to
+their interconnected network of compliant tensile elements.
+sense change in cable rest length as control inputs into
+As such, an external force exerted at a single point will
+the dynamic model utilized by the UKF. For testing our
+cause a global displacement in all nodal positions of the
+approach, we use the SUPERball prototype, a six strut
+system.Thispropertyisbeneficialinthatitallowsthesystem
+tensegrity robot designed to explore tensegrity systems for
+to passively adapt to external forces and redistribute loads
+planetary exploration [5][6]. SUPERball is shown in Fig. 1.
+effectively through the tension network. However, it also
+This paper is organized as follows. We first present a
+causes difficulties in determining the state of the system
+detailed overview of the system’s sensors, ranging method
+when only limited sensor information is available.
+andcalibrationroutine.Wethendescribetheimplementation
+Variouscontrolapproacheshavebeenproposedfortenseg-
+oftheunscentedKalmanfilterandthedynamicsmodel.This
+rity systems in simulation. However, these algorithms often
+is followed by our experimental results. We end this paper
+relyonfullstateortrajectoryinformation[1][2][3][4].Inthis
+with our conclusions and future outlook.
+paper, we present the design and evaluation of a state esti-
+mator for this class of robot which will allow the transfer of II. SUPERBALLOVERVIEW
+these existing and future control algorithms from simulation TheSphericalUnderactuatedPlanetaryExplorationRobot
+to hardware. (SUPERball) is a preliminary tensegrity robot prototype
+developedattheNASAAmesResearchCenter.Thepurpose
+*Theseauthorscontributedequallytothiswork.
+This work was performed while all authors were at the the SUPERball project is to develop technologies for a new
+NASAAmesResearchCenter, Moffett Field CA, USA, with funding class of planetary exploration robot which is able to deploy
+fromNASAsNSTRF,NIACandGCDPrograms. from a compact launch volume, land at high speeds without
+1Oak Ridge Associated Universities (ORAU), Oak Ridge TN, USA
+ken.caluwaerts@nasa.gov the use of air-bags, and provide robust surface mobility.
+2University of California Santa Cruz, Santa Cruz CA, USA This broad set of functions can be enabled by utilizing the
+jebruce@ucsc.edu
+efficiency and structural compliance of tensegrity robots.
+3University of California San Diego, San Diego CA, USA
+jfriesen@ucsd.edu Passive-structure drop tests have confirmed the analysis
+4SGTInc.,GreenbeltMD,USAvytas.sunspiral@nasa.gov supporting the high-speed landing concept, and the current
+2v04210.0151:viXra
+prototype of SUPERball is intended to develop the foun- Inthismode,themodulesexchange3packetstoestimatethe
+dational engineering approaches required to support surface time-of-flightbetweeneachother.Whilethetime-of-flightof
+locomotion by tensegrity robots. A full system overview is unsynchronizedmodulescanbeestimatedwiththeexchange
+out of the scope of this paper, but the relevant details of the of only 2 packets, the employed mode can significantly
+systemwillbediscussed.PleaserefertoBruceet.al.[5]and reduce measurement noise [8].
+Sabelhaus and Bruce [6] for system details. ThebasicrangingpacketexchangeisshowninFig.2.One
+Relevant to this work are the sensors, actuators, and module sends out a poll message containing an emission
+the ROS network implemented on SUPERball. SUPERball timestamp (t ) using its local clock. A second module
+consistsof6identicalrodsheldtogetherby24cablesin-line receives this message and timestamps the time of arrival
+with springs. As described in [5], each rod of SUPERball is using its local clock (t ). The second module then sends
+comprised of two modular tensegrity robotic platforms (end out a response packet at time t (module 2’s clock). The
+caps). Each platform is equipped with inertial measurement first module receives this packet at time t (module 1’s
+units, a motor with encoders, and a fully enabled Robot clock). Module 1 now sends out a final message containing
+Operating System (ROS) node which communicates to our t and the emission time of the final message (t ,
+ROS network via WiFi. SUPERball is underactuated and clock of module 1). Module 2 receives this information and
+only 12 out of the 24 cables can be actuated (shortened) timestamps it (t ).
+by spooling cable around a spindle (one per end cap). This
+allowstherobottorollthroughdeformation.Sinceeachmod- module 1 module 2
+ulartensegrityplatformcanbeoutfittedwithsensors,ranging TOF tSP poll (tSP) tRP a b
+sensors were added for this paper to enable positioning. The c
+ranging sensors are discussed in detail in Section III. TOF'tRR response tSR d
+III. RANGINGSETUPANDCALIBRATION TOF''
+tSF final (tRR, tSF)
+This section introduces the hardware and software setup Fig.2:Basicsymmetricdouble-sidetwo-wayrangingpacket
+forasetofwirelessrangingmodulestoenablepositiontrack- exchange. Modules 1 and 2 exchange 3 packets (poll, re-
+ingoftherobotbothasanasinternaldistancemeasurements sponse, and final). Module 2 then estimates the distance
+(end cap to end cap) an in an external (world) reference between the modules based on the local timestamps.
+frame.
+WeequippedallendcapsofSUPERballwithaDWM1000 Module 2 can now estimate the time-of-flight and the
+ranging module from DecaWave Ltd. By employing ultra distance between itself and module 1 based on the 6 times-
+wideband technology, the low-cost DWM1000 modules pro- tampes.Thebasicequationstoestimatethedistancebetween
+vide wireless data transfer and highly accurate timestamps module i and module j (module i initiates the ranging and
+oftransmittedandreceivedpackets.Thisallowsthedistance module j computes the distance) are given by:
+between two DWM1000 modules to be estimated by com-
+puting the time-of-flight of exchanged messages without the a i = ti SF −ti SP (1)
+need for synchronized clocks. We opted for this technology b = tj,i −tj,i (2)
+because it allows proprioceptive state estimation (distances c = tj,i −tj (3)
+between end caps), which cannot be easily tracked directly j,i RF SR
+d = ti −ti,j (4)
+via motor encoders. [7] Furthermore, we placed eight more i,j SF RR
+DWM1000 modules as ”fixed anchors” around our testing
+(cid:18) (cid:19)
+area to provide a world reference frame for ground truth TOF ≈ 1 c −d b j,i −δ (5)
+and generation of a reward signal for the machine learning j,i 2 j,i i,j a j,i
+algorithmsthatwewillusetodeveloplocomotioncontrollers 1 (cid:18) b (cid:19)
+(cid:107)N −N (cid:107) ≈ c −d j,i −o (6)
+for the robot. Our intention is that the fixed anchors will not j i 2c j,i i,j a j,i
+be required in the final deployed version of the robot, and .
+are primarily for use during algorithm development.
+We first introduce the basic sensor operation and our The variables a, b, c, and d are also visualized in Fig. 2.
+approach to efficiently estimate distances between a large The time-of-flight calculation between two modules i and j
+number of sensor modules. This is followed by a discussion (TOF = TOF ) is hindered by a fixed measurement
+of our ranging software and hardware setup. Finally, we offset (δ = δ ). This offset is due to antenna delays
+provide a calibration routine similar to a common motion and other discrepancies between the timestamps and actual
+capture system that allows for quick set up of the sensor packetreceptionoremission.Whereasthisoffsetisexpected
+network. tobeuniquetoeachmodule,wefoundthatitisnecessaryto
+estimatethisoffsetpairwiseforcloselylocatedmodules.Our
+A. Sensor Operation
+hypothesisisthattheproximityoftherobot’smotorsandthe
+1) Bidirectional Ranging: We operate the DWM1000 in sensor’spositionneartheendcap’smetalstructureinfluence
+theso-calledsymmetricdouble-sidedtwo-wayrangingmode. the antenna characteristics between pairs of modules.
+Eq. 6 estimates the distances between the modules based
+on the time-of-flight calculation (c is the speed of light).
+We rewrite the time offset δ as a distance offset o (with
+o =o ). Here N and N refer to the positions of nodes
+j,i i,j i j
+i and j respectively (see Section IV). The variables m
+represent the uncorrected distance estimates.
+The DWM1000 requires careful configuration for optimal
+performance. We provide our main configuration settings in
+Table I. The ranging modules tend to measure non line-
+of-sight paths near reflective surfaces (e.g. floor, computer
+monitors), which may cause filter instability. Using the
+DWM1000’s built-in signal power estimator, we reject such
+suspicious packets. In practice, between 30% and 70% of
+packets are rejected in our indoor test environment.
+TABLE I: DWM1000 configuration
+bitrate channel preamble PRF preamblecode
+6.8Mbits−1 7 256 64MHz 17
+2) Broadcast Ranging: Due to the large number of ex-
+changed packets (3 per pair) bidirectional ranging between
+pairsofmodulesquicklybecomesinefficientwhenthenum-
+ber of modules grows. We propose a simple approach using
+timed broadcast messages that scales linearly in the number
+ofmodules(3packetspermodule).Inthissetuponemodule
+periodicallyinitiatesameasurementsequencebysendingout
+a poll message. When another module receives this message
+itemitsitsown poll messageafterafixeddelaybased onits
+ID,followedbyresponseandfinalmessagesafteradditional
+delays. Broadcast ranging is illustrated in Fig. 3.
+B. Ranging Setup
+Each end cap of SUPERball was fitted with a DWM1000
+module located approximately 0.1m from the end of the
+strut.Tosimplifythenotation,wedonotdistinguishbetween
+end cap positions (ends of the struts) and the positions
+ranging sensor locations. In practice, we take this offset into
+account in the output function of our filter (see Section IV).
+The broadcasting algorithm runs at 15Hz and packet
+transmissions are spaced 1ms apart. This allows for over 20
+modules to range. After one ranging iteration, each end cap
+transmits its measurements over WiFi to the ROS network.
+AROSnodethencombinesmeasurementsfromallendcaps
+into a single ROS message at 10Hz.
+The fixed anchors operate in a similar way to the end
+caps, but are not connected to a ROS node and can not
+directly transmit data to the ROS network. This means that
+weobtaintwomeasurements(oneineachdirection)foreach
+pairofmodulesontherobot, butonlyasinglemeasurement
+between the fixed anchors and the modules on the robot.
+C. Calibration
+One of the design goals of our state estimation method
+is quick deployment in new environments without signifi-
+cant manual calibration. To achieve this, we implemented
+an automatic calibration procedure to jointly estimate the
+constellation of fixed modules (anchors, defining an external
+reference frame) and the pairwise sensor offsets (o ). Cal-
+ibration is performed - similar to common motion capture
+systems - by moving the robot around, while recording the
+uncorrected distance measurements (m ).
+After recording a dataset, we minimize the reconstruction
+Δt error L by optimizing over the offsets o (o rearranged
+as a vector), the estimated anchor locations Nest, and the
+estimated moving module locations Nfloat[1...n ]
+(i.e. the module on the robot’s end caps):
+event L(i,j,t)= (cid:16) (cid:107)Nanchor−Nfloat[t](cid:107)−o −m [t] (cid:17)2 (8)
+i j j,i i,j
+L (cid:0) o,Nanchor,Nfloat[1...n ] (cid:1) =(cid:80) α L(i,j,t). (9) samples i,j,t j,t
+The brackets in Nfloat[1...n ] indicate the mov- samples
+ing module locations (end cap positions) at a specific
+timestep. For example Nfloat[5] contains the estimated end
+cap positions at timestep 5 in the recorded dataset. In Eq. 9,
+Fig.3:Packetexchangebetween4modulesforbidirectional i iterates over anchors, j iterates over moving nodes and t
+pairwise and broadcast ranging. Timed broadcast messages iterates over samples. The indicator variables α are equal
+allow for efficient ranging with a large number of modules. to1whenforsampletthereareatleast4validmeasurements
+to the fixed module for moving module j (i.e. the number
+One disadvantage of the broadcasting approach is that the of DOFs reduces).
+total measurement time between a pair of modules takes In practice we also add constraints on the bar lengths,
+longer (up to 60ms in our experimental setup) than a single which take the same form as Eq. 8 with the offsets set
+pairwisebidirectionalmeasurement(approx.3ms).However, to 0. We used BFGS to minimize Eq. 9 with a dataset
+broadcast ranging provides two measurements for each pair containing approximately 400 timesteps selected randomly
+of modules per measurement iteration. from a few minutes of movement of the robot. Although the
+Notethateachmodulenowneedstokeeptrackofthepoll algorithm works without prior knowledge, we noticed that
+and final packet reception times of all other modules. The providing the relative positions of 3 fixed nodes (3 manual
+finalpacketbecomeslongeraseachmoduleneedstotransmit measurements) significantly improves the success rate as
+the response reception time (t ) of all other modules. there are no guarantees on global convergence.
+Oncetheexternaloffsets(betweentheanchorsandmoving N −N , where we use the notation U to denote the kth
+nodes)andthemodulepositionsareknown,wecanestimate row of matrix U. If we then compute V = CdN with the
+the offsets between moving nodes in a straightforward way same method as U, we obtain a matrix of relative member
+by computing the difference between the estimated internal velocities. The matrices U and V are used to calculate
+distances and the uncorrected distance measurements. member lengths as L = |U | and member velocities as
+IV. FILTERDESIGN dt k Lk
+We can then use these values to calculate member force
+Tensegrity systems are nonlinear and exhibit hybrid dy- densities, q, using Hooke’s law and viscous damping as:
+namicsduetocableslackconditionsandinteractionswiththe
+environmentthatinvolvecollisionandfriction.Thiswarrants q =K (1− 0k)− k (L ).
+k k L L dt k
+a robust filter design to track the robot’s behavior. k k
+The commonly used Extended Kalman Filter (EKF) does Here K k and c k denote the kth member’s stiffness and
+not perform well on highly nonlinear systems where first- damping constants, respectively. Note that cables require
+order approximations offer poor representations of the prop- some additional case handling to ensure unilateral forcing.
+agationofuncertainties.AdditionallytheEKFrequirescom- Scaling each U k by q k yields a matrix whose rows
+putation of time-derivatives through system dynamics and correspond to vector forces of the members. We denote this
+output functions which is challenging for a model with matrixasUq ∈Rm×3,andwenotethatUq =diag(q)CN.
+complex hybrid dynamics. Thus this matrix of member forces can be easily applied to
+ThesigmapointUKFdoesnotrequirederivativesthrough the nodes using:
+the system dynamics and is third order accurate when F m =CTUq.
+propagating Gaussian Random Variables through nonlinear
+We now have a method for computing nodal forces exerted
+dynamics [9]. The computational cost of the UKF is com-
+by the members and need only compute ground interaction
+parable to that of the EKF, but for tensegrity systems which
+forces, which we will denote as F . We computed ground
+commonly have a large range of stiffnesses and a high g
+interaction forces using the numerical approach in [11]. The
+numberofstatevariablesthetime-updateofthesigmapoints
+nodal accelerations can then be written as:
+dominates computational cost. As such we first describe
+the methods used to reduce computational cost of dynamic =M−1(F +F )−G,
+simulation, then in the following section we outline the dt2 m g
+specific implementation of the UKF for the SUPERball where M ∈ Rn×n is a diagonal matrix whose diagonal
+prototype. entriesarethemassesofeachnodeandG∈Rn×3 ismatrix
+with identical rows equal to the vector acceleration due to
+A. Dynamic Modelling
+gravity. It is then straightforward to simulate this second
+TheUKFrequiresadynamicmodelwhichbalancesmodel order ODE using traditional numerical methods.
+fidelityand computationalefficiency sinceit requiresa large Note also that it is possible to propagate many parallel
+number of simulations to be run in parallel. We model a simulationsefficientlybyconcatenatingmultipleN matrices
+tensegritysystemasaspring-massnetandusedthefollowing column wise to produce N ∈ Rn×3l for l parallel simula-
+incomplete list of simplifying assumptions: tions. The resultant vectorization of many of the operations
+• Only point masses located at each node point yields significant gains in computational speed with some
+• All internal and external forces are applied at nodes careful handling of matrix dimensions.
+• Members exert only linear stiffness and damping
+B. UKF Implementation
+• Unilateral forcing in cables
+• Flat ground at a known height with Coulomb friction We implement a traditional UKF as outlined in [9] with
+• No bar or string collision modelling additiveGaussiannoiseforstatevariablesandmeasurements.
+Several parameters are defined for tuning the behavior
+Foratensegritywithnnodesandmmembers,themember
+force densities, q ∈ Rm, can be transformed into nodal of the UKF, namely α, β and κ, where α determines
+forces, F ∈ Rn×3, by using the current Cartesian nodal the spread of the sigma points generated by the unscented
+positions, N ∈ Rn×3, and the connectivity matrix, C ∈ transformation, β is used to incorporate prior knowledge of
+Rm×n, as described in [10]. This operation is described by distribution,andκisasecondaryscalingparameter.Wehand
+tuned these parameters to the values α=0.0139, β =2 for
+the equation:
+F =CTdiag(q)CN, Gaussian distributions and κ=0 and found this to yield an
+adequately stable filter.
+where diag(·) represents the creation of a diagonal matrix We define our state variables as N and dN stacked in
+with the vector argument along its main diagonal. We first a vector y ∈ RL where L = 6n is the number of state
+notethatCN producesamatrixU ∈Rm×3 whereeachrow variables. We assume independent state noise with variance
+corresponds to a vector that points between the ith and jth λ =0.4 thus with covariance R=λ I .
+nodes spanned by each member. Therefore, this first matrix Formeasurementswetakeestimatedorientationdatafrom
+multiplicationcanbereplacedwithvectorindexingasU = our IMUs using a gradient descent AHRS algorithm based
+on[12],θ ∈Rb wherebisthenumberofbaranglesavailable
+at the given time step and all ranging measures, r ∈ Ra,
+where a is the number of ranging measures available at a
+given time step. We again assume independent noise with
+λ =0.1andλ =0.029themeasurementcovariancematrix
+is then defined as:
+(cid:20) (cid:21)
+Q= θ b .
+These user defined variables are then used within the frame-
+work of our UKF to forward propagate both the current
+expected value of the state as well as its covariance. Fig. 4
+shows an overview of our complete state estimation setup.
+Control State
+This information was sent over ROS along with IMU data
+(yaw,pitch,roll) and cable rest lengths to the UKF. The
+base stations were placed in a pattern to cover an area of
+approximately91m2.Eachbasestation’srelativelocationto
+each other may be seen in Fig. 5. SUPERball and the base
+stations were then used to show the UKF tracking a local
+trajectory of end caps and a global trajectory of the robotic
+system. In each of these experiments, the UKF was allowed
+time to settle from initial conditions upon starting the filter.
+This ensured that any erroneous states due to poor initial
+conditioning did not affect the filter’s overall performance.
+B. Local Trajectory Tracking
+In order to track a local trajectory, SUPERball remained
+stationary while two of its actuators tracked phase shifted
+stepwise sinusoidal patterns. During the period of actuation,
+two end cap trajectories were tracked on SUPERball and
+compared to the trajectory outputs of the UKF. One end
+cap was directly connected to an actuated cable (end cap
+2), while the other end cap had no actuated cables affixed
+to it (end cap 1). To obtain a ground truth for the position
+trajectory, a camera that measured the position of each end
+cap was positioned next to the robot. Both end caps started
+Anchor 2 at the same relative height and the majority of movement
+of both fell within the plane parallel to the camera. Fig. 6
+shows the measured and UKF global positions of the two
+end caps through time.
+Fig. 4: Block diagram of data flow within the system.
+Red signals are passed as ROS messages and blue signals 0.1
+are passed using the ranging modules. Note that each rod 0.0
+contains two ranging sensors located at each end of the rod. 0.1
+The gray control strategy block represents a to-be-designed 0.2
+state-feedback control strategy.
+V. FILTEREVALUATION 0 10 20 30 40 50 60
+A. Experimental Setup
+Fig. 5: Visualization of the UKF output. SUPERball sits in
+themiddleoftheplotsurroundedby8rangingbasestations.
+Lines between the robot and the base stations indicate valid
+ranging measures during this timestep.
+ToevaluatetheperformanceoftheUKF,weusedtheeight
+”fixed anchor” ranging base stations calibrated as detailed
+in Section III-C. Each end cap of SUPERball was then
+able to get a distance measurement to each base station.
+End Cap 1 0.5
+0 10 20 30 40 50 60
+Measured X UKF Y
+Measured Y
+Fig. 6: Position plotted through time for both end cap 1
+and end cap 2. The thin line represents the position output
+measured by the camera tracking system, and the bold
+line represents the position output from the UKF filter. As
+expected, there is a time domain lag between the measured
+and estimated positions.
+C. Global Trajectory Tracking
+Forglobaltrajectorytracking,SUPERballwasactuatedto
+induce a transition from one base triangle rolling through to
+another base triangle as presented in [6]. Ground truth for
+this experiment was ascertained by marking and measuring
+thepositionsofeachbasetriangle’sendcapsbeforeandafter
+afacetransition.Weevaluate4settingsofthestateestimator.
+Full: The state estimator as described in Section IV with all
+IMUandrangingsensors.noIMU:Onlytherangingsensors
+are enabled. full w. cst. offset: Same as full, but the offsets
+o are set to a constant instead of optimized individually.
+4 base station ranging sensors: 50% of the base station
+ranging sensors are disabled. The results of this experiment Most of the current control approaches for tensegrity
+are presented in Fig. 7 and 8. robotsrelyonpositiontrackingforeithermotionplanningor
+performance evaluation. Hence, our main contribution to the
+fieldoftensegrityroboticsisthatthisworkwillfinallyallow
+various proposed control algorithms for tensegrity robots to
+be transferred from the simulation domain to hardware.
+We believe that - in this context - our setup is a viable
+alternative to more established external solutions, such as
+motion capture systems. In particular, our approach is low-
+cost,self-calibratingandonlyreliesonautonomousanchors.
+These last two qualities are particularly attractive for future
+spacemissions.Wedonotyetachievetheaccuracyprovided
+by commercial motion capture systems. However, this is not
+a priority at this point as we mainly are focused on large
+displacements by rolling of SUPERball.
+1 2 3 The logical next step is to test our state estimator when
+Fig. 7: Top down view of the triangular faces to which SUPERball is moving around in a larger space. The Rover-
+the robot transitions during the global trajectory tracking Scape at NASA Ames - a football field sized outdoor rover
+experiment for various setting of the state estimator. The testbed - is the ideal candidate test area for this.
+small inset illustrates the movement of the robot. The line A related future goal is to add support for an incremental
+shows the estimated center of mass (CoM) using the full number of ranging anchors. This will allow SUPERball to
+settings. Finding the initial position (origin) is hard for all explore uncharted terrain by dropping beacons when the
+settings, and without the IMUs the estimator does not find uncertainty of its current position increases.
+the correct initial face. After a first roll, tracking becomes
+more accurate. The offsets o have a minimal impact, which
+ACKNOWLEDGMENTS
+indicates that our calibration routine is sufficiently accurate. We appreciate the support, ideas, and feedback from members
+of the Dynamic Tensegrity Robotics Lab. We are also grateful to
+Terry Fong and the NASA Ames Intelligent Robotics Group.

@@ -1,0 +1,322 @@
+1v0208020/sc:viXra
+Using the DIFF Command
+for Natural Language Processing
+Masaki Murata and Hitoshi Isahara
+Communications Research Laboratory,
+2-2-2 Hikaridai, Seika-cho, Soraku-gun,Kyoto, 619-0289, Japan,
+{murata,isahara}@crl.go.jp,
+Abstract. Diff is a software program that detects differences between
+two data sets and is useful in natural language processing. This paper
+showsseveralexamplesoftheapplicationofdiff.Theyincludethedetec-
+tionofdifferencesbetweentwodifferentdatasets,extractionofrewriting
+rules,mergingoftwodifferentdatasets,andtheoptimalmatchingoftwo
+different data sets. Since diff comes with any standard UNIXsystem, it
+is readily available and veryeasy touse. Ourstudies showed that diff is
+a practical tool for research intonatural language processing.
+1 Introduction
+Diff, a software program that detects differences between two sets of data, has
+numerous applications in natural language processing. In this paper, we first
+describe diff and then give several examples of how diff can be used in natural
+language processing. These examples include the detection of differences, the
+merging of two sets of different data, the extraction of rewriting rules, and the
+best matching of two different sets of data.
+We summarize the value of this paper below.
+– Since diff is one of the basic programs that comes with UNIX systems, it is
+readilyavailableandveryeasytouse.Asthispapershows,diff isalsoappli-
+cable to various kinds of studies in the field of natural language processing.
+This combination makes the program particularly valuable.
+– Paraphrasinghasbeenbecome anactiveareaofstudy[2].Section3.2shows
+that we can use diff to examine the differences between a spoken language
+and the corresponding written language and in acquiring the rules for the
+transformations between the spoken and written languages. Diff is not only
+useful for such studies, but is also applicable to other kinds of studies in
+the field of paraphrasing. This paper will provide a basis for such further
+application of diff.
+– In general, diff is used to detect differences between two data. However, it
+canalsobeusedtomergedataandtomatchdataoptimally.Section4covers
+1 This papar is an English rough translation of ourpapers [1,3].
+several interesting studies of the use of diff in merging and best-matching
+tasks.Theseexamplesarethealignmentofapaperandacorrespondingpre-
+sentation and a question-answering system. This paper thus has originality
+in terms of topics researched and approach to the research.
+2 Diff and Mdiff
+Inthis section,we describe diff. Diff is asoftwareprogramofUnix systems that
+is usedto comparefiles.The programdisplaysline-by-line differencesbetweena
+pair of text files while retaining the order of the data. For example, suppose we
+have the following two files:
+File 1: File 2:
+school. university.
+When we givethese data to diff, the difference is displayedinthe followingway.
+< school.
+> university.
+Diffhasa-Doption,whichisveryuseful.Whenweusediff withthisoption,
+common parts as well as differences are displayed. That is, files can be merged
+byusingthisoption.However,theoutputofdiff -Disinaformwhichisusedfor
+C preprocessorsuchas“Ifdef” andthis is difficult forpeople to read.Therefore,
+in this paper, we give the differences in the following way:
+(The parts which only exist in the first file)
+(The parts which only exist in the second file)
+where,“;===== begin =====”indicatesthebeginningofthedifferences,“;====
+indicates the boundary between the two sets of data. In this paper, we refer to
+diff in the case where the files are mergedby using the -D optionand the differ-
+ences are displayed in the above form as mdiff.
+Whenwegiveourearlierpairoffilestomdiff,weobtainthefollowingresult.
+school.
+university.
+“I go to” matchs while “school” and “university” are differences. The output of
+mdiff iseasytoexamineandunderstandbecauseitalsodisplays,unlike diff,the
+common parts.
+We can reproduce the two original files from the output of mdiff. When we
+take the common part and the upper part of the differences, we obtain the
+content of the first file. When we take the common part and the lower part of
+the differences,we obtainthe contentofthe secondfile.We canreproduceallof
+the original data in this way.
+Since mdiff only displays the common part of the data once, it is able to
+reduce the amount of data. Since it is possible to fully reproduce the original
+data from mdiff’s output, we are able to say that mdiff compresses the data
+while retaining the original information.
+Since the output of diff is difficult to read and the output of mdiff contains
+allinformationoutputbydiff, weusemdiff forourexplanationsinthe following
+sections. In the following sections, let’s look at some actual examples of the
+application of mdiff to natural language processing.
+3 Detecting differences and acquiring transformation
+Inthissection,wedescribethe studies whereweusedmdiff todetectdifferences
+and then acquired transformation rules from the differences. In more concrete
+terms, we give the following two examples.
+– Detection of differences between the outputs of multiple systems
+– Examination of differences to acquire transformation rules
+3.1 Detection of differences between the outputs of multiple
+We have been using multiple morphological analyzers to improve the quality of
+the results of morphologicalanalysis.
+Suppose that we use two morphological analyzers to analyze “We like ap-
+ples.”; the results are as follows.
+System 1 System 2
+We Noun We Noun
+like Verb like Preposition
+apples Noun apples Noun
+The word, “like” is ambiguous in terms of part of speech (POS) and can take
+“Verb”or“Preposition”.ThePOSof“like”intheabovesentenceis“Verb”and
+theanalysisbySystem2waswrong.Here,whenwegivethetworesultstomdiff,
+we obtain the following results.
+like Preposition
+apples Noun
+Mdiff makes it easy for us to detect differences between the results producedby
+multiple systems.Inthis case,wenotice thatthere aredifferences inthe line for
+“like”. Here, we determine beforehand that a worker corrects the outputs and
+judges which is correct when such differences are detected. When the output of
+the first system is correct he does nothing and when the output of the second
+system is correcthe marks the beginning of “;—————–” with an “x”.When
+wedoso,wecanautomaticallyselectthebetterresultofeachdifferencefromthe
+results marked by the worker.We simply delete the lower part of the difference
+where there is no “x” and delete the upper part of the difference when there is
+an“x”.As a result,weproduce amoreaccurateoverallresultthaneither ofthe
+two original results. There are many cases when both parts of a difference are
+incorrect. In such cases, we manually rewrite the data correctly above “;———
+——–”.
+When we use this method, the only incorrect data that is not corrected are
+the data on which both the systems have performed exactly the same wrong
+analysis. Many errors can thus be corrected. What we want to say here is that
+we must prepare multiple systems that have different characteristics. If we use
+two systems that often produce the same wrong analysis, we will fail to correct
+a large number of errors.
+Diff3, which is another unix program, is available for analysing the outpus
+of three systems. Diff3 detects differences among three files.
+Although we have given an example of morphological analysis, we can also
+use mdiff to detect differences between the results of other forms of analysis as
+long as the results are expressed in a line-by-line form.
+Although we have described a study where we detected differences between
+the outputs of multiple systems, we are also able to detect and correcterrors in
+tagged corpora by comparing the tagged corpora and the results of analysis of
+the corpora by a certain system.2
+3.2 Examining differences and acquiring transformation rules
+Inthissection,wedescribeourstudyoftheuseofmdifftodetectdifferencesbe-
+tweena spokenlanguageandthe correspondingwritten language.In this study,
+we usedthe alignmentbetweendata onthe spokenlanguageandonthe written
+language to examine the differences between the spoken and written languages
+on the basis of the results of mdiff. We thus acquired rules for transforming the
+2 There are studies on thecorrection of errors in tagged corpora [5].
+Table 1. Examples of written data and the corresponding data in spoken form
+Thewritten-language sample Thespoken-language sample
+paper, like
+describe describe
+meaning the
+sort. meaning
+In sort.
+general, In
+sorting general,
+is sorting
+performed is
+spoken language to the written language along with the inverse transformation
+rules.We used presentationsat academicconferences as examples of the spoken
+language and used papers which had the same content as the presentations as
+examples of the writtten language.
+Forexample,wesupposedthatdatainthe spokenandwrittenlanguagesare
+givenasinTable1.3 Thedatainthe table aretransformedsothateachline has
+onewordbeforeweapplymdiff.Applyingmdiff tothedataproducesthe results
+showninTable2.Byextractingthe differencesfromtheseresults,weobtainthe
+results shown in Table 3.
+The results show us that “uh” is inserted in the spoken language and that
+“performed” can, in this case, be paraphrased as “done”. We can use mdiff to
+detect differences between the spoken language and the written language and
+thenexaminethemlinguistically.Wecanalsoconsiderthedetecteddifferencesas
+rulesforthetransformationbetweenwrittenandspokenlanguages.Forexample,
+the occurrence of “uh” can be regarded as indicating a rule that we may insert
+“uh” into the written-language data as part of transforming it into the spoken
+language. The difference in terms of whether “performed” or “done” is used
+can be regarded as a rule that we transform “performed” to “done” when we
+transform data from the written to the spoken language. We thus find that we
+are able to use mdiff to detect the transformation rules.
+Inthissection,weuseddatainthewrittenandspokenlanguage.However,we
+canstudyavarietyofdatainasimilarway.Forexample,whenweapplymdiffto
+writtentextsbeforeandafterspellingandgrammararechecked,wecanfindout
+3 AlthoughwehavegivenEnglish sentencesinthetable,weactuallyperformed these
+experiments on Japanese-language materials.
+Table 2. The result of applying mdiff to the written-language sample and the
+corresponding spoken-language sample
+paper, meaning
+we sort.
+;—————– In
+Today general,
+I’d sorting
+(Contined in theright-hand column) by
+Table 3. Extraction of differences
+Thewritten-language dataThespoken-language data
+Inthis paper, we Today I’d like to
+performed done
+howweshouldmodifythesentencestoeliminatespellingandgrammaticalerrors
+andthusacquirerulesforcheckingspellingandgrammar.Whenweusemdiffon
+texts and the results of their automatic summarization, we can clearly see how
+the texts were summarized and can thus acquire the rules used in automatic
+summarization. In other cases of paired textual data, too, we will be able to
+apply mdiff to examine the data in the various ways that such pairs can be
+obtained and to obtain the rules for transformation.
+4 The merging and best matching of two different sets of
+In this section, we describe studies of the use of diff’s function of optimally
+merging data.4 We describe the following two examples.
+– The alignment of presentations and corresponding papers
+– Aquestion-answeringsystemusingthefunctionoffindingthethebestmatch
+4 In diff,best matchingis performed bymaximizing theextentof thecommon parts.
+<Chapter 1>
+(thecontentsof Chapter1)
+</Chapter 1>
+<Chapter 2>
+(thecontentsof Chapter2)
+</Chapter 2>
+<Chapter 3>
+(thecontentsof Chapter3)
+</Chapter 3>
+Fig.1. Structure in the paper
+;=====begin ===== (contentof thepresentation only)
+(content of the paperonly) (contentof thepaper and presentation)
+(content of the presentation only) </Chapter 1>
+(content of the paperand presentation) (contentof thepaper only)
+(content of the paperonly) (contentof thepresentation only)
+(Contined in theright-hand column)
+Fig.2. Results of applying mdiff to a paper and a corresponding presentation
+4.1 Alignment of a paper with the corresponding presentation
+Inthissection,wealignapaperwiththecorrespondingpresentation[6].Thepa-
+perandcorrespondingpresentationisthesameexampleaswasusedindescribing
+the acquisition of the rules for transformation from written to spoken-language
+data (Section 3.2). The presentation was made at an academic conference and
+the papercorrespondsto this presentation.When we areable to aligneachpart
+ofa presentationwith acorrespondingpartof the paper,this formofalignment
+isveryuseful.Forexample,whenwelistentoapresentation,weareabletorefer
+to the part of the paper that corresponds to the part of we are now listening.
+When we read a paper, we are able to refer to the part of the presentation that
+corresponds to the part of the paper we are now reading [6]. In this section, we
+consider the use of mdiff to align a paper with the corresponding presentation.
+Here,let’strytodeterminethepartsofthepresentationtowhicheachchap-
+ter ofthe papercorrespondsbyusing mdiff. We supposethat the contentis laid
+outinthesameorderinthe paperandinthe presentation.Inadvance,weplace
+symbols such as <Chapter 1>, as shown in Figure 1, into the paper. This is so
+thatweareeasilyabletorecognizethe chaptersofthe paper.Byapplyingmdiff
+to the data set that consists of a presentationafter both have been transformed
+sothateachline hasoneword,weobtainedthe resultsshowninFigure2.Next,
+<Chapter 1>
+(content of the presentation only)
+(content of the paperand presentation)
+(content of the presentation only)
+</Chapter 1>
+<Chapter 2>
+(content of the presentation only)
+Fig.3. Results of insertion of information on sections in a presentation
+we obtained the results shownin Figure 3 by eliminating the upper parts of the
+differences, i.e., those that correspond to the paper, and leaving symbols such
+as <Chapter 1> in place. The symbols such as <Chapter 1> are only inserted
+inthe dataofthe presentation.We arethenable to recognizethe chapterofthe
+paper that corresponds with a given part of the presentation.
+To put this simply, we place information to indicate chapters in the data of
+presentations. We then use the merging function of mdiff to match the parts of
+the paper and presentation. Then, by eliminating the content of the paper, we
+are left with information on the chapters. We can easily align a paper with a
+corresponding presentation at the level of chapters by using mdiff.
+4.2 A question-answering system using best matching
+In this section, we describe our question-answering system that utilizes mdiff’s
+best-matching function [2,4].
+Aquestion-answeringsystemreceivesaquestionandoutputs ananswer.For
+example, when “Where is the capital of Japan?” is given, it returns “Tokyo”.
+When we consider now much knowledge is in written natural language form,
+we see that the system only has to match a given question with a sentence (a
+knowledge sentence) that includes the knowledge then select the word in the
+sentencethatcorrespondstotheinterrogativepronounofthe questionsentence.
+Forexample,inthecaseofthepreviousquestion,thesystemdetectsthisknowl-
+edgesentenceinaknowledgedatabase:“TokyoisthecapitalofJapan.”“Tokyo”
+is output as the answer since corresponds to the interrogative pronoun in the
+sentence. Here, we consider the use of mdiff in answering questions.
+Firstly,wetransformtheinterrogativepronouninthe questionsentenceinto
+X and change “?” into “.” at the end of the sentence. We then obtain “X is the
+capital of Japan.”. We thus obtain “Tokyo is the capital of Japan.” from the
+knowledge base. We obtain the results in Figure 4 (a) by applying mdiff to the
+two sentences. We consider the part that is paired with X in the differences as
+the answer and correctly obtain “Tokyo”.
+Eveniftherearedifferencesbetweenthecomparedsentences,wecanstilluse
+mdiff to correctly extract the answer.For example, suppose that the knowledge
+sentence is “Tokyo is the capital in Japan.” In this case, the result of mdiff is
+Tokyo Tokyo
+capital capital
+Japan.
+(a) Case 1 (b) Case 2
+Fig.4. Results of mdiff in the question-answering system
+as in Figure 4 (b). Although the number of differences increased, the part that
+corresponds to X remains “Tokyo” and the correct answer has been detected.
+The question-answering system we have proposed repeats to transform the
+questionsentenceandknowledgesentencesothatthetwosentencesareassimilar
+as possible. It then extracts the answer by matching the sentences when they
+are at this point. Since we use the similarity between two sentences in that
+time, we have to define the degree of the similarity between sentences. Since we
+can recognize the common parts and the different parts by using mdiff, we can
+calculate the degree of similarity as (the number of characters in the common
+part)/(the number of all characters). Here, if we suppose that we have a rule
+for transforming “in” to “of”, we match the data after transforming “Tokyo is
+the capital in Japan.” to “Tokyo is the capital of Japan.” and we are able to
+obtain the answer more reliably by decreasing the number of differences.
+5 Conclusion
+Inthispaper,wedescribealotofexamplesoftheuseofdiffinvariousproblems
+of natural language processing.In Section 3.1, we describe how we apply diff to
+asystemthatcombinesmultiplesystemsandthusobtainhigherprecisionsthan
+fromanyofindividualsystems.Studies oncombinationofsystemsareverywell
+known. We describe how such combination can easily be performed by diff. In
+Section3.2,weshowedthatdiffiseasilyabletoexaminethedifferencesbetween
+aspokenandwrittenlanguageandacquirerulesforthe transformationbetween
+5 Here,weusemdifftocalculatethedegreeofsimilarityofthesentences.Mdiffisalso
+useful in this way.
+the spoken and written language. We handled the paraphrasing of written lan-
+guage into spoken language. However, the study on paraphrasing covers a wide
+range: automatic extraction of compressed sentences, sentence polishing-up to
+modify sentencescorrectly,andtransformationsfromdifficultsentencesto plain
+sentences. In these studies, too, it will be easy to apply diff to various forms of
+examination and to the extraction of various transformation rules. This paper
+will become a basis for studies of paraphrasing,an areain which there has been
+increasingactivity.InSection4,weshowedexamplesofthemergingofdataand
+the optimal matching of data. Since diff is generally used to detect differences,
+Section 4, which shows applications of diff to merging and matching, presents a
+newandoriginalapproach.Inthesection,weshowedthatitiseasytoapplydiff
+tointerestingstudiesoftwokinds,thealignmentofapaperwithacorresponding
+presentation and a question-answering system.
+In this paper, we have described many examples of the application of diff
+to natural language processing. We hope that diff will be applied to an ever-
+widening range of studies.
+Acknowlegement
+We were given data for the experiments on alignment of a paper with a corre-
+sponding presentation by Kiyotaka Uchimoto of the Communications Research
+Laboratory.

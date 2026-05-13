@@ -1,0 +1,529 @@
+1v2905.8021:viXra
+Graph Degree Linkage:
+Agglomerative Clustering on a Directed Graph
+WeiZhang1,XiaogangWang2,3,DeliZhao1,andXiaoouTang1,3
+1 DepartmentofInformationEngineering,TheChineseUniversityofHongKong
+wzhang009@gmail.com
+2 DepartmentofElectronicEngineering,TheChineseUniversityofHongKong
+3 ShenzhenInstitutesofAdvancedTechnology,ChineseAcademyofSciences,China
+Abstract. Thispaperproposesasimplebuteffectivegraph-basedagglomerative
+algorithm,forclusteringhigh-dimensionaldata.Weexplorethedifferentrolesof
+twofundamental concepts ingraph theory, indegree and outdegree, inthecon-
+textof clustering. Theaverageindegree reflectsthedensity near asample, and
+theaverageoutdegreecharacterizesthelocalgeometryaroundasample.Based
+on such insights, we define the affinity measure of clusters via the product of
+average indegree and average outdegree. The product-based affinity makes our
+algorithmrobust tonoise. Thealgorithm hasthree mainadvantages: good per-
+formance, easy implementation, andhigh computational efficiency. Wetest the
+algorithmontwofundamental computer visionproblems:imageclusteringand
+objectmatching.Extensiveexperimentsdemonstratethatitoutperformsthestate-
+of-the-artsinbothapplications.1
+1 Introduction
+Many problems in computer vision involve clustering. Partitional clustering, such as
+k-means[1],determinesallclustersatonce,whileagglomerativeclustering[1]begins
+withalargenumberofsmallclusters,anditerativelyselectstwoclusterswiththelargest
+affinityundersomemeasurestomerge,untilsomestoppingconditionisreached.Ag-
+glomerativeclusteringhasbeenstudiedformorethanhalfacentury,andusedinmany
+applications[1],becauseitisconceptuallysimpleandproducesaninformativehierar-
+chicalstructureofclusters.
+Classical agglomerative clustering algorithms have several limitations [1], which
+have restricted their wider applications in computer vision. The data in computer vi-
+sion applications are usually high dimensional. The distributions of data clusters are
+oftenindifferentdensities,sizes,andshapes,andformmanifoldstructures.Inaddition,
+there are often noise and outliers in data. The conventional agglomerative clustering
+algorithms, such as the well-known linkage methods [1], usually fail to tackle these
+challenges.As theiraffinitiesare directlycomputedusingpairwise distancesbetween
+samplesandcannotcapturetheglobalmanifoldstructuresinhigh-dimensionalspaces,
+1The code and supplemental materials are publicly available at
+2 W.Zhang,X.Wang,D.ZhaoandX.Tang
+Clustera Clustera
+Clusterb Clusterb
+(Directed2-NNgraph) (Undirected2-NNgraph)
+(b) Clustera IndegreefromClustera,outdegree
+toClusteraandtheirproduct
+Indegree Outdegree Product
+i k Vertex i 1 0 0
+Clusterb Vertexj 0 1 0
+(2-NNgraph) Vertexk 1 0 0
+Fig.1.(a)Indegreecanbeusetodetectthechangeofdensities.ThedensityinClusteraishigh,
+andthedensityinClusterbislow.TheverticesinsideClusteraarestronglyconnected,butthere
+isnooutedgetoverticesoutsideClustera.SotheindegreeofkfromClusteraisnonzero,while
+theindegreeofi(avertexinClusterb)andj(anoutlier)fromClusteraarezero.Ifanundirected
+graph is considered without separating indegrees and outdegrees, both i and j have the same
+degreefromClusteraask.(b)Theproductoftheindegreeandoutdegreeisanaffinitymeasure
+robusttonoisyedgesbetweenthetwoclusters.Underthismeasure,ClusteraandClusterbhave
+azeroaffinity,i.e.,thesumofproduct ofindegreeandoutdegreeforallverticesis0,andthus
+theyareseparatedwell.
+thesealgorithmshaveproblemsofclusteringhigh-dimensionaldata,andarequitesen-
+sitivetonoiseandoutliers[1].
+Totackletheseproblems,weproposeasimpleandfastgraph-basedagglomerative
+clustering algorithm.The graph representationof data has been extensively exploited
+in variousmachinelearningtopics[2,3,4,5,6],buthasrarelybeenutilizedin agglom-
+erativeclustering.OuralgorithmbuildsK-nearest-neighbor(K-NN)graphsusingthe
+pairwise distancesbetween samples,since studies[4] show the effectivenessofusing
+localneighborhoodgraphstomodeldatalyingonalow-dimensionalmanifoldembed-
+dedinahigh-dimensionalspace.
+Weusetheindegreeandoutdegree,fundamentalconceptsingraphtheory,tochar-
+acterize the affinitybetweentwo clusters. Theoutdegreeofa vertexto a clustermea-
+sures the similarity between the vertex and the cluster. If many of the K-NNs of the
+vertexbelongthe cluster,the outdegreeis large.Theoutdegreecan capturethe mani-
+fold structuresin the highdimensionalspace. Theindegreeof a vertexfroma cluster
+reflectsthedensitynearthevertex.Itiseffectivefordetectingthechangeofdensities,
+whichoftenoccursattheboundaryofclusters.Therefore,weuseittoseparateclusters
+closeinspacebutdifferentindensities,andalsoreducetheeffectofnoise.Anexample
+isshowninFig.1(a).Toourbestknowledge,propertiesoftheindegreeandoutdegree
+have notbeen exploredbyany existingclustering algorithm,althoughthey were suc-
+cessfully applied in analysis of complex networks such as World Wide Web [9] and
+socialnetworks[10]andshowedinterestingresults.
+GraphDegreeLinkage:AgglomerativeClusteringonaDirectedGraph 3
+AverageLinkage SingleLinkage CompleteLinkage Graph-basedLinkage
+AP[7] SC[3] DGSC[8] Ours
+Fig.2.Resultsofdifferentclusteringalgorithmsonasyntheticmultiscaledataset.Ouralgorithm
+can perfectly discover the threeclusters withdifferent shapes, sizes, and densities. Theoutput
+clustersareshownincolor(bestviewedonscreen).
+Ouraffinitymeasurebetweentwoclustersisdefinedasfollows.First,thestructural
+affinityfromavertextoaclusterisdefinedviatheproductoftheaverageindegreefrom
+theclusterandaverageoutdegreetothecluster.Intuitively,ifavertexbelongstoaclus-
+ter,itshouldbestronglyconnectedtothecluster,i.e.,bothitsindegreeandoutdegree
+are large.Otherwise,eitherthe indegreeor outdegreeis small. Therefore,the product
+of indegree and outdegree can be a good affinity measure (Fig. 1(b)). We show that
+thecorrelationbetweentheinter-clusterindegreeandoutdegreeisweakacrossdiffer-
+entvertices,ifthetwoclustersbelongtodifferentground-truthclusters,usingsynthetic
+datainFig.3.Then,theaffinitybetweentwoclustersisnaturallytheaggregatedaffinity
+measureforalltheverticesinthetwoclusters.
+Ouralgorithmhasthreemainadvantagesasfollows.
+Firstofall,ithasoutstandingperformance,especiallyonnoisydataandmultiscale
+data (i.e., clusters in different densities). The visual comparisons with linkage meth-
+ods[1],graph-basedaveragelinkage,affinitypropagation(AP)[7],spectralclustering
+(SC)[3],anddirectedgraphspectralclustering(DGSC)[8]onsyntheticmultiscaledata
+are shown in Fig. 2. Noise and multiple scales can degradethe performanceof spec-
+tral clustering greatly [11], while the indegree and outdegree in our algorithm detect
+theboundaryofscalesautomatically2 andreducetheeffectofnoise.InSec.4,exten-
+siveexperimentsonrealdata,includingimagerydataandfeaturecorrespondencedata,
+demonstrateitssuperiorityoverstate-of-the-artmethods.Theseexperimentsaimattwo
+fundamentalproblemsincomputervision,i.e.,imageclusteringandobjectmatching,
+andtheresultssuggestmanypotentialapplicationsofourwork.
+Second, it is easy to implement. This affinity measure can be expressed in a ma-
+trix form and implemented with vector additions and inner-products. Therefore, our
+algorithmcanbeimplementedwithoutanydependencyonexternalnumericallibraries,
+2E.g., ifcluster a has higher density thancluster b, theboundary of cluster a willhave high
+indegreeandlowoutdegree,whiletheboundaryofclusterbwillhavelowindegreeandhigh
+outdegree.
+4 W.Zhang,X.Wang,D.ZhaoandX.Tang
+such aseigen-decompositionwhichwasextensivelyemployedbymanyclusteringal-
+gorithms[2,3,12].
+Finally, it is very fast. We propose an acceleration method for our algorithm. In
+practice,ouralgorithmismuchfasterthanspectralclustering[2,3],especiallyonlarge-
+scaledata.
+2 RelatedWork
+Theliteraturededicatedtoagglomerativeclusteringisabundant[1,13,14].Linkages[1],
+e.g.,averagelinkage,definetheaffinitybasedonpairwisedistancesbetweensamples.
+Sincepairwisedistancesdonotwellcapturetheglobalstructuresofdata,thesemethods
+failonclusteringdatawithcomplexstructuresandaresensitivetonoise[1](seetheex-
+ampleinFig.2).Manyvariantsoflinkagemethods,suchasDBSCAN[15],havebeen
+proposedinthedataminingcommunityandshowsatisfactoryperformance.However,
+they usually fail to tackle the great challenge from high-dimensionalspaces, because
+their sophisticated affinity measures are based on observationsfrom low-dimensional
+data[16].
+Several algorithms [17,18,19] has attempted to perform agglomerative clustering
+on the graph representation of data. Chameleon [17] defines the cluster affinity from
+relativeinterconnectivityandrelativecloseness,bothofwhicharebasedonamin-cut
+bisection of clusters. Although good performance was shown on 2D toy datasets, it
+suffersfromhighcomputationalcostbecauseitsaffinitymeasureisbasedonamin-cut
+algorithm.Zell[18]describesthestructureofaclusterviathezetafunctionanddefined
+the affinitybased onthe structuralchangesaftermerging.Itneedsto computematrix
+inverseineachaffinitycomputation,soitismuchslowerthanoursimplealgorithm(see
+Sec. 4.1). Felzenszwalb and Huttenlocher proposed an effective algorithm for image
+segmentation[19].
+Besidesagglomerativeclustering,K-means[1]andspectralclustering[2,3,20]are
+amongthemostwidelyusedclusteringalgorithms.However,K-meansissensitiveto
+the initialization and difficult to handle clusters with varying densities and sizes, or
+manifold shapes. Although spectral clustering can handle the manifold data well, its
+performanceusuallydegradesgreatlywiththeexistenceofnoiseandoutliers,because
+the eigenvectors of graph Laplacian are sensitive to noisy perturbations [5]. Affinity
+Propagation[7] exploresthe intrinsic data structures by message passing amongdata
+points.Althoughitperformswellonhigh-dimensionaldata,itusuallyrequiresconsid-
+erablerun-time,especiallywhenthepreferencevaluecannotbemanuallyset.
+Directedgraphshavebeenstudiedforspectralclustering(e.g.,[8]).However,these
+methodssymmetrizethedirectedgraphbeforetheclusteringtask.Incontrast,weonly
+symmetrizetheaffinitybetweentwoclusters,whilekeepthedirectedgraphduringthe
+clusteringprocess.Therefore,ouralgorithmutilizesmoreinformationfromtheasym-
+metryandis morerobusttonoisyedges(seeFig. 2 fora comparisonbetweenDGSC
+[8]andouralgorithm).
+GraphDegreeLinkage:AgglomerativeClusteringonaDirectedGraph 5
+3 GraphDegree Linkage
+3.1 NeighborhoodGraph
+Givena setofsamplesX = {x ,x ,...,x }, webuilda directedgraphG = (V,E),
+whereV isthesetofverticescorrespondingtothesamplesinX ,andE isthesetof
+edges connectingvertices. The graph is associated with a weighted adjacency matrix
+W = [w ],wherew istheweightoftheedgefromvertexitovertexj.w = 0if
+andonlyifthereisnoedgefromitoj.
+To capturethe manifoldstructuresin high-dimensionalspaces, we use the K-NN
+graph,inwhichtheweightsaredefinedas
+exp −dist(i,j)2 ,ifx ∈NK,
+w = σ2 j i (1)
+(0, (cid:16) (cid:17) otherwise,
+wheredist(i,j)isthedistancebetweenx andx ,NK isthesetofK-nearestneigh-
+borsofx , andσ2 is setas σ2 = a n dist(i,j)2 . K and a arefree
+i nK i=1 x j∈N
+parametersto be set. In a K-NN graphh
+is an edge pointingifrom x
+weightw ,ifx ∈NK.
+3.2 AlgorithmOverview
+Thegraphdegreelinkage(GDL)algorithmbeginswithanumberofinitialsmallclus-
+ters,anditerativelyselectstwoclusterswiththemaximumaffinitytomerge.Theaffini-
+tiesarecomputedontheK-NNgraph,basedontheindegreeandoutdegreeofvertices
+inthetwoclusters.
+The initialsmall clusters are simply constructedas weakly connectedcomponents
+ofaK0-NNgraph,wheretheneighborhoodsizeK0issmall,typicallyas1or2.Then,
+eachcomponentisaninitialcluster,andeachsampleisassignedtoonlyonecluster.
+Definition1 A connectedcomponentof an undirectedgraphis a maximalconnected
+subgraphinwhichanytwoverticesareconnectedtoeachotherbypaths.
+Aweaklyconnectedcomponentofadirectedgraphisaconnectedcomponentofthe
+undirectedgraphproducedbyreplacingallofitsdirectededgeswithundirectededges.
+TheGDLalgorithmispresentedasAlgorithm1,withdetailsgiveninthefollowing
+subsection.
+3.3 AffinityMeasureviaProductofIndegreeandOutdegree
+The affinity measure between two clusters is the key of an agglomerative clustering
+algorithm.Ouraffinitymeasureisbasedonindegreeandoutdegreeinthegraphrepre-
+sentation. For simplicity, we start from measuringthe affinity between a vertexanda
+cluster.
+Indegree andoutdegree.Consideringa vertexanda cluster,the connectivitybe-
+tweenthembyinedgesandoutedgescanbequantifiedusingtheconceptsofindegree
+andoutdegree.
+6 W.Zhang,X.Wang,D.ZhaoandX.Tang
+Algorithm1GraphDegreeLinkage(GDL)
+Input:asetofnsamplesX ={x 1,x 2,··· ,x n},andthetargetnumberofclustersn
+.
+BuildtheK0-NNgraph,anddetectitsweaklyconnectedcomponentsasinitialclusters.Denote
+thesetofinitialclustersasVc ={C1,··· ,Cnc },wheren
+isthenumberofclusters.
+BuildtheK-NNgraph,andgettheweightedadjacencymatrixW.
+whilen >n do
+Search two clusters Ca and Cb , such that {Ca ,Cb} = argmax
+ACa,Cb , where
+ACa,Cb istheaffinitymeasurebetweenCa andCb ,computedusingEq.(5).
+=n c−1.
+Output:Vc.
+Definition2 Given a vertex i, the average indegree from and the average outdegree
+to a cluster C is definedas deg−(C) = 1 w and deg+(C) = 1 w ,
+i |C| j∈C ji i |C| j∈C ij
+respectively,where|C|isthecardinalityofsetC.
+As we stated in Sec. 1, the indegreemeasuresthe density nearsample i, andthe out-
+degree characterizes the K-NN similarity from vertex i to cluster C. We use the size
+oftheclustertonormalizethedegrees,otherwise,thealgorithmmayfavorofmerging
+largeclustersinsteadofmergingsmallclusterswithdenseconnections.Wefindthatin
+practicethenormalizeddegreesworkmuchbetterthantheunnormalizeddegrees.
+Affinity betweena vertexand a cluster. A vertexshouldbe mergedto a cluster
+ifitisstronglyconnectedtotheclusterbybothinedgesandoutedges.Mathematically,
+the correlationof two typesof degreeis weak, if the vertex and the cluster belong to
+differentground-truthclusters,andstrong,otherwise.Toverifythisintuition,weshow
+suchstatisticsonsyntheticdatainFig.3.Therefore,wedefinetheaffinityastheproduct
+oftheaverageindegreeandaverageoutdegree,i.e.,
+This affinity is robust to noisy edges between different ground-truthclusters because
+theproductcanbezeroiftheinedgesandoutedgesdonotcoincide.
+Affinity between two clusters. Following the above, we define the asymmetric
+affinityfromclusterC toclusterC bysummingupwithrespecttoalltheverticesin
+Cb→Ca i→Ca i a i a
+Finally,wehavethesymmetricaffinityusedinouralgorithmas
+Ca,Cb Cb→Ca Ca→Cb
+Efficientcomputationofaffinity.Ouraffinitymeasurecanbecomputedefficiently
+usingthefollowingtheorem.
+Theorem1 TheaffinitybetweenC andC definedinEq.(4)canbeexpressed inthe
+matrixform
+A = 1T W W 1 + 1T W W 1 , (5)
+|2 |Ca| Ca,Cb Cb,Ca |Ca| |C
+|2 |Cb| Cb,Ca Ca,Cb |Cb|
+GraphDegreeLinkage:AgglomerativeClusteringonaDirectedGraph 7
+ClusterC1 Mean PNZ Mean PNZ
+deg − i (C) 0.73 0.85 deg − i (C) 0.87 1.00
+deg+ i(C) 0.94 0.54 deg+ i(C) 0.87 1.00
+rdeg − i (C)deg+ i(C)0.470.38 rdeg − i (C)deg+ i(C)0.861.00
+Correlation (cid:16) deg − i (C),deg+ i(C) (cid:17) =0.02Correlation (cid:16) deg − i (C),deg+ i(C) (cid:17) =0.80
+Syntheticdata (a)i∈C1,C=C2 (b)i∈C1,C=C1
+Fig.3.Toverifytherobustnessoftheproductofindegreeandoutdegreeasanaffinitymeasure
+from a vertex i to a cluster C, we compare statisticsin two cases: i and C belong to different
+ground-truthclusters,e.g.,i∈C1andC =C2asin(a),andiandCareinthesameground-truth
+cluster,e.g.,i∈C1andC = C1asin(b).Weseethat,inthefirstcase,theproductisaquantity
+morerobustthantheindegreeoroutdegree.Foralli∈C1,suchthatdeg−
+meanandproportionofnonzerovalues(PNZ)of qdeg−
+aremuchsmallerthanthoseof
+deg−anddeg+,whichimpliesasmallaffinitybetweeniandC.Herethesquarerootisforfair
+comparisonofthequantities.Incontrast,inthesecondcase,themeanandPNZof qdeg−
+areclosetothoseofdeg−anddeg+,whichmeansthattheproductkeepsthelargeaffinitywell.
+Thecorrelationofdeg− anddeg+ ,whichisweakin(a)andstrongin(b),furtherverifiesthe
+effectiveness ofour affinitymeasure forreducing noisyedgesacrossground-truth clustersand
+keepingedgesinsideground-truthclusters.
+whereW isthesubmatrixofW whoserowindicescorrespondtotheverticesin
+C andcolumnindicescorrespondtotheverticesinC ,i.e.,theweightsofedgesfrom
+C toC ,and1 isanall-onevectoroflengthL.
+Remark1 Thecomputationisreducedtovectoradditionsandinner-products.So,our
+algorithmiseasytoimplement.
+Proof. Itiseasytoseethat
+deg−(C )= 1T W , (6)
+i a |C a | |Ca| Ca,Cb i
+i a |C | Cb,Ca |Ca| i
+where[v] isthei-thelementofvectorv.Th (cid:2) en,byEq.(3), (cid:3) wecanobtainthefollowing
+lemma.
+A = 1T W W 1 . (8)
+|2 |Ca| Ca,Cb Cb,Ca |Ca|
+Finally,Theorem1canbedirectlyimpliedbyLemma2usingEq.(4).
+Comparison to average linkage. The GDL algorithm is different from average
+linkageinthefollowingthreeaspects.Firstofall, theconventionalaveragelinkageis
+basedonpairwisedistances[1].Althoughwefindthataveragelinkagehasmuchbetter
+8 W.Zhang,X.Wang,D.ZhaoandX.Tang
+performanceon the K-NN graph than pairwise distances, we are unaware of any lit-
+eraturewhichstudiedthegraph-basedaveragelinkagealgorithm.Second,graph-based
+averagelinkagesimplysymmetrizesthedirectedgraphbysettingw =w =(w +
+w )/2,whileouralgorithmusesthedirectedgraph.Third,graph-basedaveragelinkage
+canbeinterpretedasdefiningtheaffinitymeasureA = 1 [deg−(C )+
+Cb→Ca |Cb| i∈Cb i a
+deg+(C )]/2 using our indegree-outdegreeframework. The sum of the indegree and
+outdegreeisnotasrobustastheproductofthemtonoise.ExperimentalresultsinFig.
+2andSec.4.1demonstratethesuperiorityofGDLtograph-basedaveragelinkage.
+3.4 ImplementationsofGDL
+WepresenttwoimplementationsoftheGDLalgorithm:anexactalgorithmviaaneffi-
+cientupdateformulaandanapproximatealgorithmcalledAcceleratedGDL(AGDL).
+BothimplementationshavethetimecomplexityofO(n2)(seeTheorem3).
+Updateformula.Ineachiteration,weselecttwoclustersC andC withthelargest
+affinity and merge them as C = C ∪C . Then, we need to update the asymmetric
+affinityA andA ,foranyotherclusterC .
+Cab→Cc Cc→Cab c
+UsingLemma2,wefindthatA canbecomputedasfollows.
+Cab→Cc Ca→Cc Cb→Cc
+Bystoringalltheasymmetricaffinities,theupdateissimple.
+AsthesameupdateformulacannotbeappliedtoA ,wehavetocomputeit
+directlyusingEq.(8).However,the totalcomplexityisO(n) ineachiteration,dueto
+therowsparsityofW(seeSec.7inthesupplementalmaterialsfordetails).
+TheGDLalgorithmwiththeupdateformula(GDL-U)ispresentedasAlgorithm2
+inthesupplementalmaterials.
+AcceleratedGDL. Althoughthe GDL-U algorithmis simple and fast, we further
+proposeAGDL.Themajorcomputationalcostisoncomputingtheaffinities.Toreduce
+the number of affinities computed in each iteration, AGDL maintains a neighbor set
+of size Kc for each cluster in Vc, to approximate its Kc-nearest cluster set. Then,
+findingthemaximumaffinityamongallpairsofclusterscanthenbeapproximatedby
+searchingitinalltheneighborsets.Updatingtheneighborsetsinvolvescomputationof
+theaffinitybetweenthenewclusterandasmallsetofclusters,insteadofalltheother
+clusters.
+DenotetheneighborsetofaclusterCasN .InitiallyN consistsofC’sKc-nearest
+clusters.OncetwoclustersC andC aremerged,weneedtoupdatetheneighborsets
+whichincludeC orC ,andcreatetheneighborsetofC ∪C .Weutilizetwoassump-
+tions that (1) if C or C is among the Kc-nearest clusters of C , C ∪C is probably
+amongtheKc-nearestclustersofC ;(2)ifC isamongtheKc-nearestclustersofC or
+C ,C isprobablyamongtheKc-nearestclustersofC ∪C .So,thenewclusterC ∪C
+b c a b a b
+isaddedtotheneighborsetswhichincludeC orC previously.Tocreatetheneighbor
+setforC ∪C ,weselecttheKc-nearestclustersfromN ∪N .
+TheAGDLalgorithmissummarizedinAlgorithm3inthesupplementalmaterials.
+GraphDegreeLinkage:AgglomerativeClusteringonaDirectedGraph 9
+3.5 TimeComplexityAnalysis
+We have the following theorem about the time complexity of the GDL, GDL-U and
+AGDLalgorithms(pleaserefertoSec.7inthesupplementalmaterialsfortheproof).
+(a) ThetimecomplexityoftheGDLalgorithm(i.e.,Algorithm1)isO(n3).
+(b) ThetimecomplexityoftheGDL-Ualgorithm(i.e.,Algorithm2)isO(n2).
+(c) ThetimecomplexityoftheAGDLalgorithm(i.e.,Algorithm3)isO(n2).
+4 Experiments
+In this section, we demonstrate the effectiveness of GDL and AGDL on image clus-
+tering and object matching. All the experiments are run in MATLAB on a PC with
+3.20GHzCPUand8Gmemory.
+4.1 ImageClustering
+Wecarryoutexperimentsonsixpubliclyavailableimagebenchmarks,includingobject
+imagedatabases(COIL-20andCOIL-100),hand-writtendigitdatabases(MNISTand
+USPS),andfacialimagedatabases(ExtendedYale-B,FRGCver2.0).3ForMNIST,we
+use alltheimagesinthetestingset. ForFRGC ver2.0,we useallthefacialimagesin
+thetrainingsetofexperiment4.ThestatisticsofallthedatasetsarepresentedinTable
+2.Weadoptwidelyusedfeaturesfordifferentkindsofimages:theintensitiesofpixels
+asfeaturesandEuclideandistanceforobjectanddigitimages,andlocalbinarypatterns
+(LBP)asfeaturesandχ2distanceforfacialimages.
+We compare the GDL-U and AGDL with eight representative algorithms, i.e., k-
+medoids (k-med) [1], average linkage (Link) [1], graph-based average linkage (G-
+Link), normalizedcuts (NCuts) [2]4, NJW spectralclustering (NJW-SC) [3], directed
+graphspectralclustering(DGSC) [8], self-tuningspectralclustering(STSC) [11] and
+Zell [18]. Here we use k-medoidsinstead of k-means because it can handle the case
+where distances between points are not measured by Euclidean distances. To fairly
+comparethegraph-basedalgorithms,wefixK = 20andselectawiththebestperfor-
+mancefromtheset{10i,i∈[−2:0.5:2]}onallthedatasets.Forouralgorithms,the
+parametersare fixedasK0 = 1, Kc = 10.Thenumbersofground-truthclustersare
+usedastheinputofallalgorithms(e.g.,n inouralgorithm).
+WeadoptthewidelyusedNormalizedMutualInformation(NMI)[12]toquantita-
+tively evaluatethe performanceof clusteringalgorithms.TheNMI quantifiesthe nor-
+malized statistical informationshared between two distributions. A larger NMI value
+indicatesabetterclusteringresult.
+whichimplementsthemulticlassnormalizedcutsalgorithm[20].
+10 W.Zhang,X.Wang,D.ZhaoandX.Tang
+Table1.QuantitativeclusteringresultsinNMIonrealimagerydata.AlargerNMIvalueindicates
+abetterclusteringresult.Theresultsshowninaboldfacearesignificantlybetterthantheothers,
+withasignificancelevelof0.01.
+Dataset k-med Link G-Link NCuts NJW-SC DGSC STSC Zell GDL-U AGDL
+COIL-20 0.710 0.647 0.896 0.884 0.889 0.904 0.895 0.911 0.937 0.937
+COIL-100 0.706 0.606 0.855 0.823 0.854 0.858 0.858 0.913 0.929 0.933
+USPS 0.336 0.095 0.732 0.675 0.690 0.747 0.726 0.799 0.824 0.824
+MNIST 0.390 0.304 0.808 0.753 0.755 0.795 0.756 0.768 0.844 0.844
+Yale-B 0.329 0.255 0.766 0.809 0.851 0.869 0.860 0.781 0.910 0.910
+FRGC 0.541 0.570 0.669 0.720 0.723 0.732 0.729 0.653 0.747 0.746
+0.5 −2 −1.5 −1 −0.5 0 0.5 1 1.5 2
+AGDL DGSC NJW−SC G−Link 1
+0.8 0 20 40 60 80 100 120 140 160
+Noise level σ n
+AGDL DGSC NJW−SC G−Link
+Fig.4.VariationsofperformanceofdifferentclusteringalgorithmsontheCOIL-20dataset,(a)
+when the parameter a for controlling σ in Eq. (1) changes; (b) when we add Gaussian noise
+2)totheimages.TheNMIdifferencesbetweenσ
+=160are0.048,0.065,
+0.067,0.012,forG-Link,NJW-SC,DGSC,andAGDL,respectively.
+The results measured in NMI are given in Table 1. k-medoids and average link-
+ageperformsimilar,astheyheavilyrelyonthecomputationofpairwisedistancesand
+thusaresensitivetonoise,andcannotwellcapturethecomplexclusterstructuresinthe
+realdatasets.NCuts,NJW-SC,andZellhavegoodperformanceonmostdatasets,as
+theycapturetheunderlyingmanifoldstructuresofthedata.STSCworksfineonsome
+syntheticmultiscale datasetsin[11] butits resultsareworse thanoursonseveralreal
+datasets in comparison.Note that STSC adaptivelyestimated the parameterσ2 at ev-
+erypointtoreflectthevariationoflocaldensitywhileoursexploresindgree/outdegree
+and fixes σ2 as constant. The effective and robust affinity measure for agglomerative
+clustering makes our GDL-U and AGDL algorithm performs the best among all the
+algorithms.TheAGDL’sresultsarenearlythesameasGDL-U.
+Comparedtoothergraph-basedalgorithms,GDL-UandAGDLaremorerobustto
+theparameterσforbuildingthegraph,aswellasthenoiseinthedata(seeFig.4).The
+noiseaddedtoimagescandegradetheperformanceofotheralgorithmsgreatly,butour
+performanceisbarelyaffected.
+For the graph-basedalgorithms, we show their time cost in Table 2. AGDL costs
+theleastamountoftimeamongallthealgorithms.GDLisfasterthanNCuts,NJW-SC,
+and DGSC, and is muchfaster than Zell. G-Link,which has worse performancethan
+AGDL,iscomparabletoAGDLontimecost.
+GraphDegreeLinkage:AgglomerativeClusteringonaDirectedGraph 11
+Table2.Thetimecost(inseconds)ofthealgorithms.Theminimumtimecostoneachdatasetis
+inbold.Thestatisticsofeachdatasetareshownforreference.
+Dataset SampleNum ClusterNum NCuts NJW-SC DGSC Zell GDL-U AGDL
+COIL-20 1440 20 3.880 6.399 8.280 15.22 0.265 0.277
+COIL-100 7200 100 133.8 239.7 326.4 432.9 12.81 5.530
+USPS 11000 10 263.0 461.6 538.9 9703 53.64 29.01
+MNIST 10000 10 247.2 384.4 460.4 64003 35.60 17.18
+Yale-B 2414 38 9.412 13.99 16.00 178.2 0.731 0.564
+FRGC 12776 222 577.4 914.3 1012.2 65021 49.15 18.62
+(a)Apairofcompositeimages,(b)Initialcorrespondences (c)Detectedcorrespondences
+oneofwhichiswarpedwith (533inliersinyellowcolor, byAGDL(532true,552
+=50; 1200outliersinredcolor, detected,F-score0.981).
+accordingtothegroundtruth);
+Fig.5.Exampleofobjectmatchingthroughfeaturecorrespondenceclustering.
+4.2 FeatureCorrespondenceClusteringforObjectMatching
+Weshowtheeffectivenessofourclusteringalgorithminthepresenceofoutliersviafea-
+ture correspondenceclustering. Feature correspondenceclustering is commonly used
+forrobustobjectmatching[21,14,22],whichcandealwithgeometricdistortionsofob-
+jectsacrossimagesandisafundamentalproblemincomputervision.Wedemonstrate
+that our algorithm can be effectively integrated with the framework of feature corre-
+spondenceclustering.Therefore,ithasarangeofpotentialapplications,suchasobject
+recognition,imageretrieval,and3Dreconstruction.
+Wecomparewithtworecentstate-of-the-artmethods,i.e.,agglomerativecorrespon-
+denceclustering(ACC)[14]andgraphshift(GS)[22].5
+Overviewofexperiments.WefollowtheexperimentsintheACCpaper[14].We
+usecompositeimagesandtheirwarpedversions(Fig.5(a))tosimulateclutteredscenes
+where deformableobjects appear. Then we can use the ground-truthfor performance
+evaluation.Namely, we compute the precisionand recallrates of detected correspon-
+dences(Fig.5(c)),givenasetofcorrespondenceswithground-truth(Fig.5(b)).Agood
+clusteringalgorithmcangroupinliersandseparateoutliers.Itisamoredirectwayof
+evaluating the performance of clustering algorithms than other experiments, such as
+objectrecognition.
+resultsofspectralmatching(SM)[21],becausebothACCandGSoutperformedSMgreatly
+[14,22], especially whenthereexisted at least twoclustersof correspondences according to
+theground-truth.
+12 W.Zhang,X.Wang,D.ZhaoandX.Tang
+200 400 600 800 1000 1200
+Number of Outliers
+σ = 10, M = 1 1
+GS ACC AGDL
+200 400 600 800 1000 1200
+Number of Outliers
+σ = 10, M = 2 1
+GS ACC AGDL
+200 400 600 800 1000 1200
+Number of Outliers
+σ = 10, M = 4
+GS ACC AGDL
+200 400 600 800 1000 1200
+Number of Outliers
+σ = 50, M = 1 1
+GS ACC AGDL
+200 400 600 800 1000 1200
+Number of Outliers
+σ = 50, M = 2 1
+GS ACC AGDL
+200 400 600 800 1000 1200
+Number of Outliers
+σ = 50, M = 4
+GS ACC AGDL
+0 10 20 30 40 50
+Deformation Noise Level σ
+1200 outliers, M = 1
+GS ACC AGDL
+0 10 20 30 40 50
+Deformation Noise Level σ
+1200 outliers, M = 2
+GS ACC AGDL
+0 10 20 30 40 50
+Deformation Noise Level σ
+1200 outliers, M = 4
+GS ACC AGDL
+Fig.6.Performancecomparisonofdifferentalgorithms.Ineachsub-figure,oneofthethreefac-
+tors,i.e.,thenumberofoutliers,thelevelofdeformationσ ,andthenumber ofcommonsub-
+images M, is varied, while the other two are fixed as the values appearing at the top. All the
+resultsareaveragedover30randomtrials.
+Experimental settings. We generate a pair of 3×3 tiled images that contain M
+commonsub-image(s).Thecommonsub-imagesarerandomlyselectedfromthemodel
+imagesoftheETHZtoysdataset6,andthenon-commonsub-imagesarefromtestim-
+ages of the same dataset. The positions of all sub-images are randomly determined.
+WhenM >1,thecommonsub-imagesarechosenasdifferentobjects.Tosimulatede-
+formation,oneofthepairedimagesiswarpedusingthethin-platespline(TPS)model.
+An exampleof paired test images are shown in Fig. 5(a). 9×9 crossing points from
+a 10×10 meshgridon the image are chosenas the controlpointsof the TPS model.
+Then,allthecontrolpointsareperturbedbyGaussiannoiseofN(0,σ2)independently,
+andtheTPSwarpingisappliedbasedontheperturbationsofcontrolpoints.Toobtain
+thecandidatecorrespondencesbetweentwotiledimages,featuresareextractedbythe
+MSER detector, and the best 3,000 correspondences are collected according to sim-
+ilarity of the SIFT descriptors. Using the warping model, each correspondencehas a
+ground-truthlabel:trueifitserrorissmallerthanthreepixels,andfalseotherwise.Fig.
+5(b)showsthecorrespondencesaslines,amongwhichthe yellowonesrepresenttrue
+correspondences.Then,theperformanceofdifferentalgorithmsarequantitativelyeval-
+GraphDegreeLinkage:AgglomerativeClusteringonaDirectedGraph 13
+uated.WeusetheF-score,atraditionalstatisticalmeasureofaccuracy,whichisdefined
+as[precision·recall/(precision+recall)].
+Parametersof ACC and GS. As we strictly follow the test protocolin the ACC
+paper[14],weusethedefaultparametersintheircodes.ForGS,wecomputetheaffinity
+matrixW =max(β−d /σ2,0)asthepaper[22],whered isthedistancebetween
+ij ij s ij
+correspondencei and correspondencej as defined in the ACC paper [14]. β, σ and
+otherparametersinGSaretunedtobethebest.
+ParametersofAGDL.ForourAGDLalgorithm(i.e.,Algorithm3),theparameters
+arefixedasn =50,a=10,K =35,K0 =2,andKc =10.WefoundthattheGDL
+workswellin a largerangeofn , asthe numberofground-truthclusters(i.e.,M) is
+verysmallandwecaneliminatetheoutlierclustersbypostprocessing.7
+Results. As shown in Fig. 6, we vary the number of outliers, the level of defor-
+mation,andthenumberofcommonsub-images,andcomparetheF-scoresofdetected
+correspondencesbydifferentalgorithms.BothACCandGSperformexcellentlyonthis
+task.Itischallengingtobeatthem,whichareveryrecentmethodsdesignedspecifically
+for objectmatching.However,oursimple clusteringalgorithmoutperformsthem.We
+find our AGDL algorithm performsconsistently better than both ACC and GS under
+differentsettings.AGDLhasahigherF-scorethanbothin95.6%oftherandomtrials
+underall the setting combinations.We attribute the success of AGDL to the effective
+clusteraffinitymeasurewhichisrobusttonoiseandoutliers.
+5 Conclusion
+Wepresentafastandeffectivemethodforagglomerativeclusteringonadirectedgraph.
+Ouralgorithmisbasedonindegreeandoutdegree,fundamentalconceptsingraphthe-
+ory. The indegree and outdegree have been widely studied in complex networks, but
+havenotreceivedmuchattentioninclustering.Weanalyzetheirrolesinmodelingthe
+structures of data, and show their power via the proposedgraph degreelinkage algo-
+rithm.Wedemonstratedthesuperiorityofthissimplealgorithmonimageclusteringand
+objectmatching.Webelieveourworkprovidesnotonlyasimpleandpowerfulcluster-
+ing algorithmto manyapplicationsin computervision,butalsoan insightfulanalysis
+ofthegraphrepresentationofdataviaindegreeandoutdegree.
+Acknowledgment
+This work is partially supportedby the GeneralResearch Fund sponsoredby the Re-
+search GrantsCouncilofHongKong (ProjectNo. CUHK416510,CUHK417110and
+CUHK417011)andNationalNaturalScienceFoundationofChina(ProjectNo.61005057).
+ItisalsosupportedthroughIntroducedInnovativeR&DTeamofGuangdongProvince
+201001D0104648280andShenzhenKeyLabofComputerVisionandPatternRecog-
+nition.Theauthorswouldlike tothankTianfanXueforproofreadingandWei Lifor
+helpontheACCcode.
+7PleaseseeSec.9inthesupplementalmaterialsfordetailsofoutliereliminationinouralgo-
+rithm.DifferentfromACC,whichutilizesadditionalinformation,i.e.,geometricallocations
+offeaturepoints,weonlyusetheK-NNgraphinoutlierelimination.
+14 W.Zhang,X.Wang,D.ZhaoandX.Tang

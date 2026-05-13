@@ -1,0 +1,440 @@
+Relevance As a Metric for Evaluating Machine
+Learning Algorithms
+Aravind Kota Gopalakrishna, Tanir Ozcelebi, Antonio Liotta, and Johan J.
+1 System Architecture and Networking (SAN),
+Department of Mathematics and Computer Science,
+2 Electro-Optical Communications,
+Department of Electrical Engineering,
+Eindhoven University of Technology, The Netherlands
+{a.kota.gopalakrishna,t.ozcelebi,a.liotta,j.j.lukkien}@tue.nl
+Abstract. In machine learning, the choice of a learning algorithm that
+issuitablefortheapplicationdomainiscritical.Theperformancemetric
+used to compare different algorithms must also reflect the concerns of
+users in the application domain under consideration. In this work, we
+propose a novel probability-based performance metric called Relevance
+Score for evaluating supervised learning algorithms. We evaluate the
+proposed metric through empirical analysis on a dataset gathered from
+anintelligentlightingpilotinstallation.Incomparisontothecommonly
+used Classification Accuracy metric, the Relevance Score proves to be
+more appropriate for a certain class of applications.
+Keywords: Machine learning algorithms; performance metric; proba-
+bilistic approach
+1 Introduction
+One of the general goals of a machine learning (ML) algorithm is to capture
+complexrelationshipsandpatternswithinadatasetandtoapplysuchknowledge
+onnewdatathatisbelievedtohavethesame(orasimilar)pattern.Thesuccess
+criteriafortheMLalgorithmdependonmanyfactors,mostimportantly,onthe
+user concerns that are specific to the application domain.
+Consider a car navigation system that utilizes a specific ML algorithm to
+select the best route from a source location to a destination. There are many
+ways to measure the performance of this algorithm objectively. Useful metrics
+can be, for instance, the actual time to reach the destination, the amount of gas
+consumption and the amount of tolls paid. However, it is often the case that a
+combination of these metrics cannot directly be mapped to the real satisfaction
+ofthedriverfromthenavigationexperience,whereasthisiswhatmattersinthe
+end. Assume that there are only two home-office routes possible and the driver
+generally likes to take the first route, which is shorter, faster and safer. On the
+other hand, sometimes, the driver likes to take the second route that goes along
+3v3907.3031:viXra
+2 A. K. Gopalakrishna et. al.
+theseashore,especiallywhenitissunnyandthedriverisinthemood.TheML
+algorithmcanbeexpectedtolearntopickthedesiredrouteamongthetwoonly
+ifweatherisaparameterthatcanbeandismonitoredbythenavigationdevice.
+Monitoring the mood of a person is very difficult nonetheless. Alternatively, the
+ML algorithm will simply start looking for patterns within other data that is
+available to it, e.g. the time of the day, which may or may not have any actual
+impact.Inthiscase,thedesiredroutemayalsodependonthoseparameters,i.e.
+features, which are relevant yet not considered by the navigation device.
+It is a difficult task to identify all the features that are relevant for the ML
+algorithm employed by an application. The features that are relevant for the
+application define a context. Even when the context is known, it may be techni-
+callyverychallengingorveryintrusivetomonitorsomefeaturesespeciallywhen
+usersareinvolved,e.g.thedriver’smoodinthepreviousexample.Thesubsetof
+relevant features that are monitored define an observed context. Depending on
+the application under consideration and the observed context, sometimes evalu-
+ating an output, i.e. a prediction made by the ML algorithm, as either right or
+wrong might not be sufficient as there are gray areas in between. For example,
+theintelligentenvironmentdescribedin[1]offerslightingservices(lightsettings)
+depending on several contextual factors such as user identity, user activity and
+time of the day. When the dataset collected from this intelligent environment
+is examined, there are two important remarks to be made. The first remark is
+that the desired light settings are not fixed for a given instance of observed con-
+text. Since perception of lighting also depends on subjective factors that cannot
+be monitored, even the same user, the same activity and the same time of the
+day may result in different desired light settings. The second remark is that,
+for a given observed context, there are acceptable (desired at least once) and
+unacceptable light settings (never desired).
+This means that the overall performance of the ML algorithm may be hin-
+dered by the fact that the observed context is not entirely representative of the
+actualcontextofanapplication.Whenthisisthecase,itisachallengetoevalu-
+ateandcomparetheperformancesofdifferentMLalgorithmsintheapplication
+domain.Intheliterature,differentevaluationmetricsassessdifferentcharacteris-
+ticsofMLalgorithms[2].ClassificationproblemsinMLarebroadlycategorized
+intomulti-classclassificationandmulti-labelclassificationproblems.Multi-class
+classificationalgorithms[3]areforthosecategoriesofproblemswhere,foragiven
+input instance, there is exactly one correct output class, which is selected out of
+several classes. Examples of multi-class classification include image recognition
+and diagnosis [4]. The commonly used evaluation metric for multi-class clas-
+sification problems are accuracy, precision and recall. Multi-label classification
+algorithms [5] address that category of problems where multiple output classes
+must be selected for each input instance. Examples of multi-label classification
+include text [6] and music categorization [7]. The commonly used evaluation
+metrics for multi-label classification problems are hamming-loss, precision and
+recall.
+Relevance As a Metric for Evaluating Machine Learning Algorithms 3
+Asillustratedbytheexamplesofcarnavigationandintelligentlighting,there
+also exists another class of applications. In these applications, the ML predic-
+tion model has to select a unique output class for a given input instance (as
+in multi-class classification), and the output for a given input instance may fall
+into multiple acceptable output classes (as in multi-label classification). An in-
+teresting property of such an application is randomness in the output, i.e. there
+is no single acceptable outcome for a given observed context but there is a sta-
+tisticalregularityassociatedwithdifferentpossibleandacceptableoutcomes.In
+such cases, even though the prediction models that are used to solve multi-class
+classification problems suits the need, the evaluation metrics such as accuracy,
+precision and recall are not suitable. For instance, the use of accuracy as a met-
+ric would lead to a score of zero for a misclassified sample, which should not be
+the case. The bad choice of performance metrics would produce results that are
+meaningless to achieve the design goal of an application [8] [9].
+Inthiswork,wedeviseanewevaluationschemetoevaluatetheperformance
+ofsupervisedlearningalgorithmsforthisclassofapplicationsandproposeanew
+evaluationmetriccalledRelevanceScore(RS).Weconsideranintelligentlighting
+scenario to describe and formulate the problem. Relevance Score is defined as a
+percentage measure of how much relevant an output or outcome is, as predicted
+by the prediction model for a given observed context. The score is based on the
+probabilistic distances among the different outcomes, i.e. predicted and actual
+outcome. We use this metric to evaluate several rule based prediction models
+and then compare it with the commonly used metric Prediction Accuracy or
+Classification Accuracy (CA) tovalidatethesignificanceoftheproposedmetric.
+Thepaperisorganizedasfollows.Section2discussesthedrawbacksofusing
+thecommonlyusedCAmetricwithanexampleofintelligentlightingapplication
+andidentifiesimprovementdirections.Section3presentstheproposedrelevance
+metric.Section4providesanevaluationoftheproposedmetric.Finally,Section5
+concludes the paper.
+2 Problem Definition
+In this section, we discuss the drawbacks of Classification Accuracy (CA) as a
+metric for evaluating supervised learning algorithms, which motivates the need
+for a new metric using an intelligent lighting application scenario.
+Letx (cid:15)X denotetheithsampleinadataset,wherex =[x ,x ,...,x ]and
+i i i1 i2 in
+X representsann-dimensionalinputfeaturespacegivenbyX =X ×X ×X ×
+...×X .Letusdenotetheoutputclasslabelasy wherey(cid:15)Y ={y ,y ,...,y }
+and K denotes the number of possible outcomes. In the intelligent lighting ap-
+plication under consideration [1], there are 8 possible presets for output lighting
+conditions (K=8) in a breakout area, as shown in the three dimensional space
+in Fig. 1. Each octant represents a possible light combination (e.g. static-warm-
+dim).
+4 A. K. Gopalakrishna et. al.
+bbbrrriiiggghhhttt
+dddyyynnnaaammmiiiccc
+cccoooooolll wwwaaarrrmmm
+ssstttaaatttiiiccc
+Fig.1. Possible Output Light Combinations
+A user is provided with a lighting condition based on six input features
+(n=6) namely user-identity, type of activity, area of activity, number of users,
+time of the day and the external light influence.
+In[1],thesupervisedlearningapproachisexploredwhereaconsideredclassi-
+ficationmodelistrainedonthebreakoutdatasettopredictauniquelightoutput
+y (cid:15)Y ={y ,y ,...,y }foragiveninputx =[x ,x ,...,x ].Thesuccessofan
+i 1 2 8 i i1 i2 i6
+intelligent lighting application depends on selecting the best suitable prediction
+model that selects the desired lighting condition for a given observed context.
+The performance of the selected models is evaluated using CA as a metric.
+Let us assume that a classification model h is trained using the breakout
+dataset.Thebreakoutdatasetcontainsasamplex 10timesandtheoutputlight
+condition selected by a user is light A (LA) four times, light B (LB) four times
+andlightC(LC) twotimes.Thismeansthattheuserforagiveninputinstance
+x has selected LA, LB and LC with probabilities 0.4, 0.4 and 0.2 respectively,
+i.e. a sample x has multiple output classes. Assume that the classifier h selects
+LAbasedonwhatithaslearntfromthetrainingdata,whereastheuseractually
+desires LB as the lighting condition. Here the classifier h is not right with the
+prediction, but not entirely wrong either. If CA is used as a metric, then the
+selection made by the classifier h would be assessed as completely wrong. From
+the application point-of-view the CA metric is not very representative as it is
+importanttomeasurehowrelevantthelightingconditionisforagivenobserved
+context,ratherthantomeasurehowaccurateitis.Itcanneverbe100%accurate
+Relevance As a Metric for Evaluating Machine Learning Algorithms 5
+Table 1. Sample comparison of metrics
+Actual OutputPredicted Output CA Metric Alternative Metric
+LA LA 100 Good match
+LB LC 0 Decent match
+LC LA 0 Irrelevant match
+LA LB 0 Relevant match
+LB LB 100 Good match
+200/5 = 40% 325/5 = 65%
+as the user is not consistent in choosing the desired lighting condition, based on
+the observed context.
+From the example above it is evident that CA is not a relevant metric for
+similar applications as it fails to capture the degree of relevance when there is a
+“non-ideal” prediction. Hence, it is necessary to have an evaluation mechanism
+thatisabletocomputethedistancebetweenactualandpredictedoutcomewhen
+they are not equal. An example of such a metric for a given classifier is shown
+in Table 1.
+As shown in Table 1, by virtue of the problem, CA gives a low accuracy of
+40%, whereas the user is given relevant outputs 80% of the time and irrelevant
+outputs only 20% of the time according to the Alternative Metric, resulting in
+anaveragescoreof65%.Herethe Alternative Metric computestherelevanceof
+the outcome i.e. how good is the output selection made by a prediction model
+through the data statistics available from the observed environment, thereby
+making it more suitable than the CA metric.
+Formally, we propose an evaluation metric named as Relevance Score, which
+is more suitable for the third class of applications mentioned in Section 1 than
+the commonly used CA metric. In particular, we seek to find a performance
+function f :(X,Y)→R100 where R100 ={RS(cid:15)R|0≤RS ≤100}.
+3 Proposed Metric
+In this section, we propose a new mechanism to evaluate supervised prediction
+models used in the presented class of applications, e.g. in intelligent lighting.
+Here, we formulate a function that quantifies the relevance of the predicted
+outcome when there is a mismatch between the predicted and actual outcome.
+6 A. K. Gopalakrishna et. al.
+SSSpppllliiittttttiiinnnggg
+DDaattaasseett
+TTrraaiinniinngg PPPrrreeedddiiiccctttiiiooonnn
+DDaattaasseett MMooddeell
+CCoommpplleettee
+DDaattaasseett
+TTeesstt DDaattaasseett HHyyppootthheessiiss
+CCCooommmpppuuuttteee
+PPrroobbaabbiilliittiieess PPrreeddiicctt
+PPrreeddiiccttiioonn
+RREELLEEVVAANNCCEE
+SSCCOORREE
+Fig.2. Relevance Score computation procedure
+ThewellknownCAmetriciscomputedasanaverageofthesumofindividual
+accuracies for k test set samples as in equation 1.
+1 (cid:88)
+CA= Acc (1)
+We inherit the same mechanism to compute the Relevance Score on a test
+set for a given prediction model with a minor modification where the accuracy
+Acc for a sample is replaced by Score as in equation 2.
+1 (cid:88)
+RS = Score (2)
+We divide RS computation into two phases: 1. Probability Computation
+Phase, and 2. Evaluation Phase. The entire process of computing RS is shown
+in Fig. 2.
+3.1 Probability Computation Phase
+An ErrScore is a real number that is calculated when there is an error in pre-
+diction by the prediction model. It is computed based on five parameters, the
+predictedoutcome(O ),theactualoutcome(O ),theprobabilityofoccurrence
+of the predicted outcome (P(O )), the probability of occurrence of the actual
+Relevance As a Metric for Evaluating Machine Learning Algorithms 7
+Table 2. Qualitative Relevance
+CASEOUTCOME PROBABILITIES QUALITATIVE
+1 O =O - Highly Relevant
+2 O (cid:54)=O P(O )=P(O );P(O )>P(O )Moderately Relevant
+P A H P P A
+3 O (cid:54)=O P(O )>P(O )>P(O ) Relevant
+4 O (cid:54)=O P(O )>P(O )>P(O ) Less Relevant
+5 O (cid:54)=O P(O )=P(O );P(O )>P(O ) Irrelevant
+P A H A A P
+outcome (P(O )) and the probability of the most frequently selected outcome
+(P(O )). These probabilities are the values that are computed from the entire
+dataset.Theprobabilityvaluesarecomputedforthedifferentoutputclasslabels
+(y(cid:15)Y) for every input instance (x ) in the breakout dataset. Formally, compute
+P(y|x ) for i = 1,2,3,...,m where m is the number of samples in the entire
+dataset. In this phase, the values of the most probable feature that is responsi-
+blefortherandomnessinoutput(e.g.useridentityfeatureinintelligentlighting
+application) is removed for generalization.
+3.2 Evaluation Phase
+Inthisphase,thepredictionsonthetestdataareevaluatedusingtheconsidered
+classificationmodels.Ifddenotestheprobabilisticdistancesingeneral,thenthe
+distances between the probabilities are given by,
+Several cases are possible for a given input instance based on the predicted
+and the actual outcomes and their computed probabilities. The cases may be
+classified qualitatively in terms of relevancy of the outputs provided. The de-
+creasing order of relevance we consider for different cases is summarized in Ta-
+ble 2. The ordering is based on the consequence of individual cases as explained
+later. Thus, ErrScore is a score that is obtained by quantifying these cases.
+Case 1: O =O
+In this case, for a given input instance in the test set, the predicted out-
+come and the actual outcome are equal. Thus, there is no error in the predicted
+outcome.
+Case 2: O (cid:54)=O ;P(O )=P(O )>P(O )
+Inthiscase,foragiveninputinstancethepredictedoutcomeandthehighest
+probable outcome are equal but a different output (actual outcome) is selected.
+8 A. K. Gopalakrishna et. al.
+Sincethepredictedoutcomeisequaltothehighestprobableoutcome(d =0)
+and the classification model has not been able to capture the switch in output,
+the error is kept minimum and is equal to β ·d where β is a positive real
+constant, whose value depends on the application.
+Case 3: O (cid:54)=O ;P(O )>P(O )>P(O )
+In this case, for a given input instance the predicted outcome, the actual
+outcome and the highest probable outcome are not equal. Since the probability
+of the predicted outcome lies in between that of the highest probable outcome
+and the actual outcome, the error value is higher than the previous case, and is
+equal to (α·d +β·d ) where α and β denote positive real constants.
+Case 4: O (cid:54)=O ;P(O )>P(O )>P(O )
+In this case, for a given input instance the predicted outcome, the actual
+outcome and the highest probable outcome are not equal. Since the probability
+of the predicted outcome lies farther away than that of the highest probable
+outcome and the actual outcome, the error value is much higher, and equal to
+(α·d +β·d ) as in Case 3.
+Case 5: O (cid:54)=O ;P(O )=P(O )>P(O )
+In this case, for a given input instance the actual outcome and the highest
+probableoutcomeareequalbuttheclassificationmodelselectsadifferentoutput
+(predicted outcome). Since the actual outcome is equal to the highest probable
+outcome and the performance of the classification model was poor to select a
+different output, the error rate is much higher than that of the previous cases.
+The error is equal to (α+β)·d .
+Combining above equations and normalizing over (α+β), we find the fol-
+lowing error score function
+ErrScore= HP PA . (6)
+Therefore, the RS for a sample is computed as below
+Score=(1−ErrScore)×100, (7)
+Score=(1− HP PA )×100. (8)
+4 Experimentation and Results
+Inthissection,westudytheperformanceoftheproposedRS metricandcompare
+it to the CA metric for different classifiers used in the breakout dataset. We
+furtherinvestigatetheinfluenceofαandβparametersoftheRSmetricfunction.
+The performance of RS metric is studied through various experimentations
+using the Weka [10] simulator on the following rule-based prediction models:
+DecisionTable[11],JRip[12],NearestNeighborwithgeneralization(NNge)[13],
+PART[14],ConjunctiveRule[15]andRidor[16]onthebreakoutdataset[1].The
+breakout dataset consists of 236 samples of data from different users gathered
+Relevance As a Metric for Evaluating Machine Learning Algorithms 9
+from the breakout area. Here 70% of the dataset is used for training and the
+remaining 30% is used as test set. We consider 10 randomly shuffled training
+and test sets for experimentation and then mean the results to avoid biased
+results. We perform the following investigations:
+1. Comparison of RS and CA Metrics
+2. Significance of α and β
+3. Lower and Upper Bounds of RS with changing α and β
+4. Testing of RS on Random Output Data
+4.1 Comparison of RS and CA Metrics
+Fig. 3 shows the graph of Performance Metric vs. Prediction Model for two
+different metrics: CA and RS. The RS values are computed with α = 2 and
+β =1.Asdiscussedearlier,lowaccuracyvaluesareachievedwiththeCAmetric.
+This means that no prediction models provide exact lighting conditions based
+on the input instances in more than 50% of the test samples. However, with
+RS as a metric, a maximum of 73% relevant lighting condition is achieved with
+DecisionTable prediction model.
+An interesting observation is that the prediction model Ridor has lower CA
+than Conjunctive Rule, whereas Ridor has a better RS value than Conjunctive
+Rule. This is interpreted as follows. For a portion of the data samples, the most
+desired outcome (the best match) is calculated for each prediction model and
+ConjunctiveRule performs better than Ridor, i.e. it has higher classification ac-
+curacy. However, when it comes to the relevance of the predicted outcomes, the
+Ridor is more successful than ConjunctiveRule, i.e. it predicts the most rele-
+vant outcomes on average. Even though ConjunctiveRule finds the best match
+slightly more often than Ridor, when it cannot find the best match, it comes
+up with less relevant predictions. Therefore, Ridor is preferable for applications
+where relevance of the predicted outcome is more critical than accuracy. As a
+consequence,forsuchapplications,RS asaperformancemetricismorerelevant.
+4.2 Significance of α and β
+In this experiment, we investigate the influence of varying values of α and β on
+RS.Fig.4showstheplotofRS vs.PredictionModelfordifferentvaluesofαand
+β. The graph shows that the prediction model DecisionTable is more consistent
+with the changing (α, β) whereas the RS values improve with α decreasing and
+β increasing for other prediction models. The parameters α and β are used as
+weights for probabilistic distances d and d , respectively. Thus, when α is
+higher the product α·(d ) is emphasized more, i.e. the probabilistic distance
+between the predicted and actual outcome is given less importance. When β is
+higher, the product β·(d ) is emphasized more, i.e. the probabilistic distance
+between the most probable outcome and the predicted outcome is given less
+importance.
+Fig.5showstheplotofRS vs.α,β fordifferentpredictionmodels.Fromthe
+graph,wefindthatthepredictionsmadebyConjunctiveRulemodelarecloserto
+10 A. K. Gopalakrishna et. al.
+eeuullaaVV
+DDeecciissiioonnTTaabbllee JJRRiipp NNNNggee PPAARRTT CCoonnjjuunnccttiivveeRRuullee RRiiddoorr
+PPrreeddiiccttiioonn MMooddeell
+Fig.3. Performance Metric vs. Prediction Model
+ecnaveleR α=2, β=1
+PPrreeddiiccttiioonn MMooddeell
+Fig.4. Relevance Score vs. Prediction Model
+Relevance As a Metric for Evaluating Machine Learning Algorithms 11
+theactualoutcomeandhencevaryingα,β hasmoreinfluenceontheRSvalues.
+The low RS values for the ConjunctiveRule are due to the fact that the model
+is not good in consistently predicting relevant outcomes for the given scenarios.
+4.3 Lower and Upper Bounds of RS with changing α and β
+MaximumorminimumRS thatapredictionmodelcanreachisfoundbytaking
+either α or β to be very large.
+When α is very large compared to β, the error is computed is as follows:
+ErrScore= lim HP PA = lim HP =d . (9)
+When β is very large compared to α, the error is computed is as follows:
+ErrScore= lim HP PA = lim PA =d . (10)
+ThelowerandtheupperboundsonRSfortheconsideredpredictionmodels
+are summarized in Table 3.
+Table3.SummaryofmaximumandminimumRS valuesforvariouspredictionmodels
+on the breakout dataset
+DecisionTable 73.68 73.56
+JRip 65.50 68.10
+NNge 67.50 69.26
+PART 65.79 70.48
+ConjunctiveRule 57.13 67.28
+Ridor 64.90 66.87
+4.4 Testing of RS on Random Output Data
+In this test, we study the RS results on the same dataset with randomly gener-
+atedoutput.Oneofthemainmotivationsforthisresearchwasthefactthatthe
+performance of the prediction model should not be punished for inconsistencies
+in the data pattern that are caused by factors outside the observed context. For
+example,apredictionmodelwhosegoalistofindthedesiredlightingconditions
+for the user can be expected to perform at best as good as the user himself. If
+the user is generating inconsistent data, i.e. if an observed context maps to dif-
+ferent outcomes at different times, then the student (the prediction model) will
+12 A. K. Gopalakrishna et. al.
+DecisionTable erocS
+DecisionTable
+ecnaveleR NNge
+ecnaveleR NNge
+ConjunctiveRule
+ConjunctiveRule
+RRiiddoorr
+Fig.5. Relevance Score vs. (α, β)
+be learning from an inconsistent teacher (the user), whose reasons for changing
+mind are completely hidden from the student, i.e. the reasons either don’t exist
+ortheyarebeyondtheobservedcontext.Considertheextremecasewherethere
+isnorelationbetweentheinputinstancesandoutputlightingconditions,i.e.the
+user throws an 8-sided dice to select the desired lighting condition and the dice
+is not part of the observed context. In this case, the CA metric would be equal
+to 1/8 as there are 8 possible lighting conditions. We also expect to achieve a
+lower RS in comparison to the scores on the dataset with real output. On the
+otherhand,notethattheusermakesnodistinctionbetweenlightingconditions.
+For a given observed context, even though there is exactly one desired lighting
+condition, all possible lighting conditions are indeed somewhat relevant. There-
+fore, we expect that the RS metric will be higher than the CA metric. Fig. 6
+shows the plot of RS vs. prediction model for random output data and for the
+real output data from the breakout dataset.
+Intherandomoutputdataset,sinceoneoftheeightlightconditionsischosen
+at random i.e. with probability 0.125, the output probability distributions are
+almost uniform for the input instances. This makes it difficult for the prediction
+modelstoselecttherightoutputchoice.Thusalltheconsideredpredictionmod-
+els lie between the range 50 and 60%. But in case of real output dataset, there
+are some relationships between the input and output causing the output proba-
+bility distribution to be non-uniform. Thus the prediction model DecisionTable
+performs the best with a RS of 74%.
+Relevance As a Metric for Evaluating Machine Learning Algorithms 13
+eeerrrooocccSSS
+eeecccnnnaaavvveeellleeeRRR Random Output
+ecnaveleR Random Output
+Real Output
+Real Output
+DDeecciissiioonnTTaabbllee JJRRiipp NNNNggee PPAARRTT CCoonnjjuunnccttiivveeRRuullee RRiiddoorr
+PPrreeddiiccttiioonn MMooddeell
+Fig.6. Relevance Score vs. Prediction Model
+From the performed studies, we find that RS is a more suitable metric than
+the commonly used metrics for the mentioned class of applications. Further-
+more, the RS metric provides a provision to select the prediction models that
+havedifferentcharacteristicsinpredictingtheoutcomes.Thisdependsontheap-
+plicationrequirement,andisdonebyvaryingparametersαandβ.Forexample,
+a higher value of α is chosen as compared to β for applications where capturing
+inconsistencies in the outcome for an observed context is not so critical.
+5 Conclusion
+The choice of a suitable performance metric is critical to select a machine learn-
+ing algorithm for intelligent applications. In this direction, we presented the
+drawback of the commonly used evaluation metric CA with an illustration of
+intelligent lighting and similar class of applications. We further proposed a new
+metric named as Relevance Score to evaluate machine learning algorithms when
+thereismorethanonechoiceofoutputclasslabelssuitableforaninputinstance.
+The metric is based on the probability values of the outcomes computed from
+the dataset for a given observed context. We also presented a detailed analysis
+on the performance and relevance of the proposed metric RS through various
+experiments on the breakout dataset. From the obtained results, we conclude
+that RS is a better performance metric for the class of applications where the
+relevanceofpredictionsiscriticalratherthanthepredictionaccuracy.Moreover,
+14 A. K. Gopalakrishna et. al.
+variants of RS computation can be used by carefully selecting the parameters of
+the RS computation function based on the application requirement.
+Acknowledgments. We would like to acknowledge Smart Context-aware Ser-
+vices (SmaCS) project for supporting this work. We would also like to thank
+Serge Offermans for providing the breakout dataset.

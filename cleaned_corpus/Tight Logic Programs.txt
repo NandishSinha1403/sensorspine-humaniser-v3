@@ -1,0 +1,694 @@
+1v8302030/sc:viXra
+Underconsideration for publication in Theory and Practice of Logic Programming 1
+Tight Logic Programs
+Esra Erdem
+Department of Computer Science
+Universityof Toronto
+6 King’sCollege Road
+Toronto, ON M5S 3H5, Canada
+(e-mail: esra@cs.toronto.edu)
+Vladimir Lifschitz
+Department of Computer Sciences
+University of Texasat Austin
+Austin, TX 78712, USA
+(e-mail: vl@cs.utexas.edu)
+Thisnoteisabouttherelationshipbetweentwotheoriesofnegationasfailure—onebased
+on program completion, theotherbased on stable models, or answer sets. Franc¸ois Fages
+showed that if a logic program satisfies a certain syntactic condition, which is now called
+“tightness,”thenitsstablemodelscanbecharacterizedasthemodelsofitscompletion.We
+extendthedefinitionoftightnessandFages’theoremtoprogramswithnestedexpressions
+in the bodies of rules, and study tight logic programs containing the definition of the
+transitive closure of a predicate.
+1 Introduction
+Thisnoteisabouttherelationshipbetweentwotheoriesofnegationasfailure—one
+based on program completion (Clark 1978), the other based on stable models, or
+answer sets (Gelfond and Lifschitz 1988). Franc¸ois Fages (1994) showed that if a
+logic program satisfies a certain syntactic condition, which is now called “tight-
+ness,”1 thenitsstable modelscanbe characterizedasthe modelsofits completion.
+Lifschitz(1996)observedthatFages’theoremcanbeextendedtoprogramswithin-
+finitelymanyrulesandtoprogramswithclassicalnegation(Gelfond and Lifschitz 1991)
+if the concept of completion in the statement of the theorem is replaced by its se-
+mantic counterpart—the concept of a supported model (Apt et al. 1988). Fages’
+theorem was further generalized in (Babovich et al. 2000).
+In this paper we show how to extend Fages’ theorem to programs with nested
+expressions in the bodies of rules. A generalization of the completion semantics
+to such programs was proposed in (Lloyd and Topor 1984), and a similar gener-
+alization of the answer set semantics is given in (Lifschitz et al. 1999). Here is an
+1 ThetermusedbyFagesis“positive-order-consistent.”
+2 Esra Erdem and Vladimir Lifschitz
+example. Program
+p←not not p
+contains nested occurrences of negation as failure in the body of the first rule.2 It
+belongs to the syntactic class for which our theorem guarantees the equivalence of
+theanswersetsemanticstothecompletionsemantics.Thisprogramhastwoanswer
+sets ∅, {p}; they are identical to the models of the completion
+of this program.
+A preliminary report on the tightness of programs with nested expressions is
+published in (Erdem and Lifschitz 2001a).
+The second question studied here is the tightness of logic programs containing
+the definition of the transitive closure of a predicate:
+Such rules are found in many useful programs. Unfortunately, the definition of
+tightness may be difficult to verify directly for a program containing these rules.
+We give here a sufficient condition that can make this easier. A preliminary report
+on this part of the work was presented at the 2001 AAAI Spring Symposium on
+Answer Set Programming (Erdem and Lifschitz 2001b).
+The concept of a tight program and generalizations of Fages’ theorem may be
+interesting for two reasons.
+First, the completion semantics and the stable model semantics are among the
+most widely used definitions of the meaning of negation as failure, and it is useful
+to know under what conditions they are equivalent to each other.
+Second,theclassoftightprogramsisimportantfromtheperspectiveofanswerset
+programming.Whenever the two semanticsare equivalent,answersets for the pro-
+gramcanbecomputedbysolvingthesatisfiabilityproblemforitscompletion.This
+canbedoneusingasatisfiabilitysolversuchassato3ormchaff4(Babovich et al. 2000).
+The idea of computing answer sets for a program using a satisfiability solver led
+to the creation of the system cmodels5 which, in some cases, finds answer sets
+faster than “general-purpose”answer set solvers such as smodels6 and dlv7. Our
+generalizationofFages’theoremallowsustoapplythisideatoprogramscontaining
+weightconstraintrules (Simons et al. 2002), because such programscanbe viewed
+2 Thedoublenegationinthefirstruleof(1)isredundantfromthepointofviewofthecompletion
+semantics, but itdoes affect the program’sanswer sets. On the other hand, the second ruleis
+redundant from the point of view of the answer set semantics. But, generally, dropping a rule
+likethiscanchangeaprogram’scompletioninanessential way.
+Tight Logic Programs 3
+asaspecialcaseofprogramswith nestedexpressions(Ferraris and Lifschitz 2003).
+For instance, rule {p} can be treated as shorthand for
+p←not not p.
+cmodelsusesthisfacttohandleprogramswithweightconstraints,andourgener-
+alization of Fages’ theorem allows cmodels to decide whether the answer sets for
+such a program are identical to the models of its completion.
+We begin by reviewing the definitions ofanswersets, closure,supportedness and
+completion for programs with nested expressions (Sections 2, 3). After discussing
+theconceptoftightnessforsuchprogramsinSections4and5,westateourgeneral-
+izationofFages’theorem(Section6).Asanexample,weshowhowthisgeneralized
+formappliestoaformalizationofthen-queensproblem(Section7).Thenwestudy
+the tightness of programs containing the definition of the transitive closure of a
+relation (Section 8). A logic programming description of the blocks world is used
+as an example in Section 9. Proofs of theorems are given in Section 10.
+2 Programs and Answer Sets
+This section is a review of the answer set semantics for nondisjunctive programs
+with nested expressions.
+The wordsatomandliteralareunderstoodhere asinpropositionallogic;we call
+the sign ¬ in a negative literal ¬A classical negation, to distinguish it from the
+symbol for negation as failure (not). Elementary formulas are literals and the 0-
+place connectives ⊥ and ⊤. Formulas are built fromelementary formulas using the
+unaryconnectivenot andthebinaryconnectives,(conjunction)and;(disjunction).
+A (nondisjunctive) rule is an expression of the form
+Head ←Body (3)
+where Head is a literal or ⊥, and Body is a formula.8 If Body = ⊤, we will drop
+both the body and the arrow separating it from the head; rules with the body ⊤
+are called facts. If Head = ⊥, we will drop the head; rules with the head ⊥ are
+called constraints.
+A (nondisjunctive logic) program is a set of rules.
+We define when a consistent set X of literals satisfies a formula F (symbolically,
+X |=F) recursively, as follows:
+• for elementary F, X |=F if F ∈X or F =⊤,
+• X |=not F if X 6|=F,
+• X |=(F,G) if X |=F and X |=G,
+• X |=(F;G) if X |=F or X |=G.
+A consistent set X of literals is closed under a program Π if, for every rule (3) in
+Π, Head ∈X whenever X |=Body.
+8 In (Lifschitzetal.1999), the syntax of rules is more general: the head may be an arbitrary
+formula,inparticularadisjunction.
+4 Esra Erdem and Vladimir Lifschitz
+Let Π be a programwithout negationas failure. We say that X is an answerset
+forΠifX isminimalamongtheconsistentsetsofliteralsclosedunderΠ.Itiseasy
+to see that there can be at most one such set. For instance, the answer set for the
+is {p}.
+The reduct ΠX of a programΠ relative to a set X of literals is obtained from Π
+by replacing every maximal occurrence of a formula of the form not F in Π (that
+is, every occurrence of not F that is not in the scope of another not) with ⊥ if
+X |= F, and with ⊤ otherwise.9 A consistent set X of literals is an answer set for
+Π if it is the answer set for the reduct ΠX. For instance, {p} is an answer set for
+program(1) since it is the answer set for the reduct (4) of (1) relative to {p}.
+We say that a formula (or a program) is normal if it does not contain classical
+negation. We will sometimes identify a normal formula F with the propositional
+formulaobtainedfromF byreplacingeverycommawith∧,everysemicolonwith∨,
+andeveryoccurrenceofnot with¬.Itiseasytoseethat,foranynormalformulaF
+andanysetX ofatoms,X |=F iffX satisfiesF inthe senseofpropositionallogic.
+3 Supported Sets and Completion
+This section is a review of supported sets and completion for the class of logic
+programs introduced above.
+We say that a set X of literals is supported by a program Π if for every literal
+L ∈ X there exists a rule (3) in Π such that Head = L and X |=Body.10 For
+instance, each of the sets {p}, {¬q} is supported by the program
+but their union is not. The set {p} is supported by program (1); {q} is not.
+We are interested in the relationship between the concept of an answer set on
+the one hand, and the conjunction of the closure and supportedness conditions on
+the other. According to the following proposition, every answer set is both closed
+under the program and supported by it.
+Proposition 1
+Forany programΠ and anyconsistentset X of literals,ifX is ananswersetfor Π
+then X is closed under and supported by Π.
+For instance, the answer sets for program (5) are {p} and {¬q}; each of them is
+9 This definition is equivalent to the recursive definition of the reduct given
+in(Lifschitzetal.1999).
+10 In (BaralandGelfond1994) and (Inoue andSakama1998) the definition of supportedness
+from(Aptetal.1988)isgeneralizedinadifferentdirection—itisextended todisjunctivepro-
+grams.
+Tight Logic Programs 5
+closedunder and supportedby (5).The answersets forprogram(1) are∅ and {p};
+each of them is closed under and supported by (1).
+The converse,in general,is not true. The easiest counterexample is the program
+consistingofonerulep←p.Theset{p}isclosedunderthisprogramandsupported
+by it, although it is not an answer set. Tightness, defined in Section 4 below, is a
+syntactic condition that eliminates programs like this.
+Let Π be a finite normal program. The “completion” of Π is the set of proposi-
+tionalformulasdefinedasfollows.IfAisanatomorthesymbol⊥,byComp(Π,A)
+we denote the propositional formula
+where the disjunction extends over all rules
+A←Body (7)
+in Π with the head A. The completion of Π is the set of formulas Comp(Π,A) for
+For instance, the bodies of rules (1), written as propositional formulas, are ¬¬p
+and p ∧ q; for this program Π, formulas (2) are Comp(Π,p) and Comp(Π,q).
+In addition to these two formulas, the completion of this program includes also
+Comp(Π,⊥), which is the tautology ⊥≡⊥.
+Inapplicationtofinitenormalprograms,theconjunctionofclosureandsupport-
+edness exactly corresponds to the program’s completion:
+Proposition 2
+For any finite normal program Π, a set of atoms satisfies the completion of Π iff it
+is closed under and supported by Π.
+From Propositions 1 and 2, we conclude:
+Corollary 1
+For any finite normalprogramΠ and any set X of atoms,if X is ananswer set for
+Π then X satisfies the completion of Π.
+4 Tight Programs
+To define the concept of a tight program, we need a few auxiliary definitions.
+RecallthatanoccurrenceofaformulaF inaformulaGissingularifthe symbol
+beforethisoccurrenceis¬;otherwise,theoccurrenceisregular(Lifschitz et al. 1999).
+It is clear that the occurrence of F can be singular only if F is an atom. For any
+formula G, by lit(G) we denote the set of all literals having regular occurrences in
+G.Forinstance,lit(p;not ¬r)={p,¬r}.ForanyformulaG,byposlit(G)wedenote
+the set of all literals having a regular occurrence in G that is not in the scope of
+negation as failure. For instance, poslit(p,not q,(not not r;¬s))={p,¬s}.
+11 This is essentially the definition from (LloydandTopor1984) restricted to the propositional
+case.Itisrestrictedtofiniteprogramstoavoidtheneedtouseaninfinitedisjunctionin(6).
+6 Esra Erdem and Vladimir Lifschitz
+For any program Π and any set X of literals, we say about literals L,L ∈ X
+that L is a parent of L relative to Π and X if there is a rule (3) in Π such that
+• X |=Body,
+• L∈poslit(Body), and
+• L =Head.
+For instance, the parents of p relative to the program
+q ←not p (8)
+andthe set{p,q,r}arep andr; onthe other hand, phas no parentsrelativeto (8)
+and the set {p,q}.
+Now we are ready to give the main definition of this paper:
+AprogramΠistightonasetX ofliteralsifthereisnoinfinitesequenceL1,L2,...
+of elements of X such that for every i, L i+1 is a parent of L i relative to Π and X.
+In other words, Π is tight on a set X iff the parent relation relative to Π and X
+is well-founded.12
+If X is finite then the tightness condition can be reformulated as follows: there
+is no finite sequence L1,...,L
+of elements of X (n > 1) such that for every i
+(1≤i<n), L i+1 is a parent of L i relative to Π and X, and L n =L1.
+For instance, program(1) is tight on {p}: p does not haveparents relative to (1)
+and {p}, so that the parent relation relative to (1) and {p} is well-founded. But
+that program is not tight on {p,q}. Indeed, p and q are the parents of p relative
+to (1) and {p,q}, so that in the sequence p,p,... every element is followed by its
+parent.
+The proposition below gives an equivalent characterizationof tightness:
+Proposition 3
+A program Π is tight on a set X of literals iff there exists a function λ from X to
+ordinals satisfying the following condition:
+(*) for every rule (3) in Π such that Head ∈ X and X |= Body, and for every L
+For instance, to show that program(1) is tight on{p},we can take λ(p)=0. To
+show that program
+p←q;not r (9)
+IfX isfinitethenthevaluesofλinthestatementofProposition3canbeassumed
+to be finite.
+Proposition 3 is a special case of the following general fact:
+12 AbinaryrelationRiswell-foundedifthereisnoinfinitesequence x1,x2,...of elements of its
+domainsuchthat, foralli,xi+1Rxi.
+Tight Logic Programs 7
+Lemma from Set Theory
+A binary relation R is well-founded iff there exists a function λ from the domain
+of R to ordinals such that, for all x and y, xRy implies λ(x)<λ(y).
+To compare the definition of tightness above with the definition given earlier
+in (Babovich et al. 2000), assume that the rules of Π have the form
+Head ←L1,...,L
+,not L m+1,...,not L
+where each L is a literal. In this case,condition (*) says: for every rule (10) in Π,
+Head ∈X, (11)
+L m+1,...,L
+then,forallL∈X∩{L1,...,L
+},λ(L)<λ(Head).Inviewof(12),theintersection
+X∩{L1,...,L
+}herecanbereplacedby{L1,...,L
+}.Theonlydifferencebetween
+thisformofcondition(*)andthecorrespondingconditionin(Babovich et al. 2000)
+isthepresenceofrestriction(13).Theadditionalgeneralitygainedbyincluding(13)
+can be illustrated by the program
+—itistighton{p,q}inthesenseofthispaper,butnotinthesenseof(Babovich et al. 2000).
+5 Absolutely Tight Programs
+The following modification of the tightness condition is often useful. A programΠ
+is absolutely tight if there is no infinite sequence L1,L2,... of literals such that for
+every i there is a rule (3) in Π for which L i+1 ∈poslit(Body) and L i =Head. It is
+clear that an absolutely tight programis tight on any set of literals.
+Toprovethata programΠ is absolutelytight,it is sufficientto find afunction λ
+from literals to ordinals such that for every rule (3) in Π with Head 6= ⊥ and for
+every literal L∈poslit(Body), λ(L)<λ(Body).
+Fora programcontainingfinitely many atoms,absolute tightness canbe charac-
+terized as follows. The positive dependency graph of a program Π is the directed
+graph G such that
+• the vertices of G are the literals that have regular occurrences in Π, and
+• GhasanedgefromLtoL ifthereisarule(3)inΠforwhichL∈poslit(Body)
+and L =Head.
+Aprogramcontainingfinitely manyatomsis absolutely tightiffits positivedepen-
+dency graph has no cycles.
+Inapplicationtoprogramswhoseruleshavetheform(10)andcontainneither⊥
+8 Esra Erdem and Vladimir Lifschitz
+nor classical negation, the definition of absolute tightness above turns into (the
+propositional case of) Fages’ original definition of tightness (Fages 1994).
+6 Generalization of Fages’ Theorem
+For any programΠ and any consistent set X of literals such that Π is tight on X,
+X is an answer set for Π iff X is closed under and supported by Π.
+Forinstance,program(5)istightonthesets{p}and{¬q}thatareclosedunder
+andsupported by (5). By Proposition1 and the theoremabove,it follows that {p}
+and {¬q} are the answer sets for (5).
+By Proposition 2, we conclude:
+Corollary 2
+ForanyfinitenormalprogramΠandanysetX ofatomssuchthatΠistightonX,
+X is an answer set for Π iff X satisfies the completion of Π.
+For instance, program (1) is tight on the models ∅, {p} of its completion (2). In
+accordance with Proposition 1 and Corollary 2, these two models are the answer
+sets for (1).
+By pos(Π) we denote the set of literals L such that Π contains a rule (3) with
+Head 6= ⊥ and L ∈ poslit(Body). For instance, if Π is (1) then pos(Π) = {p,q}. If
+a set X of literals is disjoint from pos(Π) then no literal in X has a parent relative
+to Π and X, and consequently Π is tight on X. We conclude:
+Corollary 3
+For any program Π and any consistent set X of literals disjoint from pos(Π), X is
+an answer set for Π iff X is closed under and supported by Π.
+By Proposition 2, it follows then:
+Corollary 4
+For any finite normal program Π and any set X of atoms disjoint from pos(Π), X
+is an answer set for Π iff X satisfies the completion of Π.
+Since an absolutely tight program is tight on every set of literals, we conclude
+from Theorem 1 and Corollary 2:
+Corollary 5
+For any absolutely tight program Π and any consistent set X of literals, X is an
+answer set for Π iff X is closed under and supported by Π.
+Corollary 6
+For any finite normalabsolutely tight programΠ and any set X of atoms, X is an
+answer set for Π iff X satisfies the completion of Π.
+Tight Logic Programs 9
+number(1..n).
+1{queen(R,C) : number(R)}1 :- number(C).
+:- queen(R,C), queen(R,C1), number(R;C;C1), C < C1.
+:- queen(R,C), queen(R1,C1), number(R;C;R1;C1),
+C < C1, abs(R-R1) == abs(C-C1).
+Fig. 1. An smodels representation of the n-queens problem.
+7 Example: The N-Queens Problem
+Inthe n-queensproblem,thegoalisto findaconfigurationofnqueensonann×n
+chessboard such that no queen can be taken by any other queen. In other words,
+(a) no two queens may be on the same column, (b) no two queens may be on the
+same row, and (c) no two queens may be on the same diagonal.
+Asolutiontothen-queensproblemcanbedescribedbyasetofatomsoftheform
+queen(R,C) (1≤R,C ≤n) satisfying conditions (a)–(c); including queen(R,C) in
+the set indicates that there is a queen in position (R,C).
+The n-queens problem can be described by a programwhose answer sets are so-
+lutions,asfollows.The selections satisfyingcondition(a)correspondtothe answer
+sets for the program consisting of the rules
+queen(R,C)←not not queen(R,C) (14)
+for all R,C in {1,...,n},
+←not queen(1,C),...,not queen(n,C) (15)
+for all C in {1,...,n}, and
+←queen(R,C),queen(R1,C) (16)
+for all R,R1,C in {1,...,n} such that R < R1. Conditions (b) and (c) are repre-
+sented by the constraints
+←queen(R,C),queen(R,C1) (17)
+for all R,C,C1 in {1,...,n} such that C <C1 and
+←queen(R,C),queen(R1,C1) (18)
+for all R,R1,C,C1 in {1,...,n} such that C <C1 and |R−R1|=|C−C1|.
+Theanswersetsforprogram(14)–(18)areina1–1correspondencewiththepossi-
+blearrangementsofnqueens.Accordingto(Ferraris and Lifschitz 2003),rules(14)–
+(16) can be rewritten as weight constraints
+1{queen(1,C),...,queen(n,C)}1 (19)
+for all C in {1,...,n} Then the program can be presented to smodels as shown
+in Figure 1.
+Program (14)–(18) is a finite normal absolutely tight program. By Corollary 6,
+10 Esra Erdem and Vladimir Lifschitz
+itsanswersetsareidenticaltothemodelsofitscompletion.(Notetheuseofnested
+negations in rule (14); this is the reason why the new generalization of Fages’
+theorem is needed here.) This fact can be used to find solutions to the n-queens
+problem using cmodels, that is to say, by running a satisfiability solver on the
+program’scompletion.cmodels transformsthe inputshowninFigure1into(14)–
+(18), computes the completion, clausifies it, andcalls mchaff to find a model. For
+n=20cmodelsfinds asolutionin2 seconds(forcomparison,smodels,giventhe
+same input file, finds one in 55 seconds).13 For n = 25, cmodels finds a solution
+in 3 seconds, whereas smodels requires more than 2 hours.
+This example confirms the conjecture underlying the design of cmodels: using
+satisfiability solvers to compute answer sets for tight programs may be computa-
+tionally advantageous. Systematic experimental evaluation of this form of answer
+set programming is a topic for future research.
+8 Transitive Closure
+In logic programming, the transitive closure tc of a binary predicate p is usually
+defined by the rules
+IfwecombinethisdefinitionDef withanysetΠoffactsdefiningp,andconsiderthe
+minimal model of the resulting program, the extent of tc in this model will be the
+transitive closure of the extent of p. In this sense, Def is a correctcharacterization
+of the concept of transitive closure. We know, on the other hand, that the sets of
+atoms closed under and supported by Π∪Def may be different from the minimal
+model.Inthese “spurious”setsofatoms,tc is weakerthanthe transitiveclosureof
+p. The absence of such “spurious” sets can be assured by requiring that facts in Π
+define relation p to be acyclic.
+In this section we study the more general situation when Π is a logic program,
+notnecessarilyasetoffacts.This programmaydefineseveralpredicatesbesides p.
+Even tc is allowed to occur in Π, except that all occurrences of this predicate are
+supposed to be in the bodies of rules, so that all rules defining tc in Π∪Def will
+belongto Def.TherulesofΠmayinclude negationasfailure,and,accordingly,we
+talk about answer sets instead of the minimal model. Program Π∪Def may have
+many answer sets. According to Proposition 4 below, the extent of tc in each of
+these sets is the transitive closure of the extent of p in the same set.
+Recall that programs in the sense of Section 2 are propositional objects; there
+are no variables in them. Expressions containing variables, such as Def, can be
+treated as schematic: we select a non-empty set C of symbols (“object constants”)
+and view an expression with variables as shorthand for the set of all its ground
+instances obtained by substituting these symbols for variables. It is convenient,
+13 Wehaveusedlparse1.0.11,smodels2.27,cmodels1.03,andmchaffspelt3.AllCPUtimes
+hereareforaSunBlade1000,withtwo600MHzUltraSPARC-IIIprocessorsand5GBRAM.
+Tight Logic Programs 11
+however, to be a little more general. We assume p and tc to be functions from
+C ×C to the set of atoms such that all atoms p(x,y) and tc(x,y) are pairwise
+distinct.
+Proposition 4
+Let Π be a program that does not contain atoms of the form tc(x,y) in the heads
+of rules. If X is an answer set for Π∪Def then
+is the transitive closure of
+If atoms of the form tc(x,y) do not occur in Π at all then the answer sets for
+Π∪Def are actually in a 1-1 correspondence with the answer sets for Π.14 The
+answersetfor Π∪Def correspondingto ananswerset X for Πis obtainedfromX
+by adding a set of atoms of the form tc(x,y).
+Under what conditions can we assert that the consistent sets of literals closed
+underandsupportedbyaprogramcontainingDef arenot“spurious”?Asweknow
+fromTheorem1,suchaconditionisprovidedbythe tightnessofthe program.The
+verificationofthetightnessofprogramscontainingDef isfacilitatedbythetheorem
+below,whichtellsusthatinsomecasesthetightnessofaprogramispreservedafter
+adding Def to it.
+ForanyprogramΠandanysetX ofliterals,wesayaboutliteralsL,L ∈X that
+L isanancestorofLrelativeto ΠandX ifthereexistsafinite sequenceofliterals
+∈ X (n > 1) such that L = L1, L = L
+and for every i (1 ≤ i < n),
+L i+1 is a parentof L i relative to Π and X. In other words,the ancestor relation is
+the transitive closure of the parent relation.
+Let Π be a program that does not contain atoms of the form tc(x,y) in the heads
+of rules. For any set X of literals, if
+(i) Π is tight on X,
+(ii) {hx,yi: p(y,x)∈X} is well-founded, and
+(iii) noatomoftheformtc(x,y)isanancestorofanatomoftheformp(x,y)
+relative to Π and X,
+then Π∪Def is tight on X.
+By Theorem 1 and Proposition 4, we conclude:
+Corollary 7
+Let Π be a program that does not contain atoms of the form tc(x,y) in the heads
+ofrules,andletX beasetofliteralssatisfyingconditions(i)–(iii)fromTheorem2.
+If, in addition,
+14 ThisobservationisduetoHudsonTurner(personalcommunication, October 3,2000).
+12 Esra Erdem and Vladimir Lifschitz
+(iv) X is a consistent set closed under and supported by Π∪Def
+then X is an answer set for Π∪Def, and
+{hx,yi:tc(x,y)∈X}
+is the transitive closure of
+{hx,yi:p(x,y)∈X}.
+Proposition2showsthatifX isasetofatomsandΠisafinite programwithout
+classical negation then condition (iv) can be reformulated as follows:
+(iv) X is a model of the completion of Π∪Def.
+Condition(ii)inthe statementofTheorem2is similartothe acyclicityproperty
+mentioned at the beginning of this section. In fact, if the underlying set C of
+constants is finite then (ii) is obviously equivalent to the following condition: there
+is no finite sequence x1,...,x
+∈C (n>1) such that
+p(x1,x2),...,p(x n−1,x
+= x1. For an infinite C, well-foundedness implies acyclicity, but not the
+other way around.
+Here is a useful syntactic sufficient condition for (ii):
+Proposition 5
+If Π contains constraint
+and C is finite then, for every set X of literals closed under Π∪Def, set {hx,yi :
+p(y,x)∈X} is well-founded.
+Withoutcondition(ii),theassertionofthetheoremwouldbeincorrect.Program
+Π that consists of one fact p(1,1), with C ={1,2} and
+provides a counterexample.
+Condition (iii) is essential as well. Indeed, take Π to be
+With C = {1,2}, set X = {p(2,1),tc(2,1)} is closed under and supported by Π∪
+Def, but is is not an answer set for Π∪Def: the only answer set for this program
+is empty.
+9 Example: The Blocks World
+AsanexampleoftheuseofTheorem2,considera“historyprogram”fortheblocks
+world—a program whose answer sets represent possible “histories”of the blocks
+world over a fixed time interval. A history of the blocks world is characterized by
+thetruthvaluesofatomsoftwokinds:on(b,l,t)(“blockbisonlocationlattimet”)
+and move(b,l,t)(“block b is moved to location l between times t and t+1”). Here
+Tight Logic Programs 13
+• b ranges over a finite set of “block constants,”
+• l rangesoverthe setoflocationconstantsthatconsistsofthe blockconstants
+and the constant table,
+• t rangesoverthe symbolsrepresentinganinitialsegmentofintegers0,...,T,
+except that in move(b,l,t) we require t < T. One other kind of atoms used in the
+program is above(b,l,t): “block b is above location l at time t”. These atoms are
+used to express constraint (32) that requires every block to be “supported by the
+table” and thus eliminates stacks of blocks flying in space.
+The program consists of the following rules:15
+on(b,l,0)←not ¬on(b,l,0)
+¬on(b,l,0)←not on(b,l,0)
+move(b,l,t)←not ¬move(b,l,t)
+¬move(b,l,t)←not move(b,l,t)
+on(b,l,t+1)←move(b,l,t)
+on(b,l,t+1)←on(b,l,t),not ¬on(b,l,t+1)
+←on(b,b ,t),on(b,b ,t) (b6=b) (27)
+←move(b,l,t),on(b,b,t) (28)
+←move(b,l,t),move(b,l,t) (b6=b or l6=l) (29)
+above(b,l,t)←on(b,l,t)
+above(b,l,t)←on(b,b,t),above(b,l,t)
+←above(b,b,t) (31)
+←not above(b,table,t) (32)
+To illustrate the use of Theorem2, in Section 10 we use it to provethe following
+proposition:
+Proposition 6
+Program(24)–(32) is tight on every set of literals that is closed under it.
+This proposition, in combination with Proposition 1 and Theorem 1, tells us
+that the answer sets for (24)–(32) can be characterized as the sets that are closed
+under this program and supported by it. These answer sets can be computed by
+eliminating classical negation in favor of new atoms and generating models of the
+completion of the resulting program.
+15 This program is similar to the history program for the blocks world from (Lifschitz1999).
+Instead of rules(24),the programinthatpaper contains apairofdisjunctive rules;according
+to Theorem 1 from (ErdemandLifschitz1999), this difference does not affect the program’s
+answersets.Theintuitivemeaningofrules(25)–(28)isdiscussedin(Lifschitz1999),Section6.
+Rule (29) prohibits concurrent actions. Rules (30) and (31) were suggested to us by Norman
+McCain and Hudson Turner on June 11, 1999; similar rules are discussed in (Lifschitz1999),
+Section8.
+14 Esra Erdem and Vladimir Lifschitz
+The idea of the proofis to check firstthat program(24)–(29), (31), (32) is tight,
+and then use Theorem 2 to conclude that tightness is preserved when we add the
+definition (30) of above. There are two complications, however, that need to be
+taken into account.
+First, on and above are ternary predicates, not binary. To relate them to the
+concept of transitive closure, we can say that any binary “slice” of above obtained
+by fixing its last argument is the transitive closure of the corresponding “slice” of
+on.Accordingly,Theorem2willneedtobe appliedT+1times,onceforeachslice.
+Second,thefirsttwoargumentsofon donotcomefromthesamesetC ofobject
+constants, as required in the framework of Theorem 2: the set of block constants
+is a proper part of the set of location constants. In the proof, we will introduce
+a program similar to (24)–(32) in which, syntactically, table is allowed as the first
+argument of both on and above.
+Given a formula F without negation as failure and two sets Z,Z of literals such
+that Z ⊆Z, if Z |=F then Z |=F.
+Immediate by structural induction.
+The following lemma is the special case of Proposition 1 in which Π is assumed
+to be a program without negation as failure.
+ForanyprogramΠwithoutnegationasfailureandanyconsistentsetX ofliterals,
+if X is an answer set for Π then X is closed under and supported by Π.
+Let Π be a program without negation as failure and X be an answer set for Π.
+By the definition of an answer set for programs without negation as failure, X is
+closedunderΠ.Toprovesupportedness,takeanyliteralLinX.SinceX isminimal
+among the sets closed under Π, X\{L} is not closed under Π. This means that Π
+contains a rule (3) such that X \{L}|= Body but Head 6∈X \{L}. By Lemma 1,
+X |=Body.SinceX isclosedunderΠ,itfollowsthatHead ∈X,sothatHead =L.
+The definition of the reduct FX of a formula F is similar to the definition of the
+reduct of a programgiven in Section 2.
+For any formula F, any programΠ, and any consistent set X of literals,
+(i) X |=F iff X |=FX;
+(ii) X is closed under Π iff X is closed under ΠX;
+(iii) X is supported by Π iff X is supported by ΠX.
+Tight Logic Programs 15
+Part (i) is immediate by structural induction; parts (ii) and (iii) follow from (i).
+Proof of Proposition 1 (Section 3)
+Consider a program Π and an answer set X for Π. By the definition of an answer
+set,X isananswersetforΠX.Then,byLemma2,X isclosedunderandsupported
+by ΠX. By Lemma 3(ii,iii), it follows that X is closed under and supported by Π.
+Proof of Proposition 2 (Section 3)
+Let Π be a finite normal program. Recall that the completion of Π consists of the
+equivalences (6) where A is an atom or the symbol ⊥. It is clear that a set X of
+atoms satisfies the completion of Π iff, for each A,
+(a) for every rule (7) in Π with the head A, if X |=Body then A∈X, and
+(b) if A∈X then X |=Body for some rule (7) in Π with the head A.
+Condition(a) expressesthat X is closedunder Π, and condition(b) expressesthat
+X is supported by Π.
+Proof of Lemma from Set Theory (Section 4)
+The “if” part follows from the well-foundedness of < on sets of ordinals. To prove
+the “only if” part, consider the following transfinite sequence of subsets of the
+domain of R:
+S =S S if α is a limit ordinal.
+For any x ∈ S S , define λ(x) to be the smallest α such that x ∈ S . From the
+well-foundedness of R we can conclude that S S is the whole domain of R.
+For any formula F and any set X of literals, X |=F iff X ∩lit(F)|=F.
+Immediate by structural induction.
+The following lemma is the special case of one half of Theorem 1 in which Π is
+assumed to be a program without negation as failure.
+LetΠbeaprogramwithoutnegationasfailure.ForanyconsistentsetX ofliterals
+such that Π is tight on X, if X is closed under and supported by Π then X is an
+answer set for Π.
+16 Esra Erdem and Vladimir Lifschitz
+LetΠbeaprogramwithoutnegationasfailureandX beaconsistentsetofliterals
+suchthatΠis tightonX.Suppose thatX isclosedunderandsupportedby Π.By
+the definition of an answer set for programs without negation as failure, we need
+to show that no proper subset of X is closed under Π. Let Y be a proper subset
+of X. Note first that there exists a literal L in X \Y that does not have a parent
+in X\Y relative to Π and X. Indeed, assume that there is no such literal, so that
+everyliteralinX\Y has aparentrelativeto ΠandX inthis set;thenthere exists
+an infinite sequence L1,L2,... of elements of X \Y such that L i+1 is a parent of
+L , which contradicts the assumption that Π is tight on X.
+Take such a literal L. Since X is supported by Π, there is a rule
+in Π such that
+X |=Body. (33)
+Bythedefinitionoftheparentrelation,theelementsofX∩poslit(Body)areparents
+of L relative to Π and X. By the choice of L, no parent of L relative to Π and X
+belongs to X \Y, so that X ∩poslit(Body) is disjoint from X \Y. Consequently,
+X ∩poslit(Body) ⊆ Y. Since Π does not contain negation as failure, lit(Body) =
+poslit(Body), so that
+X ∩lit(Body)⊆Y. (34)
+By Lemma 4, we can conclude from (33) that
+X∩lit(Body)|=Body.
+Inview of(34),itfollowsby Lemma 1that Y |=Body.Since L∈/ Y,itfollowsthat
+Y is not closed under Π.
+For any programΠ and any consistent set X of literals, if Π is tight on X then so
+is ΠX.
+Let Π be a program and X be a consistent set of literals. Suppose that ΠX is not
+tightonX;wewanttoshowthatΠisnottightonX.Itisclearfromthedefinition
+of reduct of a program that every rule of ΠX has the form
+Head ←BodyX (35)
+forsomerule(3)inΠ.Thenthereisaninfinite sequenceL1,L2,...inX suchthat,
+for every i, there is a rule (35) in ΠX with L i = Head, L i+1 ∈ poslit(BodyX)∩X
+and X |=BodyX.
+By Lemma 3(i), X |= BodyX iff X |=Body. From the definition of the reduct,
+poslit(BodyX)⊆poslit(Body). Therefore, there is an infinite sequence L1,L2,...
+in X such that, for every i, there is a rule (3) in Π with L i = Head, L i+1 ∈
+poslit(Body)∩X and X |= Body. This contradicts the assumption that Π is tight
+on X.
+Tight Logic Programs 17
+Proof of Theorem 1 (Section 6)
+Consider a programΠ and a consistent set X of literals such that Π is tight on X.
+Assume that X is closed under and supported by Π. Then, by Lemma 3(ii,iii), X
+is closed under and supported by ΠX. By Lemma 6, ΠX is tight on X. Hence, by
+Lemma5, X is ananswersetfor ΠX, andconsequentlyananswerset forΠ. Inthe
+other direction, the assertion of the theorem follows from Proposition 1.
+Proof of Proposition 4 (Section 8)
+We will first provethe specialcase when Π doesn’t containnegationas failure.Let
+X be ananswerset for Π∪Def; denote set (21) by R, and its transitive closure by
+R . We need to prove that for all x and y, tc(x,y)∈X iff hx,yi∈R .
+Left-to right. Since there is no negation as failure in Π, X can be characterized
+as the union S
+of the sequence of sets of literals defined as follows: X0 = ∅;
+X i+1 is the set of all literals L such that Π∪Def contains a rule L ← Body with
+Body satisfied by X . We will show by induction on i that tc(x,y) ∈ X implies
+hx,yi ∈ R . If i = 0, the assertion is trivial because X0 is empty. Assume that
+for all x and y, tc(x,y) ∈ X implies hx,yi ∈ R , and take an atom tc(x,y) from
+X i+1.Takearuletc(x,y)←Body inΠ∪Def suchthatX
+|=Body.SinceΠdoesn’t
+contain atoms of the form tc(x,y) in the heads of rules, this rule belongs to Def.
+Case 1: Body = p(x,y). Then p(x,y)∈ X ⊆ X, so that hx,yi ∈R ⊆ R . Case 2:
+Body = p(x,v),tc(v,y). Then p(x,v) ∈ X ⊆ X, so that hx,vi ∈ R ⊆ R ; also,
+tc(v,y)∈X ,sothat,bythe inductionhypothesis,hv,yi∈R .Bythetransitivity
+of R , it follows that hx,yi∈R .
+Right-to-left.SinceR ∞ =S Rj,itissufficienttoprovethatforallj >0,hx,yi∈
+Rj implies tc(x,y)∈X.The proofisby inductiononj.Whenj =1, hx,yi∈R,so
+thatp(x,y)∈X;since X is closedunder Def,it follows that tc(x,y)∈X.Assume
+that for all x and y, hx,yi ∈ Rj implies tc(x,y) ∈ X, and take a pair hx,yi from
+Rj+1. Take v such that hx,vi∈R and hv,yi ∈ Rj. Then p(x,v) ∈ X and, by the
+induction hypothesis, tc(v,y) ∈ X. Since X is closed under Def, it follows that
+tc(x,y)∈X.
+We have provedthe assertionof Proposition4 for programswithout negation as
+failure.Nowlet Πbe anyprogramthatdoes notcontainatomsofthe formtc(x,y)
+in heads of rules, and let X be an answer set for Π∪Def. Clearly, the reduct ΠX
+is a program without negation as failure that does not contain atoms of the form
+tc(x,y) in the heads of rules, and X is an answer set for ΠX ∪Def. By the special
+case of the theorem proved above, applied to ΠX, (20) is the transitive closure of
+(21).
+Proof of Theorem 2 (Section 8)
+Assume (i)–(iii), and assume that Π∪Def is not tight on X. Then there exists an
+infinite sequence L1,L2,... of elements of X suchthat for everyi, L i+1 is a parent
+of L relative to Π∪Def and X. Consider two cases.
+Case 1: Sequence L1,L2,... contains only a finite number of terms of the form
+18 Esra Erdem and Vladimir Lifschitz
+tc(x,y). Let L n be the last of them. Then for every i > n, L i+1 is a parent of
+relative to Π and X. Sequence L n+1,L n+2,... shows that Π is not tight on X,
+contrary to (i).
+Case2: Sequence L1,L2,... containsinfinitely many terms ofthe formtc(x,y). By
+(iii),itfollowsthatthissequencehasnotermsoftheformp(x,y).Theexamination
+ofrulesDef showsthateverytc(x,y) inthis sequence isimmediately followedbya
+term of the form tc(v,y) such that p(x,v)∈X. Consequently, sequence L1,L2,...
+consists of some initial segment followed by an infinite sequence of literals of the
+tc(v0,y),tc(v1,y),...
+such that, for every i, p(v
+,v i+1)∈X. This is impossible by (ii).
+Proof of Proposition 5 (Section 8)
+Let Π be a program containing constraint (23), with finite C, and let X be a set
+of literals closed under Π∪Def. Assume that {hx,yi : p(y,x) ∈ X} is not well-
+founded. Take x1,...,x
+∈ C that satisfy (22) and x
+= x1. Since X is closed
+under Def, tc(x1,x1)∈X. But this is impossible because X is closed under (23).
+Proof of Proposition 6 (Section 9)
+Let Π be the program that differs from (24)–(32) in that
+• its underlying set of atoms includes, additionally, expressions of the forms
+on(table,l,t) and above(table,l,t), and
+• rules (30) and (31) are replaced by
+above(l,l,t)←on(l,l,t)
+above(l,l,t)←on(l,l ,t),above(l ,l,t)
+←above(l,l,t). (37)
+Let X be a set of literals that does not contain any of the newly introduced atoms
+ortheirnegationsandisclosedundertheoriginalprogram(24)–(32).Wewillprove
+that Π is tight on X. It will follow then that the originalprogramis tight on X as
+well, because that program is a subset of Π.
+For every k = 0,...,T + 1, let Π be the subset of the rules of Π in which
+rules (36) are restricted to t<k. Since Π T+1 =Π, it is sufficient to prove that, for
+all k, Π is tight on X. The proof is by induction on k. Basis: k = 0. The rules of
+Π0 are (24)–(29), (32) and (37). To see that this program is tight, define
+Inductionstep:AssumethatΠ istightonX.LetC bethesetoflocationconstants,
+Tight Logic Programs 19
+and let functions p and tc be defined by
+p(l,l)=on(l,l,k),
+tc(l,l)=above(l,l,k).
+ThenΠ k+1 =Π k ∪Def.LetuscheckthatallconditionsofTheorem2aresatisfied.
+Condition(i)holdsbytheinductionhypothesis.SinceX isclosedundertheoriginal
+program (24)–(32) and does not contain any of the newly introduced literals, it is
+closed under Π k+1 as well; in view of the fact that Π k+1 contains constraint (37),
+condition(ii)followsbyProposition5.Byinspection,(iii)holdsalso.ByTheorem2,
+it follows that Π k+1 is tight on X.
+11 Conclusion
+For absolutely tight logic programs, the answer set semantics is equivalent to the
+completionsemantics.Answersetsforafinitenormalabsolutelytightprogramcan
+be found by running a satisfiability solver on the program’s completion. Defining
+tightnessrelativetoasetofliteralsextendstheapplicabilityofthismethodtosome
+programs that are not absolutely tight. This method of computing answer sets is
+applicable to rules with nested expressions and with weight constraints.
+Althoughthismethodisnotdirectlyapplicabletodisjunctiveprograms,disjunc-
+tionintheheadofarulecanbesometimeseliminatedinfavorofnestedexpressions
+initsbody(Lifschitz et al. 1999),(Lifschitz 2002).Forinstance,thedisjunctiverule
+p;not q ←r
+in any program can be replaced by
+p←r,not not q
+without changing the program’s answer sets.
+Acknowledgments
+We are gratefulto Yuliya Babovich,Selim Erdo˘gan,PaoloFerraris, Joohyung Lee,
+Victor Marek, Norman McCain and Emilio Remolina for comments and discus-
+sions related to the subject of this paper. Special thanks to Hudson Turner for
+many useful suggestions, including the use of poslit in the definition of tightness
+instead of the more complicated condition from (Erdem and Lifschitz 2001a), and
+the possibility of restriction (13) from Section 4.
+This work was partially supported by National Science Foundation under grant
+IIS-9732744 and by the Texas Higher Education Coordinating Board under grant
+003658-0322-2001.The firstauthorwasalsosupportedby a NATO Science Fellow-
+ship.

@@ -1,0 +1,923 @@
+The Informed Sampler:
+A Discriminative Approach to Bayesian Inference in
+Generative Computer Vision Models
+VarunJampani VARUN.JAMPANI@TUEBINGEN.MPG.DE
+MaxPlanckInstituteforIntelligentSystems,Spemannstraße41,72076,Tu¨bingen,Germany
+SebastianNowozin SEBASTIAN.NOWOZIN@MICROSOFT.COM
+MicrosoftResearchCambridge,21StationRoad,Cambridge,CB12FB,UnitedKingdom
+MatthewLoper MLOPER@TUEBINGEN.MPG.DE
+MaxPlanckInstituteforIntelligentSystems,Spemannstraße41,72076,Tu¨bingen,Germany
+PeterV.Gehler PGEHLER@TUEBINGEN.MPG.DE
+MaxPlanckInstituteforIntelligentSystems,Spemannstraße41,72076,Tu¨bingen,Germany
+Abstract 1.Introduction
+Aconceptuallyelegantviewoncomputervisionistocon-
+Computervisionishardbecauseofalargevari- sideragenerativemodelofthephysicalimageformation
+abilityinlighting,shape,andtexture;inaddition process. The observed image becomes a function of un-
+theimagesignalisnon-additiveduetoocclusion. observed variables of interest (for example presence and
+Generativemodelspromisedtoaccountforthis positionsofobjects)andnuisancevariables(forexample
+variabilitybyaccuratelymodellingtheimagefor- lightsources,shadows). Whenbuildingsuchagenerative
+mation process as a function of latent variables model,wecanthinkofascenedescriptionθthatproduces
+withpriorbeliefs. Bayesianposteriorinference an image I = G(θ) using a deterministic rendering en-
+couldthen,inprinciple,explaintheobservation. gine G, or more generally, results in a distribution over
+Whileintuitivelyappealing,generativemodelsfor images,p(I|θ). GivenanimageobservationIˆandaprior
+computervisionhavelargelyfailedtodeliveron overscenesp(θ)wecanthenperformBayesianinference
+thatpromiseduetothedifficultyofposteriorin- toobtainupdatedbeliefsp(θ|Iˆ). Thisviewwasadvocated
+ference. Asaresultthecommunityhasfavoured sincethelate1970’ies(Horn,1977;Grenander,1976;Zhu
+efficientdiscriminativeapproaches. Westillbe- andMumford,1997;MumfordandDesolneux,2010;Mans-
+lieve in the usefulness of generative models in inghkaetal.,2013;YuilleandKersten,2006).
+computervision,butarguethatweneedtolever-
+Now, 30 years later, we would argue that the generative
+ageexistingdiscriminativeorevenheuristiccom-
+approachhaslargelyfailedtodeliveronitspromise. The
+putervisionmethods. Weimplementthisideain
+fewsuccessesoftheideahavebeeninlimitedsettings. In
+aprincipledwaywithaninformedsampler and
+thesuccessfulexamples, eitherthegenerativemodelwas
+incarefulexperimentsdemonstrateitonchalleng-
+restricted to few high-level latent variables, e.g. (Oliver
+inggenerativemodelswhichcontainrendererpro-
+et al., 2000), or restricted to a set of image transforma-
+gramsastheircomponents.Weconcentrateonthe
+tions in a fixed reference frame, e.g. (Black et al., 2000),
+problemofinvertinganexistinggraphicsrender-
+or it modelled only a limited aspect such as object shape
+ingengine,anapproachthatcanbeunderstoodas
+masks(Eslamietal.,2012),or,intheworstcase,thegen-
+“InverseGraphics”. Theinformedsampler,using
+erative model was merely used to generate training data
+simplediscriminativeproposalsbasedonexisting
+foradiscriminativemodel(Shottonetal.,2011). Withall
+computervisiontechnology,achievessignificant
+its intuitive appeal, its beauty and simplicity, it is fair to
+improvementsofinference.
+saythatthetrackrecordofgenerativemodelsincomputer
+visionispoor. Asaresult,thefieldofcomputervisionis
+nowdominatedbyefficientbutdata-hungrydiscriminative
+models,theuseofempiricalriskminimizationforlearning,
+andenergyminimizationonheuristicobjectivefunctions
+Copyright2015bytheauthor(s).
+3v9580.2041:viXra
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+andisnottailoredtoaparticularapplication.
+Duringsampling,theinformedsamplerleveragescomputer
+vision features and algorithms to make informed propos-
+alsforthestateoflatentvariablesandtheseproposalsare
+accepted or rejected based on the generative model. The
+informedsamplerissimpleandeasytoimplement,butit
+Figure1.Anexample“inversegraphics”problem.Agraphicsen- enables inference in generative models that were out of
+ginerendersa3Dbodymeshandadepthimageusinganartificial reach for current uninformed samplers. We demonstrate
+camera. ByInverseGraphicswerefertotheprocessofestimat-
+thisclaimonchallengingmodelsthatincorporaterendering
+ingtheposteriorprobabilityoverpossiblebodiesgiventhedepth
+engines,objectocclusion,ill-posedness,andmulti-modality.
+image.
+Wecarefullyassessconvergencestatisticsforthesamplers
+toinvestigatetheirtruthfulnessabouttheprobabilisticesti-
+mates. Inourexperimentsweuseexistingcomputervision
+technology: ourinformedsamplerusesstandardhistogram-
+forinference.
+of-gradientsfeatures(HoG)(DalalandTriggs,2005),and
+Whydidgenerativemodelsnotsucceed? Therearetwokey theOpenCVlibrary,(BradskiandKaehler,2008),topro-
+problemsthatneedtobeaddressed,thedesignofanaccu- duceinformedproposals. Likewiseoneofourmodelsisan
+rategenerativemodel,andtheinferencetherein. Modern existingcomputervisionmodel,theBlendSCAPEmodel,a
+computergraphicsystemsthatleveragededicatedhardware parametricmodelofhumanbodies(Hirshbergetal.,2012).
+setupsproduceastunninglevelofrealismwithhighframe In Section2, we discuss relatedwork and explainour in-
+rates. Webelievethatthesesystemswillfinditswayinthe formedsamplerapproachinSection3. Section4presents
+designofgenerativemodelsandwillopenupexcitingmod- baselinemethodsandexperimentalsetup. Thenwepresent
+ellingopportunities.Thisobservationmotivatestheresearch experimental analysis of informed sampler with three di-
+questionofthispaper,thedesignofageneralinferencetech- verseproblemsofestimatingcameraextrinsics(Section5),
+niqueforefficientposteriorinferenceinaccuratecomputer occlusionreasoning(Section6)andestimatingbodyshape
+graphics systems. As such it can be understood as an in- (Section7). Weconcludewithadiscussionoffuturework
+stanceofInverseGraphics(Baumgart,1974),illustratedin inSection8.
+Figure1withoneofourapplications.
+Thekeyprobleminthegenerativeworldviewisthediffi- 2.RelatedWork
+cultyofposteriorinferenceattest-time.Thisdifficultystems
+Thisworkstandsattheintersectionofcomputervision,com-
+fromanumberofreasons: first,theparameterθistypically
+putergraphics,andmachinelearning;itbuildsonprevious
+high-dimensionalandsoistheposterior. Second,givenθ,
+approacheswewilldiscussbelow.
+theimageformationprocessrealizescomplexanddynamic
+dependencystructures,forexamplewhenobjectsoccludeor Thereisavastliteratureonapproachestosolvecomputer
+self-occludeeachother.Theseintrinsicambiguitiesresultin vision applications by means of generative models. We
+multi-modalposteriordistributions. Third,whilemostren- mention some works that also use an accurate graphics
+derersarereal-time,eachsimulationoftheforwardprocess process as generative model. This includes applications
+isexpensiveandpreventsexhaustiveenumeration. suchasindoorsceneunderstanding(DelPeroetal.,2012),
+humanposeestimation(LeeandCohen,2004),handpose
+Webelieveintheusefulnessofgenerativemodelsforcom-
+estimation(deLaGorceetal.,2008)andmanymore. Most
+putervisiontasks,butarguethatinordertoovercomethe
+of these works are however interested in inferring MAP
+substantial inference challenges we have to devise tech-
+solutions,ratherthanthefullposteriordistribution.
+niquesthataregeneralandallowreuseinseveraldifferent
+modelsandnovelscenarios. Ontheotherhandwewantto Our method is similar in spirit to a Data Driven Markov
+maintaincorrectnessintermsoftheprobabilisticestimates ChainMonteCarlo(DDMCMC)methodsthatuseabottom-
+thattheyproduce. Onewaytoimproveoninferenceeffi- up approach to help convergence of MCMC sampling.
+ciencyistoleverageexistingcomputervisionfeaturesand DDMCMC methods have been used in image segmenta-
+discriminativemodelsinordertoaidinferenceinthegener- tion (Tu and Zhu, 2002), object recognition (Zhu et al.,
+ativemodel.Inthispaper,weproposetheinformedsampler, 2000),andhumanposeestimation(LeeandCohen,2004).
+a Markov chain Monte Carlo (MCMC) method with dis- TheideaofmakingMarkovsamplersdatadependentisvery
+criminativeproposaldistributions. Itcanbeunderstoodas general,butintheworksmentionedabove,leadtohighly
+an instance of a data-driven MCMC method (Zhu et al., problem specific implementations, mostly using approxi-
+2000), and our aim is to design a method that is general matelikelihoodfunctions. Itisduetospecializationona
+enoughsuchthatitcanbeappliedacrossdifferentproblems
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+problemdomain,thattheproposedsamplersarenoteasily should make the task of inferring p(θ|Iˆ) easier. Further-
+transferable to new problems. This is what we focus on moreaphysicallyaccurategenerativemodelcanbeused
+inourwork: toprovideasimple,yetefficientandgeneral in an offline stage prior to inference to generate as many
+inferencetechniqueforproblemswhereanaccurateforward samples as we would like or can afford computationally.
+processexists. Becauseourmethodisgeneralwebelieve Again,intuitivelythisshouldallowustoprepareandsum-
+thatitiseasytoadapttoavarietyofnewmodelsandtasks. marizeusefulinformationaboutthedistributioninorderto
+acceleratetest-timeinference.
+The idea to invert graphics (Baumgart, 1974) in order to
+understandscenesalsohasrootsinthecomputergraphics Concretely,inourcasewewilluseadiscriminativemethod
+communityundertheterm“inverserendering”. Thegoalof to provide a global density T (Iˆ), which we then use in
+inverserenderinghoweveristoderiveadirectmathematical avalidMCMCinferencemethod. Intheremainderofthe
+modelfortheforwardlighttransportprocessandthento sectionwefirstreviewMetropolis-HastingsMarkovChain
+analyticallyinvertit. Theworkof(RamamoorthiandHan- Monte Carlo (MCMC) and then discuss our proposed in-
+rahan,2001)fallsinthiscategory. Theauthorsformulate formedsamplers.
+thelightreflectionproblemasaconvolution,tothenunder-
+standtheinverselighttransportproblemasadeconvolution. 3.1.Metropolis-HastingsMCMC
+Whilethisisaveryelegantwaytoposetheproblem,itdoes
+Thegoalofanysampleristorealizeindependentandiden-
+requireaspecificationoftheinverseprocess,arequirement
+ticallydistributedsamplesfromagivenprobabilitydistri-
+generativemodellingapproachestrytocircumvent.
+bution. MCMCsampling,duetoMetropolisetal.(1953)is
+Ourapproachcanalsobeviewedasaninstanceofaproba- aparticularinstancethatgeneratesasequenceofrandom
+bilisticprogrammingapproach.Intherecentworkof(Mans- variablesbysimulatingaMarkovchain. Samplingfroma
+inghkaetal.,2013),theauthorscombinegraphicsmodules targetdistributionπ(·)consistsofrepeatingthefollowing
+in a probabilistic programming language to formulate an twosteps(Liu,2001):
+approximateBayesiancomputation. Inferenceisthenim-
+plementedusingMetropolis-Hastings(MH)sampling. This 1. Propose a transition using a proposal distribution T
+approachisappealinginitsgeneralityandelegance,how- andthecurrentstateθ
+everweshowthatforourgraphicsproblems,aplainMH
+samplingapproachisnotsufficienttoachievereliableinfer- θ¯∼T(·|θ t )
+enceandthatourproposedinformedsamplercanachieve
+robustconvergenceinthesechallengingmodels. Another 2. Accept or reject the transition based on Metropolis
+pieceofworkfrom(Stuhlmu¨lleretal.,2013)issimilarto Hastings(MH)acceptancerule:
+ourproposedinferencemethodinthatknowledgeaboutthe (cid:40) θ¯, rand(0,1)<min (cid:16) 1, π(θ¯)T(θ¯→θt) (cid:17) ,
+forward process is learned as “stochastic inverses”, then θ
+applied for MCMC sampling in a Bayesian network. In θ t , otherwise.
+the present work, we devise an MCMC sampler that we
+showworksinbothamulti-modalproblemaswellasfor DifferentMCMCtechniquesmainlydifferintheimplemen-
+invertinganexistingpieceofimagerenderingcode. Insum- tationoftheproposaldistributionT.
+mary,ourmethodcanbeunderstoodinasimilarcontextas
+theabove-mentionedpapers,including(Mansinghkaetal., 3.2.InformedProposalDistribution
+2013).
+WeuseacommonmixturekernelforMetropolis-Hastings
+3.TheInformedSampler
+Ingeneral,inferenceabouttheposteriordistributionischal-
+lengingbecauseforacomplexmodelp(Iˆ|θ)noclosed-form HereT
+isanordinarylocalproposaldistribution,forex-
+simplificationscanbemade. Thisisespeciallytrueinthe ampleamultivariateNormaldistributioncenteredaround
+casethatweconsider,wherep(Iˆ|θ)correspondstoagraph- thecurrentsampleθ,andT
+isaglobalproposaldistribu-
+ics engine rendering images. Despite this apparent com- tionindependentofthecurrentstate. Weinjectknowledge
+plexityweobservethefollowing: formanycomputervision byconditioningtheglobalproposaldistributionT G onthe
+applicationsthereexistwellperformingdiscriminativeap- imageobservation. WelearntheinformedproposalT G (·|Iˆ)
+proaches, that, giventheimage, predictsomeparameters discriminatively in an offline training stage using a non-
+θ ordistributionsthereof. Thesedonotcorrespondtothe parametricdensityestimatordescribedbelow.
+posterior distribution that we are interested in, but, intu-
+Themixtureparameterα∈[0,1]controlsthecontribution
+itivelytheavailabilityofdiscriminativeinferencemethods
+of each proposal, for α = 1 we recover MH. For α =
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Algorithm1LearningaglobalproposalT (θ|I) Algorithm2INF-MH
+1. Simulate{(θ(i),I(i))} fromp(I|θ)p(θ) Input: observedimageIˆ
+2. Computeafeaturerepresentationv(I(i)) T ←Localproposaldistribution(Gaussian)
+3. Performk-meansclusteringof{v(I(i))} c←clusterforv(Iˆ)
+4. ForeachclusterC ⊂{1,...,n},fitakernel T ←KDE(c)(asobtainedbyAlg.1)
+densityestimateKDE(C
+)tothevectorsθ{Cj} T =αT
+Initializeθ
+fort=1toN −1do
+0 the proposal T
+would be identical to T
+resultingMetropolissamplerwouldbeavalidmetropolized π(θt|Iˆ)T(θt→θ¯)
+ifrand(0,1)<γ then
+independencesampler(Liu,2001). Withα=0wecallthis
+baselinemethodInformedIndependentMH(INF-INDMH). t+1
+Forintermediatevalues,α∈(0,1),wecombinelocalwith
+globalmovesinavalidMarkovchain. Wecallthismethod t+1 t
+InformedMetropolisHastings(INF-MH).
+3.3.DiscriminativelyLearningT
+ThekeystepintheconstructionofT istoincludediscrim-
+inativeinformationaboutthesampleIˆ. Ideallywewould
+hopetohaveT proposeglobalmoveswhichimprovemix- tosmallchangesinθandtonuisanceparameters. Themain
+ingandevenallowmixingbetweenmultiplemodes,whereas inferencemethodremainsthesameacrossproblems.
+thelocalproposalT isresponsibleforexploringthedensity
+L We construct the KDE for each cluster and we use a rel-
+locally. Toseethatthisisinprinciplepossible,considerthe
+ativelysmallkernelbandwidthinordertoaccuratelyrep-
+caseofaperfectglobalproposal,thatis,T (·|Iˆ)=p (·|Iˆ).
+G θ resent the high probability regions in the posterior. This
+Inthatcasewewouldgetindependentsampleswithα=0
+is similar in spirit to using only high probability regions
+becauseeveryproposalisaccepted. InpracticeT isonly
+G as“darts”intheDartingMonteCarlosamplingtechnique
+anapproximationtop (·|Iˆ). Iftheapproximationisgood
+θ of Sminchisescu and Welling (2011). We summarize the
+enoughthenthemixtureoflocalandglobalproposalswill
+offlinetraininginAlgorithm1.
+haveahighacceptancerateandexplorethedensityrapidly.
+At test time, this method has the advantage that given an
+Inprinciplewecanuseanyconditionaldensityestimation
+imageIˆweonlyneedtoidentifythecorrespondingcluster
+techniqueforlearningaproposalT fromsamples. Typ-
+G onceusingv(Iˆ)inordertosampleefficientlyfromtheker-
+icallyhigh-dimensionaldensityestimationisdifficultand
+neldensityT . WeshowthefullprocedureinAlgorithm2.
+evenmoresointheconditionalcase;however,inourcase G
+wedohavethetruegeneratingprocessavailabletoprovide Thismethodyieldsatransitionkernelthatisamixtureker-
+examplepairs(θ,I). Thereforeweuseasimplebutscal- nelofareversiblesymmetricMetropolis-Hastingskernel
+able non-parametric density estimation method based on andametropolizedindependencesampler. Thecombined
+clusteringafeaturerepresentationoftheobservedimage, transition kernel T is hence also reversible. Because the
+v(Iˆ) ∈ Rd. Foreachclusterwethenestimateanuncondi- measureofeachkerneldominatesthesupportofthepos-
+tionaldensityoverθusingkerneldensityestimation(KDE). terior, thekernelisergodicandhasthecorrectstationary
+Wechosethissimplesetupsinceitcaneasilybereusedin distribution(Brooksetal.,2011). Thisensurescorrectness
+manydifferentscenarios, intheexperimentswesolvedi- oftheinferenceandintheexperimentsweinvestigatethe
+verseproblemsusingthesamemethod. Thismethodyields efficiencyofthedifferentmethodsintermsofconvergence
+avalidtransitionkernelforwhichdetailedbalanceholds. statistics.
+In addition to the KDE estimate for the global transition
+4.SetupandBaselineMethods
+kernelwealsoexperimentedwitharandomforestapproach
+thatmapstheobservationstotransitionkernelsT . More
+G Intheremainderofthepaperwedemonstratetheproposed
+detailswillbegiveninSection7.
+methodinthreedifferentexperimentalsetups. Forallexper-
+Forthefeaturerepresentationweleveragesuccessfuldis- iments,weusefourparallelchainsinitializedatdifferent
+criminative features and heuristics developed in the com- randomlocationssampledfromtheprior.Thereportednum-
+puter vision community. Different task specific feature bersaremedianstatisticsovermultipletestimagesexcept
+representationscanbeusedinordertoprovideinvariance whennotedotherwise.
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+4.1.BaselineMethods 1998)isderivedbycomparingwithin-chainvarianceswith
+between-chain variances of sample statistics. For this, it
+Metropolis Hastings (MH) Described above, corre-
+requiresindependentrunsofmultiplechains(4inourcase)
+spondstoα = 1, weuseasymmetricdiagonalGaussian
+inparallel. Becauseoursampleθismulti-dimensional,we
+distribution,centeredatθ .
+t estimatethePSRFforeachparameterdimensionseparately
+and take the maximum PSRF value as final PSRF value.
+MetropolisHastingswithinGibbs(MHWG) Weusea
+Avalueclosetooneindicatesthatallchainscharacterize
+Metropolis Hastings scheme in a Gibbs sampler, that is,
+the same distribution. This does not imply convergence,
+wedrawfromone-dimensionalconditionaldistributionsfor
+the chains may all collectively miss a mode. However, a
+proposingmovesandtheMarkovchainisupdatedalongone
+PSRFvaluemuchlargerthanoneisacertainsignoflackof
+dimensionatatime. Wefurtheruseablockedvariantofthis
+convergenceofthechain. PSRFalsoindicateshowwellthe
+MHWGsampler,whereweupdateblocksofdimensionsat
+samplervisitsdifferentmodesofamulti-modaldistribution.
+atime,anddenoteitbyBMHWG.
+Root Mean Square Error (RMSE) During our experi-
+ParallelTempering(PT) WeuseParallelTemperingto
+mentswehaveaccesstotheinputparametersθ∗thatgener-
+addresstheproblemofsamplingfrommulti-modaldistri-
+atedtheimage. Toassesswhethertheposteriordistribution
+butions (Geyer, 1991; Swendsen and Wang, 1986). This
+coversthe“correct”valuewereporttheRMSEbetweenthe
+techniqueisalsoknownas“replicaexchangeMCMCsam-
+posteriorexpectationE [G(·)]andthevalueG(θ∗)of
+pling”(HukushimaandNemoto,1996). Werundifferent p(·|Iˆ)
+parallelchainsatdifferenttemperaturesT,samplingπ(·)T 1 the generating input. Since there is noise being added to
+theobservationwedonothaveaccesstothegroundtruth
+and at each sampling step propose to exchange two ran-
+posteriorexpectationandthereforethismeasureisonlyan
+domly chosen chains. In our experiments we run three
+indicator. Underconvergenceallsamplerswouldagreeon
+chainsattemperaturelevelsT ∈{1,3,27}thatwerefound
+thesamecorrectvalue.
+tobebestworkingoutofallcombinationsin{1,3,9,27}
+forallexperimentsindividually. Thehighesttemperature
+4.3.ParameterSelection
+levelscorrespondstoanalmostflatdistribution.
+Foreachsamplerweindividuallyselectedhyper-parameters
+RegenerationSampler(REG-MH) Weimplementeda thatgavethebestPSRFvalueafter10kiterations. Incase
+regenerative MCMC method (Mykland et al., 1995) that thePSRFdoesnotdifferformultiplevalues,wechosethe
+performsadaption(Gilksetal.,1998)oftheproposaldistri- one with highest acceptance rate. We include a detailed
+butionduringsampling.Weusethemixturekernel(Eq.1)as analysisofthebaselinesamplersandparameterselectionin
+proposaldistributionandadaptonlytheglobalpartT G (·|Iˆ). thesupplementarymaterial.
+Thisisinitializedastheprioroverθandattimesofregen-
+eration we fit a KDE to the already drawn samples. For
+5.Experiment: EstimatingCameraExtrinsics
+comparisonweusedthesamemixturecoefficientαasfor
+INF-MH(moredetailsofthistechniqueinA). We implement the following simple graphics scenario to
+createachallengingmulti-modalproblem. Werenderacu-
+4.2.MCMCDiagnostics bicalroomofedgelength2withapointlightsourceinthe
+centeroftheroom(0,0,0)fromtheviewpointofacamera
+Weuseestablishedmethodsformonitoringtheconvergence
+somewhere inside the room. The camera parameters are
+ofourMCMCmethod(Kassetal.,1998;Flegaletal.,2008).
+describedbyits(x,y,z)-positionandtheorientation,speci-
+Inparticular,wereportdifferentdiagnostics. Wecompare
+fiedbyyaw,pitch,androllangles. Theinferenceprocess
+thedifferentsamplerswithrespecttothenumberofitera-
+consistsofestimatingtheposterioroverthese6Dcamera
+tionsinsteadoftime. Theforwardgraphicsprocesssignifi-
+parametersθ.SeeFigure2fortwoexamplerenderings.Pos-
+cantlydominatestheruntimeandthereforetheiterationsin
+teriorinferenceisahighlymulti-modalproblembecausethe
+ourexperimentscorrespondlinearlytotheruntime.
+roomisacubicalandthussymmetric.Thereare24different
+cameraparametersthatwillresultinthesameimage. This
+AcceptanceRate(AR) Theratioofacceptedsamplesto
+isalsoshowninFigure2whereweplotthepositionand
+thetotalMarkovchainlength. Thehighertheacceptance
+orientation(butnotcameraroll)ofallcameraparameters
+rate,thefewersamplesweneedtoapproximatetheposterior.
+that create the same image. A rendering of a 200×200
+Acceptancerateindicateshowwelltheproposaldistribution
+imagewitharesolutionof32bitusingasinglecoreonan
+approximatesthetruedistributionlocally.
+IntelXeon2.66GHzmachinetakesabout11msonaverage.
+PotentialScaleReductionFactor(PSRF) ThePSRFdi- AsmallamountofisotropicGaussiannoiseisaddedtothe
+agnostics(GelmanandRubin,1992;BrooksandGelman, rendered image G(θ), using a standard deviation of σ =
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+discoversdifferentmodesquickerwhencomparedtoother
+baselinesamplers. Justsamplingfromtheglobalproposal
+distributionINF-INDMHisinitiallyvisitingmoremodes(it
+isnotbeingheldbackbylocalsteps)butisdominatedby
+INF-MHoversomerange. Thisindicatesthatthemixture
+kerneltakesadvantageofbothlocalandglobalmoves,either
+oneofthemisexploringslower. Alsoinmostexamplesall
+Figure2.Tworenderedroomimageswithpossiblecameraposi- samplersmisssomemodesunderourdefinition,theaverage
+tionsandheadingsthatproducethesameimage. Notshownare numberofdiscoveredmodesis21forINF-MHandeven
+theorientations;intheleftexampleallsixheadingscanberolled lowerforMH.
+by90,180,and270degreesforthesameimage.
+Figure14(c)showstheeffectofmixturecoefficient(α)on
+theinformedsamplingINF-MH.Sincethereisnosignificant
+differenceinPSRFvaluesfor0 ≤ α ≤ 0.7,wechose0.7
+0.02. Theposteriordistributionwetrytoinferthenreads:
+duetoitshighacceptancerate. Likewise, theparameters
+of the baseline samplers are chosen based on the PSRF
+uniformprioroverlocationparametersrangesbetween−1.0
+andacceptanceratemetrics. Seesupplementarymaterial
+and1.0andtheprioroverangleparametersismodelledwith
+fortheanalysisofthebaselinesamplersandtheparameter
+wrappeduniformdistributionover[−π,π].
+selection.
+Tolearntheinformedpartoftheproposaldistributionfrom
+data,wecomputedahistogramoforientedgradients(HOG)
+descriptor(DalalandTriggs,2005)fromtheimage,using
+9gradientorientationsandcellsofsize20×20yielding
+afeaturevectorv(I)∈R900. Wegenerated300ktraining
+images using a uniform prior over the camera extrinsic
+parameters,andperformedk-meansusing5kclustercenters
+based on the HOG feature vector. For each cluster cell,
+wethencomputedandstoredaKDEforthe6dimensional
+cameraparameters,followingthestepsinAlgorithm1. As Figure4.Roleofmixturecoefficient.PRSFsandAcceptancerates
+testdata, wecreate30imagesusingextrinsicparameters correspondingtovariousmixturecoefficients(α)ofINF-MHsam-
+sampleduniformatrandomovertheirrange. plingin‘EstimatingCameraExtrinsics’experiment.
+5.1.Results
+We also tested the MHWG sampler and found that it did
+We show results in Figure 3. We observe that both MH notconvergeevenafter100kiterations,withaPSRFvalue
+andPTyieldlowacceptanceratecomparedtoothermeth- around3. Thisistobeexpectedsincesinglevariableup-
+ods. Howeverparalleltemperingappearstoovercomethe dates will not traverse the multi-modal posterior distribu-
+multi-modality better and improves over MH in terms of tionsfastenoughduetothehighcorrelationofthecamera
+convergence.Thesameholdsfortheregenerationtechnique, parameters. InFigure5weplotthemedianauto-correlation
+weobservemanyregenerations,goodconvergenceandAR. ofsamplesobtainedbydifferentsamplingtechniques,sepa-
+BothINF-INDMHandINF-MHconvergequickly. ratelyforeachofthesixextrinsiccameraparameters. The
+informedsamplingapproach(INF-MHandINF-INDMH)
+Inthisexperimentalsetuphaveaccesstothedifferentexact
+appears to produce samples which are more independent
+modes,thereare24differentones. Weanalyzehowquickly
+comparedtootherbaselinesamplers.
+thesamplersvisitthemodesandwhetherornottheycapture
+allofthem.Foreverdifferentinstancethepairwisedistances Asexpected,someknowledgeofthemulti-modalstructure
+betweenthemodeschanges,thereforewechosetodefine of the posterior needs to be available for the sampler to
+“visiting a mode” in the following way. We compute a performwell.ThemethodsINF-INDMHandINF-MHhave
+Voronoitesselationwiththemodesascenters. Amodeis thisinformationandperformbetterthanbaselinemethods
+visitedifasamplefallsintoitscorrespondingVoronoicell, andREG-MH.
+thatis,itiscloserthantoanyothermode.Samplinguniform
+atrandomwouldquicklyfindthemodes(dependingonthe 6.Experiment: OccludingTiles
+cellsizes)butisnotavalidsampler. Wealsoexperimented
+withballsofdifferentradiiaroundthemodesandfounda Inasecondexperimentwerenderimagesdepictingafixed
+similarbehaviourtotheonewereporthere. Figure3(right) numberofsixquadratictilesplacedatarandomlocation
+showsresultsforvarioussamplers. WefindthatINF-MH x, y in the image at a random depth z and orientation θ.
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Figure3.Resultsofthe‘EstimatingCameraExtrinsics’experiment.AcceptanceRates(left),PSRFs(middle),andAveragenumberof
+modesvisited(right)fordifferentsamplingmethods.Weplotthemedian/averagestatisticsover30testexamples.
+Figure5.Auto-Correlationofsamplesobtainedbydifferentsamplingtechniquesincameraextrinsicsexperiment,foreachofthesix
+extrinsiccameraparameters.
+WeblurtheimageandaddabitofGaussianrandomnoise and the plain informed sampling fail when proposing all
+(σ =0.02). AnexampleisdepictedinFigure6(a),notethat parametersjointly.Sincethetilesareindependentexceptfor
+allthetilesareofthesamesize,butfartherawaytileslook theocclusion,wecanapproximatethefulljointdistribution
+smaller. Arenderingofone200×200imagetakesabout as product of block distributions where each block corre-
+25msonaverage. Here,asprior,weagainusetheuniform spondstotheparametersofasingletile. Toestimatethefull
+distributionoverthe3Dcubefortilelocationparameters, posteriordistribution,welearnglobalproposaldistributions
+andwrappeduniformdistributionover[−π,π]fortileori- foreachblockseparatelyanduseablock-Gibbslikescheme
+entationangle. Toavoidlabelswitchingissues,eachtileis inoursamplerwhereweproposechangestoonetileata
+givenafixedcolorandisnotchangedduringtheinference. time,alternatingbetweentiles.
+Wechosethisexperimentsuchthatitresemblesthe“dead Theexperimentalprotocolisthesameasbefore,werender
+leavesmodel”ofLeeetal.(2001),becauseithasproper- 500kimages,applytheOpenCValgorithmtofitrectangles
+tiesthatarecommonplaceincomputervision. Itisascene andtaketheirfoundfourparametersasfeaturesforcluster-
+composedofseveralobjectsthatareindependent, except ing(10kclusters). AgainKDEdistributionsarefittoeach
+forocclusion,whichcomplicatestheproblem. Ifocclusion cluster and at test time, we assign the observed image to
+did not exist, the task is readily solved using a standard itscorrespondingcluster. TheKDEinthatchosencluster
+OpenCV(BradskiandKaehler,2008)rectanglefindingal- determinestheglobalsamplerT forthattile. Wethenuse
+gorithm(minAreaRect). Theoutputofsuchanalgorithm T toproposeanupdatetoall4parametersofthetile. We
+can be seen in Figure 6(c), and we use this algorithm as refertothisprocedureasINF-BMHWG.Empiricallywe
+a discriminative source of information. This problem is findα=0.8tobeoptimalforINF-BMHWGsampling.
+higherdimensionalthanthepreviousone(24,dueto6tiles
+of4parameters). Inferencebecomesmorechallengingin 6.1.Results
+higherdimensionandourapproachwithoutmodification
+AnexampleresultisshowninFigure6. Wefoundthatthe
+doesnotscalewellwithincreasingdimensionality.Oneway
+theMHandINF-MHsamplersfailentirelyonthisproblem.
+toapproachthisproblem,istofactorizethejointdistribution
+Bothuseaproposaldistributionfortheentirestateanddue
+intoblocksandlearninformedproposalsseparately. Inthe
+to the high dimensions there is almost no acceptance (<
+presentexperiment,weobservedthatbothbaselinesamplers
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Figure6.Avisualresultin‘OccludingTiles’experiment. (a)Asamplerenderedimage,(b)Groundtruthsquares,andmostprobable
+estimatesfrom5000samplesobtainedby(c)MHWGsampler(bestbaseline)and(d)theINF-BMHWGsampler.(f)Posteriorexpectation
+ofthesquareboundariesobtainedbyINF-BMHWGsampling.(Thefirst2000samplesarediscardedasburn-in)
+1%)andthustheydonotreachconvergence. TheMHWG model (Hirshberg et al., 2012), which updates the origi-
+sampler,updatingonedimensionatatime,isfoundtobe nallyproposedSCAPEmodel(Anguelovetal.,2005)with
+thebestamongthebaselinesamplerswithacceptancerate bettertrainingandblendweights.Thismodelproducesa3D
+ofaround42%,followedbyablocksamplerthatsamples meshofahumanbodyasshowninFigure8asafunctionof
+each tile separately. The OpenCV algorithm produces a shapeandposeparameters. Theshapeparametersallowus
+reasonableinitialguessbutfailsinocclusioncases. torepresentbodiesofmanybuildsandsizes,andincludesa
+statisticalcharacterization(beingroughlyGaussian). These
+TheblockwiseinformedsamplerINF-BMHWGconverges
+parameterscontroldirectionsindeformationspace,which
+quicker,withhigheracceptancerates(≈53%),andlowerre-
+werelearnedfromacorpusofroughly20003Dmeshmod-
+constructionerror. Themediancurvesfor10testexamples
+elsregisteredtoscansofhumanbodiesviaPCA.Thepose
+areshowninFigure7,INF-BMHWGbyfarproduceslower
+parametersarejointangleswhichindirectlycontrollocal
+reconstructionerrors. AlsoinFig6(f)theposteriordistri-
+orientationsofpredefinedpartsofthemodel.
+butionisvisualized,fullyvisibletilesaremorelocalized,
+positionandorientationofoccludedtilesmoreuncertain. Our model uses 57 pose parameters and any number of
+Figure12intheappendixshowssomemorevisualresults. shapeparameterstoproducea3Dmeshwith10,777vertices.
+Although the model is relatively simple, all the baseline Weusethefirst7SCAPEcomponentstorepresenttheshape
+samplersperformpoorlyanddiscriminativeinformationis ofaperson. Thecameraviewpoint,orientation,andposeof
+crucialtoenableaccurateinference. Herethediscriminative thepersonisheldfixed. Thusarenderingprocesstakesθ ∈
+informationisprovidedbyareadilyavailableheuristicin R7,generatesa3Dmeshrepresentationofitandprojectsit
+theOpenCVlibrary. throughavirtualdepthcameratocreateadepthimageofthe
+person. Thiscanbedoneinvariousresolutions,wechose
+Thisexperimentillustratesavariationoftheinformedsam-
+430×260withdepthvaluesrepresentedas32bitnumbers
+pling strategy that can be applied to sampling from high-
+intheinterval[0,4]. Onaverage, afullrenderpathtakes
+dimensionaldistributions. Inferencemethodsforgeneral
+about28ms.WeaddGaussiannoisewithstandarddeviation
+high-dimensionaldistributionsisanactiveareaofresearch
+of0.02tothecreateddepthimage. SeeFig.8(left)foran
+andintrinsicallydifficult. Theoccludingtilesexperimentis
+example.
+simplebutillustratesthispoint,namelythatallnon-block
+baselinesamplersfail. Blocksamplingisacommonstrat- Weusedverysimplelowlevelfeaturesforfeaturerepresen-
+egyinsuchscenariosandmanycomputervisionproblems tation. Inordertolearntheglobalproposaldistributionwe
+have such block-structure. Again the informed sampler computedepthhistogramfeaturesona15×10gridonthe
+improvesinconvergencespeedoverthebaselinemethod. image. Foreachcellwerecordthemeanandvarianceof
+Othertechniquesthatproducebetterfitstotheconditional thedepthvalues. Additionallyweaddtheheightandthe
+(block-)marginalsshouldgivefasterconvergence. widthofthebodysilhouetteasfeaturesresultinginafeature
+vectorv(I)∈R302. Asnormalization,eachfeaturedimen-
+sion is divided by the maximum value in the training set.
+7.Experiment: EstimatingBodyShape
+Weused400ktrainingimagessampledfromthestandard
+Thelastexperimentismotivatedbyarealworldproblem: normalpriordistributionand10kclusterstolearntheKDE
+estimating the 3D body shape of a person from a single proposaldistributionsineachclustercell.
+static depth image. With the recent availability of cheap
+Forthisexperimentwealsoexperimentedwithadifferent
+active depth sensors, the use of RGBD data has become
+conditional density estimation approach using a forest of
+ubiquitousincomputervision(Shaoetal.,2013;Jungong
+random regression trees (Breiman et al., 1984; Breiman,
+etal.,2013).
+2001). Inthepreviousexperiments,utilizingtheKDEesti-
+To represent a human body we use the BlendSCAPE mates,thediscriminativeinformationenteredthroughthe
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Figure7.Resultsofthe‘OccludingTiles’experiment.AcceptanceRates(left),PSRFs(middle),andRMSEs(right)fordifferentsampling
+methods.Medianresultsfor10testexamples.
+featurerepresentation. Then,supposeiftherewasnorela- 7.1.Results
+tionbetweensomeobservedfeaturesandthevariablesthat
+Wetestedthedifferentapproacheson10testimagesthatare
+wearetryingtoinfer,wewouldrequirealargenumberof
+generatedbyparametersdrawnfromthestandardnormal
+samples to reliably estimate the densities in the different
+priordistribution. Figure9summarizestheresultsofthe
+clusters. Theregressionforestcanadaptivelypartitionthe
+sampling methods. We make the following observations.
+parameterspacebasedonobservedfeaturesandisableto
+ThebaselinesmethodsMH,MHWG,andPTshowinferior
+ignoreuninformativefeatures,thusmayleadtobetterfitsof
+convergenceresultsandMHandPTalsosufferfromlower
+theconditionaldensities. Itcanthusbeunderstoodasthe
+acceptancerates. Justsamplingfromthedistributionofthe
+adaptiveversionofthek-Meansclusteringtechniquethat
+discriminativestep(INF-INDMH)isnotenough,because
+solelyreliesontheusedmetric(Euclideaninourcase).
+thelowacceptancerateindicatesthattheglobalproposals
+Inparticular,weusethesamefeaturesasfork-meansclus- donotrepresentthecorrectposteriordistribution. However,
+tering but grow the regression trees using a mean square combined with a local proposal in a mixture kernel, we
+errorcriterionforscoringthesplitfunctions. Aforestof10 achieve a higher acceptance rate, faster convergence and
+binarytreeswithadepthof15isgrown,withtheconstraint a decrease in RMSE. The regression forest approach has
+of having a minimum of 40 training points per leaf node. slowerconvergencethanINF-MH.Inthisexample,there-
+Thenforeachoftheleafnodes,aKDEistrainedasbefore. generationsamplerREG-MHdoesnotimproveoversimpler
+AttesttimetheregressionforestyieldsamixtureofKDEs baseline methods. We attribute this to rare regenerations
+astheglobalproposaldistribution. Wedenotethismethod whichmaybeimprovedwithmorespecializedmethods.
+asINF-RFMHintheexperiments.
+Webelievethatoursimplechoiceofdepthimagerepresen-
+InsteadofplacingusingoneKDEmodelforeachcluster,we tationcanalsosignificantlybeimprovedon. Forexample,
+couldalsoexplorearegressionapproach,forexampleusing featurescanbecomputedfromidentifiedbodyparts,some-
+adiscriminativelinearregressionmodeltomapobservations thingthatthesimplehistogramfeatureshavenottakeninto
+intoproposaldistributions. Byusinginformativecovariates account. Inthecomputervisionliteraturesomediscrimina-
+intheregressionmodeloneshouldbeabletoovercomethe tiveapproachesforposeestimationdoexist,mostprominent
+curseofdimensionality. Suchasemi-parametricapproach beingtheinfluentialworkonposerecoveryinpartsforthe
+wouldallowtocaptureexplicitparametricdependenciesof KinectXBoxsystem(Shottonetal.,2011). Infuturework
+thevariables(forexamplelineardependencies)andcombine we plan to use similar methods to deal with pose varia-
+themwithnon-parametricestimatesoftheresiduals. Weare tionandcomplicateddependenciesbetweenparametersand
+exploringthistechniqueasfuturework. observations.
+Again,wechoseparametersforallsamplersindividually,
+7.2.3DMeshReconstruction
+based on empirical mixing rates. For informed samplers,
+wechoseα=0.8,andalocalproposalstandarddeviation InFigure8weshowasample3Dbodymeshreconstruction
+of0.05. Thefullanalysisforallsamplersisincludedinthe resultusingtheINF-MHsamplerafteronly1000iterations.
+supplementarymaterial. Wevisualizedthedifferenceofthemeanposteriorandthe
+groundtruth3Dmeshintermsofmeshedgedirections.One
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Figure8.Inferenceofbodyshapefromadepthimage.Asampletestresultshowingtheresultof3Dmeshreconstructionwiththefirst
+1000samplesobtainedusingourINF-MHsamplingmethod. Wevisualizetheangularerror(indegrees)betweentheestimatedand
+groundtruthedgeandprojectontothemesh.
+Figure9.Resultsofthe‘BodyShape’experiment.AcceptanceRates(left),PSRFs(middle),andRMSEs(right)fordifferentsampling
+methodsinthebodyshapeexperiment.Medianresultsover10testexamples.
+canobservethatmostdifferencesareinthebellyregionand surements(suchasheightandchestcircumference). For-
+thefeetoftheperson. Theretrievedposteriordistribution tunately,ouroriginalshapetrainingcorpusincludesahost
+allowsustoassessthemodeluncertainty. Tovisualizethe of47differentper-subjectmeasurements,obtainedbypro-
+posterior variance we record standard deviation over the fessional anthropometrists; this allows us to relate shape
+edgedirectionsforallmeshedges. Thisisbackprojected parameterstomeasurements. Amongmanypossibleforms
+toachievethevisualizationinFigure8(right). Weseethat ofregression,regularizedlinearregression(ZouandHastie,
+posteriorvarianceishigherinregionsofhighererror,that 2005)wasfoundtobestpredictmeasurementsfromshape
+is,ourmodelpredictsitsownuncertaintycorrectly(Dawid, parameters. Thislinearrelationshipallowsustotransform
+1982). Inareal-worldbodyscanningscenario,thisinfor- any posterior distribution over SCAPE parameters into a
+mationwillbebeneficial;forexample,whenscanningfrom posteriorovermeasurements,asshowninFigure10. We
+multipleviewpointsorinanexperimentaldesignscenario,it reportforthreerandomlychosensubjects’(S1,S2,andS3)
+helpsinselectingthenextbestposeandviewpointtorecord. resultsonthreeoutofthe47measurements. Thedashed
+Figure13showsmore3Dmeshreconstructionresultsusing linescorrespondstogroundtruthvalues. Ourestimatenot
+oursamplingapproach. onlyfaithfullyrecoversthetruevaluebutalsoyieldsachar-
+acterizationofthefullconditionalposterior.
+7.3.BodyMeasurements
+7.4.IncompleteEvidence
+Predicting body measurements has many applications in-
+cludingclothing,sizingandergonomicdesign. Givenpixel Anotheradvantageofusingagenerativemodelistheability
+observations,onemaywishtoinferadistributionovermea- toreasonwithmissingobservations. Weperformasimple
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Figure11.Inferencewithincompleteevidence. Mean3Dmesh
+Figure10.Bodymeasurementswithquantifieduncertainty. Box and corresponding errors and uncertainties (std. deviations) in
+plotsofthreebodymeasurementsforthreetestsubjects,computed meshedgedirections,forthesametestcaseasinfigure8,com-
+fromthefirst10ksamplesobtainedbytheINF-MHsampler.Dot- putedfromfirst10ksamplesofourINF-MHsamplingmethod
+ted lines indicate measurements corresponding to ground truth with(bottomrow)occlusionmaskinimageevidence.(blueindi-
+SCAPEparameters. catessmallvaluesandredindicateshighvalues)
+this method as an initial step into the direction of gen-
+experimentbyoccludingaportionoftheobserveddepthim-
+eralinferencetechniquesforaccurategenerativecomputer
+age. Weusethesameinferenceandlearningcodes,withthe
+vision models. Identifying conditional dependence struc-
+sameparametrizationandfeaturesasinthenon-occlusion
+tureshouldimproveresults,e.g. recentlyStuhlmu¨lleretal.
+casebutretrainthemodeltoaccountforthechangesinthe
+(2013)usedstructureinBayesiannetworkstoidentifysuch
+forwardprocess. TheresultofINF-MH,computedonthe
+dependencies.Oneassumptioninourworkisthatweusean
+first10ksamplesisshowninFig.11.The3Dreconstruction
+accurategenerativemodel. Relaxingthisassumptiontoal-
+isreasonableevenunderlargeocclusion;theerrorandthe
+lowformoregeneralscenarioswherethegenerativemodel
+edgedirectionvariancedidincreaseasexpected.
+isknownonlyapproximatelyisimportantfuturework. In
+particularforhigh-levelcomputervisionproblemssuchas
+8.DiscussionandConclusions
+sceneorobjectunderstandingtherearenoaccurategenera-
+tivemodelsavailableyetbutthereisacleartrendtowards
+This work proposes a method to incorporate discrimina-
+physicallymoreaccurate3Drepresentationsoftheworld.
+tivemethodsintoBayesianinferenceinaprincipledway.
+This more general setting is different to the one we con-
+Weaugmentasamplingtechniquewithdiscriminativein-
+siderinthispaper, butwebelievethatsomeideascanbe
+formationtoenableinferencewithglobalaccurategener-
+carried over. For example, we could create the informed
+ative models. Empirical results on three challenging and
+proposaldistributionsfrommanuallyannotateddatathatis
+diversecomputervisionexperimentsarediscussed.Wecare-
+readily available in many computer vision data sets. An-
+fullyanalysetheconvergencebehaviourofseveraldifferent
+otherproblemdomainaretrans-dimensionalmodels,that
+baselinesandfindthattheinformedsamplerperformswell
+requiredifferentsamplingtechniqueslikereversiblejump
+across all different scenarios. This sampler is applicable
+MCMCmethods(Green,1995;Brooksetal.,2011). Weare
+togeneralscenariosandinthisworkweleveragetheaccu-
+investigatinggeneraltechniquesto“inform”thissamplerin
+rateforwardprocessforofflinetraining,asettingfrequently
+similarwaysasdescribedinthismanuscript.
+foundincomputervisionapplications.Themainfocusisthe
+generalityoftheapproach,thisinferencetechniqueshould Webelievethatgenerativemodelsareusefulinmanycom-
+beapplicabletomanydifferentproblemsandnotbetailored putervisionscenariosandthattheinterplaybetweencom-
+toaparticularproblem. putergraphicsandcomputervisionisaprimecandidatefor
+studyingprobabilisticinferenceandprobabilisticprogram-
+Weshowthatevenforverysimplescenarios,mostbaseline
+ming(Mansinghkaetal.,2013). However,currentinference
+samplers perform poorly or fail completely. By includ-
+techniquesneedtobeimprovedonmanyfronts: efficiency,
+ingaglobalimage-conditionedproposaldistributionthat
+easeofusability,andgenerality. Ourmethodisastepto-
+is informed through discriminative inference we can im-
+wards this direction: the informed sampler leverages the
+provesamplingperformance. Wedeliberatelyuseasimple
+powerofexistingdiscriminativeandheuristictechniques
+learningtechnique(KDEsonk-Meansclustercellsanda
+toenableaprincipledBayesiantreatmentinrichgenerative
+forestofregressiontrees)toenableeasyreuseinotherap-
+models. Ouremphasisisongenerality;weaimedtocreate
+plications. Usingstrongerandmoretailoreddiscriminative
+amethodthatcanbeeasilyreusedinotherscenarioswith
+modelsshouldleadtobetterperformance. Weseethisasa
+existingcodebases. Thepresentedresultsareasuccessful
+waywheretop-downinferenceiscombinedwithbottom-up
+exampleoftheinversionofaninvolvedrenderingpass. In
+proposalsinaprobabilisticsetting.
+the future we plan to investigate ways to combine exist-
+There are some avenues for future work; we understand ingcomputervisiontechniqueswithprincipledgenerative
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+models,withtheaimofbeinggeneralratherthanproblem bytheinformedsampler.
+specific.
+B.2.BodyShape
+Figure13showssomemoreresultsof3Dmeshreconstruc-
+tionusingposteriorsamplesobtainedbyourinformedsam-
+A.RegenerationSampler(REG-MH)
+plingINF-MH.
+Adapting the proposal distribution with existing MCMC
+samplesisnotstraight-forwardasthiswouldpotentiallyvi- References
+olatetheMarkovpropertyofthechain(Atchade´andRosen-
+thal,2005). Oneapproachistoidentifytimesofregener- S.Ahn,Y.Chen,andM.Welling. Distributedandadaptive
+ationatwhichthechaincanberestartedandtheproposal dartingMonteCarlothroughregenerations. InProceed-
+ings of the 16th International Conference on Artificial
+distributioncanbeadaptedusingsamplesdrawnpreviously.
+Severalapproachestoidentifygoodregenerationtimesin
+IntelligenceandStatistics(AIStats),2013.
+ageneralMarkovchainhavebeenproposed(Athreyaand
+D.Anguelov,P.Srinivasan,D.Koller,S.Thrun,J.Rodgers,
+Ney,1978;Nummelin,1978). Webuildon(Myklandetal.,
+and J. Davis. Scape: shape completion and animation
+1995)thatproposedtwosplittingmethodsforfindingthe
+of people. In ACM Transactions on Graphics (TOG),
+regenerationtimes. Here,webrieflydescribethemethod
+volume24,pages408–416.ACM,2005.
+thatweimplementedinthisstudy.
+Y. F. Atchade´ and J. S. Rosenthal. On adaptive Markov
+Letthepresentstateofthesamplerbexandlettheindepen-
+chainMonteCarloalgorithms. Bernoulli,11(5):815–828,
+dentglobalproposaldistributionbeT . Wheny ∼ T is
+G G 2005.
+acceptedaccordingtotheMHacceptancerule,theprobabil-
+ityofaregenerationisgivenby: K. B. Athreya and P. Ney. A new approach to the limit
+theoryofrecurrentMarkovchains. Transactionsofthe
+ max{ c , c }, ifw(x)>candw(y)>c, AmericanMathematicalSociety,245:493–501,1978.
+c c B.G.Baumgart. GeometricModelingforComputerVision.
+ 1, otherwise,
+PhDthesis,Stanforduniversity,1974.
+where c > 0 is an arbitrary constant and w(x) = π(x) . M.J.Black,D.J.Fleet,andY.Yacoob. Robustlyestimat-
+The value of c can be set to maximize the regeneration ingchangesinimageappearance. ComputerVisionand
+probability. Ateverysamplingstep,ifasamplefromthe ImageUnderstanding,78(1):8–31,2000.
+independentproposaldistributionisaccepted,wecompute
+G.BradskiandA.Kaehler. LearningOpenCV:Computer
+regenerationprobabilityusingequation2. Ifaregeneration
+visionwiththeOpenCVlibrary. OReilly,2008.
+occurs,thepresentsampleisdiscardedandreplacedwith
+onefromtheindependentproposaldistributionT . Weuse
+G L. Breiman. Random forests. Machine Learning, 45(1):
+thesamemixtureproposaldistributionasinourinformed
+5–32,2001.
+samplingapproachwhereweinitializetheglobalproposal
+T with a prior distribution and at times of regeneration L.Breiman,J.H.Friedman,R.A.Olshen,andC.J.Stone.
+fitaKDEtotheexistingsamples. Thisbecomesthenew Classification and Regression Trees. Wadsworth, Bel-
+adapted distribution T . Refer to (Mykland et al., 1995) mont,1984.
+formoredetailsofthisregenerationtechnique. Inthework
+S.BrooksandA.Gelman. Generalmethodsformonitoring
+of(Ahnetal.,2013)thisregenerationtechniqueisusedwith
+convergenceofiterativesimulations. JournalofCompu-
+successinaDartingMonteCarlosampler.
+tationalandGraphicalStatistics,7:434–455,1998.
+B.AdditionalQualitativeResults S.Brooks,A.Gelman,G.Jones,andX.-L.Meng.Handbook
+ofMarkovChainMonteCarlo. CRCPress,2011.
+B.1.OccludingTiles
+N.DalalandB.Triggs. Histogramsoforientedgradients
+InFigure12morequalitativeresultsoftheoccludingtiles
+for human detection. In Computer Vision and Pattern
+experiment areshown. Theinformed samplingapproach
+Recognition,volume1,pages886–893,2005.
+(INF-BMHWG)isbetterthanthebestbaseline(MHWG).
+Thisstillisaverychallengingproblemsincetheparameters P. A. Dawid. The well-calibrated Bayesian. Journal of
+foroccludedtilesareflatoveralargeregion. Someofthe theAmericanStatisticalAssociation,77(379):605–610,
+posteriorvarianceoftheoccludedtilesisalreadycaptured 1982.
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+M.deLaGorce,N.Paragios,andD.J.Fleet. Model-based A.B.Lee,D.Mumford,andJ.Huang. Occlusionmodels
+handtrackingwithtexture,shadingandself-occlusions. fornaturalimages: Astatisticalstudyofascale-invariant
+InComputerVisionandPatternRecognition,2008. deadleavesmodel. InternationalJournalofComputer
+Vision,41(1-2):35–59,2001.
+L.DelPero,J.Bowdish,D.Fried,B.Kermgard,E.Hartley,
+andK.Barnard. Bayesiangeometricmodelingofindoor M. W. Lee and I. Cohen. Proposal maps driven MCMC
+scenes. In Computer Vision and Pattern Recognition, for estimating human body pose in static images. In
+2012. ComputerVisionandPatternRecognition,2004.
+S. M. A. Eslami, N. Heess, and J. M. Winn. The shape J.S.Liu. MonteCarloStrategiesinScientificComputing.
+Boltzmannmachine: Astrongmodelofobjectshape. In SpringerSeriesinStatistics.NewYork,2001.
+Computer Vision and Pattern Recognition, pages 406–
+V.Mansinghka,T.D.Kulkarni,Y.N.Perov,andJ.Tenen-
+413.IEEE,2012.
+baum. ApproximateBayesianimageinterpretationusing
+J. M. Flegal, M. Haran, and G. L. Jones. Markov chain generativeprobabilisticgraphicsprograms. InAdvances
+MonteCarlo: Canwetrustthethirdsignificantfigure? inNeuralInformationProcessingSystems,pages1520–
+StatisticalScience,23(2):250–260,2008. 1528,2013.
+N.Metropolis,A.W.Rosenbluth,M.N.Rosenbluth,A.H.
+A. Gelman and D. Rubin. Inference from iterative simu-
+Teller,andE.Teller. Equationofstatecalculationsbyfast
+lation using multiple sequences. Statistical Science, 7:
+computingmachines. Thejournalofchemicalphysics,
+457–511,1992.
+21:1087,1953.
+C. J. Geyer. Markov chain Monte Carlo maximum like-
+D. Mumford and A. Desolneux. Pattern Theory: The
+lihood. In Proceedings of the 23rd Symposium on the
+StochasticAnalysisofReal-WorldSignals. 2010.
+Interface,pages156–163,1991.
+P.Mykland,L.Tierney,andB.Yu. RegenerationinMarkov
+W. R. Gilks, G. O. Roberts, and S. K. Sahu. Adaptive
+chainsamplers. JournaloftheAmericanStatisticalAsso-
+MarkovchainMonteCarlothroughregeneration.Journal
+ciation,90(429):233–241,1995.
+of the American statistical association, 93(443):1045–
+1054,1998. E. Nummelin. A splitting technique for Harris recurrent
+Markovchains.Zeitschriftfu¨rWahrscheinlichkeitstheorie
+P. J. Green. Reversible jump Markov chain Monte
+undverwandteGebiete,43(4):309–318,1978.
+Carlo computation and Bayesian model determination.
+Biometrika,82(4):711–732,1995. N.Oliver,B.Rosario,andA.Pentland. ABayesiancom-
+puter vision system for modeling human interactions.
+U.Grenander.PatternSynthesis-LecturesinPatternTheory.
+IEEETrans.PatternAnal.Mach.Intell,22(8):831–843,
+Springer,NewYork,1976.
+2000.
+D. A. Hirshberg, M. Loper, E. Rachlin, and M. J. Black.
+R. Ramamoorthi and P. Hanrahan. A signal-processing
+Coregistration: simultaneousalignmentandmodelingof
+frameworkforinverserendering. InComputergraphics
+articulated3dshape. InEuropeanconferenceonCom-
+andinteractivetechniques,pages117–128.ACM,2001.
+puterVision,pages242–255,2012.
+L.Shao,J.Han,D.Xu,andJ.Shotton. Computervision
+B.K.P.Horn. Understandingimageintensities. Artificial forRGB-Dsensors: Kinectanditsapplications. IEEE
+Intelligence,8:201–231,1977. TransactionsonCybernetics,43(5):1314–1317,2013.
+K. Hukushima and K. Nemoto. Exchange Monte Carlo J.Shotton,A.Fitzgibbon,M.Cook,T.Sharp,M.Finocchio,
+methodandapplicationtospinglasssimulations.Journal R.Moore,A.Kipman,andA.Blake. Real-timehuman
+ofthePhysicalSocietyofJapan,65(6):1604–1608,1996. poserecognitioninpartsfromsingledepthimages. In
+ComputerVisionandPatternRecognition,2011.
+H.Jungong,S.Ling,X.Dong,andJ.Shotton. Enhanced
+computer vision with Microsoft Kinect sensor: A re- C. Sminchisescu and M. Welling. Generalized darting
+view. IEEE Transactions on Cybernetics, 43(5):1318– MonteCarlo. PatternRecognition, 44(10):2738–2748,
+1334,Oct2013. 2011.
+R.E.Kass,B.P.Carlin,A.Gelman,andR.M.Neal.Markov A. Stuhlmu¨ller, J. Taylor, and N. Goodman. Learning
+chainMonteCarloinpractice: Aroundtablediscussion. stochasticinverses. InAdvancesinNeuralInformation
+TheAmericanStatistician,52:93–100,1998. ProcessingSystems,pages3048–3056,2013.
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+R. H. Swendsen and J.-S. Wang. Replica Monte Carlo
+simulationofspin-glasses. PhysicalReviewLetters,57
+(21):2607,1986.
+Z.TuandS.-C.Zhu. Imagesegmentationbydata-driven
+Markov chain Monte Carlo. Pattern Analysis and Ma-
+chineIntelligence,IEEETransactionson,24(5):657–673,
+2002.
+A. Yuille and D. Kersten. Vision as Bayesian inference:
+analysisbysynthesis? Trendsincognitivesciences,10
+(7):301–308,2006.
+S.C.ZhuandD.Mumford. Learninggenericpriormodels
+forvisualcomputation. InComputerVisionandPattern
+Recognition,pages463–469.IEEE,1997.
+S.-C.Zhu,R.Zhang,andZ.Tu. Integratingbottom-up/top-
+downforobjectrecognitionbydatadrivenMarkovchain
+MonteCarlo. InComputerVisionandPatternRecogni-
+tion,volume1,pages738–745,2000.
+H.ZouandT.Hastie. Regularizationandvariableselection
+viatheelasticnet.JournaloftheRoyalStatisticalSociety:
+SeriesB(StatisticalMethodology),67(2):301–320,2005.
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Figure12.QualitativeResultsoftheoccludingtilesexperiment. Fromlefttoright: (a)Givenimage,(b)Groundtruthtiles,andmost
+probableestimatesfrom5000samplesobtainedby(c)MHWGsampler(bestbaseline)and(d)ourINF-BMHWGsampler.(f)Posterior
+expectationofthetilesboundariesobtainedbyINF-BMHWGsampling.(First2000samplesarediscardedasburn-in)
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Figure13.Qualitativeresultsforthebodyshapeexperiment.Shownisthe3Dmeshreconstructionresultswithfirst1000samplesobtained
+usingtheINF-MHinformedsamplingmethod.(blueindicatessmallvaluesandredindicateshighvalues)
+Supplementary Material for
+The Informed Sampler:
+A Discriminative Approach to Bayesian Inference in
+Generative Computer Vision Models
+VarunJampani VARUN.JAMPANI@TUEBINGEN.MPG.DE
+MaxPlanckInstituteforIntelligentSystems,Spemannstraße41,72076,Tu¨bingen,Germany
+SebastianNowozin SEBASTIAN.NOWOZIN@MICROSOFT.COM
+MicrosoftResearchCambridge,21StationRoad,Cambridge,CB12FB,UnitedKingdom
+MatthewLoper MLOPER@TUEBINGEN.MPG.DE
+MaxPlanckInstituteforIntelligentSystems,Spemannstraße41,72076,Tu¨bingen,Germany
+PeterV.Gehler PGEHLER@TUEBINGEN.MPG.DE
+MaxPlanckInstituteforIntelligentSystems,Spemannstraße41,72076,Tu¨bingen,Germany
+C.BaselineResultsandAnalysis oftemperaturelevels. Thesamplerwithtemperaturelevels
+of [1,3,27] performed best in terms of both mixing and
+Onthenextpagesofthissupplementarymaterial,wegive
+acceptancerate.
+anin-depthperformanceanalysisofthevarioussamplers
+andtheeffectoftheirhyperparameters. Wechoosehyper-
+Effect of Mixture Coefficient in Informed Sampling
+parameterswiththelowestPSRFvalueafter10kiterations,
+(INF-MH) Figure14(c)showstheeffectofmixturecoef-
+for each samplerindividually. If the differencesbetween
+ficient(α)ontheinformedsamplingINF-MH.Sincethere
+PSRFarenotsignificantlydifferentamongmultiplevalues,
+isnosignificantdifferentinPSRFvaluesfor0≤α≤0.7,
+wechoosetheonethathasthehighestacceptancerate.
+wechose0.7duetoitshighacceptancerate.
+D.Experiment: EstimatingCamera
+E.Experiment: OccludingTiles
+Extrinsics
+E.1.ParameterSelection
+D.1.ParameterSelection
+Metropolis Hastings (MH) Figure 15(a) shows the re-
+MetropolisHastings(MH) Figure14(a)showstheme-
+sultsofMHsampling. Resultsshowthepoorconvergence
+dian acceptance rates and PSRF values corresponding to
+forallproposalstandarddeviationsandrapiddecreaseof
+variousproposalstandarddeviationsofplainMHsampling.
+ARwithincreasingstandarddeviation. Thisisduetothe
+Mixing gets better and the acceptance rate gets worse as
+high-dimensionalnatureofproblem. Weselectedastandard
+thestandarddeviationincreases. Thevalue0.3isselected
+deviationof1.1.
+standarddeviationforthissampler.
+BlockedMetropolisHastingsWithinGibbs(BMHWG)
+MetropolisHastingsWithinGibbs(MHWG) Asmen- The results of BMHWG are shown in Figure 15(b). In
+tioned in the main paper, the MHWG sampler with one- thissamplerweupdateonlyoneblockoftilevariables(of
+dimensionalupdatesdidnotconvergeforanyvalueofpro- dimensionfour)ineachsamplingstep. Resultsshowmuch
+posal standard deviation. This problem has high correla- better performance compared to plain MH. The optimal
+tionofthecameraparametersandisofmulti-modalnature, proposalstandarddeviationforthissampleris0.7.
+whichthissamplerhasproblemswith.
+Metropolis Hastings Within Gibbs (MHWG) Fig-
+ParallelTempering(PT) ForPTsampling,wetookthe ure15(c)showstheresultofMHWGsampling. Thissam-
+bestperformingMHsampleranduseddifferenttemperature pler is better than BMHWG and converges much more
+chainstoimprovethemixingofthesampler. Figure14(b) quickly. Here a standard deviation of 0.9 is found to be
+shows the results corresponding to different combination best.
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+(b) PT (b) BMHWG
+(c) INF-MH (c) MHWG
+Figure14.Resultsofthe‘EstimatingCameraExtrinsics’experi-
+ment.PRSFsandAcceptanceratescorrespondingto(a)various
+standarddeviationsofMH,(b)varioustemperaturelevelcombi-
+nations of PT sampling and (c) various mixture coefficients of
+INF-MHsampling.
+ParallelTempering(PT) TheFigure15(d)showsthere- (d) PT
+sultsofPTsamplingwithvarioustemperaturecombinations.
+ResultsshownoimprovementinARfromplainMHsam-
+plingandagain[1,3,27]temperaturelevelsarefoundtobe
+optimal.
+Effect of Mixture Coefficient in Informed Sampling
+(INF-BMHWG) Figure 15(e) shows the effect of mix-
+turecoefficient(α)ontheblockedinformedsamplingINF- (e) INF-BMHWG
+BMHWG.SincethereisnosignificantdifferentinPSRF
+valuesfor0≤α≤0.8,wechose0.8duetoitshighaccep- Figure15.Resultsofthe‘OccludingTiles’experiment.PRSFand
+tancerate. Acceptanceratescorrespondingtovariousstandarddeviationsof
+(a)MH,(b)BMHWG,(c)MHWG,;(d)varioustemperaturelevel
+combinationsofPTsamplingand;(e)variousmixturecoefficients
+F.Experiment: EstimatingBodyShape
+ofourinformedINF-BMHWGsampling.
+F.1.ParameterSelection
+MetropolisHastings(MH) Figure16(a)showstheresult Metropolis Hastings Within Gibbs (MHWG) For
+ofMHsamplingwithvariousproposalstandarddeviations. MHWG sampling we select 0.3 proposal standard devia-
+Thevalueof0.1isfoundtobebest. tion. ResultsareshowninFigure16(b).
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+Parallel Tempering (PT) As before, results in Fig-
+ure 16(c), the temperature levels were selected to be
+[1,3,27]dueitsslightlyhigherAR.
+Effect of Mixture Coefficient in Informed Sampling
+(INF-MH) Figure16(d)showstheeffectofαonPSRF
+andAR.SincethereisnosignificantdifferencesinPSRF
+valuesfor0≤α≤0.8,wechoose0.8.
+(d) INF-MH
+Figure16.Results of the ‘Body Shape Estimation’ experiment.
+PRSFsandAcceptanceratescorrespondingtovariousstandard
+deviationsof(a)MH,(b)MHWG;(c)varioustemperaturelevel
+combinationsofPTsamplingand;(d)variousmixturecoefficients
+oftheinformedINF-MHsampling.
+TheInformedSampler:ADiscriminativeApproachtoBayesianInferenceinComputerVision
+G.ResultsOverview
+(a) Resultsfor:EstimatingCameraExtrinsics
+(b) Resultsfor:OccludingTiles
+(c) Resultsfor:EstimatingBodyShape
+Figure17.Summaryofthestatisticsforthethreeexperiments.Shownareforseveralbaselinemethodsandtheinformedsamplersthe
+acceptancerates(left),PSRFs(middle),andRMSEvalues(right).Allresultsaremedianresultsovermultipletestexamples.

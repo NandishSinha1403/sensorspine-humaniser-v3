@@ -1,0 +1,916 @@
+Molecular Infectious Disease Epidemiology: Survival Analysis
+and Algorithms Linking Phylogenies to Transmission Trees
+Eben Kenah1,5,¤,*, Tom Britton2, M. Elizabeth Halloran3,4,5, Ira M. Longini, Jr.1,5
+1 Biostatistics Department and Emerging Pathogens Institute, University
+of Florida, Gainesville, Florida, USA
+2 Department of Mathematics, Stockholm University, Stockholm, Sweden
+3 Vaccine and Infectious Diseases Division, Fred Hutchinson Cancer
+Research Center, Seattle, Washington, USA
+4 Department of Biostatistics, University of Washington, Seattle,
+Washington, USA
+5 Center for Inference and Dynamics of Infectious Diseases, Fred
+Hutchinson Cancer Research Center, Seattle, Washington, USA
+¤University of Florida, 22 Buckman Drive, Dauer Hall, PO Box 117450,
+Gainesville, FL 32611-7450
+* ekenah@ufl.edu
+Recent work has attempted to use whole-genome sequence data from pathogens to
+reconstruct the transmission trees linking infectors and infectees in outbreaks. However,
+transmission trees from one outbreak do not generalize to future outbreaks.
+Reconstruction of transmission trees is most useful to public health if it leads to
+generalizable scientific insights about disease transmission. In a survival analysis
+framework, estimation of transmission parameters is based on sums or averages over the
+possible transmission trees. A phylogeny can increase the precision of these estimates by
+providing partial information about who infected whom. The leaves of the phylogeny
+represent sampled pathogens, which have known hosts. The interior nodes represent
+common ancestors of sampled pathogens, which have unknown hosts. Starting from
+assumptions about disease biology and epidemiologic study design, we prove that there
+is a one-to-one correspondence between the possible assignments of interior node hosts
+and the transmission trees simultaneously consistent with the phylogeny and the
+epidemiologic data on person, place, and time. We develop algorithms to enumerate
+these transmission trees and show these can be used to calculate likelihoods that
+incorporate both epidemiologic data and a phylogeny. A simulation study confirms that
+this leads to more efficient estimates of hazard ratios for infectiousness and baseline
+hazards of infectious contact, and we use these methods to analyze data from a
+foot-and-mouth disease virus outbreak in the United Kingdom in 2001. These results
+demonstrate the importance of data on individuals who escape infection, which is often
+overlooked. The combination of survival analysis and algorithms linking phylogenies to
+transmission trees is a rigorous but flexible statistical foundation for molecular
+infectious disease epidemiology.
+]MQ.oib-q[
+2v87140.7051:viXra
+Author Summary
+Recent work has attempted to use whole-genome sequence data from pathogens to
+reconstruct the transmission trees linking infectors and infectees in outbreaks. However,
+transmission trees from one outbreak do not generalize to future outbreaks.
+Reconstruction of transmission trees is most useful to public health if it leads to
+generalizable scientific insights about disease transmission. Accurate estimates of
+transmission parameters can help identify risk factors for transmission and aid the
+design and evaluation of public health interventions for emerging infections. Using
+statistical methods for time-to-event data (survival analysis), estimation of transmission
+parameters is based on sums or averages over the possible transmission trees. By
+providing partial information about who infected whom, a pathogen phylogeny can
+reduce the set of possible transmission trees and increase the precision of transmission
+parameter estimates. We derive algorithms that enumerate the transmission trees
+consistent with a pathogen phylogeny and epidemiologic data, show how to calculate
+likelihoods for transmission data with a phylogeny, and apply these methods to a foot
+and mouth disease outbreak in the United Kingdom in 2001. These methods will allow
+pathogen genetic sequences to be incorporated into the analysis of outbreak
+investigations, vaccine trials, and other studies of infectious disease transmission.
+Introduction
+Genetic sequences from pathogen samples are an increasingly important source of
+information in infectious disease epidemiology. The structure of a pathogen phylogeny
+can reflect immunological strain selection, epidemic dynamics, and patterns of spatial
+spread [1–3]. Phylogenies linking pathogen genetic sequences sampled at known times
+and places have been used to investigate the origins and spread of HIV-1 [4,5] and the
+global circulation of seasonal influenza [6–9]. Using coalescent models, phylogenies can
+be used to reconstruct the history of effective viral population sizes [10] or estimate
+basic reproductive numbers (R ) [11]. These methods can reveal details of the
+large-scale spread of infection that would be difficult or impossible to detect otherwise.
+For example, Biek et al. [12] showed that the invasion of the eastern United States by a
+raccoon-specific rabies virus occurred in seven distinct clades (each representing a
+different direction of spread from the epizootic origin in West Virginia) and three waves
+of expansion (1987–1993, 1986–1990, and 1990–1992).
+When epidemic models are integrated with population genetics, several
+complications arise in the interpretation of the effective number of infections and the
+scaling of time [13–15]. Recently, methods have been developed that use phylogenetic
+trees to make inferences about the prevalence of infection over time while accounting for
+epidemic dynamics [13,16], and some of these can incorporate time series data on the
+number of cases [17,18]. These phylodynamic methods generally assume a sparse
+sample of pathogen genetic sequences from a large infected population. In this paper,
+we consider the use of densely-sampled pathogen genetic sequences to make inferences
+about person-to-person transmission.
+Reconstructing transmission trees with genetic sequences
+The earliest use of phylogenetics in infectious disease epidemiology was to confirm or
+rule out a suspected source of the human immunodeficiency virus (HIV). Phylogenetic
+analyses were used to confirm that five HIV patients were infected at a dental practice
+in Florida between 1987 and 1989 [19] and to rule out infection of a Baltimore patient
+in 1985 by an HIV-positive surgeon [20]. A more ambitious use of phylogenetics is to
+reconstruct a transmission tree, which is a directed graph with an edge from node i to
+node j if person i infected person j. An analysis by Leitner et al. [21,22] of an HIV-1
+transmission cluster in Sweden from the early 1980s compared reconstructed phylogenies
+based on HIV genetic sequences to a true phylogeny based on the known transmission
+tree, times of transmission, and times of sequence sampling. The reconstructed
+phylogenies accurately reflected the topology of the true phylogeny, and the accuracy
+increased when sequences from different regions of the HIV genome were combined.
+The increasing availability of whole-genome sequence data has renewed interest in
+combining pathogen genetic sequence data with epidemiologic data to reconstruct
+transmission trees. One approach to this problem is to reconstruct the transmission tree
+using genetic distances. Spada et al. [23] reconstructed the transmission tree linking five
+children infected with hepatitis C virus (HCV) by finding the spanning tree linking the
+HCV genetic sequences that minimized the sum of the genetic distances across its edges,
+excluding edges inconsistent with the epidemiologic data. The SeqTrack algorithm of
+Jombart et al. [24] generalizes this approach. It constructs a transmission tree by
+finding the spanning tree linking the sampled sequences that minimizes (or maximizes)
+a set of edge weights. Snitkin et al. [25] used this algorithm to investigate a 2011
+outbreak of carbapenem-resistant Klebsiella pneumoniae in the NIH Clinical Center,
+penalizing edges with large genetic distances, between patients who did not overlap in
+the same ward, or that required a long silent colonization. Wertheim et al. [26]
+constructed a network among HIV patients in San Diego by linking individuals whose
+sequences were <1% distant. This was used to estimate community-level effects of HIV
+prevention and treatment.
+A second approach to transmission tree reconstruction is to weight possible
+infector-infectee links using a pseudolikelihood based on genetic and epidemiologic data.
+Ypma et al. [27] analyzed a 2003 influenza A(H7N7) outbreak among poultry farms in
+the Netherlands by combining data on the times of infection and culling at each farm,
+the distances between the farms, and RNA consensus sequences. The weight of each
+possible transmission link was the product of components based on temporal,
+geographic, and genetic data. The weight of a complete transmission tree was the
+productoftheedgeweights. TheRpackageoutbreakerimplementsanextensionofthis
+approach that allows multiple introductions of infection and unobserved cases [28]. Like
+the spanning tree methods above, these methods model pathogen evolution as a process
+that occurs at the moment of transmission. Morelli et al. [29] proposed a variation of
+these methods that allows within-host pathogen evolution by incorporating the times of
+infection and observation into the likelihood component for the genetic sequence data.
+A third approach is to reconstruct the transmission tree by combining a phylogeny
+with epidemiologic data, which was first done by Cottam et al. [30,31] in an
+investigation of a 2001 foot-and-mouth disease virus (FMDV) outbreak among farms in
+the United Kingdom (UK). The phylogeny and the transmission tree were linked by
+considering possible locations of the most recent common ancestors (MRCAs) of viruses
+sampled from the farms. The probability p that farm i infected farm j was calculated
+using epidemiologic data on the oldest detected FMDV lesion and the dates of sampling
+and culling on each farm. The weight of each possible transmission network was
+proportional to the product of the p for all edges i→j. Similar methods were used to
+track farm-to-farm spread of a 2007 FMDV outbreak [32]. Gardy et al. [33] combined
+social network analysis with a phylogeny based on whole-genome sequences to construct
+a transmission tree for a tuberculosis outbreak in British Columbia. Didelot et al. used
+the time of the most recent common ancestor (TMRCA) to identify possible
+person-to-person transmission events in studies of Clostridium difficile transmission in
+the UK [34] and Helicobacter pylori transmission in South Africa [35]. In a study of
+Mycobacterium tuberculosis transmission in the Netherlands, Bryant et al. [36] ruled out
+transmission between individuals whose samples did not share a parent in the phylogeny.
+Recent research has identified problems with using genetic sequence data to
+reconstruct transmission trees. Simulations by Worby et al. [37,38] found that pairwise
+genetic distances cannot reliably identify sources of infection. Methods based on
+phylogenies often underestimate the complexity of the relationship between the
+phylogenetic and transmission trees. Branching events in a phylogeny do not necessarily
+correspond to transmissions, and the topology of the phylogenetic tree need not be the
+same as the topology of the transmission tree [39–41]. These differences are especially
+important for diseases with significant within-host pathogen diversity and long latent or
+infectious periods [41,42].
+Ypma et al. [40] and Didelot et al. [42] have developed Bayesian methods that
+enforce consistency between phylogenetic and transmission trees in Markov chain Monte
+Carlo (MCMC) iterations. More recently, Lau et al. [43] have outlined a Bayesian
+integration of epidemiologic and genetic sequence data that uses likelihoods based on
+survival analysis, but their approach does not use pathogen phylogenies directly,
+assuming that a single dominant lineage within each host can be transmitted. Here, we
+build a systematic understanding of the relationship between pathogen phylogenies and
+transmission trees under much weaker assumptions about within-host evolution,
+allowing the incorporation of genetic sequence data into frequentist and Bayesian
+survival analysis of infectious disease transmission data.
+Transmission trees and public health
+Reconstruction of transmission trees is most useful to public health if it leads to
+generalizable scientific insights about disease transmission. The transmission tree from
+one outbreak does not generalize to future outbreaks, but a phylogeny provides partial
+information about who-infected-whom. Survival analysis provides a rigorous but flexible
+statistical framework for infectious disease transmission data that explicitly links
+parameter estimation to the set of possible transmission trees [44–46]. In this
+framework, estimates of transmission parameters such as covariate effects on
+infectiousness and susceptibility and evolution of infectiousness over time in infectious
+individuals are based on sums or averages over all possible transmission trees. Since a
+phylogeny linking pathogen samples from infected individuals constrains the set of
+possible transmission trees, pathogen genetic sequence data can be combined with
+epidemiologic data to obtain more efficient estimates of transmission parameters.
+General stochastic S(E)IR model
+At any time, each individual i∈{1,...,n} is in one of four states: susceptible (S),
+exposed (E), infectious (I), or removed (R). Person i moves from S to E at his or her
+infection time t , with t =∞ if i is never infected. After infection, i has a latent period
+of length ε during which he or she is infected but not infectious. At time t +ε , i
+moves from E to I, beginning an infectious period of length ι . At time t +ε +ι , i
+moves from I to R, where he or she can no longer infect others or be infected. The latent
+period ε is a nonnegative random variable, the infectious period ι is a strictly positive
+random variable, and both have finite mean and variance. If person i is infected, the
+time elapsed since the onset of infectiousness at time t +ε is the infectious age of i.
+After becoming infectious at time t +ε , person i makes infectious contact with
+j (cid:54)=i at time t =t +ε +τ∗. We define infectious contact to be sufficient to cause
+infection in a susceptible person, so t ≤t . The infectious contact interval τ∗ is a
+strictly positive random variable with τ∗ =∞ if infectious contact never occurs. Since
+infectious contact must occur while i is infectious or never, τ∗ ∈(0,ι ] or τ∗ =∞.
+For each ordered pair ij, let C =1 if infectious contact from i to j is possible and
+C =0 otherwise. For example, the C could be the entries in the adjacency matrix for
+a contact network. However, we do not require that C =C . We assume the
+infectious contact interval τ∗ is generated in the following way: A contact interval τ is
+drawn from a distribution with hazard function h (τ). If τ ≤ι and C =1, then
+ij ij i ij
+Epidemiologic data Our epidemiologic data contain the times of all S→E
+(infection), E→I (infectiousness onset), and I→R (removal) transitions in the
+population between time 0 and time T. For all ordered pairs ij in which i is infected,
+we observe C .
+An exogenous infection occurs when an individual is infected from a source outside
+the observed population. An endogenous infection occurs when an individual is infected
+from within the observed population. For each endogenous infection j, let v denote the
+index of his or her infector. Let v =0 if j is an exogenous infection and v =∞ if j is
+not infected. Let V denote the set of possible v <∞, which we call the infectious set
+of j. If j is not infected, let V =∅ (the empty set).
+The transmission tree is the directed network with an edge from v to j for each
+infected j. It is a directed tree rooted at node 0, and it can be represented by a vector
+v=(v ,...,v ). Let V denote the set of all possible v consistent with the observed
+data. A v∈V can be generated by choosing a v ∈V for each infected j, but we do
+not assume that all possible transmission trees have the same probability.
+Survival analysis of transmission data
+Survival analysis of infectious disease transmission data can be viewed as a
+generalization of discrete-time chain binomial models [47] to continuous time, and it
+includes parametric methods [44], nonparametric methods [45], and semiparametric
+relative-risk regression models [46]. For simplicity, we use parametric methods and
+assume that exogenous infections are known. Let the hazard of infectious contact from i
+to j at time τ after the onset of infectiousness in i be
+where β is an unknown coefficient vector, X (τ) is a covariate vector, and h (τ) is a
+baseline hazard function. The vector X (τ) can include individual-level covariates
+affecting the infectiousness of i or the susceptibility of j as well as pairwise covariates
+(e.g., membership in the same household). The coefficient vector β captures covariate
+effects on the hazard of transmission, and the baseline hazard function h (τ) captures
+the evolution of infectiousness over time in infectious individuals.
+We assume that τ can be observed only if j is infected by i at time t +ε +τ .
+The contact interval τ will be unobserved if i recovers from infectiousness before
+making infectious contact with j, if j is infected by a someone other than i, or if
+observation of j has stopped. Let I (τ)=1 be a left-continuous process
+i τ∈(0,ιi]
+indicating whether i remains infectious at infectious age τ. Let S (τ)=1 be
+a left-continuous process indicating whether j remains susceptible when i reaches
+infectious age τ. Assume that the population is under observation until a stopping time
+T and let O (τ)=1 be a left-continuous process indicating whether j is
+under observation when i reaches infectious age τ. Then
+ij ij i ij ij
+is a left-continuous process indicating whether infectious contact from i to j can be
+observed at infectious age τ of i. The assumptions above ensure that censoring of τ is
+independent for all ij, and they can be relaxed if independent censoring is preserved.
+Let θ be a parameter vector for a family of hazard functions h(τ,θ) such that
+h (τ)=h(τ,θ ) for an unknown θ . To allow maximum likelihood estimation, we
+assume that h(τ,θ) has continuous second derivatives with respect to θ. Let
+Let W ={i:t +ε <t and C =1} denote the set of all infectious individuals to
+j i i j ij
+whom j was exposed while susceptible, which we call the exposure set of j. When we
+observe who-infected-whom (i.e., v is known), the likelihood is
+n (cid:20) (cid:21)
+The hazard terms depend on v, but the survival terms do not [44].
+When we do not observe who-infected-whom, the likelihood is a sum over all possible
+transmission trees: L(β,θ)= L (β,θ) [44]. Each v∈V can be generated by
+choosing a v ∈V for each endogenous infection j. Given the epidemiologic data, each
+v can be chosen independently [48]. This leads to the sum-product factorization
+(cid:89) n (cid:20)(cid:16)(cid:88)
+h ij (t j −t i −ε i ,β,θ)
+(cid:17)1vj(cid:54)∈{0,∞} (cid:89) e−(cid:82)
+j=1 i∈Vj i∈Wj
+The probability of a particular transmission tree v is
+j:vj(cid:54)∈{0,∞} i∈Vj ij j i i
+and L (β,θ)=Pr(v|β,θ)L(β,θ). In this framework, estimation of (β, θ), and the
+probabilities of possible transmission trees is simultaneous. An interesting special case is
+when h (τ,β,θ)=λ for all ij. Then Pr(v|β,θ) does not depend on λ, so the
+transmission tree is an ancillary statistic [44].
+Likelihood calculation with a phylogeny Let Φ denote a pathogen phylogeny, v
+denote a transmission tree, and Epi denote the epidemiologic data. Let the function
+Pr(·) denote probabilities or probability densities as necessary, and let V denote the set
+of transmission trees consistent with both Φ and Epi. Then the likelihood for β is
+(cid:88) (cid:88)
+The factor Pr(v,Epi|β,θ) is the likelihood in equation (4). The factor Pr(Φ|v,Epi)
+depends on within-host pathogen evolution and could incorporate genetic distances and
+branching times, allowing the joint estimation of between-host transmission parameters
+and within-host evolutionary parameters. For example, within-host coalescent models
+were used by Ypma et al. [40] and Didelot et al. [42]. The probability of a given
+transmission tree v is
+As before, estimation of (β,θ) and the probabilities of different transmission trees is
+simultaneous. By providing partial information about who-infected-whom, a phylogeny
+can increase the precision of transmission parameter estimates.
+Phylogenies and transmission trees
+The relationship between phylogenies and transmission trees we develop here is similar
+to the approach taken by Cottam et al. [31] who linked phylogenetic and transmission
+trees via the locations of common ancestors. It is logically equivalent to the approaches
+of Ypma et al. [40] who joined the within-host phylogenies of infectors and infectees into
+a single phylogeny, Didelot et al. [42] who colored lineages in the phylogeny with a
+unique color for each individual, and Hall and Rambaut [49] who represented
+transmission trees as partitions of phylogenies. We begin with these assumptions:
+1. Each individual is infected at most once.
+2. Each infection is initiated by a single pathogen. Following infection, within-host
+pathogen evolution occurs and the evolved pathogens are transmitted to others.
+3. The order in which infections (or onsets of infectiousness) occurred is known.
+4. We have at least one pathogen sequence from each infected individual, and these
+sequences are linked in a rooted phylogeny. The root of this phylogeny has a
+parent node r .
+5. Each node in the phylogeny represents a pathogen that had a host, which is also
+the “host” of the node. A parent-child relationship between nodes with different
+hosts represents a direct transmission of infection from the host of the parent to
+the host of the child. The node r has a host outside the observed population.
+The first two assumptions concern the biology of disease. The last three assumptions
+concern the resolution of the epidemiologic data, which can be controlled through study
+design. Initially, we use only the topology of the pathogen phylogeny to infer the set of
+possible transmission trees. Later, we consider how branching times at interior nodes
+further restrict the set of possible transmission trees.
+Transmission trees and interior node hosts The leaves (tips) of the phylogenetic
+tree represent sampled pathogens. Each interior node represents a most recent common
+ancestor (MRCA) of two or more sampled pathogens. Let host(x) be the host of the
+pathogen represented by node x in the phylogeny. If x is a leaf, then host(x) is known.
+If x had a host outside the observed population, let host(x)=0. In particular,
+host(r )=0. The hosts of all other interior nodes are unknown.
+Lemma 1. The nodes hosted by an infected individual form a subtree of the
+phylogenetic tree.
+Proof. See S1 Appendix.
+Theorem 1. A phylogeny with known interior node hosts implies a unique
+transmission tree.
+Proof. See S1 Appendix.
+Lemma 1 applies to nodes hosted by infected individuals in the observed population,
+not to the set of nodes hosted by 0 (i.e., hosts outside the observed population). In the
+rest of this section, we assume that the set of nodes hosted by 0 is a tree rooted at r .
+In practice, this restricts the study design. For example, this assumption would be
+violated if we observed only individuals A and C in a household where A was the index
+case and there was a chain of transmission A→B →C. The results of this section can
+be generalized to phylogenies where the set of nodes hosted by 0 is a union of subtrees
+as long as each subtree has a known root node. In this case, the phylogeny can split into
+transmissiontrees
+phylogenetic
+A B C B A C C A B
+Figure 1. Two possible transmission trees and three possible pathogen
+phylogenies for a household outbreak. A, B, and C were infected in alphabetical
+order such that their infectious sets are V ={0}, V ={A}, and V ={A,B}. We
+have a single pathogen sequence from each person. The top shows the two possible
+transmission trees within the household: either A infected B and B infected C (left) or
+A infected B and C (right). The bottom shows the three rooted, bifurcating phylogenies
+linking pathogen sequences from A, B, and C. In each phylogeny, the possible hosts are
+written underneath each interior node and arrows indicate how each assignment of
+interior node hosts determines a transmission tree via Assumption 5.
+disjoint pieces by erasing the incoming edge to each root of a subtree hosted by 0. Each
+of these pieces can be treated as a separate phylogeny in which the nodes hosted by 0
+form a subtree.
+An assignment of interior node hosts consistent with Lemma 1 will produce at most
+one transmission tree. A possible assignment of interior node hosts is an assignment
+consistent with Lemma 1 that produces a transmission tree consistent with the
+epidemiologic data. A possible transmission tree is a transmission tree consistent with
+the epidemiologic data that can be produced by at least one assignment of interior node
+hosts consistent with Lemma 1. We now show that each possible transmission tree is
+produced by exactly one possible assignment of interior node hosts.
+Let C denote the set of nodes in the phylogenetic clade rooted at node x, and let
+L be the set of hosts of leaf nodes in C . If x is an interior node, host(x) may not be
+in L . Let first(x) denote the individual in L who is infected earliest or has the earliest
+onset of infectiousness, at least one of which is well-defined by Assumption 3. If the
+individual infected earliest and the individual with the earliest onset of infectiousness
+are different, either of them can be used as first(x). If x is a leaf, C ={x},
+Lemma 2. For any node x, host(x)=first(x) or host(x) infected first(x).
+Proof. See S1 Appendix.
+Theorem 2. A transmission tree corresponds to at most one possible assignment of
+interior node hosts in a phylogeny.
+Proof. See S1 Appendix.
+Theorems 1 and 2 imply a one-to-one correspondence between the possible
+transmission trees and the possible assignments of interior node hosts in a phylogeny.
+Fig 1 illustrates this relationship in a very simple case. An similar result was proven
+independently by Hall and Rambaut [49] using partitions of phylogenies.
+Sets of possible interior node hosts Theorems 1 and 2 reduce the problem of
+finding the transmission trees consistent with a given phylogeny to that of finding the
+possible assignments of interior node hosts. Let H denote the set of hosts h of node x
+such that at least one possible transmission tree can be generated when host(x)=h.
+There are two sets of constraints on H . The ancestors of x constrain the possible hosts
+because of Lemma 1. The descendants of x constrain the possible hosts because host(x)
+must be a common ancestor of all members of L in the transmission tree.
+We deal first with the descendant constraints. A transmission tree within clade C is
+a transmission tree rooted at host(x) that consists of host(x) and all members of L .
+Let D denote the set of all hosts h such that at least one possible transmission tree
+within C can be generated when host(x)=h. If x is a leaf, D ={host(x)} where
+host(x) is the source of the pathogen sample whose genetic sequence is represented by x.
+If x is an interior node, D can be calculated using the following results:
+(cid:0) (cid:1)
+Lemma 3. If x is an interior node, host(x)=first(x) or host(x)=host parent(x) .
+Proof. See S1 Appendix.
+Lemma 4. If x is an interior node with child y in the phylogeny, then
+D if first(y)(cid:54)∈D ,
+y D ∪V if first(y)∈D .
+y first(y) y
+Proof. See S1 Appendix.
+Theorem 3. For any interior node x in the phylogeny,
+y∈children(x)
+where children(x) denotes the children of x.
+Proof. See S1 Appendix.
+Now we consider the ancestral constraints on H . By assumption, host(r )=0. Let
+A ={0}. For all other nodes in the phylogeny, let
+x parent(x)
+Theorem 4. H =A ∩D .
+Proof. See S1 Appendix.
+Since D is known for each leaf x, Theorem 3 shows that D can be found for each
+interior node x in a postorder (i.e., childen before parents) traversal of the phylogeny.
+Since A ={0}, Theorem 4 shows that we can calculate H for each interior node x in
+a preorder (parents before children) traversal of the phylogeny once all D are known.
+Combining these results, we get Algorithm 1 for calculating all H in two traversals of
+the phylogeny. We say that a phylogeny Φ is topologically consistent with the
+epidemiologic data if H is nonempty for each interior node x of Φ.
+Having found the H at each interior node x, it is possible to generate all possible
+transmission trees consistent with the phylogeny and the epidemiologic data.
+Theorem 5. Given a pathogen phylogeny Φ that is topologically consistent with the
+epidemiologic data, a transmission tree v is possible if and only if it can be generated
+using Algorithm 2.
+Input: Rooted phylogeny Φ and epidemiologic data
+Output: H for each node x of Φ
+for node x in postorder traversal of Φ do
+if x is a leaf then D ={host(x)} else D =∩ D∗, where D∗ is
+x x y∈children(x) y y
+defined in equation (9)
+for node x in preorder traversal of Φ do
+if x=r then H ={0} else H =D ∩A , where
+x parent(x)
+Algorithm 1: Finding host sets.
+Input: Rooted phylogeny Φ with nonempty H for each node x
+Output: Transmission tree v consistent with Φ and the epidemiologic data
+for node x in preorder traversal of Φ do
+if x=r then set host(x)=0 else
+w =parent(x);
+choose host(x)∈H ∩{host(w),first(x)};
+if host(x)(cid:54)=host(w) then
+add edge host(w)→host(x) to v, adding node host(x) if necessary
+Algorithm 2: Generating transmission trees.
+Proof. See S1 Appendix.
+Theorem 5 gives a useful indication of the value of a phylogeny. A bifurcating
+phylogeny with n leaves has n−1 interior nodes. For each interior node x, we have at
+most 2 possible hosts given the host of parent(x). Thus, there are at most 2n−1 possible
+transmission trees consistent with a pathogen phylogeny of n infections. Without a
+phylogeny, the worst-case scenario is n! possible transmission trees. Using partitions,
+Hall and Rambaut [49] independently proved that a phylogeny reduces the number of
+possible transmission trees when n>2.
+The combination of Algorithms 1 and 2 is similar to a Sankoff parsimony [50] where
+the states represent infected individuals and the cost of going from state i to state j is 1
+if i∈V and ∞ otherwise. If there is a single exogenous infection, any transmission tree
+consistent with the phylogeny and the epidemiologic data will have cost n−1, and all
+other transmission trees will have infinite cost. Compared to the more general context
+of a Sankoff parsimony, our algorithms gain efficiency by not having to consider all
+possible states at each internal node or calculate costs. They also have the advantage of
+being based on explicit assumptions about the biology of infection and study design.
+Host sets under a molecular clock Under a strict or relaxed molecular clock
+model, each interior node of the phylogenetic tree can be assigned a branching time
+based on its genetic distance to one or more sequences with known sampling times.
+These branching times produce new opportunities for inconsistency between the
+phylogenetic tree and the epidemic data, increasing the possible value of the phylogeny
+for transmission parameter estimation. Let t denote time assigned to node x in the
+phylogeny. For each leaf, t is the time at which the corresponding pathogen was
+sampled. If x is an interior node, t is a branching time.
+PLOS 10/28
+If host(x) is known, the branching time t is subject to two constraints. Because
+branching must occur after the infection of host(x) and before the end of his or her
+infectious period,
+x host(x) host(x) host(x) host(x)
+where a square bracket indicates an endpoint included in the interval and a parenthesis
+indicates an endpoint excluded from the interval. We have t >t because a
+branching time in host(x) cannot occur until after he or she is infected. We have
+t ≤t +ε +ι because a descendant of virus x was transmitted to at
+x host(x) host(x) host(x)
+least one other host. The second constraint is that if x is a parent of y and
+host(x)(cid:54)=host(y), then t <t (y) because a descendant of virus x infected host(y).
+These constraints are sufficient to find a valid set of branching times given a possible
+assignment of interior node hosts.
+Theorem 6. If a transmission tree is generated using Algorithm 2, then Algorithm 3
+assigns a valid branching time to each internal node of the phylogeny. Any assignment
+of branching times consistent with the epidemiologic data can be generated this way.
+Proof. See S1 Appendix.
+Input: Rooted phylogeny Φ with known host(x) for each node x
+Output: Branching time t for each node x
+for node x in postorder traversal of Φ do
+if x is a leaf then set t to be the time pathogen x was sampled else
+t =min t ;
+max y∈children(x) y
+choose t ∈(t ,t );
+x host(x) max
+Algorithm 3: Assigning branching times.
+Now suppose we have a phylogenetic tree with known branching times but unknown
+interior node hosts. Let
+be the set of individuals who are infected but not yet removed at time t, and let H (t)
+be the set of possible hosts of node x when t =t. To find H (t ), it is not sufficient to
+calculate H using Algorithm 1 and then let H (t )=H ∩H(t ). To see why, suppose
+x and y are nodes in the phylogeny such that h∈H ∩H and h∈H(t )∩H(t ). Let
+w be the MCRA of x and y. There is no guarantee that h∈H (t ). If not, h can be in
+at most one of H (t ) and H (t ) by Lemma 1.
+Algorithm 1 can be modified to find H (t ) with the following changes: In the
+postorder traversal, we replace D with
+(cid:16) (cid:17)
+x x x y∈children(x) y
+In the preorder traversal, we define
+x parent(x) parent(x)
+for all x(cid:54)=r . Then H (t )=A ∩D (t ). With these changes, the proofs of
+0 x x x x x
+Theorems 3 and 4 in S1 Appendix work as before under the additional constraint that
+host(x)∈H(t ) for all nodes x in the phylogeny.
+PLOS 11/28
+Simulations
+To study the impact of a phylogeny on the efficiency of transmission parameter
+estimates, we conducted a series of 1,000 simulations. In each simulation, there were 100
+independent households of size 6. Each household had an index case with an infection
+time chosen from an exponential distribution with mean one. Each individual i had a
+binary covariate X that could affect infectiousness and susceptibility. Given a
+parameter vector β =(β ,β ), the hazard of infectious contact from i to j at
+infectious age τ of i is
+ij inf i sus j 0
+In each simulation, β and β were independently chosen from a uniform distribution
+on (−1,1). In all simulations, the baseline hazard was λ =1 and the infectious periods
+were independent exponential random variables with mean one.
+In each simulation, we analyzed data from the first 200 infections in three ways:
+using only epidemiologic data via the likelihood in equation (5), using epidemiologic
+data with who-infected-whom via the likelihood in equation (4), and using
+epidemiologic data with a phylogeny via the likelihood in equation (7). In the
+phylogenetic analysis, we assumed a single pathogen sample from each infected
+individual. The within-host phylogeny for each individual who infected m>0
+individuals was chosen uniformly at random from all rooted, bifurcating phylogenies
+with m+1 tips. Within-individual phylogenies were chosen independently and
+combined into a single phylogeny as in Ypma et al. [40]. Thus, the conditional
+probability Pr(Φ|v,Epi) for a phylogeny Φ given a transmission tree v in which each
+individual j infected m ≥0 other individuals was proportional to
+(cid:89) 2mj−1(m j −1)! . (17)
+(2m −1)!
+The set of transmission trees consistent with the phylogeny was determined using
+Algorithms 1 and 2. We calculated the mean error, mean squared error, 95% confidence
+interval coverage probability, and relative efficiency of β , β , and lnλ estimates in
+all three analyses.
+The simulations were conducted in Python 2.7 (www.python.org) and analysis was
+conducted in R 3.2 (cran.r-project.org) via RPy2 2.7 (rpy.sourceforge.net). The
+Python code is in S1 Text. Parameters, point estimates, and 95% confidence limits are
+in S1 Data. R code for the simulation data analysis is in S2 Text.
+Data on individuals who escape infection The likelihoods in equations (4)
+and (5) require data on individuals who were at risk of infection but not infected.
+Except for Lau et al. [43], these data are not used in any of the studies cited in the
+Introduction. To study the value of data on individuals who escape infection in the
+households of infected individuals, we repeated all analyses excluding data on the
+uninfected. The parameters, point estimates, and 95% confidence limits are in S2 Data.
+Time variation in infectiousness When contact intervals are exponential and
+there is no variation in infectiousness, the transmission tree is an ancillary statistic for
+the hazard λ of infectious contact [44]. To explore the effect of time variation in
+infectiousness on the value of a phylogeny, we repeated the simulations using a Weibull
+contact interval distribution with shape parameter γ =0.5. To keep the same mean
+contact interval, we set the rate parameter λ =2. The hazard of infectious contact
+from i to j at infectious age τ or i is
+ij inf i sus j 0
+PLOS 12/28
+With γ =0.5, this decreases monotonically during the infectious period. These
+simulations used the same combinations of (β ,β ) that were used in the simulations
+with exponential contact intervals. The parameters, point estimates, and 95%
+confidence limits are in S3 Data.
+Data analysis
+To illustrate an application of these algorithms and likelihoods, we use them to analyze
+farm-to-farm transmission trees of foot and mouth disease virus (FMDV) in a cluster of
+12 epidemiologically linked farms in Durham, UK in 2001. The genetic and
+epidemiologic data are publicly available as Data S3 and Data S4 in Morelli et al. [29].
+These data were previously analyzed by Cottam et al. [31,32], Morelli et al. [29],
+Ypma et al. [40], and Lau et al. [43].
+FMDV is a picornavirus that causes a highly contagious disease in cattle, pigs, sheep,
+and goats [51]. Upon infection, there is an incubation period of approximately 1–12 days
+in sheep, 2–14 days in cattle, and two or more days in pigs. The incubation period is
+followed by an acute febrile illness with painful blisters on the feet, the mouth, and the
+mammary glands. It is transmitted through secretions from infected animals, fomites,
+virus carried on skin or clothing, and aerosolized virus. Outbreaks of foot-and-mouth
+disease are difficult to control and can devastate livestock. During the FMDV outbreak,
+teams from the UK Department for Environment, Food, and Rural Affairs (DEFRA)
+visited each infected farm [30,31]. They recorded the number and types of susceptible
+and infected animals, examined infected animals to determine the age of the oldest
+lesions, and collected epithelial samples. Finally, they recorded the date of the cull.
+We assume that infectiousness begins on the day that the first lesions appeared and
+ends with the cull, and we assumed a latent period (between infection and the onset of
+infectiousness) of 2–16 days. Fig 2 shows the relative locations of the farms, and Fig 3
+shows the timeline of the latent and infectious periods. Analysis was conducted in R 3.2
+(cran.r-project.org), and the code is available in S3 Text.
+Estimating the hazard of infectious contact Without a phylogeny, we estimated
+the hazard of transmission from an infected farm to a susceptible farm using the
+likelihood in equation (5). We assumed a log-logistic contact interval distribution with
+rate parameter λ and shape parameter γ, which has the hazard function
+and the survival function S(τ,λ,γ)=
+where τ is the infectious age. This
+is the simplest parametric model in survival analysis that allows a non-monotonic
+hazard function. When γ ≤1, the hazard decreases monotonically. When γ >1, the
+hazard is unimodal. To enforce the restriction that λ>0 and γ >0, maximum
+likelihood estimation was done using parameters lnλ and lnγ.
+If farm j is infected on day t, let V (t) denote its infectious set and W (t) denote its
+exposure set. For each i∈V (t), the times t +ε of onset of infectiousness and t∗ of
+onset of symptoms are known. Without a phylogeny, the overall likelihood contribution
+for each infected farm j except K (the index farm) is the sum of the likelihood in
+equation (5) over all possible infection times:
+t∗−2 (cid:34) (cid:35)
+(cid:88) (cid:88) (cid:0) (cid:1) (cid:89) (cid:0) (cid:1)
+PLOS 13/28
+−1.80 −1.75 −1.70 −1.65
+Figure 2. Relative locations of the 12 farms in the Durham cluster. These
+were infected in the 2001 FMDV outbreak in the UK.
+K Possible exposure dates
+Minimum latent period
+L Infectious period
+March 15 April 01 April 15 May 01 May 15 June 01
+Figure 3. Timeline of latent and infectious periods in the Durham cluster.
+The gray bars represent the range of days on which each farm might have been infected.
+PLOS 14/28
+Note that the sum of the hazards is zero for each t where there is no possible infector.
+Via a sum-product factorization, the product of equation (20) over all j (cid:54)=L is the sum
+of the likelihoods of all possible combinations of infection times at the farms.
+With a phylogeny, we estimated the hazard of transmission from an infected farm to
+a susceptible farm using the likelihood in equation (7), which is a weighted sum of the
+likelihood contributions of each transmission tree. Let I denote the set of endogenously
+infected farms. For each transmission tree v, the likelihood is
+(cid:34) t∗−2 (cid:35)
+(cid:89) (cid:88) (cid:0) (cid:1) (cid:89) (cid:0) (cid:1)
+vj vj i i i
+where v denotes the infector of farm j. We assumed that the within-host phylogeny for
+each farm that infected m>0 other farms was chosen uniformly at random from all
+rooted, bifurcating phylogenies with m+1 tips, so each transmission tree gets a weight
+proportional to equation (17).
+Data on farms that escaped infection As usual, the epidemiologic data set
+contains only infected farms. To illustrate how our results depend on farms that
+escaped infection, we repeat the analyses with and without a phylogeny using 6, 12, and
+24 uninfected farms. Because observation of the outbreak ended after the end of
+infectiousness in all infected farms, the likelihood contribution from each uninfected
+farm is S(ι ,λ,γ) where W is the set of infected farms and ι is the infectious
+i∈W∗ i ∗ i
+period for farm i.
+Simulations
+Table 1 shows the mean error, mean squared error, 95% confidence interval coverage
+probability, and relative efficiency of β , β , and lnλ estimators in the simulations.
+In all cases, the point estimates were nearly unbiased (indicated by the mean error
+squared being much smaller than the mean squared error) and the 95% confidence
+interval coverage probabilities were near 0.95. Fig 4 shows that estimates of β using a
+phylogeny were more efficient than estimates using epidemiologic data only and less
+efficient than estimates using who-infected-whom. By mean squared error, the
+phylogenetic estimates had a relative efficiency of 1.39 compared to estimates using only
+epidemiologic data and 0.80 compared to estimates using who-infected-whom. Because
+knowledge of who-infected-whom does not add to our knowledge of who was infected, all
+three analyses were equally efficient for β (similar results were obtained for estimates
+with and without who-infected-whom in Ref [46]). Fig 5 shows that estimates of lnλ
+using a phylogeny were more efficient than those using epidemiologic data only and less
+efficient than those using who-infected whom. By mean squared error, the phylogenetic
+estimates had a relative efficiency of 1.17 compared to estimates using only
+epidemiologic data and 0.90 compared to estimates using who-infected-whom.
+Table 2 shows the mean error, mean squared error, 95% confidence interval coverage
+probability, and relative efficiency of β , β , and lnλ estimators that excluded data
+on uninfected household members. The mean squared errors were much higher than the
+correspondingestimatorsinTable1, sotheirrelativeefficiencywasverylow. Inallcases,
+the efficiency loss from excluding data on individuals who escape infection was much
+larger than the efficiency gain from incorporating a phylogeny or from knowing exactly
+who infected whom. For estimators of β and β , the square of the mean error was
+much smaller than the mean squared error, indicating little bias. Estimates of lnλ were
+PLOS 15/28
+Table 1. Statistical performance of estimators under exponential contact intervals.
+Epidemiologic
+only + phylogeny + who-infected-whom
+Mean error 0.0032 0.0060 0.0080
+Mean squared error 0.0537 0.0386 0.0307
+Coverage probability 0.945 0.942 0.945
+Relative efficiency∗ 1 1.39 1.75
+Mean error 0.0023 0.0025 0.0023
+Mean squared error 0.0306 0.0306 0.0305
+Coverage probability 0.953 0.953 0.953
+Relative efficiency∗ 1 1.00 1.00
+Mean error -0.0050 -0.0054 -0.0057
+Mean squared error 0.0300 0.0256 0.0230
+Coverage probability 0.952 0.953 0.955
+Relative efficiency∗ 1 1.17 1.31
+* Compared to estimates with epidemiologic data only.
+biased upward, resulting in extremely low relative efficiencies and coverage probabilities.
+In Ref [44], similar results were seen for estimates of the basic reproduction number
+(R ) when approximate likelihoods for mass-action models, which do not require data
+on uninfected individuals, were used to analyze data from network-based epidemics.
+Table 3 shows results the mean error, mean squared error, 95% confidence interval
+coverage probability, and relative efficiency of β , β , lnλ , and lnγ estimators from
+models with Weibull contact interval distributions with rate parameter λ =2 and
+shape parameter γ =.5. All estimators are unbiased with 95% confidence interval
+coverage probabilities near 0.95. The relative efficiencies are similar to those in Table 1,
+showing that the gains in efficiency for estimates of infectiousness hazard ratios and
+baseline hazards occur under weak assumptions about the baseline hazard.
+Data Analysis
+With no phylogeny, there are 19,440 possible transmission trees linking the 12 farms in
+the Durham cluster. A phylogeny was constructed in SeaView [52] using consensus
+RNA sequences from 15 farms, including three farms not epidemiologically linked to the
+cluster [29]. We used a generalized time reversible (GTR) nucleotide substitution model
+with four rate classes on 8,196 sites. Fig 6 shows the rooted phylogeny for the 12 farms
+in the cluster with branch tips scaled to reflect the time of infectiousness onset at each
+farm (interior branch lengths do not indicate branching times). The order of
+infectiousness onsets is known, so first(x) is the host with the earliest onset of
+infectiousness in clade C . Fig 7 shows the postorder host set D for each node x in the
+phylogeny, and Fig 8 shows the host sets. The host is uniquely determined by the
+phylogeny for all interior nodes except three. Figure 9 shows the six possible interior
+node host assignments and the corresponding transmission trees.
+Hazard of infectious contact Tab. 4 shows the rate and shape parameter estimates
+with and without a phylogeny for 0, 6, 12, and 24 uninfected farms. The estimates with
+a phylogeny have lower rate and shape parameters, suggesting a slightly more rapid
+increase in infectiousness with a lower peak. The estimates using a phylogeny have
+narrower confidence intervals. The predicted hazard functions are shown in Fig 10, and
+PLOS 16/28
+Table 2. Statistical performance of estimators using infecteds only.
+Epidemiologic
+data + phylogeny + who-infected-whom
+Mean error 0.0300 0.0312 0.0299
+Mean squared error 0.1850 0.1115 0.0804
+Coverage probability 0.682 0.756 0.779
+Relative efficiency∗ 0.29 0.48 0.67
+Mean error 0.0408 0.0410 0.0261
+Mean squared error 0.1351 0.1339 0.1842
+Coverage probability 0.583 0.582 0.491
+Relative efficiency∗ 0.23 0.23 0.17
+Mean error 0.7647 0.7559 0.9341
+Mean squared error 0.6151 0.5978 0.9033
+Coverage probability 0.008 0.007 0.000
+Relative efficiency∗ 0.05 0.05 0.03
+* Compared to estimates in Table 1 with epidemiologic data only.
+Table 3. Statistical performance of estimators under Weibull contact intervals.
+Epidemiologic
+data + phylogeny + who-infected-whom
+Mean error 0.0030 0.0043 0.0000
+Mean squared error 0.0454 0.0318 0.0251
+Coverage probability 0.948 0.960 0.966
+Relative efficiency∗ 1 1.43 1.81
+Mean error -0.0076 -0.0076 -0.0075
+Mean squared error 0.0278 0.0276 0.0276
+Coverage probability 0.949 0.949 0.946
+Relative efficiency∗ 1 1.01 1.01
+Mean error 0.0278 0.0224 0.0260
+Mean squared error 0.1188 0.1069 0.0978
+Coverage probability 0.941 0.948 0.943
+Relative efficiency∗ 1 1.11 1.21
+Mean error 0.0133 0.0114 0.0106
+Mean squared error 0.0052 0.0046 0.0045
+Coverage probability 0.958 0.961 0.960
+Relative efficiency∗ 1 1.12 1.15
+* Compared to estimates using epidemiologic data only.
+PLOS 17/28
+l l ll l l l l l l l ll l ll l ll l l l ll l l l l l l l l l l ll l l l l l ll l l l ll l l l l l l l l ll l l l l ll lll l l l l l l l l l llll l l l l l l l l ll l ll l l l l l l l l l ll l l ll ll l l l l ll l ll l lll ll lll l l l l l l ll l l l l ll l l l l l l l lll l ll l l l ll lll l ll ll l ll l l l l l l l l l l l ll l l l l l l l l l l l l ll ll l l l l l l l l l l ll l l l l ll l l lll l l l l l ll l l l l l l l l l l l l lll l l ll l l ll l l l l l l l l l l l ll l l l l l l l l l l l l l ll l l l l l l l l ll l l l l l ll l l l l l l l ll ll ll l l l l l l l l l l lll l l l l l l l ll l ll l l l l l l l ll lll l l l l l l l l l l l l l l l l ll ll ll l l l l l l l l l l l l l l ll l l l ll l l l l l l l l l lll l l ll l ll l ll l l l ll l ll l ll ll l l l l l l l l l ll l l l l l l l l ll l l l l l l l l l l l l ll ll l l l l l l l l l l l l l l l l l l l l l l l llll l l l l l l l l ll l l l l l l l l l l l lll l ll l l l l l l l l l l l l ll ll l lllll l l l l l lll l l l l l ll l ll l l l l l l ll l ll l l l l l ll l l l ll l ll lll l l l l l l l l l l ll l l l ll l l l l l l l l ll l l l l l l l l l l l ll l l ll l ll l l l l l l l l l l l ll lll l l ll ll ll l ll l l l l l ll ll l l l l l l l l l l l l l l l l ll l l l l ll l l l lll l l l l ll l l l l l ll l ll l l l l l l l lll ll ll l l l l ll ll llll l l l l l l l l l l l l l l l l l ll l l l l l lll l llll ll l l l l l ll l l l l ll l l l l l l l l l l l l l l l l l l ll l l l l ll l ll l l l l l l l l l l l l l ll l l l l l lll l l l l l l l l l lll l l l l ll l l l l ll l l l l l l l l l l l l l ll l l l l l l l l l l l l l l l l l l l l ll l l l l l l l l l l l ll l l l l ll l l l l l l lll l l l l l l l l lll l l l l l l l l l l l ll l ll l l l l l l l l l l l l l l ll l l l l l l l l l ll ll l l l l l l l l l l
+−1.0 −0.5 0.0 0.5 1.0
+Log hazard ratio for infectiousness (b )
+evitaleR ll ll l l l l ll l l ll l ll l ll ll ll ll lll ll l l lllll l l l l ll l l ll l l l l l l l l l l l ll lll ll lllll l l l lll l l l lll lll l l l l l l l ll l l l ll ll l l l l l l l l lll l l l l ll ll l l l ll lll l l ll l l l l l l l ll l l l l l ll l ll l l l l l l ll l ll l l l l l l l l l l l lll l llll l ll l l l l l ll l llll l ll l l llll ll l ll l l l l lll l l ll l l l ll lll l l ll ll l ll l l l ll ll l l ll l l ll lllll ll l l l lllll ll ll l l ll l llll lll l llll l lll l l ll l ll l ll l l l llll ll l l l l l l ll l l l ll l l l ll l l llllll llll ll ll l l ll l l lll l l llll l ll ll l l lllll lll l l llll ll ll llll ll l llll l ll ll l l l l l l l l l ll l l l l l l ll l lll ll l l l l l ll llll llll llll l l l lll l l l l l ll l llllll l ll l l l l l ll ll lll ll l lll ll ll l l l ll l lll l l l l l l llllll lll l ll l ll lll l l l l llll l l l l llllll l l l l l ll l l l l l l l l l l l l l l l l l l l ll l l l l l lll l lllll l llll ll l l ll llll l l ll lll ll l l l l l l ll ll lll l ll ll l l ll lll l l l ll l lll l ll l l l l l ll l llllll l l l l l ll l l llll l l ll l ll l l l l l llll l l ll l l l ll llll l l l l l llll l l l l l l ll ll l l l lll ll l l ll l lllll ll l lll l l ll l ll lll ll lllll ll l l l l l l l ll ll l ll llll l l l l l l l l ll ll l l lll l l l l ll ll l l l ll l ll l l l ll l l lll l l l l l l l l l l l l l l l ll l ll lll l l l l llll l l l l l l lll lll l l l l l l ll l ll l l lll lllllll l l l l l l l ll l l l ll l l lllll l ll l l llll l l lll l l ll l l l l lll ll l lll l l l l ll l l l l l llll l l l l l ll l l l l ll l l l llll lll l l l ll l ll l ll l l l l l ll l
+l Epidemiologic data
+Epidemiologic data with phylogeny
+l Epidemiologic data with who−infected−whom
+Figure 4. Relative efficiencies of β estimates based on squared widths of
+confidence intervals. The dashed and dotted lines are smoothed means.
+l l l l l l l l l l l lll l l l l l lll l l l l ll ll l l l l l l lll l ll l l l llll l l ll l l l l l l l l l l l l l l l l l l l lll l lll l l l ll l l l l l l l l l l l l l l ll l l l l l l l ll ll ll l l l l l l ll l l l l l l ll l ll l l l l l l l ll l ll ll l l l l l l ll l ll lll l l ll l l l l l l l l l l ll l ll l l ll l ll lll l l lll l l l l l l l l l l l l ll ll l l ll l l l l l l lll l l l ll l l l l l l l l l l ll l ll l l l l ll l l l l l l l l l l l ll ll l l l l l ll ll l ll l l ll l l l l l l l l l ll l l ll l l ll l lll l l l l llll l ll l l ll lll l l l lll l l l l l l llll l l l l l l l l l l l l l l l l l l l l l ll l l lll l l l l l l l l ll l l ll ll l ll l lll l l lll l l l l l l l ll l l l l ll l l l l l l l l lll l l l l l l l l l ll l l l l l l l l l l l l l l l l l ll l l l l l l lll l l ll l lllll l ll l l l l l l l l l l l l ll l l l l l l l l l l l ll l l lll l ll l ll l l l l l l l l l l ll ll l l l ll ll l l l ll l l l l ll l l l ll l l ll lll l l l l l l ll l l l l l ll l l l l l ll l l lll ll l l ll l ll l l ll l l l ll l l l l l l l l l l l ll lll l l ll l l l l l l l ll ll l l l l ll l l ll ll l l l l lll ll l l l l l l l l ll l l ll l l l l l l l l l l l l l l l lll l l l llll l ll l l l l ll l l l l l l l lllll l l l ll l l l l l l l l l l l l l l l ll l l l l l l lll l l ll l ll l l ll l ll l lll l l l l ll l l l l ll l lll l l l l l l l l l l ll l l l ll ll l l lll l l l l l l l l lll l l ll l l l l l l ll l l l l l l l l l l l l lll ll l l ll l l l l l l l l l ll l l l ll l l l l l l l l l l l l l l l l l l l ll l l l ll l l l l l l ll l l l l l l l l l l ll l l l ll l l l l l l l l l l l l l l l l l l l l l l ll l l l l l l ll l l ll ll ll l lll l ll l l l ll lll l ll l l l l l l l ll ll l ll l l l l l l l l lll ll l l l
+0 200 400 600 800 1000
+Simulation number
+ycneciffe evitaleR l lll l l ll l ll l l lll l l l ll l l l l l ll l l l ll l l l lllllllll lllll l ll l l l l l l l l l l l l l l ll ll l l ll l llll lll l ll l l l l l l l l l l lll lll l l llll l llll l l l lll lll l lllll l l lll ll lllll l l l l l l l l l ll l l l l l ll l l ll ll l ll ll l ll llll l ll l ll l l l l ll ll l l l l llllll l lll l l l ll l l ll l l ll ll lll l ll l lll l lll ll ll ll l l lll l l l l ll ll ll l l l l ll l l ll l l l lllll ll l l llllll lll l l l l l ll l ll l l l ll llll l l l l l l ll l lll l ll lll lll l l l l ll l l lllll ll ll l l l l l ll l l ll l ll l l ll lll l l ll ll l l l l l l ll l l llllll l l ll l l l ll l ll l lll ll l l ll lll l l l lll l l l l lll l l ll l l l l l l ll lllll l ll l l l l l l llll ll ll l l l ll l l ll ll l ll l ll lllll l l l l l l lll l l lll l l l ll l ll l l l l lllll llll l l ll l l lll l l llll ll l l lll ll l l l l l l l ll l lll l l ll l l l l ll llll l l l lllll l l l llll ll l ll l l lll l lllll l l l ll l l l ll ll ll ll ll l l l l l ll l l ll ll l l l l l l l l l l ll l l l ll ll l l l l l l llllll l l ll ll lll l lll l l l ll l l l l ll llll l l ll l l lll l l l l l l l ll ll l lll ll lll l lll l l l l l l l l l lll ll l l l l ll l l lll l l ll l l l l ll l l l l l l l ll l llllll l l l l ll l lllllll l ll l l l lll ll l l lll l l l l l l l l ll l l lll l l l lll l lllllllll l ll l llllllll l ll l l l ll lll l llll ll ll l ll l l ll l ll ll l l l l l l l l ll ll l ll lllll lll l ll l l l l l l lll ll l llll l ll l lll l l l l l l lll l l ll l ll l l l ll l l l l l ll ll llll l l ll l l l l l l llll l l ll l lll ll l l l lll l l l l ll l l l l
+l Epidemiologic data
+Epidemiologic data with phylogeny
+l Epidemiologic data with who−infected−whom
+Figure 5. Relative efficiencies of lnλ estimates based on squared widths of
+confidence intervals. The dashed and dotted lines are smoothed means.
+PLOS 18/28
+Mar 15 Apr 01 Apr 15 May 01 May 15 Jun 01
+Onset of infectiousness
+Figure 6. First hosts in the Durham cluster. Rooted phylogeny for RNA
+sequences from the 12 farms in the Durham cluster with tips at the onset of
+infectiousness. Each interior node x has first(x) written next to it.
+Leaf hosts and infectious sets are known. Infectious set
+D {F, E, P}
+{L, O, C} P {L, O, F, E, C}
+{K, L, O} C {K, L, O}
+E {K, L, O}
+{K} {K, L}
+{G} I {M, G, D}
+{E, F} G {F, E, P}
+F {K, L, O, E}
+Mar 15 Apr 01 Apr 15 May 01 May 15 Jun 01
+Onset of infectiousness
+Figure 7. Postorder host sets in the Durham cluster. The postorder host set
+D is written next to each interior node x. These are calculated in a postorder traversal
+using the leaf hosts and the infectious sets.
+PLOS 19/28
+Postorder hosts
+Root host and postorder host sets are known.
+(interior nodes)
+{O, C} P {L, O, C}
+{K, O} C {K, L, O}
+{I} {M, I}
+Mar 15 Apr 01 Apr 15 May 01 May 15 Jun 01
+Onset of infectiousness
+Figure 8. Host sets in the Durham cluster. The host set H is written next to
+each interior node x. These are calculated in a preorder traversal using the root host
+and the postorder host sets.
+they are very sensitive to the number of farms that escaped infection. A similar
+sensitivity was observed by Lau et al. [43], who estimated 300 uninfected farms based
+on the crude density of farms in Durham County.
+To understand the effect of the phylogenies on the precision of the hazard function
+estimates, we constructed approximate pointwise 95% confidence bands for the hazard
+functions estimated with no uninfected farms. We took 4000 samples from each
+likelihood using a grid with spacing 0.02 on the interval [−3.6,−1.3] for lnλ and
+[−0.5,1.8] for lnγ. These intervals include the 99% confidence limits for both estimates
+plus a boundary of width 0.2. For each sample, we calculated the hazard function at
+500 time points between 0 and 15. At each time point, we took the .025 and .975
+quantiles of the calculated hazards to get an approximate 95% confidence interval.
+Fig 11 shows that the confidence bands for the estimates with phylogenies are narrower.
+Similar results were obtained when parameters were sampled from their approximate
+multivariate normal distributions, which can be done using S3 Text.
+Discussion
+Here we took a single phylogeny, derived the set of possible transmission trees, and
+estimated transmission parameters using likelihoods that are sums over the possible
+transmission trees. By restricting the set of possible transmission trees, incorporating a
+phylogeny into the analysis produced more efficient estimates of infectiousness hazard
+ratios and the baseline hazard of infectious contact. The efficiency gain was largest for
+infectiousness hazard ratio estimates. The combination of survival analysis and
+algorithms linking phylogenies to transmission trees can be incorporated into analyses
+based on many different statistical and phylogenetic methods. More precise estimates of
+PLOS 20/28
+K K or L G J
+C or O P L
+K K or L G J
+Figure 9. Interior node host assignments (left) and transmission trees
+(right) consistent with the phylogeny and the epidemiologic data. Dashed
+lines on the right indicate transmissions fixed by the phylogeny to the left. Dotted lines
+indicate that the infector of an individual depends on a choice of hosts in the phylogeny.
+At the top, K infects C, C infects P, and either K or L infects E. At the bottom, O
+infects C, either O or C infects P, and either K or L infects E. There are six possible
+transmission trees—two on top and four on the bottom.
+Table 4. Log-logistic rate and shape parameter estimates.
+Uninfected Without phylogeny With phylogeny
+farms Point estimate (95% CI) Point estimate (95% CI)
+rate (λ) 0.132 (0.062, 0.180) 0.125 (0.060, 0.175)
+shape (γ) 2.486 (1.131, 4.748) 2.233 (1.158, 3.807)
+rate (λ) 0.068 (0.018, 0.110) 0.062 (0.018, 0.103)
+shape (γ) 1.972 (0.946, 3.605) 1.812 (0.966, 2.979)
+rate (λ) 0.049 (0.010, 0.089) 0.043 (0.010, 0.080)
+shape (γ) 1.878 (0.907, 3.413) 1.725 (0.924, 2.823)
+rate (λ) 0.034 (0.005, 0.070) 0.029 (0.005, 0.061)
+shape (γ) 1.815 (0.881, 3.289) 1.666 (0.894, 2.720)
+PLOS 21/28
+0 2 4 6 8 10 12
+Days since onset of infectiousness
+suoitcefni
+12 escaped
+24 escaped
+Figure 10. Predicted farm-to-farm infectiousness with (black) and without
+(gray) phylogenies. These are log-logistic hazard functions based on the rate and
+shape parameters estimates in Table 4.
+0 2 4 6 8 10 12
+Days since onset of infectiousness
+suoitcefni
+Without phylogeny
+With phylogeny
+Figure 11. Point estimates and approximate 95% confidence bands for the
+hazard function estimates. These assume no farms escaped infection. The bands for
+the estimates using a phylogeny are narrower.
+PLOS 22/28
+transmission parameters, not the transmission trees themselves, will inform public
+health responses to emerging infections.
+We assumed complete observation of infection times, latent periods, and infectious
+periods, so our methods need to be extended to account for missing data and
+phylogenetic uncertainty. Bayesian MCMC with data augmentation is a well-established
+method of handling missing data in infectious disease epidemiology [53]. Combining this
+with a Bayesian MCMC for phylogeny reconstruction would allow our likelihoods to be
+integrated over both missing data and phylogenetic uncertainty [54]. Standard
+phylogenetic reconstruction assumes a well-mixed population, which may not be a good
+approximation for pathogen populations partitioned among hosts, but Bayesian
+methods can reconcile the reconstruction of phylogenies with possible transmission
+trees [49]. Extending these methods to nonparametric or semiparametric models of
+disease transmission will require iterative approaches to the assignment of probabilities
+to possible transmission trees [45,46].
+Our methods can be extended to diseases with complex within-host and
+between-host dynamics by adapting the likelihood in equation (7) or the algorithms
+linking phylogenies to transmission trees. For example, Assumption 2 requires a strict
+transmission bottleneck. If multiple pathogen lineages can be transmitted when a new
+host is infected at time t, sequences sampled from the infectee could have an MRCA
+with a branching time before t. The nodes hosted by the infectee would no longer form
+a subtree of the phylogeny. This is similar to deep coalescence (lineage sorting), which
+causes gene trees and species trees to have different topologies. Deep coalescence would
+be most likely to occur in a disease with a wide transmission bottleneck, substantial
+within-host diversity, and little within-host evolution [55]. Algorithm 1 could be
+adapted by allowing the infector of an i∈V to be the host of an interior node of the
+phylogeny whose child is hosted by j. The likelihood in equation (7) would have to
+include the likelihood contributions of these additional host assignments, including the
+within-host pathogen dynamics allowing two parallel strains to pass through i to j.
+Simulations The simulations suggest that a phylogeny can recover much of the
+information that would be obtained by observing who-infected-whom. Incorporating a
+phylogeny generated more precise estimates of β and lnλ . This increase in efficiency
+remained when infectiousness varied over the course of the infectious period, as in the
+Weibull models. The simulations used only phylogenetic topologies and assumed that all
+within-host topologies were equally likely, limiting the ability of the phylogeny to
+constrain the set of possible transmission trees. Using branching times and more
+realistic models of within-host pathogen evolution would allow greater information
+about who-infected-whom to be extracted from a phylogeny.
+The simulations that excluded data on household members who escape infection
+showed that this information is critical to estimating β , β , and lnλ accurately.
+These individuals do not appear anywhere on the pathogen phylogeny, so this point has
+escaped the attention of many researchers working on incorporating phylogenetics into
+the analysis of infectious disease transmission data. Any analysis that excludes this data
+should have an explicit justification based on a complete-data model—for example, the
+initial spread of a mass-action epidemic can be analyzed without data on escapees [44].
+In general, epidemiologic studies of emerging infections should be designed to capture
+information on individuals who were exposed to infection but not infected, which might
+justify greater emphasis on detailed studies of households, schools, or other settings
+with rapid transmission and a clearly defined population at risk.
+Data analysis The data analysis showed that the increased precision found in the
+simulations can be obtained in practice. The incorporation of phylogenies allowed more
+PLOS 23/28
+precise estimates of the hazard of FMDV transmission from infected to susceptible
+farms. For simplicity, our analysis assumed that the times of infectiousness onset were
+accurately estimated. A data-augmented MCMC [53] could be used to account for
+uncertainty in the onset of infectiousness, showing the importance of extending our
+methods to account for missing data.
+A more important limitation of this analysis was the lack of data on uninfected
+farms. The hazard function estimates were highly sensitive to the number of uninfected
+farms in the area where the cluster occurred. These data often go uncollected in
+outbreaks because their importance is unrecognized. This insight has important
+implications for the theory and practice of molecular infectious disease epidemiology.
+Acknowledgements
+The authors thank participants in the RAPIDD-EPI Workshop on Survival Analysis
+and Phylogenetics in Infectious Disease Epidemiology at the University of Florida in
+January, 2013 for useful comments on this research. TB is grateful to the University of
+Florida for hosting him on a sabbatical. EK was supported by National Institute of
+Allergy and Infectious Diseases (NIAID) grant R00 AI095302. EK, MEH, and IML were
+supported by National Institute of General Medical Sciences (NIGMS) grant U54
+GM111274 and NIAID grant R01 AI116770. The content is solely the responsibility of
+the authors and does not represent the official views of NIAID, NIGMS, or the National
+Institutes of Health.
+Supporting Information
+S1 Appendix
+Proofs of the lemmas and theorems.
+Parameters, point estimates, and 95% confidence limits from the
+simulations. Used in S2 Text.
+Parameters, point estimates, and 95% confidence limits from the
+simulations using data on infecteds only. Used in S2 Text.
+Parameters, point estimates, and 95% confidence limits from the
+simulations with Weibull contact intervals. Used in S2 Text.
+Python code for the simulations.
+R code for the simulation data analysis. Including Tables 1–3 and Figs 4–5.
+PLOS 24/28
+R code for the FMDV data analysis. Including Tab 4 and Figs 2–3 and 6–11.
+Newick file for rescaled Durham cluster phylogeny. Used in S3 Text.

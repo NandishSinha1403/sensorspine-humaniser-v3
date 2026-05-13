@@ -1,0 +1,255 @@
+Lattice-Boltzmann Method for Geophysical
+Plastic Flows
+Alessandro Leonardi Falk K. Wittel Miller Mendoza
+Hans J. Herrmann
+ETH Zurich, Institute for Building Materials, Schafmattstrasse 6, 8093, Zurich
+We explore possible applications of the Lattice-Boltzmann Method for the simula-
+tion of geophysical flows. This fluid solver, while successful in other fields, is still
+rarely used for geotechnical applications. We show how the standard method can be
+modified to represent free-surface realization of mudflows, debris flows, and in gen-
+eral any plastic flow, through the implementation of a Bingham constitutive model.
+The chapter is completed by an example of a full-scale simulation of a plastic fluid
+flowing down an inclined channel and depositing on a flat surface. An application
+is given, where the fluid interacts with a vertical obstacle in the channel.
+Key words: mudflow, debris flow, non-Newtonian, Bingham, Lattice-Boltzmann
+Preprint submitted to Elsevier 12 August 2021
+]nyd-ulf.scisyhp[
+1v90010.9051:viXra
+1 Introduction
+Geophysical flows are dangerous natural hazards occurring mostly in moun-
+tainous terrain. The most apparent phenomena of this category are debris
+flows, which originate when heavy rainfall mobilizes a large amount of debris
+[10]. The resulting mixture comprises water, cohesive sediments, organic mat-
+ter, silt, sand and in many cases also stones of different sizes The resulting
+rheological behavior is known to have a wide variability[24], which makes nu-
+merical studies an essential tool to support experimental investigations [9].
+Full-scale simulations of geophysical flows are very scarce, since they require a
+framework that efficiently manages complicated boundary conditions, as well
+as a powerful and flexible fluid solver. Moreover, the non-Newtonian nature
+of the material, and in some cases its multiple phases, pose more challenges.
+Traditional solvers are known to have troubles in tackling this problem, and
+nowadays alternative solution are sought by the community.
+The Lattice Boltzmann Method (LBM) [23] is becoming increasingly popu-
+lar and is today considered a valid alternative for categories of flows where
+traditional solvers exhibit disadvantages, like multiphase fluids, flows through
+porous media [18], irregular geometries [17], and free-surface realizations [12].
+After reviewing the most commonly used rheological model for flowing geoma-
+terialsinSec.2,weofferanessentialoverviewofthemethodinSec.3,together
+with a simple but effective formulation for the simulation of geophysical flows.
+In Sec. 4 and 5 examples are given.
+2 Rheology of geophysical flows and simulation
+The rheology of geophysical flow materials is a debated issue in the field, due
+to the extreme variability in natural material parameters and the presence of
+multiple phases, complicating the classification. Most models therefore adopt
+simplified solutions based on single-phase descriptions. This can either be a
+frictional material [21,16] or a viscoplastic fluid [7,26]. The former is used for
+rock and snow avalanches, while the latter is preferred for mudflows and vis-
+cous debris flows [2]. For certain categories of geophysical flows, however, a
+single-phase approach is insufficient to capture the physics of the phenom-
+ena. Debris flows are a typical example of this, because granular and viscous
+behavior interact, giving rise to unexpected structures and a localization of
+rheological properties [11]. A continuum-continuum coupling for granular and
+fluid phase is possible, but is incapable of capturing the localization of flow
+properties, which is widely recognized to be a key feature of debris flows.
+A discrete-continuum approach would of course be able to provide a detailed
+description, but development of this sort of coupling has been slowed by its
+demanding computational cost. This is currently challenged, however, by the
+maturity reached by alternative solvers like Smoothed Particle Hydrodynam-
+ics, the Material Point Method, or LBM, which are more flexible in managing
+complex boundary conditions than traditional tools like Finite Differences and
+Finite Volumes. In such methods, the granular phase is treated by a separate
+solver and, for this reason, the fluid model can focus on the nature of the
+material. This is the reason behind our choice to adopt LBM with a purely
+viscoplastic rheological law, an approach that can offer:
+• An efficient framework for the simulation of geophysical flows of plastic
+nature, where the complexity of the boundary does not influence the per-
+formance.
+• A convenient environment for the coupling with a discrete method. This
+option opens future chances for full realizations of multiphase flows [13].
+Regarding the specific rheological law, we adopt the Bingham model, which is
+widely used to describe plastic fluids due to its conceptual simplicity. It reads:
+ γ˙ = 0 if fluid does not yield (σ < σ
+γ˙ if fluid flows (σ > σ
+where σ and µ denote yield stress and plastic viscosity. An analogous way
+to write the law is through an analogy with Newtonian flow. One defines a
+parameter, the apparent viscosity µ , which proportionally relates stress and
+rate of strain and is treated as a variable. In the case of a Bingham fluid, µ
+takes the form
+app app pl
+where the apparent viscosity µ (from now on, for simplicity, called viscosity
+µ), diverges when γ˙ → 0, which will require special care in the solver. We
+are now ready to introduce LBM in the next section, and to incorporate this
+constitutive law in Sec. 3.1.
+3 Lattice-Boltzmann Formulation
+LBMhaslatelyemergedasanattractivealternativetotraditionalfluidsolvers,
+mainly due to its high-level performance and the predisposition to paral-
+lelization. LBM is also suitable to the solution of problems involving com-
+plex boundary conditions [1]. It is beyond the scope of this chapter to give a
+complete description of the method. The reader can refer to Refs. [5,23] for
+a comprehensive review. We will focus on the aspects of the formulation that
+need to be modified in order to successfully reproduce debris flows.
+In LBM, the fluid is described using a distribution function f and a set of
+discrete velocities c . Density ρ and velocity u of the fluid are computed as
+the first two moments of the distribution function
+(cid:88) (cid:88)
+The evolution of f is governed by the Lattice-Boltzmann equation
+whereΩ istheoperatorthatrepresentstheeffectsofinter-particlecollisionsin
+the fluid. A common way to approximate the otherwise complex expression of
+Ω is the Bhatnagar-Gross-Krook operator [3], which relaxes the distribution
+function to a thermodynamic equilibrium feq. It can be written as
+(cid:32) feq −f (cid:33)
+andfeaturesaconstant,therelaxationtimeτ,whichisrelatedtothekinematic
+viscosity of the fluid µ as
+Withthisformulation,andwiththesettingofacoherentlattice[22],LBMcan
+produce realizations of fluid dynamics in analogy to the Navier-Stokes equa-
+tions. The method is accurate in the limit of small Mach number, practically
+u < 0.01c with c denoting the lattice speed of sound. We will now de-
+scribe two additions to the model necessary for the simulation of geophysical
+flows: a non-Newtonian rheology and a free-surface treatment.
+3.1 Non-Newtonian rheology
+The LBM described in the previous section yields, after the Chapman-Enskog
+expansion [4], the Navier-Stokes equation for Newtonian fluids. A simple way
+to upgrade the method to more general formulations is offered by a local
+Bingham model Range of LBM
+acceptable μ
+Shear rate γ
+Fig. 1. Representation of the rheology model employed for plastic fluids. The ap-
+proximationoftheBinghammodelislimitedbythemaximumandminimumvalues
+for the relaxation time τ imposed by the method. Therefore, also the viscosity µ
+is limited.
+treatment of the relaxation time τ [14,25]. Any rheological law that can be
+approximated as
+with µ = µ(γ˙), is suitable for this approach. The relaxation time can in fact
+be directly related to the viscosity through Equation 6, obtaining ad hoc
+formulations for different rheological laws. The Bingham fluid, for example,
+can be written as
+(cid:32) (cid:33)
+y pl 2 c2 pl γ˙
+This type of formulation requires the computation of the shear rate tensor,
+which can be done easily in LBM directly form the distribution functions
+ab 2τc2 i,a i,b i i
+and the magnitude can be extracted as
+(cid:88)(cid:88)
+The limitation of this approach lies in the range of values given to the re-
+laxation time τ by Equation 8. Accuracy in LBM is guaranteed as long as
+τ < τ < τ . Reasonable values for these limits are τ = 0.501 and
+min max min
+τ = 1.0. Therefore, also the viscosity µ, which is linearly linked to the
+relaxation time, is subjected to the same restrictions: µ < µ < µ . The
+following considerations are thus necessary:
+• The fluid that reaches the maximum allowed value of µ is considered to be
+in a plastic state. However, with the proposed scheme, the fluid never stops
+its motion, but rather flows at a much slower rate. The ratio between µ
+and µ determines the effectiveness of this approach. With the proposed
+limit values for τ, µ = 500µ .
+• The best approximation of a Bingham fluid is obtained when µ ≤ µ ,
+because the lower limitation on µ has no effect. However, an eventual tran-
+sition to turbulent regime can happen when simulating diluted flows, and
+therefore the value of µ must be raised to avoid instabilities. In case
+µ ≥ µ , the approximation of the Bingham constitutive model becomes
+less accurate.
+3.2 Implementation of the free-surface technique
+In order to simulate geophysical flows on realistic geometries, we need to in-
+clude the boundary conditions given by the channel bed and the interface of
+the flow with air. While the former can be implemented as a standard no-
+slip boundary condition, as in Ref. [19], the latter is a less common practice
+in LBM. The free-surface is represented through a classification of the lat-
+tice nodes in three categories: liquid, interface and gas nodes. The governing
+parameter is the liquid fraction λ:
+ λ = ρ if the node is liquid,
+0 < λ < ρ if the node is interface, (11)
+λ = 0 if the node is gas.
+The liquid fraction of a node evolves according to the streaming of the distri-
+bution function given by Equation 4 as
+where f and f represent the distribution function streaming respectively
+in and out of the node, and α is a parameter that depends on whether the
+distributions are exchanged with a fluid node or another interface node. This
+method conserves mass exactly, and ensures a smooth evolution of the surface.
+Further details are found in Ref. [12].
+4 Simulation of mudflow
+Fig.2.Geometryofthesimulation.Thefluidmassliesatthetopofalongcylindrical
+chute. The deposition area at the bottom is flat and features a vertical obstacle.
+0 10 20 30
+Time t [s]
+noitazicitsalP
+0 10 20 30
+Time t [s]
+Fig. 3. Evolution of the maximum velocity of the fluid and of the flow plasticization
+level,computedasratiobetweencellsthathavereachedthemaximumviscosityand
+the total number of cells.
+The full-scale simulation of a plastic geophysical flow is shown in this sec-
+tion. Mimicking the real geometry of a small valley, the simulation features a
+cylindrical channel inclined at 5◦ with respect to the horizontal, and a flat de-
+position area at its bottom (Fig. 2). The total volume of the flowing material
+is 500 m3 and is fixed, i.e. neither entrainment nor deposition are modeled.
+While very big events can be of the order of 106 m3, the size of the most fre-
+quent type of geophysical flows lies in the range of 103 m3, which is big enough
+to endanger humans and infrastructures. Therefore our simulation proposes
+a realistic scenario, even though not a particularly dangerous one. The fluid
+has density ρ = 2000 kg/m3 and follows a Bingham-like rheological law, like
+the one proposed in Sec. 3.1. Yield stress and kinematic plastic viscosity are
+respectively σ = 150 Pa and µ = 10 textrmm2/s, relating the simulated
+system to a very dense mudflow or to a debris flow whose granular phase has
+been homogenized into the fluid, therefore increasing the bulk viscosity [20,6].
+Fig. 4 shows how the fluid free surface evolves in time. The fluid is quickly
+sheared by the effect of gravity and moves until an equilibrium is reached in
+the deposition area, where the viscosity increases. This technique can be used
+to estimate the deposition area of the material after an event, and to support
+the design of hazard maps on real terrain. Fig. 3 shows the evolution of the
+maximum velocity in the fluid and of the plasticization level of the material,
+which are the useful parameters to determine the status of the flow.
+Vt i=s c0o.s0i tsy [m/s] t = 1.0 s t = 3.0 s t = 6.0 s
+Viscosity [m/s]
+ν = 8.33x100
+ν = 3.33x10-2
+t = 12.0 s t = 20.0 s t = 24.0 s t = 50.0 s
+Fig. 4. Evolution of the geometry of the flow. Intensities show the viscosity at the
+surface, therefore indicating the rate of shearing of the fluid: low (dark) or high
+(light).
+5 Obstacle Interaction
+ToshowthepossibilitiestouseLBMtodesignprotectionstructures,werepeat
+the simulation of the previous section, this time featuring an obstacle. LBM
+caninfactbeusedtocalculatethehydrodynamicinteractionsonsolidobjects,
+computing all momentum transfers between the distribution function and the
+solid boundaries. The procedure, which is found in Ref. [15], does not change
+significantly the overall efficiency of the method.We add a retaining wall, fixed
+at the bottom of the channel and of size H×L×S = 3.0 m ×2.0 m ×0.25 m,
+as in Fig. 2. The shape of the free surface after the impact is shown in Fig. 5,
+with insight into the longitudinal cross section of the flow.
+Velocity [m/s]
+(b) u min = 0.0
+Fig. 5. Image of the flow splashing on the retaining wall, at t = 14.0 s. The color
+contour shows the velocity at the free surface (a) and in the longitudinal section
+(b).
+Estimation
+12 16 20 24
+Time t [s]
+Fig. 6. Force exerted on the obstacle by the flow. The estimation is obtained with
+the hydrodynamic formula in Eq. 13
+.
+The force on the wall can be estimated with a hydrodynamic formula [8] as
+F = kAρv2 , (13)
+wall front
+where A is the area of the obstacle impacted by the flow. The value of the
+coefficientk isgivenbythecomparisonwithexperimentsandvaries,according
+to different authors, from 2 to 5. In the simulation, when the flow hits the
+wall, the depth is 0.5m and the front speed is v (cid:39) 5m/s, which leads to
+an estimated force of F = 300÷750 kN. Fig. 6 shows the hydrodynamic
+force as calculated by the solver, highlighting the importance of the dynamic
+load due to the initial impact. The maximum values match the prediction of
+the hydrodynamic formula.
+In this chapter we showed how a model based on LBM can be used to simulate
+geophysical flows and provide a new tool for the rational design of mitigation
+and protection structures. The model inherits the advantages of the local
+solutionmechanismofLBM,andextendsthestandardsolverwiththeaddition
+ofaBinghamfluidformulationandofthefree-surfacetechnique.Theresulting
+framework can be used to simulate homogeneous plastic flows, and provides
+an optimal environment for the coupling with discrete method, thus opening
+future chances for the full simulation of multiphase geophysical flows.
+7 Acknowledgements
+The research leading to these results has received funding from the European
+Union (FP7/2007-2013) under grant agreement n. 289911. We acknowledge fi-
+nancial support from the European Research Council (ERC) Advanced Grant
+319968-FlowCCS.TheauthorsaregratefulforthesupportoftheEuropeanre-
+search network MUMOLADE (Multiscale Modelling of Landslides and Debris
+Flows).

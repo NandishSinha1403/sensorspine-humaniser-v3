@@ -1,0 +1,407 @@
+Numerical algebraic geometry for model selection and its
+application to the life sciences
+Elizabeth Gross1 Brent Davis2, Kenneth L. Ho3, Daniel J. Bates2, Heather A. Harrington4
+1Department of Mathematics, San Jos´e State University,
+2Department of Mathematics, Colorado State University,
+3Department of Mathematics, Stanford University,
+4Mathematical Institute, University of Oxford
+September 24, 2018
+Researchers working with mathematical models are often confronted by the related problems of
+parameterestimation,modelvalidation,andmodelselection. Thesearealloptimizationproblems,well-
+known to be challenging due to non-linearity, non-convexity and multiple local optima. Furthermore,
+the challenges are compounded when only partial data is available. Here, we consider polynomial
+models(e.g.,mass-actionchemicalreactionnetworksatsteadystate)anddescribeaframeworkfortheir
+analysisbasedonoptimizationusingnumericalalgebraicgeometry. Specifically,weuseprobability-one
+polynomialhomotopycontinuationmethodstocomputeallcriticalpointsoftheobjectivefunction,then
+filtertorecovertheglobaloptima. Ourapproachexploitsthegeometricstructuresrelatingmodelsand
+data,andwedemonstrateitsutilityonexamplesfromcellsignaling,syntheticbiology,andepidemiology.
+1 Introduction
+Across the physical, biological, and social sciences, mathematical models are formulated and studied to
+better understand real-world phenomena. Often, multiple models are developed to explore alternate hy-
+potheses. It then becomes necessary to choose between different models, for example, based on their fit
+withnoisyexperimentaldata. Thisistheproblemofmodelselection,afundamentalscientificproblemwith
+practical implications (1–3).
+Thestandardapproachtomodelselectionistofirstestimateallmodelparametersandhiddenvariables
+fromthedata,thenselectthemodelwiththesmallestbest-fiterror,uptosomepenaltyonmodelcomplexity
+(4,5). Thus,atitscore,modelselectionisintimatelytiedtoparameterestimation,which,foragivenmodel
+f(a,x)=0intheparametersaandvariablesxwithmeasurable“outputs”y=g(x),say,canbewrittenas
+the following optimization problem:
+f(a,x) = 0
+2 s.t.
+where y denotes the observed data, i.e. measured outputs. Unless f and g are convex, solving (1) is a
+nonconvex problem, which can be challenging as standard local solvers run the risk of getting trapped in
+local minima (especially in high dimensions). This can be mitigated somewhat with techniques such as
+simulatedannealing(6,7)orconvexrelaxationwhichhasbeensuccessfulformodelinvalidation(8–10),but
+there is generally no guarantee that a global minimum will be found.
+When f and g are polynomial, however, problem (1) can be solved globally by finding all roots of an
+associated polynomial system. In this case, ideas from computational algebra and algebraic geometry can
+beeffective;see,e.g.,(11–14)forapplicationsofGr¨obnerbasesinsystemsbiologyand(15)forapplications
+ofalgebraicgeometrytostatisticalinference. Suchsymbolicmethodstendtobecomputationallyexpensive,
+]MQ.oib-q[
+3v13340.7051:viXra
+which limits their use in practice. Thus, although they provide a solution in principle, new algorithms and
+techniques are yet desired.
+In this paper, we aim to fill this gap by proposing a framework for global parameter estimation for
+polynomialdeterministicmodelsusingnumericalalgebraicgeometry(NAG),asuiteoftoolsfornumerically
+approximatingthesolutionsetsofmultivariatepolynomialsystemsviaadaptivemulti-precision,probability-
+onepolynomialhomotopycontinuation(16,17). Ourapproachscaleswellindimensionrelativetoclassical
+symbolic methods (18), and, while it comes with a higher computational cost than standard local opti-
+mization,ithasaprobability-oneguaranteetorecovertheglobaloptima,solvingproblem(1)inthestrong
+sense. This allows us to reason rigorously about model fit and to address the related problems of model
+selection and parameter estimation from a maximum-likelihood perspective.
+We demonstrate our techniques on examples from biology, where polynomial models often arise as the
+steady-state descriptions of mass-action chemical reaction networks. Although some limitations remain,
+we believe that this work achieves its primary purpose of introducing NAG as a valuable complement to
+existingtoolsformodelevaluationandanalysis. Additionally,thispaperhighlightsspecificchallengesthat
+arise when using polynomial methods for model inference, such as dealing with positivity constraints and
+non-isolated solutions, and provides guidance for tackling these challenges.
+Theremainderofthepaperisorganizedasfollows. Inthenextsection, westatepreciselytheproblems
+withwhichweareconcerned: modelvalidation,modelselection,andparameterandhiddenvariableestima-
+tion. WethenpresentNAGalgorithmsforsolvingeachproblem. Finally,weshowcaseourapproachonafew
+examples including cell death activation, synthetic bio-circuits, HIV progression, and protein modification.
+2 Problem Statement
+Consider a model whose dynamics are described by the system of polynomial differential equations
+where a=(a ,...,a ) are parameters (e.g. rate constants in a deterministic mechanistic model, such as a
+chemical reaction network with mass-action kinetics), x = (x ,...,x ) are variables, and f = (f ,...,f )
+are polynomials in x and a with measurable outputs y = g(x) where y = (y ,...,y ), m n, and
+g = (g ,...,g ) are polynomials in x. While the parameters a ,...,a are treated as fixed variables in
+our exposition, we separate them from x ,...,x to respect how such variables are treated differently in
+experimental and computational settings.
+In algebraic geometry a variety is a solution set of a system of polynomial equations; we use this
+terminology for our next two definitions. The real model variety is the solution set of the system
+y g(x)=0, that is, (4)
+corresponding to the steady states of the model. Now, consider, for simplicity, the case of a single data
+point yˆ=(yˆ ,...,yˆ ). (See SI Appendix for multiple data points.) The real data variety is then the affine
+linear space
+( VD ) R := { (a,x,y) ∈ R k+n+m :y i =yˆ i , ∀ i=1,...,m } ,
+with dim( ) =k+n. We consider the case when the data includes some extrinsic (measurement) noise;
+weassumetheerrors (cid:15) ,...,(cid:15) ontheobserveddatavariablesareuncorrelatedrandomvariablesandeach
+error (cid:15) is normally distributed with known variance σ (which can be obtained by instrument calibration).
+Using this geometric framework, the problems of (1) model validation, (2) model selection, and (3) pa-
+rameter estimation, can be described precisely in terms of the real algebraic varieties ( ) and ( ) .
+2.1 Problem 1: Model Validation
+For model validation, we want to determine whether a deterministic polynomial model is compatible
+withthedataaccordingtoagivensignificancelevelα. Thisisakintoaskingwhetherthemodelisa“good
+fit” for the data. A natural goodness-of-fit statistic is:
+d2 :=min i − i subject to (a,x,y) ( ) . (5)
+Whenthevariancesdiffer,d2 istheminimumsquaredweightedEuclideandistancebetween( ) and
+( ) . Whenallvariancesareequaltoone,thevalueof (5)isjusttheminimumsquareddistance. Forthe
+remainder of the text, we will assume the latter, knowing that we can simply rescale.
+Optimization problem 5 can be derived directly from the log-likelihood function
+m 1 (yˆ y )2
+logL(a,x,y)= log2πσ2 i − i
+i=1(cid:18) i (cid:19)
+asdemonstratedinSection2.1oftheSI.Thisprovidesabridgetostandardstatisticalmodelselectiontools
+such as AIC (19) and BIC (20).
+If the data are generated from the model with normally distributed extrinsic noise, the distribution
+function of d2 is dominated by that of the chi-squared distribution with m degrees of freedom, χ2 , where
+m is the number of measurable outputs. Thus, if p is the upper α-percentile for χ2 , then Pr(d2 p )
+Pr(U p )=α where U χ2 . We reject the model as incompatible if d2 >p ; otherwise we say that
+the model is compatible.
+Iftherealmodelanddatavarietiesintersect,thatis,( ) ( ) = ,thend2 =0,andwealsosay
+VM R ∩ VD R 6 ∅
+thatthemodeliscompatiblewiththedata. Iftherearerestrictionson(a,x,y),forexampleifallparameters
+and variables are required to be non-negative, then finding d2 becomes a constrained optimization problem
+(see SI Appendix).
+2.2 Problem 2: Model Selection
+For model selection, we are given a set of models ,..., and want to determine the model of best
+fit. Inthissetting,weusethestatisticd2tomakeaselection,eitherbychoosingthemodelwiththesmallest
+goodness-of-fit statistic or by using d2 in conjunction with a complexity penalty, similar to the Bayesian or
+Akaike information criteria (2).
+If the statistic d2 evaluates to zero for all (or even multiple) models, then we are unable to make a
+selection between the models. This can be remedied by designing experiments that yield more informative
+data. For example, measuring more variables can reduce the dimension of ( ) ( ) ; the most
+VM R ∩ VD R
+informative situation is when ( ) ( ) = for all models. This indeterminacy can also be resolved
+VMi R∩ VD R ∅
+by taking multiple measurements and minimizing the joint squared distance (see SI Appendix).
+2.3 Problem 3: Parameter Estimation
+Parameter estimation can be achieved by finding the point (a ,x ,y ) ( ) that minimizes the value
+of (5). The point (a ,x ,y ) is the maximum likelihood estimate under the given noise assumptions. The
+parameterestimateisthena ;theestimateofthehiddenvariables,x ;andtheestimateofthe“de-noised”
+outputs,y . Ofcourse,ifthedataandmodelvarietiesintersect,therewillbeoneormore(possiblyinfinite)
+choices for (a ,x ,y ). Otherwise, it is a matter of solving a polynomial system that yields the point(s) on
+( ) nearest ( ) . This is described in more detail in the next section.
+3 Geometry
+In each of the problems stated above, we seek to minimize the distance between (V ) and (V ) or to
+find the intersection of these two sets. Standard methods for solving non-linear optimization problems are
+local in nature, i.e., only guaranteed to converge to a local minimum which may or may not be the global
+minimum. However,usingNAG,wefindalllocalextremaoverC,necessarilyincludingtheglobalminimum.
+Duetothisglobalbenefit,NAGhasbeenusedbeforeinstatisticalinferenceinthefieldofalgebraicstatistics
+(21, 22).
+Let V Ck+n+m be the (complex) Zariski closure of (V ) and V Ck+n+m be the (complex)
+M ⊆ M R D ⊆
+Zariski closure of (V ) . We will refer to V and V as the model variety and data variety, respectively.
+The problem of determining the intersection of V V is simply a matter of solving the polynomial
+system obtained by taking the union of the polynomials defining V and the polynomials defining V .
+ThisishandleddirectlybyNAG.Iftheintersectionisnonemptyandpositive-dimensional(complexcurves,
+surfaces,etc),realpointscanbefoundusingthepolynomialhomotopymethoddescribedin(23),amethod
+based on symbolic algorithms in (24), and, more classically, on the decision method in (25).
+Theproblemoffindingthepointsonthetwovarietiesnearestoneanothercanalsobestatedintermsof
+apolynomialsystem,onwhichwethencallNAGsolverstofindsolutions. Awell-knownnecessarycondition
+for local extrema is given by Lagrange multipliers. In the main text we assume that r+m= codim ;
+however, when this is not the case, the number of equations can be reduced (see SI Appendix).
+Proposition 1 (EquationsgivenbyLagrangemultipliers). Let c= codim V and let f =(f ,...,f )=0
+on a Zariski open set of V . If (a,x,y) ( ) is a local minimum of
+then there exists λ:=(λ ,...,λ ), such that (a,x,y,λ) is a solution to the system
+f0 =0, (7)
+λ 1 ∇ f 10 +...λ c ∇ f c0+ y yˆ =0. (9)
+(cid:20) − (cid:21)
+SolvingthissystemwithNAGwillprovideuswithalllocalextremaof (6)over ,fromwhichwemay
+easily select the pair of nearest points. The geometry of zero sets of systems such as (7)-(9) are described
+in (26).
+3.1 Numerical Algebraic Geometry
+GivenapolynomialsystemF consistingofr polynomialsandN variables,NAGpackages,suchasBertini
+(17), PHCpack (27), HOM4PS-2.0 (28), use polynomial homotopy continuation to provide probability-one
+numerical methods for finding approximations of all isolated complex solutions of F = 0 (points) as well
+as witness points on all positive-dimensional irreducible components of the solution set of F = 0. These
+methodsareprobability-oneinthatthecomputationsincludesomerandomization,andthisrandomization
+will yield theoretically correct results so long as the random numbers are not chosen from some measure
+zero set in the parameter spaces of potential choices (16, 29).
+If x RN is a real solution of F = 0, it is either isolated among the complex solutions or it lies on a
+positive-dimensional complex irreducible component. In the former case, the methods of NAG will find x
+and recognize it as real. In the latter case, x can be difficult to uncover. However, for our purposes, we
+usually only need to verify the existence of a real solution. In this case, we can find witness points on all
+positive dimensional components and then use the procedure in Section 2.1 of (23) to verify the existence
+of real points.
+3.2 Algorithms
+Wepresentthreerelatedalgorithmstoaddressmodelvalidation,modelselection,andparameterestimation
+(see Fig. 1).
+The aim of the first algorithm, Algorithm 1, is to find the pair of points that minimize the distance
+between ( ) and ( ) . If ( ) ( ) = , then this is obtained by solving (7)-(9); otherwise,
+VM R VD R VM R ∩ VD R ∅
+additional techniques are required.
+We note also simply that these techniques are indeed probability-one algorithms. The computations
+will necessarily be carried out in finite time and the steps proceed linearly (no loops), so the methods will
+necessarily finish.
+3.2.1 Algorithm 1: Model validation
+Input Model , data = yˆ , tolerance α
+Output yes or no
+1 If = , goto Step 3.
+2 If dim( ) 0 and
+( ) ( ) = , return yes,
+VM R∩ VD R 6 ∅
+else, goto Step 3.
+3 Find a pair (z ,z ) ( ) ( ) that minimizes (6) (using NAG software such as
+Bertini or PH
+).
+VM R× VD R
+4 If z z 2 <p , return yes; else no.
+The computation of the intersection in Steps 1 and 2 can be determined in several ways. The
+simplest way is by considering dimensions: if dim( )+dim( ) exceeds the ambient dimension, they
+will almost surely intersect. If the ambient dimension is larger than the sum of the variety dimensions,
+they typically do not intersect. To compute the intersection (or check to see if it is nonempty), one could
+substitute yˆ g(x) for (8) in the system (7)-(8).
+InStep2,ifdim( )=0,thentheintersectionofthetwovarietiesconsistsoffinitelymanypoints;
+the condition ( ) ( ) = indicates that at least one of the points is real, which is straightforward
+VM R∩ VD R 6 ∅
+todetermine. Ifdim( )>0,tocheckif( ) ( ) = ,oneneedsmoresophisticatedmethods,
+VM∩VD VM R∩ VD R 6 ∅
+such as those in (23).
+To find the pair (z ,z ) in Step 3, one may solve the polynomial system (7)-(9). If there is a positive-
+dimensionalsetof(complex)extremalpoints,thentheproceduresin(23)couldbeusedtodetermineifthe
+set contains a real point.
+If there are constraints on the variables or parameters, for example, if we seek to minimize (6) over
+the non-negative part of ( ) , then the algorithm is updated as follows: if the dim( ) = 0 or
+VM R VM ∩VD
+= thentheKarush-Kuhn-TuckerequationsasdescribedinSection3.1oftheSIAppendixshould
+be used, while if dim( )>0, or if there is a positive-dimensional set of extremal points at Step 3,
+then the algorithm should return possibly. There are methods (30–32) for finding real points, curves, and
+surfaces within complex components of dimension 2 or less, but little is known about higher dimensions.
+3.2.2 Algorithm 2: Model selection
+In this case, there are several competing models, each with its own polynomial system. The algorithm
+proceeds much as in Algorithm 1, but iterated for the several models under consideration. If a threshold α
+is provided, one should first reject models that do not adequately support the data (d2 p ), then choose
+the model yielding the minimum value of d2 (up to some complexity penalty). Various conclusions may be
+drawn,e.g.,no model adequately fits the dataorthree models adequately fit the data and model provides
+the best fit.
+3.2.3 Algorithm 3: Parameter estimation
+Again, this algorithm is similar to the first. The input consists of only one model and data . It is
+assumed that there are unknown parameters and the goal is to find values of these parameters producing
+thebestfitbetween and . TheoutputofSteps2and3needtobeadjustedappropriately. Theoutput
+ofStep4issimplyz sincethereisnoαtobeusedforrejection. Themethodalsosimultaneouslyestimates
+hidden/unknown variables and “de-noised” outputs.
+3.2.4 Simple Example
+To illustrate Algorithm 1, consider a simple model with three variables x,y,z and three parameters a,b,c
+satisfying
++ + =1.
+Let α=0.1 and assume, for this example, that the variances on the errors are σ2 =0.1 for i=1,2,3. The
+modelvariety issimplyanellipsoid(Fig.2A)wherea,b,cdescribetheprincipalaxes. Supposeweknow
+that a,b,c=1. For the case when the outputs are x and y and xˆ=0, yˆ=0 and α=0.1, Step 2 indicates
+thatthedatadoesfitthemodel,i.e. themodeliscompatiblewiththedata. Inthiscase,therearetworeal
+points in the 0-dimensional intersection (see Fig. 2B). For the same set-up, but with data xˆ=0,
+Step 3 indicates that this data possibly fits this model. Since there is a positive-dimensional intersection
+(Fig.2C),itispossiblycompatible(dependingonconstraintsimposedbytheuser). Forthesamemodeland
+α,butdifferentdataxˆ=1.7,yˆ=0,Step4yieldspoints(1,0,0)and(1.7,0,0),so z z 2 >0.4605=p ,
+and the model is rejected (Fig. 2D). However when the data are xˆ = 1.01,yˆ = 0, Algorithm 1 indicates
+model compatibility (Fig. 2E). Previous algebraic methods that required Gr¨obner basis calculations would
+result in a zero set and thus those approaches are not useful here.
+Wedemonstrateourmethodsonproblemsinbiomedicine: celldeathactivation,syntheticbiology,epidemi-
+ologyandmultisitephosphorylation. Eachoftheforthcomingapplicationscanbewrittenasamass-action
+chemical reaction network, which has the form x˙ = f(a,x), studied at steady state: f(a,x) = 0 as in the
+problemstatement. Throughoutthesereal-worldexamples,weemphasizethepivotalcomputationsinthese
+methods,suchasdeterminingthedimensionoftheintersectionV V andfindingpointsintheintersec-
+tion (see Fig. 1B). Our first two examples, cell death signaling and genetic toggle bio-circuits, demonstrate
+how to handle positive dimensional intersections using two different approaches, while the remaining two
+examples, HIV and MAP kinase signaling, highlight analysis of zero-dimensional and empty intersections.
+In the following examples, we are interested in results that can be interpreted biologically, therefore we
+restrict our analysis to non-negative real solutions.
+4.1 Cell death activation
+Wedemonstratemodelcompatibility(Algorithm1)onanexamplefromreceptor-mediatedprogrammedcell
+death,whichisinitiatedbytheactivationofdeathreceptorsuponthedetectionofextracellulardeathligands
+(33–36). We consider, in particular, the “cluster” model of (12), which was inspired by crystallographic
+data (37) and describes the recruitment of receptors by ligands into local self-activating clusters capable of
+bistability.
+The cluster model is a system of 3 degree-4 polynomials in the form of (2) in 3 variables (representing
+various receptor states) and 6 rate parameters, supplemented by ligand and receptor conservations (see SI
+Appendix). We assume that we can measure the total ligand and receptor concentrations, which may be
+considered experimental inputs, as well as the concentration of active receptors. We do not assume access
+to the concentrations of other individual receptor states nor to any of the rate parameters.
+A steady-state data point was simulated from the model with all parameters and initial concentrations
+drawn independently and identically from the log-normal distribution ln (0,4), then combined and cor-
+rupted with i.i.d. noise from (0,0.1) to obtain yˆ. The real model and real data varieties intersect in the
+positive orthant with a distance zero and hence the model is indeed compatible with the data.
+4.2 Synthetic biology and experimental design
+Wedemonstrateanexamplefromsyntheticbiologywithexcessintersection(dim( )>0). Agoalin
+synthetic biology is to design or modify existing biological systems with new features according to specific
+designcriteria. Reverseengineeringofbiologicalsystemsoftenincludesmodules(suchasfeedbackloops)and
+howtheseareinterconnectedaredescribedbydifferentcircuits(models). Understandingdifferencesbetween
+bio-circuit implementations is crucial; therefore we compare three bistable bio-circuits models analyzed in
+(38): monomer-dimertogglecircuit( ),dimer-dimertogglecircuit( ),andsingleoperatorgenecircuit
+( ), which were initially presented in (39–41). The model variables include genes (X ) and proteins (P )
+where i=1 for or i=1,2 for , , as well as these species complexes (e.g., P P ,X P P ). These
+3 1 2 i i j i i
+variablesinteractfollowingmass-actionkineticsandformsystemsofpolynomialdifferentialequationswhere
+, , and have 7, 8 and 6 model variables, respectively, and 10, 12, and 9 kinetic parameters,
+respectively. Themodelscanbereduced(giveninSIAppendix)byassumingthatthetotalamountofgene
+1 (X ) and gene 2 (X ) is conserved.
+SupposethatthetotalamountsX andX andspecificproteinsynthesisanddegradationparame-
+ters k , k , k , and k are known. Sinceprotein concentrations areoften measurable, we assume
+bas1 bas2 deg1 deg2
+that our data are P , P , and their complexes P P , and P P . The aim is to select the best model ,
+1 2 1 1 2 2 1
+, and given the data. We simulate steady-state data from the dimer-dimer toggle model ( ) and
+add Gaussian noise from (0,0.1). We find that all three have positive dimensional intersections, where
+the dimension of the intersections are:
+VM1 R∩ VD R
+VM2 R∩ VD R
+VM3 R∩ VD R
+Clearly, all three models are compatible with the data, thus one can only select a “best fit” model using
+data-independent measures, e.g. number of parameters, dimension, etc.
+Infact,thedimensionsofthemodelanddatavarietiescanhelpusdesignmoreinformativeexperiments
+for model selection. For example, the variety associated to the monomer-dimer toggle model lives in a 15
+dimensionalambientspace, C15,andhasdimension6,whilethedatavariety C15hasdimension
+VM1 ⊆ VD ⊆
+12;thusbytheDimensionTheorem,wecandeterminethatdim( ) 6+12 15=3. Thisdimension
+VM1∩VD ≥ −
+calculationprovidesguidancetowardsthenumberofminimaladditionalvariableandparametervaluesthat
+mustbemeasuredtoensure = , i.e., atleastfourmorevariablesandparametervaluesmustbe
+known.
+Supposewecanexperimentallymeasurefourforwardbiochemicalreactionrateconstants(e.g.,k ,k ,
+k ,andk ),then iscutdownbyfourdimensionsanddoesnotintersect . Wegetsimilarresults
+nF kR VM1 VD
+for the model varieties associated to and provided we measure rate constants specific to these
+models (see SI Appendix). Now that all the intersections are empty, we run Algorithm 2 and find that the
+sum of squares (Eq. (5)) for each model are as follows: d2 = 0.2262, d2 = 7.34 10 7, and d2 = 0.3040.
+Therefore, we select the model, which is indeed the true model.
+4.3 HIV Progression
+We demonstrate parameter estimation (Algorithm 3) on an example coming from epidemiology. We use a
+modelthatincludeslong-termHIVdynamicsfrominitialviremia,latency,andvirusincrease(42),basedon
+(43). In the model (see SI Appendix), the HIV virus inhibits the CD4+T cell population while promoting
+macrophageproliferation,whichinturnhousesthereplicatingvirus. Asmacrophagesproliferate,thevirus
+reservoir increases, so the model offers a description of HIV patient progression to AIDS. Model variables
+x are uninfected CD4+T cells (T), infected CD4+ T cells (T ), uninfected macrophages (M), infected
+macrophages (M ), and HIV virus population (V).
+Hernandez-Vargasetal.showthatthemodelcanhavetworealequilibria, oneofwhichisstable, repre-
+sentingpatientsthatare“long-termnon-progressors”(42). Theparametersaare(s ,s ,k ,...,k ,δ ,...,δ ),
+1 2 1 6 1 5
+where s represents synthesis of T cells and macrophages, k are rate constants describing interactions be-
+tween variables x, and δ represents natural death. For this example, y = x. We estimated the natural
+death of the virus, parameter δ , using the long-term non-progressors steady-state value (Table 3 of (42))
+and adding noise to each variable (0,1). By Algorithm 3, the data variety and model variety do not
+intersect. We find the closest point and estimate δ =2.99876 (true value of δ =3).
+4.4 Multisite phosphorylation with experimental data
+We examine phosphorylation mechanisms of cellular signaling with experimental data, and demonstrate
+model selection (Algorithm 2) and parameter estimation (Algorithm 3). We focus on phosphorylation,
+a key cellular regulatory mechanism that has been the subject of extensive study, both experimentally
+and theoretically ((44) and references therein). An area of interest is the mechanism by which a kinase
+phosphorylates a two-site substrate, either distributively, where the kinase can add at most one phosphate
+before dissociating, or processively, where it can add both phosphates in sequence. The MAPK/ERK
+pathwayisawell-knownsystemforstudyingphosphorylation,wherebyMEK(kinase)phosphorylatesERK
+(itssubstrate). Aokietal.(45)showedexperimentalevidence,whileworkingwithpolynomialmodels,that
+the mammalian MAPK/ERK pathway acts distributively in vitro but processively in vivo.
+We compare these distributive and processive models against the in vivo data reported in the same
+study. The distributive model consists of 12 molecular species and 17 mass-action reactions, while the
+processivemodelhas14speciesand18reactions(speciescorrespondtovariables,eachreactioncorresponds
+toaparameter). Thedatataketheformof36concentrationmeasurementsofthreeaggregatephosphoforms
+over a range of 12 EGF stimulation levels. All model parameters are calibrated using in vitro estimates
+by (45), except the parameter k representing EGF loading, which we estimate for both models (see SI
+Appendix).
+Next we perform model selection by running Algorithm 2 on each data point individually and select
+independently for each run the preferred model (more details in SI Appendix). Under low EGF stimula-
+tion, the best model estimates are nearly identical with a slight preference for distributive. At high EGF
+stimulation, themodelsareidenticalwithnopreferenceforonemodelovertheother. Theseresultscanbe
+justified by noting that the main distinction between distributivity and processivity is nonlinear switching
+behavior (i.e., a sigmoidal response curve), and this only occurs at intermediate stimulations. However, at
+medium EGF stimulation (see Fig 3), there is a preference for the processive model, which supports the
+findings in (45).
+5 Conclusion
+The problem of determining whether given real-world data fits one or more given mathematical models is
+challenging. When a model is defined by algebraic (polynomial) functions, the methods of NAG may be
+employed to study the geometry underlying the model and data. In particular, these methods are useful
+for model variables observed at steady-state. We demonstrated this numerical and geometric framework
+forcomparingmodelswithexperimentaldose-responsedatainMAPK/ERKpathwayandhighlightedthat
+the intermediate EGF doses were the most informative for model selection, complementing another finding
+that model selection results can be very sensitive to experimental parameters (46).
+Despite the difficulties associated with positive dimensional components, and limitations in analysis,
+we can reproduce compatible models, and furthermore can predict additional information, such as mea-
+surements of parameters, that are necessary for selecting models. Our geometric investigations of positive
+dimensional components may perhaps relate to algebraic analyses for biochemical models, such as model
+identifiability or matroids for experimental design (14, 47, 48).
+Therearefurtherdirectionstobeconsideredinthisvein,asidefrommakingtheexistingcomputational
+methods more efficient. First, there would be great value in developing strictly real geometric methods for
+solving polynomial systems such as those that appear in this article. Some such techniques exist, but only
+inveryspecialcircumstances. Second,therewouldbemuchvalueindevelopingeffectivenumericalmethods
+for treating inequalities. It should be noted that the methods described in (49) and the references therein
+will incorporate such constraints, though the cost of such computations restricts their use to relatively low
+dimensions. Finally,thereislikelymuchtobegainedfromconsideringthegeometryunderlyingmodelsnot
+defined by algebraic functions. Algebraic geometry provides very clean, well-understood structures, paving
+the way for numerical methods. Differential geometry or topology could lead to similarly useful techniques
+for model selection and parameter estimation.
+6 Materials and Methods
+6.1 Numerical algebraic geometry
+General references for NAG include (16, 29), with the latter doubling as a user manual for the software
+package Bertini. For computations, we used Bertini 1.4 and Macaulay2 version 1.6.
+6.2 Data generation
+Data simulated from cell death activation, synthetic biology and HIV models were performed in MATLAB
+R2014b using ode15s.
+7 Acknowledgements
+We thank Kazuhiro Aoki for discussions and providing model and data files for the MAP Kinase example.
+EG, KLH, and HAH acknowledge funding from the American Institute of Mathematics (AIM). EG was
+supported by the US National Science Foundation grant DMS-1304167. BD was partially supported by
+NSF DMS–1115668. KLH acknowledges support from NSF DMS-1203554. DJB gratefully acknowledges
+partialsupportfromNSFDMS–1115668andtheMathematicalBiosciencesInstitute(MBI).HAHgratefully
+acknowledges funding from AMS Simons Travel Grant, EPSRC Fellowship EP/K041096/1, King Abdullah
+UniversityofScienceandTechnology(KAUST)KUK-C1-013-04andMPHStumpfLeverhulmeTrustGrant.
+A Model variety Data variety Intersection?
+VM i VD VM i∩VD
+B Given 1 , 2 ,..., r and
+Comput V e M dim V e M nsion o V f i M ntersect V ioDn
+Empty Zero Positive
+Find closest points Find point in
+between and ( ) V M ( ∩ ) V D ?
+VM i VD VM R∩ VD R
+(Could recover parameters)
+Ex: MAP kinase, HIV
+Compute distance d
+between ( V ) and ( V )
+Is d less tha M n to R lerance D ? R No, reject
+Yes, model compatible Yes, model compatible
+Ex: Cell death
+Compare d for all Selection requires
+models and select more information
+Ex: Syn Bio, MAP kinase Ex: Syn Bio
+Figure S1: Schematic of numerical algebraic geometry framework corresponding to Algorithms I–III. (A)
+Inputtoalgorithmsincludemodel(systemofpolynomials)translatedintoamodelvariety(red),andsteady-
+statedatatranslatedintoadatavariety(blue). (B)Flowchartofmodelcompatibility,parameterestimation
+and model selection methods. Examples (green) are described in Results section.

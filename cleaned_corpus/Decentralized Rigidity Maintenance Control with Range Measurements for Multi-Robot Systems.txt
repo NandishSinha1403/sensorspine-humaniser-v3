@@ -1,0 +1,1340 @@
+Decentralized Rigidity Maintenance Control with
+Range Measurements for Multi-Robot Systems
+Daniel Zelazo, Antonio Franchi, Heinrich H. Bu¨lthoff, and Paolo Robuffo Giordano
+Abstract—This work proposes a fully decentralized strategy The challenges associated with the design and implemen-
+for maintaining the formation rigidity of a multi-robot system tation of multi-agent systems range from hardware and soft-
+using only range measurements, while still allowing the graph
+ware considerations to the development of a solid theoretical
+topology to change freely over time. In this direction, a first
+foundation for their operation. In particular, the sensing and
+contribution of this work is an extension of rigidity theory to
+weighted frameworks and the rigidity eigenvalue, which when communication capabilities of each agent will dictate the
+positive ensures the infinitesimal rigidity of the framework. We distributed protocols used to achieve team objectives. For
+then propose a distributed algorithm for estimating a common example, if each agent in a multi-robot system is equipped
+relative position reference frame amongst a team of robots with
+with a GPS-like sensor, then tasks such as formation keeping
+onlyrangemeasurementsinadditiontooneagentendowedwith
+or localization can be trivially accomplished by communica-
+thecapabilityofmeasuringthebearingtotwootheragents.This
+first estimation step is embedded into a subsequent distributed tion between robots of their state information in a common
+algorithm for estimating the rigidity eigenvalue associated with world-frame. However, in applications operating in harsher
+theweightedframework.Theestimateoftherigidityeigenvalueis environments,i.e.,indoors,underwater,orindeep-space,GPS
+finallyusedtogeneratealocalcontrolactionforeachagentthat
+is not a viable sensing option (Scaramuzza et al., 2014).
+bothmaintainstherigiditypropertyandenforcesadditionalcon-
+Indeed,inthesesituations,agentsmustrelyonsensingwithout
+straints such as collision avoidance and sensing/communication
+range limits and occlusions. As an additional feature of our knowledge of a common inertial reference frame (Franchi
+approach, the communication and sensing links among the et al., 2012a). In these scenarios, relative sensing can provide
+robots are also left free to change over time while preserving accurate measurements of, for example, range or bearing, but
+rigidity of the whole framework. The proposed scheme is then
+without any common reference frame.
+experimentally validated with a robotic testbed consisting of 6
+A further challenge related to the sensing capabilities of
+quadrotor UAVs operating in a cluttered environment.
+multi-robot systems is the availability of these measurements.
+Index Terms—graph rigidity, decentralized control, multi-
+Sensing constraints such as line-of-sight requirements, range,
+robot, distributed algorithms, distributed estimation.
+and power limitations introduce an important system-level
+requirement, and also lead to an inherently time-varying
+I. INTRODUCTION description of the sensing network. Successful decentralized
+coordinationprotocols,therefore,mustalsobeabletomanage
+The coordinated and decentralized control of multi-robot
+these constraints.
+systemsisanenablingtechnologyforavarietyofapplications.
+Theseissuesleadtoimportantarchitecturalrequirementsfor
+Multi-robot systems benefit from an increased robustness
+the sensing and communication topology in order to achieve
+against system failures due to their ability to adapt to dy-
+thedesiredhigherleveltasks(i.e.,formationkeepingorlocal-
+namic and uncertain environments. There are also numerous
+ization). The connectivity of the sensing and communication
+economic benefits by considering the price of small and cost-
+topology is one such property that has received considerable
+effectiveautonomoussystemsasopposedtotheirmoreexpen-
+attention in the multi-robot communities (Robuffo Giordano
+sivemonolithiccounterparts.Currently,thereisagreatinterest
+et al., 2011, 2013; Ji and Egerstedt, 2007). However, con-
+inimplementingthesesystemsfromdeepspaceinterferometry
+nectivity alone is not sufficient to perform certain tasks when
+missionsanddistributedsensinganddatacollection,tocivilian
+only relative sensing is used. For these systems, the concept
+search and rescue operations, among others (Akyildiz et al.,
+of rigidity provides the correct framework for defining an
+2002; Anderson et al., 2008a; Bristow et al., 2000; Lindsey
+appropriatesensingandcommunicationtopologyarchitecture.
+et al., 2011; Mesbahi and Egerstedt, 2010; Michael et al.,
+Rigidityisacombinatorialtheoryforcharacterizingthe“stiff-
+2009; Murray, 2006).
+ness” or “flexibility” of structures formed by rigid bodies
+D.ZelazoiswiththeFacultyofAerospaceEngineering,Technion-Israel connected by flexible linkages or hinges.
+InstituteofTechnology,Haifa32000,Israeldzelazo@technion.ac.il The study of rigidity has a rich history with contributions
+A Franchi is with the Centre National de la Recherche Scien-
+from mathematics and engineering disciplines (Connelly and
+tifique (CNRS), Laboratoire d’Analyse et d’Architecture des Syste`mes
+(LAAS), 7 Avenue du Colonel Roche, 31077 Toulouse CEDEX 4, France. Whiteley, 2009; Jacobs, 1997; Krick et al., 2009; Laman,
+antonio.franchi@laas.fr 1970; Shames et al., 2009; Tay and Whiteley, 1985; Eren
+H.H.Bu¨lthoffiswiththeMaxPlanckInstituteforBiologicalCybernetics,
+etal.,2004).Recently,rigiditytheoryhastakenanoutstanding
+Spemannstraße 38, 72076 Tu¨bingen, Germany hhb@tuebingen.mpg.de.
+H. H. Bu¨lthoff is additionally with the Department of Brain and Cognitive role in the motion control of mobile robots. The rigidity
+Engineering,KoreaUniversity,Seoul,136-713Korea. framework allows for applications, such as formation control,
+P. Robuffo Giordano is with the CNRS at Irisa and Inria Rennes
+toemploycontrolalgorithmsrelyingononlyrelativedistance
+Bretagne Atlantique, Campus de Beaulieu, 35042 Rennes Cedex, France
+prg@irisa.fr. measurements, as opposed to relative position measurements
+3v5350.9031:viXra
+from a global or relative internal frame (Anderson et al., to only relative distance measurements among neighbors, so
+2008a,b;BaillieulandMcCoy,2007;Kricketal.,2009;Olfati- as to ultimately allow for a fully distributed and range-based
+Saber and Murray, 2002; Smith et al., 2007). For example, in implementation of the rigidity maintenance controller. To this
+(Krick et al., 2009) it was shown that formation stabilization end,wefirstshowthatiftheformationisinfinitesimallyrigid,
+using only distance measurements can be achieved only if it is possible to distributedly estimate the relative positions of
+rigidity of the formation is maintained. Moreover, rigidity neighboring robots in a common reference frame from only
+represents also a necessary condition for estimating relative range-based measurements. Our approach relies explicitly on
+positions using only relative distance measurements (Aspnes the form of the symmetric rigidity matrix developed here,
+et al., 2006; Calafiore et al., 2010a). in contrast to other approaches focusing on distributed im-
+In a broader context, rigidity turns out to be an important plementations of centralized estimation schemes, such as a
+architectural property of many multi-agent systems when a Gauss-Newton approach used in Calafiore et al. (2010b).This
+common inertial reference frame is unavailable. Applications first step is then instrumental for the subsequent development
+that rely on sensor fusion for localization, exploration, map- of the distributed estimation of the rigidity eigenvalue and
+ping and cooperative tracking of a target, all can benefit eigenvector needed by the rigidity gradient controller. This
+from notions in rigidity theory (Shames et al., 2009; Aspnes is obtained by exploiting an appropriate modification of the
+et al., 2006; Calafiore et al., 2010b; Williams et al., 2014; Wu power iteration method for eigenvalue estimation following
+et al., 2010). The concept of rigidity, therefore, provides the from the works (Robuffo Giordano et al., 2011; Yang et al.,
+theoretical foundation for approaching decentralized solutions 2010) for the distributed estimation of the connectivity eigen-
+to the aforementioned problems using distance measurement value of the graph Laplacian and now applied to rigidity.
+sensors, and thus establishing an appropriate framework for Finally,weshowhowtoexploittheweightsonthegraphedges
+relating system level architectural requirements to the sensing to embed constraints and requirements such as inter-robot
+and communication capabilities of the system. and obstacle avoidance, limited communication and sensing
+ranges, and line-of-sight occlusions, into a unified gradient-
+A. Main Contributions based rigidity maintenance control law.
+Ourapproach,therefore,canbeconsideredasacontribution
+In general, rigidity as a property of a given formation
+tothegeneralproblemofdistributedstrategiesformaintaining
+(i.e., of the robot spatial arrangement) has been studied from
+certainarchitecturalfeaturesofamulti-robotsystem(i.e.con-
+eitherapurelycombinatorialperspective(Laman,1970),orby
+nectivity or rigidity) with minimal sensing requirements (only
+providinganalgebraiccharacterizationviathestate-dependent
+relativedistancemeasurements).Additionally,wealsoprovide
+rigiditymatrix(TayandWhiteley,1985).Inourpreviouswork
+athoroughexperimentalvalidationoftheentireframeworkby
+(Zelazo et al., 2012), we introduced a related matrix termed
+employing a group of 6 quadrotor UAVs as robotic platforms
+the symmetric rigidity matrix. A main result of (Zelazo et al.,
+to demonstrate the feasibility of our approach in real-world
+2012)wastoprovideanecessaryandsufficientconditionsfor
+conditions.
+rigidity in the plane in terms of the positivity of a particular
+The organization of this paper is as follows. Section I-B
+eigenvalue of the symmetric rigidity matrix; this eigenvalue
+provides a brief overview of some notation and fundamental
+we term the rigidity eigenvalue. This result is in the same
+theoretical properties of graphs. In Section II, the theory
+spirit as the celebrated Fiedler eigenvalue1 and its relation to
+of rigidity is introduced, and our extension of the rigidity
+the connectivity of a graph (Godsil and Royle, 2001). A first
+eigenvalue to 3-dimensional weighted frameworks is given.
+contribution of this work is the extension of the results on
+Wethenproceedtopresentageneralstrategyforadistributed
+the rigidity eigenvalue provided in (Zelazo et al., 2012) to
+rigidity maintenance controller in Section III. This section
+3-dimensional frameworks, as well as the introduction of the
+will provide details on certain operational constraints of the
+concept of weighted rigidity and the corresponding weighted
+multi-robot team and how these constraints can be embedded
+rigidity matrix. This notion allows for the concept of rigidity
+in the control law. This section also highlights the need
+to include state-dependent weight functions on the edges of
+to develop distributed algorithms for estimating a common
+the graph, weights which can then be exploited to take into
+reference frame for the team, outlined in Section IV, and
+account inter-agent sensing and communication constraints
+estimation of the rigidity eigenvalue and eigenvector, detailed
+and/or requirements.
+in Section V. The results of the previous sections are then
+A gradient-based rigidity maintenance action aimed at
+summarized in Section VI where the full distributed rigidity
+‘maximizing’therigidityeigenvaluewasalsoproposedin(Ze-
+maintenance controller is given. The applicability of these
+lazoetal.,2012).However,whilethisgradientcontrollawwas
+results are then experimentally demonstrated on a robotic
+decentralized in structure, there was still a dependence on the
+testbedconsistingof6quadrotorUAVsoperatinginaobstacle
+availability of several global quantities, namely, of the robot
+populated environment. Details of the experimental setup and
+relative positions in some common reference frame, of the
+results are given in Section VII. Finally, some concluding
+valueoftherigidityeigenvalue,andoftherigidityeigenvector
+remarks are offered in Section VIII.
+associatedwiththerigidityeigenvalue.Amaincontributionof
+this work is then the development of the machinery needed to
+B. Preliminaries and Notations
+distributedly estimate all these global quantities by resorting
+The notation employed is standard. Matrices are denoted
+1ThesecondsmallesteigenvalueofthegraphLaplacianmatrix. by capital letters (e.g., A), and vectors by lower case letters
+(e.g., x). The ij-th entry of a matrix A is denoted [A] . The the position vector in R3 for the mapped node. We refer to
+rank of a matrix A is denoted rk[A]. Diagonal matrices will the matrix p( ) = p(v ) p(v ) T Rn×3 as the
+be written as D = diag d ,...,d ; this notation will also position matrix. We now provide some basic definitions.
+be employed for block-diagonal matrices. A matrix and/or a
+Definition II.1. Frameworks ( ,p ) and ( ,p ) are equiva-
+vector that consists of all zero entries will be denoted by 0;
+lent if p (u) p (v) = p (u) p (v) for all u,v ,
+whereas, ‘0’ will simply denote the scalar zero. Similarly, the
+(cid:107) (cid:107)
+vector 1 n denotes the n 1 vector of all ones. The n n and are congruent if (cid:107) p 0 (u) − p 0 (v) (cid:107) = (cid:107) p 1 (u) − p 1 (v) (cid:107) for
+× × all u,v .
+identity matrix is denoted as I n . The set of real numbers will { }∈V
+be denoted as R, and denotes the standard Euclidean Definition II.2. A framework ( ,p ) is globally rigid if every
+2-normforvectors.The (cid:107) K · ro (cid:107) neckerproductoftwomatricesA framework which is equivalen G t to 0 ( ,p ) is congruent to
+and B is written as A B (Horn and Johnson, 1991). ( ,p ). G
+Graphsandthematri ⊗ cesassociatedwiththemwillbewidely G 0
+used in this work; see, e.g., (Godsil and Royle, 2001). An Definition II.3. Aframework( ,p 0 )isrigidifthereexistsan
+undirected (simple) weighted graph is specified by a vertex (cid:15) > 0 such that every framework ( ,p 1 ) which is equivalent
+set ,anedgeset whoseelements G characterizetheincidence to ( ,p 0 ) and satisfies p 0 (v) p 1 G (v) <(cid:15) for all v , is
+rela V tion between d E istinct pairs of , and diagonal cong G ruent to ( ,p 0 ). (cid:107) − (cid:107) ∈V
+weight-matrixW,with[W] 0theweightonedgee .
+kk ≥ k ∈E DefinitionII.4. Aminimallyrigidgraphisarigidgraphsuch
+In this work we consider only finite graphs and denote the
+that the removal of any edge results in a non-rigid graph.
+cardinalityofthenodeandedgesetsas =nand =m.
+Two vertices i and j are called adjacent (or neighbors) when Figure 1 shows three frameworks illustrating the above
+i,j .The neighborhood of the vertex i is the set = definitions.TheframeworksinFigure1(a)arebothminimally
+j i,j . An orientation of an undirected graph rigid and are equivalent to each other, but are not congruent,
+is the assignment of directions to its edges, i.e., an edge e is andthereforenotgloballyrigid.Byaddinganadditionaledge,
+an ordered pair (i,j) such that i and j are, respectively, the as in Figure 1(b) (the edge v 4 ,v 5 ), the framework becomes
+initial and the terminal nodes of e . globally rigid. The key feature of global rigidity, therefore, is
+The incidence matrix E( ) Rn×m is a 0, 1 -matrix that the distances between all node pairs are maintained for
+with rows and columns indexed by the vertices and edges differentframeworkrealizations,andnotjustthosedefinedby
+of such that [E( )] has the value ‘+1’ if node i is the the edge set.
+initial node of edge e , ‘ 1’ if it is the terminal node, and By parameterizing the position map by a positive scalar
+‘0’ otherwise. The degree of vertex i, d , is the cardinality of representingtime,wecanalsoconsidertrajectoriesofaframe-
+the set of vertices adjacent to it. The degree matrix, ∆( ), work.Thatis,thepositionmapnowbecomesp: R R3
+and the adjacency matrix, A( ), are defined in the usual and is assumed to be continuously differentiable with respect
+way (Godsil and Royle, 2001). The (graph) Laplacian of to time. We then explicitly write ( ,p,t) so as to represent
+, L( ) = E( )E( )T = ∆( ) A( ), is a positive- a time-varying framework. In this direction, we can define a
+G G G G G − G
+semidefinite matrix. One of the most important results from
+algebraic graph theory in the context of collective motion
+control states that a graph is connected if and only if the
+secondsmallesteigenvalueoftheLaplacianispositive(Godsil
+and Royle, 2001).
+TableIprovidesasummaryofthenotationsusedthroughout G=(V,E) agraphdefinedbyitsvertexandedgesets
+the document.
+Ni(t) time-varyingneighborhoodofnodevi∈V
+p(i) positionvectorinR3 ofthemappednodevi∈V;
+ps s∈{x,y,z}coordinateofpositionvectorfornodei
+II. RIGIDITYANDTHERIGIDITYEIGENVALUE p(V) stackedpositionmatrixofallnodes(Rn×3)
+ξ(i) velocityvectorinR3 ofthenodevi∈V
+Inthissectionwereviewthefundamentalconceptsofgraph (G,p,W) aweightedframework
+rigidity (Graver et al., 1993; Jackson, 2007). A contribution R(p,W) rigiditymatrixofaweightedframework
+of this work is an extension of our previous results on R symmetricrigiditymatrixofaweightedframework
+the concepts of the symmetric rigidity matrix and rigidity
+λ7,v7 (v) rigidityeigenvalueandeigenvector
+(cid:96)ij distancebetweennodesvi,vj ∈V,i.e.,(cid:107)p(vi)−p(vj)(cid:107)
+eigenvalue for 3-dimensional ambient spaces (Zelazo et al., λˆi agenti’sestimateoftherigidityeigenvalue
+2012), and the notion of weighted frameworks. vˆs s-coordinateoftheagentiestimation
+oftherigidityeigenvector
+pˆi,c agentiestimateofrelativepositionvectorpi−pc
+A. Graph Rigidity and the Rigidity Matrix pˆ stackedvectoroftherelative
+rk.
+x) theav p e o r s a i g ti e on o
+1 . (cid:80) ..n n
+( ,p), where = ( , ) is a graph, and p : Rd v2 i x agentiestimateofavg(vˆx◦vˆx)
+m G aps each vert G ex to a V po E int in Rd. In this work we V co → nsider z i x i y agentiestimateofavg(pˆy,c◦vˆx−pˆx,c◦vˆy)
+zxz agentiestimateofavg(pˆz,c◦vˆx−pˆx,c◦vˆz)
+frameworks in a three-dimensional ambient space, i.e., d=3. z i yz agentiestimateofavg(pˆy,c◦vˆz−pˆz,c◦vˆy)
+Therefore, for node u , p(u) = px py pz T is i
+(cid:2) (cid:3)
+v4 v4 v5 AnexampleofaninfinitesimallyrigidgraphinR3 isshown
+in Figure 1(b). Furthermore, note that infinitesimal rigidity
+v1 v2 v1 v2 impliesrigidity,buttheconverseisnottrue(TayandWhiteley,
+1985), see Figure 1(c) for a rigid graph in R3 that is not
+infinitesimally rigid.
+v5 The infinitesimal motions in (2) define a system of m
+v1 v2 v1 v2 linear equations in the vector of unknown velocities ξ =
+[ξT(v ) ... ξT(v )]T R3n.Thissystemcanbeequivalently
+written as the linear matrix equation
+(a) TwoequivalentminimallyrigidframeworksinR3.Theframeworkonthe R(p)ξ =0,
+right side is obtained by the reflection of the position of v5 with respect to
+the plane characterized by the positions of v1, v2, and v3 (as illustrated in where R(p) Rm×3n is called rigidity matrix (Tay and
+Whiteley, 1985). Each row of R(p) corresponds to an edge
+v4 e = u,v and the quantity (p(u) p(v)) represents the
+nonzero coefficients for that row. For example, the row corre-
+v1 v2 sponding to edge e has the form
+v5 (cid:20) vertex u vertex v (cid:21)
+(cid:124)t
+i(cid:122)n
+:
+finite(cid:125)simal rigidi(cid:124)ty can(cid:123)t(cid:122)hen be(cid:125)restated in
+Lemma II.6 (Tay and Whiteley (1985)). A framework ( ,p)
+(b) An infinitesimally and globally (c) A non-infinitesimally rigid frame-
+rigidframeworkinR3. work (note that vertexes v1 and v3 are in R3 is infinitesimally rigid if and only if rk[R(p)]=3n G 6.
+connected). −
+Note that, as expected from Definition II.5, the six-
+Fig.1. ExamplesofrigidandinfinitesimallyrigidframeworksinR3.Notice dimensional kernel of R(p) for an infinitesimally rigid graph
+thatinFigs.(a)and(b)the3Dpointsassociatedtoeachvertexdonotlieon
+only allows for six independent feasible framework motions,
+thesameplane,whileinFig.(c)the3Dpointsarealigned.
+that is, the above-mentioned collective roto-translations in R3
+set of trajectories that are edge-length preserving, in the sense space. Note also that, despite its name, the rigidity matrix is
+thatforeachtimet t 0 ,theframework( ,p,t)isequivalent actuallycharacterizinginfinitesimalrigidityratherthanrigidity
+to the framework ( ,p,t 0 ). More formally, an edge-length of a framework.
+preserving framework must satisfy the constraint
+p(v,t) p(u,t) = p(v,t 0 ) p(u,t 0 ) =(cid:96) vu , t t 0 (1) B. Rigidity of Weighted Frameworks
+(cid:107) − (cid:107) (cid:107) − (cid:107) ∀ ≥
+and for all v,u . We now introduce an important generalization to the con-
+One can { simil } ar ∈ ly E assign velocity vectors ξ(u,t) R3 to cept of rigidity and the rigidity matrix by introducing weights
+each vertex u for each point in the configuration space to the framework. Indeed, as discussed in the introduction,
+such that our aim is to propose a control law able to not only maintain
+infinitesimalrigidityoftheformationasperDefinitionII.5,but
+− − ∀{ }∈E to also concurrently manage additional constraints typical of
+Note that this relation can be obtained by time-differentiation multi-robot applications such as collision avoidance and lim-
+of the length constraint described in (1). These motions are ited sensing and communication.This latter objective will be
+referred to as infinitesimal motions of the mapped vertices accomplished via the introduction of suitable state-dependent
+p(u,t), and one has weights, thus requiring an extension of the traditional results
+on rigidity to a weighted case.
+Definition II.7. A d-dimensional weighted framework is the
+Fortheremainderofthispaper,wedroptheexplicitinclusion
+triple ( ,p, ), where = ( , ) is a graph, p : Rd
+of time for frameworks and simply write ( G ,p) and p(u) is a fun G ction W mapping ea G ch ver V tex E to a point in Rd, V an → d :
+and ξ(u) for the time-varying positions and velocities. The ( ,p) Rm is a function of the framework that assign W s a
+velocity vector ξ(u) will be treated as the agent velocity input G →
+scalar value to each edge in the graph.
+throughout the rest of the paper (see Section III).
+Infinitesimal motions of a framework can be used to define Using this definition, we can also define the corresponding
+a stronger notion of rigidity. weighted rigidity matrix, R(p, ) as
+Definition II.5. A framework is called infinitesimally rigid if
+every possible motion that satisfies (2) is trivial (i.e., consists W G
+of only global rotations and translations of the whole set of where W( ,p) Rm×m is a diagonal matrix containing the
+points in the framework). elements of the vector ( ,p) on the diagonal. Often we
+will simply refer to the weight matrix W( ,p) as W when Proposition II.13 (Zelazo et al. (2012)). Let p( ) Rn×3
+the underlying graph and map p is understood. be the position matrix for the framework ( ,p). The rigidity
+matrix R(p) can be defined as
+Remark II.8. Note that the rigidity matrix R(p) can also be
+considered as a weighted rigidity matrix with W( ,p) = I. R(p)= E ( )T E ( )T (I p( )), (5)
+G l G 1 ··· l G n n ⊗ V
+Another useful observation is that the unweighted framework
+( ,p) can also be cast as a weighted framework (K ,p, ), where E l ( i )(cid:2)is the local incidence matri(cid:3)x for node v i .
+whereK n isthecompletegraphonnnodesand[W( ,p)] ii is A more detailed discussion and example of these definitions
+1whenevere i (K n )isalsoanedgein ,and0otherwise. are provided in Appendix B.
+Lemma II.6 and Corollary II.11 relate the property of
+Weighted rigidity can lead to a slightly different interpre-
+infinitesimal rigidity for a given (weighted) framework to the
+tation of infinitesimal rigidity, where the introduced weights
+rank of a corresponding matrix. A contribution of this work
+might cause the rigidity matrix to lose rank. That is, an
+is the translation of the rank condition to that of a condition
+unweightedframeworkmightbeinfinitesimallyrigid,whereas
+on the spectrum of a corresponding matrix that we term the
+a weighted version might not. This observation is trivially
+symmetric rigidity matrix. For the remainder of this work,
+observed by considering a minimally infinitesimally rigid
+we will only consider weighted frameworks, since from the
+framework ( ,p) and introducing a weight with a 0 entry on
+G discussion in Remark II.8, any framework can be considered
+any edge. We formalize this with the following definitions.
+as a weighted framework with appropriately defined weights.
+Definition II.9. The unweigted counterpart of a weighted The symmetric rigidity matrix for a weighted framework
+framework ( ,p, ) is the framework (ˆ,p) where the graph ( ,p, ) is a symmetric and positive-semidefinite matrix
+ˆ=( , ˆ) i G s suc W h that ˆ and the e G dge e i is also an d G efine W d as
+if and only if
+orresponding weig
+is non-zero
+(i.e. [W( G ,p)] =0). := R(p, )TR(p, ) R3n×3n. (6)
+G ii (cid:54) R W W ∈
+Definition II.10. A weighted framework is called infinites- An immediate consequence of the construction of the sym-
+imally rigid if its unweighted counterpart is infinitesimally metric rigidity matrix is that rk[ ]=rk[R(p, )] (Horn and
+rigid. Johnson, 1985), leading to the following corollary.
+We now present a corollary to Lemma II.6 for weighted CorollaryII.14. Aweightedframework( ,p, )isinfinites-
+frameworks. imally rigid if and only if rk[ ]=3n 6.
+Corollary II.11. A weighted framework ( ,p, ) in R3 is The rank condition of Corollary II.14 can be equivalently
+infinitesimally rigid if and only if rk[R(p, )]=3n 6. stated in terms of the eigenvalues of . Denoting the eigen-
+values of as λ λ ... λ , note that infinitesimal
+Proof: The statement follows from the fact that R 1 ≤ 2 ≤ ≤ 3n
+rigidity is equivalent to λ = 0 for i = 1,...,6 and λ > 0.
+rk[R(p, )] = rk[Rˆ(p)], where Rˆ(p) is the rigidity matrix i 7
+for the u W nweighted counterpart of ( ,p, ). Consequently, we term λ 7 the Rigidity Eigenvalue. We will
+G W now show that, in fact, for any connected graph,2 the first six
+eigenvalues are always 0.
+C. The Rigidity Eigenvalue The first result in this direction shows that the symmetric
+In our previous work (Zelazo et al., 2012), we introduced rigidity matrix is similar to a weighted Laplacian matrix.
+an alternative representation of the rigidity matrix that trans-
+Proposition II.15. Thesymmetricrigiditymatrixissimilarto
+parently separates the underlying graph from the positions of
+the weighted Laplacian matrix via a permutation of the rows
+each vertex. Here we recall the presentation and extend it to
+and columns as
+the case of 3-dimensional frameworks.
+Definition II.12 (Zelazo et al. (2012)). Consider a graph R 3 ⊗ G V 3 ⊗ G
+=( , ) and its associated incidence matrix with arbitrary with (cid:0) (cid:1)
+orientation E( ). The directed local graph at node v is the
+sub-graph = G ( , ) induced by node v such that j Q2 x Q x Q y Q x Q z
+G j V E j j Q(p( V ))=  Q y Q x Q2 y Q y Q z ∈ R3m×3m, (8)
+= (v ,v ) e = v ,v . Q Q Q Q Q2
+j j i k i j z x z y z
+The local incidence matrix at node v j is the matrix whereQ x ,Q y ,andQ z arem × mdiagonalweightingmatrices
+for each edge in such that for the edge e =(v ,v ),
+E ( )=E( )diag s ,...,s Rn×m G k i j
+G G { }∈ [Q ] =(ps ps), s x,y,z
+where s =1 if e and s =0 otherwise. s kk i − j ∈{ }
+∈E and px (py, pz) represents the x-coordinate (y-coordinate, z-
+Note, therefore, that the local incidence matrix will contain i i i
+coordinate) of the position of agent i.
+columns of all zeros in correspondence to those edges not
+adjacent to v j . This also implicitly assumes a predetermined 2If the graph is not connected, there will be additional eigenvalues at the
+labeling of the edges. origin corresponding to the number of connected components of the graph,
+see(GodsilandRoyle,2001).
+Proof: The proof is by direct construction using Propo- The remaining two eigenvectors follow the same argument as
+sition II.13 and (6). Consider the permutation matrix P as above. It is also straightforward to verify that u , u , and u
+are linearly independent of the first 3 eigenvectors.
+n ⊗ Theorem II.16 provides a precise characterization of the
+P = I 0 1 0 . (9)
+ n ⊗(cid:2) (cid:3)  eigenvectors associated with the null-space of the symmetric
+n ⊗(cid:2) (cid:3) rigidity matrix for an infinitesimally rigid framework.
+and let Eˆ = E ( )T (cid:2) E ( (cid:3))T . It is straightfor-
+l G 1 ··· l G n Remark II.17. It is important to note that the chosen eigen-
+ward to verify that
+(cid:2) (cid:3) vectorsassociatedwiththenull-spaceofthesymmetricrigidity
+... matrix are expressed in terms of the absolute positions of the
+nodes in the framework. We note that these eigenvectors can
+(I n ⊗ (px)T)EˆTW =E( G )W (px i − px j )  , alsobeexpressedintermsoftherelativepositionofeachnode
+  ...   toanyarbitraryreferencepointp c = px c py c pz c T ∈ R3.
+  For example, vector u 4 could be replaced by
+diagonal matrix of size m×m (cid:2) (cid:3)
+where px represents the first co(cid:124)lumn of th(cid:123)e(cid:122)position ve(cid:125)ctor. upc =PT px1− c p n x ,
+The structure of the matrix in (7) then follows directly.3 4  c n − 
+The representation of the symmetric rigidity matrix as a
+weighted Laplacian allows for a more transparent understand- that is a linear combination of the null-space eigenvectors
+ingofcertaineigenvaluesrelatedtothismatrix.Thenextresult u 1 ,u 2 and u 4 . The use of eigenvectors defined on relative
+shows that the first six eigenvalues of must equal zero for positions, in fact, will be necessary for the implementation
+any connected graph . R of a distributed estimator for the rigidity eigenvector and
+G eigenvaluebasedononlyrelativemeasurementsavailablefrom
+TheoremII.16. Assumethataweightedframework( ,p, ) onboard sensing.
+has weights such that the weight matrix W( ,p) is invertible
+and the underlying graph is connected. Th G en the symmetric Theorem II.16 can be used to arrive at the main result
+rigidity matrix has at leas G t six eigenvalues at the origin; that relating infinitesimal rigidity to the rigidity eigenvalue.
+is, λ i = 0 for i 1,...,6 . Furthermore, a possible set Theorem II.18. A weighted framework ( ,p, ) is infinites-
+of linearly independent eigenvectors associated with each 0 G W
+imally rigid if and only if the rigidity eigenvalue is strictly
+eigenvalue is,
+positive, i.e., λ >0.
+n Proof: The proof is a direct consequence of Corollary
+PT 0 ,PT 1 ,PT 0 ,
+  0   0 n   1  II.14 and Theorem II.16.
+ n Another useful observation relates infinitesimal rigidity of
+(py)   (pz)  0  a framework to connectedness of the underlying graph.
+PT (px) ,PT 0 ,PT (pz) ,
+ −      CorollaryII.19. Rigidityoftheweightedframework( ,p, )
+0 − (px) − (py)  implies connectedness of the graph . G W
+where  P is defin  ed in (  9).    G
+ The connection between infinitesimal rigidity of a frame-
+Proof: Recall that for any connected graph, one has work and the spectral properties of the symmetric rigidity
+E( )T1 n = 0 (Godsil and Royle, 2001). Therefore, P PT matrix inherits many similarities between the well studied re-
+must have three eigenvalues at the origin, with eigenvectors lationshipbetweengraphconnectivityandthegraphLaplacian
+u = 1T 0T 0T T , u = 0T 1T 0T T , and matrix (Mesbahi and Egerstedt, 2010).
+u = 0T 0T 1T T . We now demonstrate that the In the next section, we exploit this similarity and propose
+3 (cid:2) n (cid:3) (cid:2) (cid:3)
+remaining three eigenvectors proposed in the theorem are a rigidity maintenance control law that aims to ensure the
+indeed i (cid:2) n the null-space o (cid:3) f the symmetric rigidity matrix. rigidity eigenvalue is always positive. Such a control action
+Let u = (py)T (px)T 0T T . Observe that (I will be shown to depend on the rigidity eigenvalue, on its
+WE( )T)u = bT − bT 0T T is such that b ⊗ is eigenvector,andonrelativepositionsamongneighboringpairs
+[W] G (py 4(cid:2) py) only 1 for 2 edges e (cid:3) = v ,v , 1 and expressed in a common frame. The issue of how every agent
+± kk i − j (cid:2) (cid:3) k { i j } ∈ E inthegroupcandistributedlyestimatethesequantitieswillbe
+0 otherwise. Similarly, b is [W] (px px) only for edges
+2 ± kk j − i addressed in Sections IV and V.
+e = v ,v . The invertibility assumption of the weight
+matrix also guarantees that [W] =0. It can now be verified
+kk (cid:54) III. ADECENTRALIZEDCONTROLSTRATEGY
+that from this construction one has
+FORRIGIDITYMAINTENANCE
+Q2 Q Q Q Q
+x x y x z The results of Section II highlight the role of the rigidity
+Q Q Q2 Q Q (I WE( )T)u =0.
+ y x y y z  3 ⊗ G 4 eigenvalue λ as a measure of the “degree of infinitesimal
+Q Q Q Q Q2 7
+z x z y z rigidity” of a weighted framework ( ,p, ). It provides a
+linear algebraic condition to test the infinitesimal rigidity of a
+3Amoredetailedproofforthetwo-dimensionalcaseisprovidedin(Zelazo
+etal.,2012). frameworkand,especiallyinthecaseofweightedframeworks,
+00 5 10 15 20 λ25 30 35 40 45 50
+00 1 2 3ℓuv 4 5 6 7
+Fig. 2. A possible shape for the rigidity potential function V λ (λ7) with
+λmin=5.
+provides a means of quantifying “how rigid” a weighted
+framework is. Moreover, the symmetric rigidity matrix was
+shown to have a structure reminiscent of a weighted graph
+Laplacian matrix, and thus can be considered as a naturally
+distributed operator.
+The basic approach we consider for the maintenance of
+rigidity is to define a scalar potential function of the rigidity
+eigenvalue, V (λ ) > 0, with the properties of growing
+unbounded as λ λmin >0 and vanishing (with vanishing
+7 → 7 derivative) as λ (see Fig. 2 for one possible shape
+→ ∞ or V with λmin = 5). Here, λmin represents some predeter-
+mined minimum allowable value for the rigidity eigenvalue
+determined by the needs of the application. In addition to
+maintainingrigidity,thepotentialfunctionshouldalsocapture
+additional constraints in the system, such as collision avoid-
+anceorformationmaintenance.Eachagentshouldthenfollow
+the anti-gradient of this potential function, that is
+where ξ(u) is the velocity input of agent u, as defined
+in (3), and p = px py pz T is the position vector of u u u u
+the u-th agent. This strategy will ensure that the formation
+(cid:2) (cid:3) maintains a “minimum” level of rigidity (i.e., λmin) at all
+times. Of course, this strategy is an inherently centralized
+one, as the computation of the rigidity eigenvalue and of
+its gradient require full knowledge of the symmetric rigidity
+matrix. Nevertheless, we will proceed with this strategy and
+demonstratethatitcanbeimplementedinafullydecentralized
+manner.
+In the sequel, we examine in more detail the structure of
+thecontrolscheme(10).First,weshowhowtheformalization
+of weighted frameworks allows to embed additional weights
+within the rigidity property that enforce explicit inter-agent
+sensing and communication constraints and group require-
+ments such as collision avoidance and formation control. For
+instance, the weighting machinery will be exploited so as to
+inducetheagentstokeepadesiredinter-agentdistance(cid:96) and
+to ensure a minimum safety distance (cid:96) from neighboring
+agents and obstacles. With these constraints, the controller
+will simultaneously maintain a minimum level of rigidity
+while also respecting the additional inter-agent constraints.
+We then provide an explicit characterization of the gradient
+of the rigidity eigenvalue with respect to the agent positions,
+and highlight its distributed structure. Finally, we present the
+00 1 2 3ℓuvo 4 5 6 7
+00 1 2 3 ℓu 4 v 5 6 7 8
+Fig. 3. The shape of γ
+((cid:96)uv) for D = 6 (a), γ
+((cid:96)uvo) for (cid:96)min = 1
+(b),andβuv((cid:96)uv)for(cid:96)0=4(c).
+general control architecture for implementing (10) in a fully
+decentralized way.
+A. Embedding Constraints in a Weighted Framework
+In real-world applications a team of mobile robots may not
+be able to maintain the same interaction graph throughout the
+duration of a mission because of various sensing and commu-
+nication constraints preventing mutual information exchange
+and relative sensing. Furthermore, additional requirements
+such as collision avoidance with obstacles and among robots,
+aswellassomedegreeofformationcontrol,mustbetypically
+satisfied during the mission execution. Building on the design
+guidelines proposed in (Robuffo Giordano et al., 2013) for
+dealingwithconnectivitymaintenance,webrieflydiscusshere
+a possible design of weights aimed at taking into account
+the above-mentioned sensing and communication constraints
+andgrouprequirementswithintherigiditymaintenanceaction.
+To this end, we start with the following definition of
+neighboring agents:
+DefinitionIII.1. Twoagentsuandvareconsideredneighbors
+if and only if (i) their relative distance (cid:96) = p(u) p(v)
+uv is smaller than D R+ (the sensing range), (ii (cid:107) ) the d − istanc (cid:107) e
+(cid:96) between the segment joining u and v and the closest uvo
+obstaclepointoislargerthan(cid:96) (theminimumline-of-sight
+visibility), and (iii) neither u nor v are closer than (cid:96) to
+any other agent or obstacle.
+Conditions (i) and (ii) are meant to take into account
+two typical sensing constraints in multi-robot applications:
+maximumcommunicationandsensingrangesandline-of-sight
+occlusions.Thepurposeofcondition(iii),whichwillbebetter
+detailed later on, is to force disconnection from the group if
+an agent is colliding with any other agent or obstacle in the
+environment. In the following we will denote with the set
+of neighbors of agent u induced by Definition III.1.
+This neighboring definition can be conveniently taken into
+account by designing the inter-agent weights as state-
+dependent functions smoothly vanishing as any of the above
+constraints and requirements are not met by the pair (u, v)
+with the desired accuracy. Indeed, the use of state-dependent
+weights allows us to consider the ensemble of robots in the
+context of weighted frameworks, as introduced in Definition
+II.7. In particular, we take the underlying graph to be the
+completegraphK andthemappcorrespondstothephysical
+position state of each agent in a common global frame. The
+weightsarethemaps ,andtheweightedframeworkisthe Remark III.3. We further highlight the following properties
+triple (K ,p, ) with, therefore, = v =0 . whoseexplicitproofcanbefoundin(RobuffoGiordanoetal.,
+W N { ∈V|W (cid:54) }
+Following what was proposed in (Robuffo Giordano et al., 2013): the chosen weights are functions of only relative
+2013), and recalling that (cid:96) represents the distance between distances to other agents and obstacles, while their gradients
+the segment joining agents u and v and the closest obstacle with respect to the agent position p (resp. p ) are functions
+point o, we then take of relative positions expressed in a common reference frame.
+Furthermore, = and ∂Wuv =0, v / . Finally,
+the evaluation
+withα =α ((cid:96) , (cid:96) ),β =β ((cid:96) ),γa = performedinadecentralizedwaybyagentu(reps.v)byonly
+γa ((cid:96) uv ), γb u = v γ u b k | ( k (cid:96) ∈Su ) a v n k d | k s ∈ u S c v h tha u t v uv uv uv resorting to local information and 1-hop communication.
+uv uv uv uv uvo
+• – lim (cid:96)uk→(cid:96)min α uv =0,
+u , As shown the next developments, these properties will
+– lim (cid:96)vk→(cid:96)min α uv =0,
+v , and be instrumental for expressing the gradient of the rigidity
+– α uv 0 if (cid:96) uk (cid:96) min or (cid:96) vk (cid:96) min , for any eigenvalue as a function of purely relative quantities with
+k u , k v ; respect to only 1-hop neighbors.
+(cid:96) uv
+=(cid:96) 0 ;
+• • l l i i m m (cid:96) (cid:96) u u v vo → → D (cid:96)m γ i u n a v γ u = b v 0 = w 0 it w h i γ th u a v γ u ≡ b v 0 ≡ ∀ 0 (cid:96) u ∀ v (cid:96) u ≥ vo D ≤ ; (cid:96) min . B. The Gradient of the Rigidity Eigenvalue
+As explained, (cid:96) min is a predetermined minimum safety dis- We now present an explicit characterization of the gradient
+tance for avoiding collisions and line-of-sight occlusions. of the rigidity eigenvalue with respect to the agent positions,
+Figures 3(a)–(c) show an illustrative shape of weights γa , as used in the control (10). We first recall that the rigidity
+γ u b v and β uv . The shape of the weights α uv is conceptually eigenvalue can be expressed as
+equivalent to that of weights γb in Fig. 3(b).
+This weight design results in the following properties: for λ 7 =v 7 T R v 7 ,
+a given pair of agents (u, v), the weight will vanish
+(because of the term γa γb ) whenever W the sensing and where v 7 is the normalized rigidity eigenvector associated
+uv uv withλ .Fornotationalconvenience,weconsiderthepermuted
+communication constraints of Definition III.1 are violated 7
+(maximum range, obstacle occlusion), thus resulting in a rigidity eigenvector Pv 7 = (vx)T (vy)T (vz)T T ,
+decreased degree of connectivity of the graph (edge u, v where P is defined in Theorem II.16. For the remainder of
+(cid:2) (cid:3)
+G { } the work, we drop the subscript and reserve the bold font
+islost).Thesamewillhappenastheinter-distance(cid:96) deviates
+toomuchfromthedesired(cid:96) becauseofthetermβ .Finally, v for the rigidity eigenvector. Note that in fact, the rigidity
+eigenvalue and eigenvector are state-dependent, and therefore
+the term α will force complete disconnection of vertexes u
+alsotime-varyingwhentheformationisinducedbythespatial
+andv fromtheothervertexesandthereforeacompletelossof
+orientation of a mobile team of robots, or due to the action
+connectivityforthegraph wheneveracollisionwithanother
+agent is approached.4 G ofstate-dependentweightsonthesensingandcommunication
+links.
+We now recall from Corollary II.19 that infinitesimal rigid-
+ity implies graph connectivity. Therefore, any decrease in the We can now exploit the structure of the symmetric rigid-
+degreeofgraphconnectivityduetotheweights vanishing ity matrix for weighted frameworks. Using the form of the
+willalsoresultinadecreaseofrigidityofthew W eig u h v tedframe- symmetric rigidity matrix given in (7), we define Q˜(p( ))=
+w a o d r i k sco (K nn n e , c p te , d W g ) ra ( p i h n ). pa B r y tic m u a la in r, ta r i i n g i i n d g ity λ is > ob 0 v ( io in us th ly e l c o o s n t te fo x r t ( a I n 3 d ⊗ ob W ser ) v Q e ( t p h ( a V t ))(I 3 ⊗ W) as a generalized weight matrix,
+of weighted frameworks) over time, it is then possible to
+preserve formation rigidity while, at the same time, explicitly R 3 ⊗ G V 3 ⊗ G
+considering and managing the above-mentioned sensing and The elements of Q˜(p( )) are entirely in(cid:0)terms of the r(cid:1)elative
+communication constraints and requirements. V
+positions of each agent and the weighting functions defined
+Remark III.2. We note that the purpose of the weight β on the edges as in (11).
+in (11) is to embed a basic level of formation control into the The rigidity eigenvalue can now be expressed explicitly as
+rigidity maintenance action: indeed, every neighboring pair
+will try to keep the desired distance (cid:96) thanks to the shape of
+λ7= (cid:88) Wij (cid:16) (px
+the weights β uv . More complex formation control behaviors (pz−pz)2(vz−vz)2+2(px−px)(py−py)(vx−vx)(vy−vy)+
+i j i j i j i j i j i j
+could be obtained by different choices of functions β uv (e.g., 2(px−px)(pz−pz)(vx−vx)(vz−vz)+
+i j i j i j i j
+.
+z) (cid:17) = (cid:88) WijSij.
+rigidity property of the configuration. (12)
+From(12),onecanthenderiveaclosed-formexpressionfor
+4As for collision with obstacles, an equivalent behavior is automatically ∂λ7,s x, y, z ,i.e.,thegradientofλ withrespecttoeach
+obtainedfromweightsγ u b v ,seeagain(RobuffoGiordanoetal.,2013)fora a ∂ g p e s int’s ∈ po { sition. } In particular, by explo 7 iting the structure of
+full explanation. Also note that, because of the definition of weights Wuv,
+onehasNu⊆Su butSu(cid:54)⊂Nu. thetermsS ij andthepropertiesoftheemployedweights ij
+Robot i Position Estimator Environment
+...
+Rigidity Estimator
+...
+...
+pk,k 2Ni(t) pˆc k ,k 2Ni(t) eigenvalue (λˆ 7 ) and of the relative components of the
+eigenvector (vˆ), labeled as the rigidity estimator in the
+figure. This procedure is explained in section V;
+k k p 2 k  Ni p ( i t k ) pˆc i λˆ vˆ 7 i 3) λ t ˆ han a k n s d t vˆ o ), th e e a s c e h e a s g t e im nt a c te a d n q fi u n a a n ll t y iti i e m s p ( l r e e m la e t n iv t e th p e os c i o ti n o t n ro s l ,
+action(10)inadistributedwayformaintaininginfinites-
+imal rigidity of the formation during the group motion
+(while also coping with the various constraints and
+requirements embedded into weights ). Maintaining
+infinitesimal rigidity guarantees in turn convergence of
+the position estimator from measured distances of step
+vˆk,k 2Ni(t)
+1), and thus closes the ‘estimation-control loop.’
+We finally note that the proposed control architecture also
+Fig.4. Controlarchitecturefordistributedrigiditymaintenance.
+implicitly assumes the initial spatial configuration of the
+agents(i.e.,theirpositionsp( )attime0)tobeinfinitesimally
+(see, in particular, the previous Remark III.3), it is possible to rigid (with, in particular, a λ 7 > λm 7 in). This assumption on
+reduce ∂λ7 to the following sum over the neighbors, the group initial condition is formally stated below.
+7 = (cid:88) Wij (cid:16) 2(py
+.
+ijSij, λ 7 >λm 7 in.
+i (13) Thepurposeofrequiringaminimumlevelofrigidity(λmin)
+and similarly for the y and z components. is discussed in greater detail in Section VII.
+The gradient (13) possesses the following key feature: it is
+a function of relative quantities, in particular of (i) relative IV. DECENTRALIZEDESTIMATIONOF
+components of the eigenvector v, (ii) relative distances, and POSITIONSINACOMMONFRAME
+(iii)relativepositionswithrespecttoneighboringagents(see,
+As explained, evaluation of the gradient control (13) re-
+again, Remark III.3 for what concerns weights ), thus
+W ij quires that each agent has access to the relative positions of
+allowing for a distributed computation of its value once these
+its neighboring agents. A main focus of this work, however,
+quantities are locally available. The next sections IV and V
+is to achieve rigidity maintenance using only relative distance
+will detail two estimation schemes able to recover all these
+measurements. In this section, we leverage the infinitesimal
+relativequantitiesbyresortingtoonlymeasureddistanceswith
+rigidity of the formation to estimate the relative position with
+respect to 1-hop neighbors owing to the infinitesimal rigidity
+respect to a common reference point, p , shared by all agents.
+of the group formation. c
+In particular, each agent i, with i = 1...n, will be able to
+compute an estimate pˆ of its relative position p =p p
+i,c i,c i c
+C. The Control Architecture −
+to this common point. By exchanging their estimates over 1-
+Theexplicitdescriptionofthegradientoftherigidityeigen- hop communication channels, two neighboring agents i and j
+value in (13) motivates the general control architecture for can then build an estimate pˆ pˆ of their actual relative
+the implementation of the rigidity maintenance action in (10). position p p in a common reference frame. Notice that
+We observethat each agentrequires knowledge ofthe rigidity both the graph (i.e., neighbor sets, edges, etc.) and the robot
+eigenvalue,appropriatecomponentsoftherigidityeigenvector, positions are time-varying quantities. However, in this section
+and relative positions with respect to neighboring agents in we omit dependency on time for the sake of conciseness.
+a common reference frame. As already mentioned, all these Wealsonotethatthiscommonreferencepointdoesnotneed
+quantities are inherently global quantities, and thus a fully to be stationary, i.e., it can move over time. In the following,
+distributed implementation of (10) must include appropriate wechoosethepointp tobeattachedtoaspecialagent inthe
+estimators for recovering these parameters in a distributed group, determined a priori. This agent will be denoted with
+manner. the index i and, in the remainder of this section, we set p =
+As a preview of the next sections in this work, Figure 4 p . We now proceed to describe a distributed scheme able to
+depicts the general architecture needed by each agent to recover an estimation of the relative position p = p p
+implement the rigidity maintenance control action (10): for any agent in the group by exploiting the mea i s ,c ured r i e − lativ i e c
+1) exploiting measured distances with respect to its 1-hop distances and the rigidity property of the formation.
+neighbors, and owing to the formation rigidity, each To achieve this estimation, we first introduce additional
+agent distributely estimates relative positions in a com- assumptions on the capabilities of the special agent i . While
+mon reference frame, labeled as the position estimator all agents other than i are able to measure only the relative
+inthefigure.ThisblockisfullyexplainedinsectionIV; distance to their neighbors, the special agent i is required to
+2) theoutputofthepositionestimatoristhenusedbyeach be endowed with an additional sensor able to also measure,
+agent to perform a distributed estimation of the rigidity at any time t, the relative position (i.e., distance and bearing
+angles)ofatleast2non-collinearneighbors;5thesetwosensed i-th agent (i=i ):
+neighbors will be denoted with the indexes (ι(t), κ(t))
+= (cid:88) ((cid:107)pˆ j,c −pˆ i,c (cid:107)2−(cid:96)2 ij )(pˆ j,c −pˆ i,c )−
+Remark IV.1. We stress that the agent indexes ι(t) and κ(t) δ pˆ −δ (pˆ −(p −p ))−δ (pˆ −(p −p )),
+iic i,c iι ι,c ι ic iκ κ,c κ ic
+are time-varying; indeed, contrarily to the special agent i , (15)
+ι(t) and κ(t) are not preassigned to any particular agent in
+where δ is the well known Kronecker’s delta.6 The estima-
+themulti-robotteam.Thereforethespecialagenti onlyneeds ij
+c tor (15) is clearly decentralized since:
+tomeasureitsrelativepositionsp p andp p with
+respecttoanytwoagentswithinit
+κare • (cid:96) ij is locally measured by agent i;
+effectivelyarbitrary),withthepointsp ,p andp being • pˆ i,c is locally available to agent i;
+non-collinear t t . We believe this
+ot too • pˆ j,c can be transmitted using one-hop communication
+restrictiveinpr ∀ ac ≥ tice,asitonlyrequirethepresenceofatleast from agent j to agent i, for every j i ;
+onerobotequippedwitharangeplusbearingsensorwhileall • (p ι
+p ic )and(p κ
+p ic )aremeasuredbyagenti c andcan
+the remaining ones can be equipped with simple range-only be transmitted using one-hop communication to agents ι
+sensors. and κ respectively.
+In order to show the relation between the proposed decentral-
+In the following we omit for brevity the dependency upon
+ized position estimator scheme and the infinitesimal rigidity
+the time t of the quantities ι and κ.
+property, one can restate (15) in matrix form as
+In order to perform the distributed estimation of p =
+p p , i 1,...,n we follow the approach presented pˆ˙ = (pˆ)pˆ+R(pˆ)(cid:96)+∆c (16)
+in (Calafiore et al., 2010a), with some slight modifications
+where (pˆ) and R(pˆ) are the symmetric rigidity matrix and
+dictated by the nature of our problem. Consistently with our R
+notation, we define pˆ = pˆT ... pˆT T R3n. For the rigidity matrix computed with the estimated positions,
+1,c n,c ∈ (cid:96) R|E| is a vector whose entries are (cid:96)2 , i,j , and
+compactness, we also den (cid:2) ote by (cid:96) ij the me (cid:3) asured distance ∆ ∈ c R|E| containstheremainingtermso i f j th ∀ e { righ } t-h ∈ an E d-side
+(cid:107) p j − p i (cid:107) , as introduced in Definition III.1. We then consider of (1 ∈ 5).
+the following least squares estimation error:
+e(pˆ)= 1 4 {i(cid:88),j}∈E (cid:0) (cid:107) pˆ j,c − pˆ i,c (cid:107) 2 − (cid:96)2 ij (cid:1) 2 + 1 2(cid:107) pˆ ic,c (cid:107) 2+ P ri r g ( o i p d p 1 os th it e p i n o c n )T the IV. v 2 e . cto I ( r f p n o th f e p tr c u f ) r e T am v e a T w lu o i e s r s k an p i i s s − ol ( a ( i 1 n te fi n d ni l ⊗ t o e c s a p im l c ) m al i l n = y - )
++ pˆ (p p ) 2+ pˆ (p p ) 2. imizer of e(pˆ). Therefore, there exists an (cid:15)>0 such that, for
+2(cid:107) ι,c − ι − ic (cid:107) 2(cid:107) κ,c − κ − ic (cid:107) (cid:2) all initial conditions satisfying pˆ (cid:3) (0) p (1 p ) < (cid:15),
+(14) the estimation pˆconverges to p (cid:107) (1 − p − ). n ⊗ c (cid:107)
+Notice that the quantities (cid:96) , p p , and p p are mea-
+ij ι − ic κ − ic We point out that the estimator in the form (16) is identical
+sured while all the other quantities represent local estimates
+to the formation controller proposed in (Krick et al., 2009).
+of the robots.
+Consequently,wereferthereadertothisworkforadiscussion
+The nonnegative error function e(pˆ) is zero if and only if:
+on the stability and convergence properties of this model. A
+• (cid:107) pˆ j,c − pˆ i,c (cid:107) is equal to the measured distance (cid:96) ij for all similarestimationschemeisalsoproposedin(Calafioreetal.,
+the pairs i,j ;
+{ }∈E 2010a). We briefly emphasize that the property of having the
+• (cid:107) pˆ ic,c (cid:107) =0; true value of relative positions p (1 n p c ) as an isolated
+• pˆ ι,c and pˆ κ,c are equal to the measured relative positions local minimizer of (14) is a conse − quence ⊗ of the definition of
+p p and p p , respectively.
+ι − ic κ − ic infinitesimalrigidityandofthenon-collinearityassumptionof
+Note that the estimates pˆ ic,c , pˆ ι,c and pˆ κ,c could be directly the agents i c , ι, and κ.
+set to 0, (p ι
+p ic ), and (p ι
+p ic ), respectively, since the first We finally note that, in general, the rate of convergence of
+quantityisknownandthelasttwoaremeasured.Nevertheless, a gradient descent method is known to be slower than other
+we prefer to let the estimator obtaining these values via a estimation methods. However, we opted for this method since
+‘filtering action’ for the following reasons: first, the estimator is its directly amenable to a distributed implementation and
+provides a relatively simple way to filter out noise that might requires only first-order derivative information.
+affecttherelativepositionmeasurements;secondly,implemen-
+tation of the rigidity maintenance controller only requires that
+V. DISTRIBUTEDESTIMATIONOFTHE
+(pˆ pˆ ) (p p ),whichisachievedifpˆ p pˆ
+j,c − i,c → j − i j,c → j − ic,c RIGIDITYEIGENVALUEANDEIGENVECTOR
+andpˆ p pˆ foranycommonvalueofpˆ .Therefore
+AsseeninsectionIV,whenthemulti-robotteampossesses
+any additional hard constraint on pˆ (e.g., pˆ 0) might
+≡ theinfinitesimalrigidityproperty,itispossibletodistributedly
+unnecessarily over-constrain the estimator.
+estimate the relative positions in a common reference frame
+Applying a first-order gradient descent method to e(pˆ), we
+for each agent. However, the proposed distributed rigidity
+finally obtain the following decentralized update rule for the
+maintenance control action (10) requires knowledge of some
+5Formationrigidityimpliespresenceofatleast2non-collinearneighbors
+foreachagent(Laman,1970). 6δij =0ifi(cid:54)=j andδij =1otherwise.
+additional global quantities that are explicitly expressed in result and refer the reader to Yang et al. (2010) for details of
+the expressions (13) and (10). In particular, each agent must the proof, noting that the proof methodologies are the same
+know also the current value of the rigidity eigenvalue and for the system (17) as that proposed in Yang et al. (2010).
+certain components of the rigidity eigenvector. In this sec-
+TheoremV.1. Assumethattheweightedframework( ,p, )
+tion we propose a distributed estimation scheme inspired by G W
+with symmetric rigidity matrix is infinitesimally rigid and
+the distributed connectivity maintenance solution proposed in R
+hasdistinctnon-zeroeigenvalues,andletvdenotetherigidity
+(Yang et al., 2010) for obtaining the rigidity eigenvalue and
+eigenvector. Then for any initial condition vˆ(t ) R3n
+eigenvector. 0 ∈
+such that vTvˆ(t ) = 0, the trajectories of (17) converge
+For the reader’s convenience, we first provide a brief 0 (cid:54)
+to the subspace spanned by the rigidity eigenvector, i.e.,
+summary of the power iteration method for estimating the
+lim vˆ(t) = γv for γ R, if and only if the gains k ,k
+eigenvalues and eigenvectors of a matrix. We then proceed t→∞ ∈ 1 2
+and k satisfy the following conditions:
+to show how this estimation process can be distributed by 3
+1) k ,k ,k >0,
+employing PI consensus filters and by suitably exploiting the 1 2 3
+2) k >k λ ,
+structure of the symmetric rigidity matrix. 1 2 7
+3) k >k λ .
+Furthermore, for any choice of constants k ,k ,k > 0, the
+A. Power Iteration Method 1 2 3
+trajectories of (17) remain bounded and satisfy
+The power iteration method is one of a suite of iterative
+algorithms for estimating the dominant eigenvalue and eigen- vˆ(t) max vˆ(t 0 ) ,√3n , t t 0 .
+(cid:107) (cid:107)≤ (cid:107) (cid:107) ∀ ≥
+vector of a matrix. Following the same procedure as in (Yang (cid:110) (cid:111)
+Inparticular,thetrajectoryconvergestotherigidityeigenvec-
+et al., 2010), we employ a continuous-time variation of the
+algorithm that will compute the smallest non-zero eigenvalue
+and eigenvector of the symmetric rigidity matrix. lim vˆ(t) = 3n 1 2 λ .
+The discrete-time power iteration algorithm is based on the t→∞(cid:107) (cid:107) (cid:115) (cid:18) − k 3(cid:19)
+following iteration, Remark V.2. The power iteration proposed in (17) assumes
+Ax(k) Akx(0) that the symmetric rigidity matrix is static. However, in a
+x(k+1) = = . dynamic setting the parameters of the rigidity matrix are a
+(cid:107) (cid:107) (cid:107) (cid:107) function ofthe stateof therobots ina multi-robot system,and
+Under certain assumptions for the matrix A (i.e., no repeated boththesymmetricrigiditymatrixandtheexpressionofitsnull
+eigenvalues), the iteration converges to the eigenvector asso- spaceareinherentlytime-varying.Whiletheproofprovidedin
+ciated to the largest eigenvalue of the matrix. (Yangetal.,2010)doesnotexplicitlyaddressthetime-varying
+To adapt the power iteration to compute the rigidity eigen- case,ourexperiencesuggeststhatthedynamicsof(17)isable
+vector and eigenvalue, we leverage the results of Theorem to track even a time-varying rigidity eigenvector, so long as
+II.16 and consider the iteration on a deflated version of the the dynamics of the robots are slower than the estimator. The
+symmetric rigidity matrix, i.e. ˜ =I TTT α for some speedofconvergenceof(17),ofcourse,isalsotunablebythe
+smallenoughα>0.Thepoweriterationmethodestimatesthe constants k .
+largest eigenvalue of a matrix. As all the eigenvalues of the
+RemarkV.3. Anotherimportantsubtletyofthedynamics(17)
+symmetric rigidity matrix are non-negative, the largest eigen-
+value of the deflated version ˜ will correspond to 1 αλ , is the requirement that the rigidity eigenvalue is unique.
+R − When the rigidity eigenvalue is not unique, the associated
+and thus can be used to estimate λ . The constant α ensures
+the matrix ˜ is positive semi-definite.The columns of the eigenvector can belong to (at least) a two-dimensional sub-
+contain the eigenvectors corresponding to
+space , so that (17) can not be expected to converge to
+∈ a unique eigenvector but rather to an equilibrium point in
+the zero eigenvalues of , for example, as characterized in
+R (see, e.g., (Yang et al., 2010)). This can pose difficulties
+Theorem II.16. Note that the power iteration applied to the
+matrix ˜ will compute the eigenvector associated with the in real-world conditions since non-idealities such as noise in
+rigidity R eigenvalue.7 measuring the agent states (used in evaluating the symmet-
+ric rigidity matrix ), and discretization when numerically
+The continuous-time counterpart of the power iteration
+integrating (17), can make the equilibrium point for (17) in
+algorithm now takes the form (Yang et al., 2010)
+to abruptly vary over time, thus preventing a successful
+vˆ˙(t)= k TTT+k +k vˆ(t)Tvˆ(t) 1 I vˆ(t),(17) L convergence of the estimation of v.
+− 1 2 R 3 3n −
+(cid:16) (cid:16) (cid:17) (cid:17)
+where vˆ is the estimate of the rigidity eigenvector, and the
+B. A Distributed Implementation
+constants k ,k ,k > 0 are chosen to ensure the trajectories
+convergetotherigidityeigenvector.8 Wepresentherethemain The results of section V-A provide a continuous-time esti-
+mator for estimating the rigidity eigenvalue and eigenvector
+7Assumingtherigidityeigenvalueisuniqueandtheframeworkisinfinites- of the symmetric rigidity matrix. The estimator given in
+imally rigid (i.e., the rigidity eigenvalue is positive). We will discuss the (17), however, is a centralized implementation. Moreover,
+implicationsofthisassumptionlater.
+certainparametersusedin(17)areexpressedusingacommon
+8Notethattheconstantαusedtodescribethedeflatedsymmetricrigidity
+matrixiseffectivelyreplacedbyk2 inthisformulation. reference frame (i.e., the quantity TTT, see Theorem II.16
+and Remark II.17) or require each robot to know the entire G (t)
+estimator state (i.e., the quantity vˆ(t)Tvˆ(t) in (17)). We
+propose in this sub-section a distributed implementation for Consensus
+the rigidity estimator that overcomes these difficulties, in vx(t) X
+particular by leveraging the results of Section IV. In the same  py(t)
+spiritasthesolutionproposedin(Yangetal.,2010),wemake PI I 0 0 TTT vy(t)
+Consensus 2vz(t)3
+use of the PI average consensus filter (Freeman et al., 2006) Filter X ⇥ ⇤ 4 5
+to distributedly compute the necessary quantities of interest,
+and strongly exploit the particular structure of the symmetric PI
+rigidity matrix. Filter
+Ourapproachtothedistributionof(17)istoexploitboththe
+built-indistributedstructure(i.e.,thesymmetricrigiditymatrix
+)andthereductionoftheotherparameterstovaluesthatall
+agentscanobtainviaadistributedalgorithm.Inthisdirection, Fig. 5. Block diagram showing PI consensus filters in calculation of
+TTTvˆ(t).
+we now proceed to analyze each term in (17) and discuss
+the appropriate strategies for implementing the estimator in a
+distributed fashion.
+however, a direct application of the consensus protocol will
+ConcerningthefirsttermTTTvˆ,TheoremII.16providesan
+notbesufficient.Indeed,itisexpectedthateachagentwillbe
+analytic characterization of the eigenvectors associated with
+physicallymoving,leadingtoatime-varyingdescriptionofthe
+the zero eigenvalues of the symmetric rigidity matrix (assum-
+matrix TTT (see Remark V.2). Additionally, the underlying
+ing the graph is infinitesimally rigid). To begin the analysis,
+network is also dynamic as sensing links between agents are
+weexplicitlywriteoutthematrixT andexaminetheelements
+inherently state dependent.
+of the matrix TTT. Following the comments of Remark
+The use of a dynamic consensus protocol introduces ad-
+II.17, we express the null-space vectors in terms of relative
+ditional tuning parameters that can be used to ensure that
+positions to an arbitrary point p = px py pz R3; in
+c c c c ∈ the distributed average calculation converges faster than the
+particular, the point p will be the special agent i described
+c (cid:2) c (cid:3) underlying dynamics of each agent in the system, as well as
+in Section IV.
+the ability to track the average of a time-varying signal. We
+employ the following PI average consensus filter proposed in
+T= 1 0 n 1 0 0 0 p p x y 1− py c 1 p n x pz − 0 pz c 1 n pz 0 pz1 (Freeman et al., 2006),
+ 0 0 n 1 c n 0 − px1 px py1− c p n y 
+Fort  heremainderofthisdiscussion,weassumethatallagents  w˙(t) = − n K − L( P (t) G ) I 0 G w(t)
+have access to their state in an estimated coordinate frame (cid:20) (cid:21) (cid:20) − G (cid:21)(cid:20) (cid:21)
+relative to the point p , the details of which were described + n u(t) (21)
+in Section IV. (cid:20) (cid:21)
+To simplify notations, we write as in Section IV, for exam- y(t)= I 0 . (22)
+ple,py,c =py py1 ,andp =p p .Followingourearlier n w(t)
+notation, we a − lso c pa n rtition t i h ,c e vec i to − r vˆ c into each coordinate, The paramete (cid:2) rs K ,K (cid:3) (cid:20) R an (cid:21) d γ R are used to ensure
+vˆx, vˆy, and vˆz. Let avg(r) denote the average value of the stability and tune the spe ∈ ed of the fi ∈ lter. An analysis of the
+elements in the vector r ∈ Rn, i.e. avg(r) = n 11T n r. Then it stability and performance of this scheme with time-varying
+is straightforward to verify that graphs is given in (Freeman et al., 2006). Figure 5 provides a
+1 1Tvˆk(t)=navg(vˆk(t))1 , k x,y,z (19) block diagram representation of how the PI consensus filters
+n n n ∈{ } are embedded into the calculation of TTTvˆ(t) (in only the
+p (p )Tvˆk(t)=navg(p vˆk)p , i,j,k x,y,z ,
+i,c j,c j,c i,c x-coordinate).
+As for the second term in (17), as shown in II-C the sym-
+where ‘ ’ denotes the element-wise multiplication of two metricrigiditymatrixisbyconstructionadistributedoperator.
+vectors. The term vˆ(t) can be computed using only information
+Thischaracterizationhighlightsthat,inordertoevaluatethe exchanged between neighboring agents, as determined by the
+termTTTvˆ,eachagentmustcomputetheaverageamongstall sensing graph.
+agentsofacertainvaluethatisafunctionofthecurrentstateof The final term in (17) is a normalization used to drive the
+the estimator and of the positions in some common reference eigenvector estimate to the surface of a sphere of radius √3n.
+frame whose origin is the point p . It is well known that the Using the same analysis as above, it can be verified that
+consensus protocol can be used to distributedly compute the
+average of a set of numbers (Mesbahi and Egerstedt, 2010). 1 vˆ(t)=(avg(vˆ(t) vˆ(t)) 1)vˆ(t). (23)
+The speed at which the consensus protocol can compute this (cid:18) (cid:19)
+valueisafunctionoftheconnectivityoftheunderlyinggraph This quantity can therefore be distributedly computed using
+and the weights used in the protocol. In this framework, an additional PI consensus filter.
+1 1T +py,c(py,c)T +pz,c(pz,c)T py,c(px,c)T pz,c(px,c)T
+TTT = n n px,c(py,c)T 1 1T +px − ,c(px,c)T +pz,c(pz,c)T − pz,c(py,c)T (18)
+ − px,c(pz,c)T n n py,c(pz,c)T 1 1T +px − ,c(px,c)T +py,c(py,c)T 
+UsingtheresultofTheoremV.1andthePIconsensusfilters, was presented in Sections IV and V, with the complete set
+each agent is also able to estimate the rigidity eigenvalue. of filter equations summarized in (24)–(33). Note that both
+estimation strategies implicitly require that the underlying
+CorollaryV.4. Letv2(t)denotetheoutputofthePIconsensus
+i formation is infinitesimally rigid (see also Assumption III.4).
+filter for estimating the quantity avg(vˆ(t) vˆ(t)) for agent i.
+Then agent i’s estimate of the rigidity eige ◦ nvalue, λˆi, can be The final step for implementation of the rigidity maintenance
+7 controlleristhentoreplaceallthestate-variablesgivenin(13)
+obtained as
+k with the appropriate estimated states computed by the relative
+λˆi = 3 1 v2(t) .
+7 k − i position estimators and rigidity eigenvalue estimators. The
+local controller for each agent is thus given as,9
+In summary, each agent im(cid:0)plements t(cid:1)he following filters:
+• Estimation of a common reference frame using (15).
+• • E A st P im I- a C ti o o n n se o n f s t u h s e fi ri l g te id r it f y or ei t g r e a n c v k e in c g tor th u e sin a g ve ( r 1 a 7 g ) e . of the ξ i x=− ∂V ∂λ (λˆ 7 i 7 ) j (cid:88) ∈Ni Wij (cid:16) 2(pˆx i,c −pˆx j,c )(vˆ i x−vˆ j x)2+
+i,c j,c i j i j i,c j,c i j i j
+).
+onsensus filter for tracking the quantity described ∂
+• A PI-Consensus filter for tracking the average of the
+in conjunction with all the estimation filters of (24)-(33).
+square of the rigidity eigenvector estimate, (23).
+For completeness, we now present the full set of filters that Remark VI.1. The interconnection of the relative position
+each robot executes in (24)-(33). These equations are written estimator, rigidity eigenvalue estimator, and gradient con-
+only for the x-coordinate associated with all the quantities. troller leads to a highly non-linear dynamics for which a
+Observe, however, that the filters needed for the y and formal proof analysis is not straightfoward. While we are
+z coordinatesdonotrequireadditionalintegrators,as − similar currently working towards a deeper analysis in this sense, the
+fi − lters can be vectorized (for example, the PI filters can be approach taken in this work is to exploit the typical (although
+combinedasin(21)).Forthereadersconvenience,asummary informal) time-scale separation argument commonly found in
+of the notations and variable definitions used in (24)-(33) is many robotics applications relying on feedback control from
+provided in Table I. an estimated state (as, e.g., when using an extended Kalman
+filter). Basically, the estimator dynamics is assumed “fast
+Remark V.5. Equations (24)-(33) show that each agent re-
+enough”suchthatitstransientbehaviorcanbeconsideredas
+quires a 10-th order dynamic estimator for estimating the
+a second-order perturbation with respect to the robot motion
+rigidityeigenvectorandeigenvalue.Thisfilteriscomprisedof
+(see also (Yang et al., 2010)) for an equivalent assumption in
+threePI-Consensusfilters,anrelativepositionestimationfilter,
+the context of decentralized connectivity maintenance control.
+andthepoweriterationfilter.Animportantpointtoemphasize
+is the order of the overall filter is independent of the number
+VII. EXPERIMENTALRESULTS
+of agents in the ensemble, and thus is a scalable solution.
+In this section we report some experimental results aimed
+VI. THERIGIDITYMAINTENANCECONTROLLER at illustrating the machinery proposed so far for distributed
+rigidity maintenance. The experiments involved a total of
+The primary focus of this work until now was a detailed
+N = 6 quadorotor UAVs (5 real and 1 simulated) flying the
+description of how the rigidity of a multi-robot formation can
+environment shown in Fig. 6. A video illustrating the various
+be maintained in a distributed fashion. The basic idea was
+phasesoftheexperiment(MultimediaExtension1)isattached
+to follow the gradient of an appropriately defined potential
+to the paper.
+function of the rigidity eigenvalue; this control strategy was
+All the quadrotor UAVs were implementing the rigidity
+presented in (13). The fundamental challenge for the imple-
+maintenance action (34) in addition to the estimation filters
+mentation of this control strategy was twofold: on the one
+presented in (24)-(33). Additionally, for two of the quadrotor
+hand,rigidityofaformationisaninherentlyglobalpropertyof
+UAVs (namely, quadrotors 1 and 2) an exogenous bounded
+the network, and on the other hand, the control law depended
+velocity term ξ∗ R3 was also added to (34); this allows for
+on relative position measurements in a common reference i ∈
+two human operators to independently control the motion of
+fame.
+quadrotors 1 and 2 during the experiment, so as to steer the
+A truly distributed solution based on this control strategy
+whole formation and trigger the various behaviors embedded
+requires each agent to estimate a common inertial reference
+frameandalsoestimatetherigidityeigenvalueandeigenvector
+9The control is shown in the x-coordinate; a similar expression can be
+of the formation. The solution to these estimation problems obtainedforthey-andz-coordinates.
+vˆ˙x = k n vx+zxy(t)pˆy +zxzpˆz (t) k W vˆx(t) vˆx k (vx 1)vˆx (24)
+i − 1 i i i,c i i,c − 2 ij i − j − 3 i − i
+(cid:0) (cid:1)
+(cid:0) (cid:1)
+i,c (cid:107) j,c − i,c (cid:107) − ij j,c − i,c − iic i,c − iι ι,c − ι − ic − iκ κ,c − κ − ic
+v˙x =γ(vˆx vx) K vx vx(t) +K wx wx (26)
+i i − i − P i − j I i − j
+∈Ni(cid:0)
+(cid:0) (cid:1)
+w˙x = K vx vx (27)
+i − I i − j
+(cid:0) (cid:1)
+v˙2x =γ (vˆx)2 v2x K v2x v2x +K w2x w2x (28)
+i i − i − P i − j I i − j
+(cid:0) (cid:1)
+(cid:0) (cid:1)
+(cid:0) (cid:1)
+w˙2x = K v2x v2x (29)
+i − I i − j
+(cid:0) (cid:1)
+z˙xy =γ((pˆy vˆx pˆx vˆy) zxy) K zxy zxy +K wxy(t) wxy (30)
+i ◦ − ◦ − i − P i − j I i − j
+(cid:0) (cid:1)
+(cid:0) (cid:1)
+w˙xy = K zxy zxy (31)
+i − I i − j
+(cid:0) (cid:1)
+z˙xz =γ((pˆz vˆx pˆx vˆz) zxz) K zxy zxy +K wxy wxy (32)
+i ◦ − ◦ − i − P i − j I i − j
+(cid:0) (cid:1)
+(cid:0) (cid:1)
+w˙xz = K zxz zxz (33)
+i − I i − j
+(cid:0) (cid:1)
+in the weights (formation control, obstacle avoidance,
+sensing limitations).10
+Our experimental quadrotor platform is a customized ver-
+sion of the MK-Quadro11 implementing the TeleKyb ROS
+framework12 for flight control, experimental workflow man-
+agement and human inputing. Attitude is stabilized with a
+fast inner loop that takes advantage of high-rate/onboard
+accelerometerandgyroscopemeasurementswhilethevelocity
+stabilizationisachievedbyaslowercontrolloopthatmeasures
+the current velocity thanks to an external motion capture
+system. The motion capture system is also used to obtain
+relative distance measurements among the robots and the two
+bearing measurements needed by the special robot i . The
+reader is referred to (Franchi et al., 2012b) for a detailed
+description of the quadrotor-based experimental setup.
+We start illustrating the behavior of the relative position
+estimator described in Sect. IV and upon which all the subse-
+quent steps are based (estimation of λ and v and evaluation Fig. 6. Two snapshots of the reported experiment. Left: simulated 3D
+7 viewsshowing,inparticular,theinter-agentlinks(red–almostdisconnected
+of the control action (10)). As explained in Sect. IV, owing
+link, green – optimally connected link). Right: corresponding pictures of
+to the formation infinitesimal rigidity, the scheme (15) allows the experimental setup. The two highlighted quadrotor UAVs are partially
+each agent i to build an estimation pˆ of its relative position controlledbytwohumanoperators
+p p with respect to the agent i , with i = 1 in this
+experiment. Figures 7(a–e) report the behavior of the norm of
+the estimation errors p p pˆ for i=2...6 together errors keep low values over time, thus effectively allowing
+(cid:107) − − (cid:107)
+with their mean values (dashed horizontal black line). It is everyagenttorecoveritscorrectrelativepositionwithrespect
+then possible to verify how the relative position estimation to p from the measured relative distances.
+AsfortherigidityeigenvalueestimationofSect.V,Fig.8(a)
+10We note that, being ξ∗ bounded, its effect does not threaten rigidity reports the behavior of λ (t) (solid blue line), of the 6
+maintenance since the control action ξi in (10) always results dominant as estimations λˆi(t) (solid colored lines almost superimposed to
+V λ 1 ( 1 λ m 7 i ) kr → oko ∞ pte i r f .d λ e 7(t)→λm 7 in. λ 7 (t)), and of 7 the minimum threshold λm 7 in =7.5 (horizontal
+12ros.org/wiki/telekyb dashed line). From the plot one can verify: (i) the accuracy
+00 50 100 150 200 250 300
+0.02 00 50 100 150 200 250 300
+00 50 100 150 200 250 300 time[s]
+00 50 100 150 200 250 300 time[s]
+00 50 100 150 200 250 300
+40 50 100 150 200 250 300 time[s]
+Fig.7. Behaviorof(cid:107)pi−pc−pˆi,c(cid:107),i=2...6,thenormoftheestimation
+error for the relative positions of agents 2...6 w.r.t. agent ic = 1. The
+horizontaldashedblacklinerepresentsthemeanvalueofeacherrornormover
+time.Notehowtheestimationerrorskeepalowvalueduringthegroupmotion
+andthusindicatetheabilityofeachrobottorecoveritsrelativepositionwith
+respecttotherobotic=1byonlyexploitingmeasureddistanceswithrespect
+toitsneighborsandtheinfinitesimalrigidityoftheformation
+in recovering the value of λ (t) (note how the 6 estimations
+are almost superimposed on the real value) and (ii) that
+λ (t) > λmin at all times apart from few isolated spikes,
+implying that formation rigidity was maintained during the
+task execution. As an additional indication of the eigenvalue
+estimation performance, Fig. 8(b) shows the total estimation
+error for the rigidity eigenvalue
+which again confirms the accuracy of the estimation strategy.
+Figures 9(a–o) report the behavior of the 15 weights W
+defined in (11) and associated to the all the possible edges of
+graph in order to show their time-varying nature because of
+theconstraintsandrequirementslistedinSect.III-A.Notehow
+thevalueofsomeweightdropstozeroovertime(e.g.,W (t)
+at about t = 25 [s] or W (t) at about t = 210 [s]), thus
+indicating loss of the corresponding edge. In the same spirit,
+00 50 100 150 200 250 300 time[s]
+Fig. 8. Left: behavior of λ7(t) (blue line) and the 6 estimations λˆi
+(dashedcoloredlines)whichresultalmostcoincident.Right:behaviorofthe
+overallrigidityeigenvalueestimationerrore λ (t)asdefinedin(35)
+Fig.10showsthetotalnumberofedges ˆ oftheunweighted
+graph ˆ (i.e., of non-zero weights W | , E s | ee Definition II.9) uv G during the group motion. These results highlight the time-
+varying nature of graph which, as explained in the previous
+G sections, is not constrained to keep a given fixed topology but
+is free to lose or gain edges as long as infinitesimal rigidity
+of the formation is preserved.
+Finally, Figs. 11(a–f) report the behavior over time of p (t)
+(the i-th agent position, solid lines) and of p (t) (the i-th
+quadrotor position, dashed lines) while tracking the motion of
+p (t). The two position vectors result almost perfectly coinci-
+dent, thus indicating a successful tracking performance of the
+quadrotors (and the soundness of our modeling assumptions).
+As a further confirmation of this fact, the norm of the overall
+tracking error defined as
+e (t)= i=1(cid:107) i − i,real (cid:107) (36)
+is also reported in Fig. 12.
+VIII. CONCLUDINGREMARKS
+This work presented a fully distributed solution for the
+rigidity maintenance control of a multi-robot system. As dis-
+cussedintheintroduction,rigidityisanimportantarchitectural
+feature for multi-robot systems that enables, for example,
+formation keeping and localization using only range-based
+measurements. The main theme of this work, therefore, was
+the distributed implementation of a number of algorithms
+for estimation and control in a multi-robot system related to
+rigidity maintenance. In particular, we demonstrated how the
+rigidity eigenvalue and eigenvector, used to decide if a for-
+mation is infinitesimally rigid, can be distributedly estimated
+usingasuiteofestimatorsbasedondynamicconsensusfilters
+andthepoweriterationmethodforeigenvalueestimation.The
+rigidity property also allowed for estimation of a common
+inertialreferenceframeusingonlyrangebasedmeasurements,
+alongwithonesingleendowedagentthatisabletosenseboth
+range and bearing. The estimation of these quantities were
+then embedded in a gradient-based distributed control action
+ensuring each agent moves in a way that guarantees rigidity
+of the formation is maintained. This control scheme also
+explicitlyhandlesavarietyofpracticalmulti-robotconstraints,
+0.7 0.6 0.5 0.4 0.3 0.2 0.10 50 100tim15e0[s]200 250 300 21W
+0.85 0.8 0.75 0.7 0.65 0.6 0.55 0.50 50 100tim15e0[s]200 250 300
+0.7 0.6 0.5 0.4 0.3 0.20 50 100tim15e0[s]200 250 300
+0.20 50 100tim15e0[s]200 250 300
+0.40 50 100tim15e0[s]200 250 300
+0.20 50 100tim15e0[s]200 250 300
+0.6 0.5 0.4
+00 50 100tim15e0[s]200 250 300
+0.7 0.6 0.5
+0.20 50 100tim15e0[s]200 250 300
+0.6 0.5 0.4
+00 50 100tim15e0[s]200 250 300
+0.9 0.8 0.7
+0.6 0.5 0.4
+0.20 50 100tim15e0[s]200 250 300
+0.85 0.8 0.75
+0.650 50 100tim15e0[s]200 250 300
+0.9 0.8 0.7
+0.6 0.5 0.4 0.3
+0.10 50 100tim15e0[s]200 250 300
+00 50 100tim15e0[s]200 250 300
+00 50 100tim15e0[s]200 250 300
+0 50 100tim15e0[s]200 250 300
+Fig. 9. Behavior of the 15 weights Wuv(t) for all the possible edges of
+graph G. Note how the values of weights Wuv(t) vary over time because
+ofthesensing/communicationconstraintsandrequirementsembeddedwithin
+their definition (see sec. III-A). Some weights (e.g., W24 and W45) also
+temporarily vanish indicating loss of the corresponding edge (and, thus, the
+time-varyingnatureofgraphG)
+140 50 100 150 200 250 300 time[s]
+−40 50 100 150 200 250 300
+Fig.10. TotalnumberofedgesinthegraphG duringthegroupmotion
+includingsensingandcommunicationranges,collisionandob-
+stacle avoidance, and line-of-sight requirements. The validity
+of the proposed algorithms was demonstrated by a team of 6
+]m[laer,1 p , 1 p
+−40 50 100 150 200 250 300
+]m[laer,2 p , 2 p
+−30 50 100 150 200 250 300 time[s]
+−40 50 100 150 200 250 300 time[s]
+−40 50 100 150 200 250 300
+−50 50 100 150 200 250 300
+Fig.11. Figs.(a–f):behaviorofpi(t)(solid)andp i,real(dashed):theseare
+basically superimposed, showing the accuracy of the quadrotors in tracking
+the reference trajectory pi(t). In the plots the following color code is used:
+blue/red/greensolid/dashedlinescorrespondtothex/y/zcomponentsofpi(t)
+andp i,real
+00 50 100 150 200 250 300
+Fig. 12. Behavior of the tracking error e track (t) defined in (36) showing
+againthegoodtrackingperformanceofthe6quadrotors
+quadrotor UAVs flying in a cluttered environment.
+Thisworkalsohighlightedanumberofdirectionsforfuture
+research. In particular, the estimation of the rigidity eigen-
+value assumed that there is a separation between the rigidity
+eigenvalue and the next largest eigenvalue, i.e. λ λ >0.
+Whilethereportedexperimentalresultsshowedalargedegree
+of robustness w.r.t. this effect, there remain both theoretical
+and practical questions related to this problem. For instance,
+it would be interesting to complement the rigidity mainte-
+nance controller with an additional term meant to maintain a
+minimum separation among λ and λ . Another extension is
+to relax the requirement for having a special agent endowed
+with additional sensing capabilities (i.e. range and bearing).
+This would lead to a distributed solution involving only range
+measurements for all robots in the ensemble.
+Despite these remaining challenges, this work has suc-
+cessfully demonstrated the power of distributed strategies for
+multi-robotsystems.Indeed,itisremarkabletoobservethebe-
+haviorofthemulti-robotteamrunningmanydistributedfilters
+toachieveacommonglobalobjective.Therefinementofthese
+strategies will no doubt become an important requirement as (a) Agraph. (b) Localdirectedgraphatanode.
+autonomous multi-robot systems are integrated more into a
+Fig.13. Exampleofadirectedlocalgraph.
+variety of application domains.
+Let = ( , ) be a sub-graph induced by node v such
+APPENDIXA:INDEXTOMULTIMEDIAEXTENSIONS that
+ijrr.org. E { |{ }∈E}
+Here we emphasize that the original graph is undirected,
+Extension Type Description
+while in the new induced graph we assign a direction to
+1 Video Experiments of rigidity mainte- i
+the edge such that node v is always the tail. Furthermore,
+nance with a group of UAVs j
+observe that = .13 This is illustrated in Figure 13.
+APPENDIXB:RIGIDITYMATRIXEXAMPLE To continue with the K 3 example, we can write the local
+incidence matrix for node v as
+The development of the alternative representation of the 1
+Rigidity Matrix given in Proposition II.13 of the document
+is aided by a simple example. To begin, we make some
+E ( )= 1 0 0 .
+qualitativeobservationsoftherigiditymatrix.Forthisexample G  − 
+we consider a framework in R2 with the complete graph on −
+3 nodes (denoted K 3 ). The rigidity matrix can be written by Note that this matrix is not truly an incidence matrix for the
+inspection as graph ; “placeholders” for the other edges in the graph
+are kept. As a result, the local incidence matrix is defined as
+E ( ) R|V|×|E| to have zero-columns corresponding to the
+px px py py px px py py 0 0 l G j ∈
+p 1 x − p 2 x p 1 y− p 2 y 2 − 0 1 2 − 0 1 px px py py . edges not in E j .14
+ 1 − 0 3 1 − 0 3 px px py py p 3 x − p 1 x p 3 y− p 1 y Now, consider the local incidence matrix as the difference
+2 − 3 2 − 3 3 − 2 3 − 2 operator,
+Forthecompletegraphandanarbitraryorientationassigned
+to each edge, the incidence matrix E( ) can be written as px py px px py py
+G E ( )T p 1 x p 1 y = p 1 x − p 2 x p 1 y− p 2 y .
+1 1 0 l G 1  p 2 x p 2 y   1 − 0 3 1 − 0 3 
+E( )= 1 0 1 . 3 3
+− − Note that this is identical to the the first 2 columns of the
+The transpose of the incidence matrix functions as a “dif- rigiditymatrixR(p).Infact,thisshowsthattherigiditymatrix
+ference” operator. If the position of each agent is formed into can be written entirely in terms of local incidence matrices,
+a vector, we have as formally stated in Proposition II.13 of the main document.
+px py px px py py
+E( )T p 1 x p 1 y = px 1 − px 2 py 1 − py 2 .
+G  p 2 x p 2 y   px 1 − px 3 py 1 − py 3  ACKNOWLEDGMENTS
+3 3 2 − 3 2 − 3
+The point to illustrate here is that this difference operation Part of Heinrich Bu¨lthoff’s research was supported by the
+between positions is redundantly embedded inside the rigidity BrainKorea21PLUSProgramthroughtheNationalResearch
+matrix. This fact can be made more precise by defining Foundation of Korea funded by the Ministry of Education.
+a directed local graph at node v from the graph as Correspondence should be directed to Heinrich H. Bu¨lthoff.
+in Definition II.12 in the main text. Intuitively, the idea is
+that each node only has some local information about the 13Here, we assume that the directed edges (vi,vj) and (vj,vi) are
+connectivity of the entire graph; indeed, it only knows of the equivalenttotheundirectededge{vi,vj}.
+existence of other nodes that it can sense. In this way, we 14Thisrepresentationalsoassumesthatalltheedgeshavebeenassigneda
+label,andthislabelingismaintainedevenforthelocalgraphs(localgraphs
+can define a sub-graph induced by each node in the graph as
+do not relabel their edges; for example if edge 2 is not in local graph Gj,
+follows. thenthesecondcolumnofE(Gj)willbezero).
+REFERENCES M. Ji and M. Egerstedt. Distributed Coordination Control of Multi-
+agent Systems While Preserving Connectedness. IEEE Trans. on
+I. F. Akyildiz, Y. Sankarasubramaniam, and E. Cayirci. A survey
+onsensornetworks. IEEECommunicationsMagazine,40(8):102– Robotics, 23(4):693–703, August 2007.
+L.Krick,M.E.Broucke,andB.A.Francis. Stabilisationofinfinites-
+114, 2002.
+B. D. O. Anderson, B. Fidan, C. Yu, and D. van der Walle. UAV imally rigid formations of multi-robot networks. International
+formationcontrol:Theoryandapplication. InV.D.Blondel,S.P. Journal of Control, 82(3):423–439, 2009.
+Boyd, and H. Kimura, editors, Recent Advances in Learning and G.Laman.Ongraphsandrigidityofplaneskeletalstructures.Journal
+Control,volume371ofLectureNotesinControlandInformation of Engineering Mathematics, 4(4):331–340, 1970.
+Sciences, pages 15–34. Springer, 2008a. Q. Lindsey, D. Mellinger, and V. Kumar. Construction of cubic
+B.D.O.Anderson,C.Yu,B.Fidan,andJ.M.Hendrickx.Rigidgraph structures with quadrotor teams. In 2011 Robotics: Science and
+control architectures for autonomous formations. IEEE Control Systems, Los Angeles, CA, Jun. 2011.
+Systems Magazine, 28(6):48–63, 2008b. M. Mesbahi and M. Egerstedt. Graph Theoretic Methods in Mul-
+J. Aspnes, T. Eren, D. K. Goldenberg, A. S. Morse, W. Whiteley, tiagent Networks. Princeton Series in Applied Mathematics.
+Y.R.Yang,B.D.O.Anderson,andP.N.Belhumeur. Atheoryof PrincetonUniversityPress,1edition,2010.ISBN9780691140612.
+network localization. IEEE Trans. on Mobile Computing, 5(12): N. Michael, J. Fink, and V. Kumar. Cooperative manipulation and
+1663–1678, 2006. transportation with aerial robots. In 2009 Robotics: Science and
+J. Baillieul and L. McCoy. The combinatorial graph theory of Systems, Seattle, WA, Jun. 2009.
+structuredformations. In200746thIEEEConferenceonDecision R.M.Murray.Recentresearchincooperativecontrolofmulti-vehicle
+and Control, pages 3609–3615, December 2007. systems. ASME Journal on Dynamic Systems, Measurement, and
+J. Bristow, D. Folta, and K. Hartman. A Formation Flying Tech- Control, 129(5):571–583, 2006.
+nology Vision. In AIAA Space 2000 Conference and Exposition, R. Olfati-Saber and R. M. Murray. The combinatorial graph theory
+volume 21, Long Beach, CA, April 2000. of structured formations. In 41th IEEE Conf. on Decision and
+G. C. Calafiore, L. Carlone, and M. Wei. A distributed gradient Control, pages 3609–3615, Las Vegas, NV, Dec. 2002.
+method for localization of formations using relative range mea- P. Robuffo Giordano, A. Franchi, C. Secchi, and H. H. Bu¨lthoff.
+surements. In 2010 IEEE Int. Symp. on Computer-Aided Control Bilateral teleoperation of groups of UAVs with decentralized
+System Design, pages 1146–1151, Yokohama, Japan, Sep. 2010a. connectivitymaintenance. In2011Robotics:ScienceandSystems,
+G.C.Calafiore,L.Carlone,andMingzhuWei. AdistributedGauss- Los Angeles, CA, Jun. 2011.
+Newton approach for range-based localization of multi agent P. Robuffo Giordano, A. Franchi, C. Secchi, and H. H. Bu¨lthoff. A
+formations. InComputer-AidedControlSystemDesign(CACSD), passivity-baseddecentralizedstrategyforgeneralizedconnectivity
+2010IEEEInternationalSymposiumon,pages1152–1157,2010b. maintenance. The International Journal of Robotics Research, 32
+R. Connelly and W. J. Whiteley. Global Rigidity: The Effect of (3):299–323, 2013.
+Coning. DiscreteComputationalGeometry,43(4):717–735,2009. D. Scaramuzza, M. C. Achtelik, L. Doitsidis, F. Fraundorfer, E. B.
+T. Eren, O. K. Goldenberg, W. Whiteley, Y. R. Yang, A. S. Morse, Kosmatopoulos, A. Martinelli, M. W. Achtelik, M. Chli, S. A.
+B. D. O. Anderson, and P. N. Belhumeur. Rigidity, computation, Chatzichristofis,L.Kneip,D.Gurdan,L.Heng,G.H.Lee,S.Ly-
+and randomization in network localization. In IEEE INFOCOM nen,L.Meier,M.Pollefeys,A.Renzaglia,RolandSiegwart,J.C.
+2004, volume 4, pages 2673–2684. IEEE, 2004. Stumpf,P.Tanskanen,C.Troiani,andS.Weiss. Vision-controlled
+A. Franchi, C. Masone, V. Grabe, M. Ryll, H. H. Bu¨lthoff, and microflyingrobots:fromsystemdesigntoautonomousnavigation
+P. Robuffo Giordano. Modeling and control of UAV bearing- and mapping in GPS-denied environments. IEEE Robotics &
+formations with bilateral high-level steering. The International Automation Magazine, 2014.
+Journal of Robotics Research, Special Issue on 3D Exploration, I. Shames, B. Fidan, and B. D. O. Anderson. Minimization of
+Mapping, and Surveillance, 31(12):1504–1525, 2012a. the effect of noisy measurements on localization of multi-agent
+A.Franchi,C.Secchi,M.Ryll,H.H.Bu¨lthoff,andP.RobuffoGior- autonomous formations. Automatica, 45(4):1058–1065, 2009.
+dano. Shared control: Balancing autonomy and human assistance B. Smith, M. Egerstedt, and A. Howard. Automatic generation
+with a group of quadrotor UAVs. IEEE Robotics & Automation of persistent formations for multi-agent networks under range
+Magazine, Special Issue on Aerial Robotics and the Quadrotor constraints. In 1st Int. Conf. on Robot communication and
+Platform, 19(3):57–68, 2012b. coordination, pages 1–8, 2007.
+Randy A. Freeman, Peng Yang, and Kevin M. Lynch. Stability and T.TayandW.Whiteley. Generatingisostaticframeworks. Structural
+Convergence Properties of Dynamic Average Consensus Estima- Topology, 11(1):21–69, 1985.
+tors. In45thIEEEConf.onDecisionandControl,pages338–343, R. K. Williams, A. Gasparri, A. Priolo, and G. S. Sukhatme.
+San Diego, CA, 2006. Evaluating Network Rigidity in Realistic Systems: Decentraliza-
+C.D.GodsilandG.Royle. AlgebraicGraphTheory. Springer,2001. tion, Asynchronicity, and Parallelization. IEEE Transactions on
+ISBN 978-0-387-95241-3. Robotics, 2014.
+J. Graver, B. Servatius, and H. Servatius. Combinatorial Rigidity. C. Wu, Y. Zhang, W. Sheng, and S. Kanchi. Rigidity guided
+GraduateStudiesinMathematics.AmericanMathematicalSociety, localisation for mobile robotic sensor networks. International
+Providence, RI, 1993. ISBN 0821838016. Journal of Ad Hoc and Ubiquitous Computing, 6(2):114, 2010.
+R. Horn and C. Johnson. Matrix Analysis. Cambridge University P.Yang,R.A.Freeman,G.J.Gordon,K.M.Lynch,S.S.Srinivasa,
+Press, New York, 1985. andR.Sukthankar. Decentralizedestimationandcontrolofgraph
+R.A.HornandC.R.Johnson.TopicsinMatrixAnalysis.Cambridge connectivity for mobile sensor networks. Automatica, 46(2):390–
+University Press, New York, NY, 1991. 396, 2010.
+B. Jackson. Notes on the Rigidity of Graphs. In Levico Conference D. Zelazo, A. Franchi, F. Allgo¨wer, H. H. Bu¨lthoff, and P. Robuffo
+Notes, 2007. Giordano. Rigidity maintenance control for multi-robot systems.
+D.Jacobs. AnAlgorithmforTwo-DimensionalRigidityPercolation: In 2012 Robotics: Science and Systems, Sydney, Australia, Jul.
+The Pebble Game. Journal of Computational Physics, 137(2): 2012.
+346–365, November 1997.

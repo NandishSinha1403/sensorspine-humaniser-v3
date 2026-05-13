@@ -1,0 +1,550 @@
+Bayesian ensemble learning for image denoising
+Hyuntaek Oha,∗
+aUniversity of Kansas, Lawrence, KS 66045
+Natural images are often affected by random noise and image denoising has
+long been a central topic in Computer Vision. Many algorithms have been
+introduced to remove the noise from the natural images, such as Gaussian,
+Wiener filtering and wavelet thresholding. However, many of these algo-
+rithms remove the fine edges and make them blur. Recently, many promising
+denoisingalgorithmshavebeenintroducedsuchasNon-localMeans,Fieldsof
+Experts, and BM3D. In this paper, we explore Bayesian method of ensemble
+learning for image denoising. Ensemble methods seek to combine multiple
+differentalgorithmstoretainthestrengthsofallmethodsandtheweaknesses
+of none. Bayesian ensemble models are Non-local Means and Fields of Ex-
+perts, the very successful recent algorithms. The Non-local Means presumes
+that the image contains an extensive amount of self-similarity. The approach
+of the Fields of Experts model extends traditional Markov Random Field
+model by learning potential functions over extended pixel neighborhoods.
+The two models are implemented and image denoising is performed on nat-
+ural images. The experimental results obtained are used to compare with
+the single algorithm and discuss the ensemble learning and their approaches.
+ComparingtotheresultsofNon-localMeansandFieldsofExperts,Ensemble
+learning showed improvement nearly 1dB.
+Keywords:
+Bayesian ensemble learning, Non-local means, Fields of Experts, Image
+∗Corresponding author
+Email address: hyuntaekoh@ku.edu (Hyuntaek Oh)
+Preprint submitted to Computer Vision and Image Understanding August 7, 2013
+1v4731.8031:viXra
+1. Introduction
+Some natural images contain some degree of natural and artificial noise.
+These noises usually affect the visual quality of the original images, so the
+goal of image denoising is to reconstruct a reasonable estimate of the original
+image from the noisy image. Ideally, the resulting denoising image will not
+contain any noise or added artifacts.
+In the past few decades, many novel approaches have been proposed for
+image denoising [1, 2, 3, 4, 5, 6]. One striking aspect of image denoising
+research is that a wide array of denoising strategies have remained popular,
+and in spite of vastly different approaches, many of these algorithms pro-
+duce reasonably similar performance in terms of peak signal-to-noise ratio
+(PSNR). For example, Fields of Experts (FoE) pursues an entirely paramet-
+ric approach, by training Markov random fields with large 5 x 5 cliques to
+capture the statistics of small image patches. Over a set of six canonical
+images, FoE attained a PSNR of 30.24dB for Gaussian noise with σ = 20. A
+Gaussian scale mixtures also uses a parametric approach, and captures the
+joint statistics of neighboring Gabor filter coefficients. Over the same set of
+six images, mean PSNR was 30.78dB for σ = 20. Sparse dictionaries is a
+method that seeks to identify an optimal set of image patches to form the
+basis of a sparse L1 norm. Over the same set of images, sparse dictionaries
+achieved a mean PSNR of 30.57dB when the dictionary was trained from
+natural images, and 31.01dB when trained on the noisy input image. An-
+other method that exploits patterns found within the noisy input image is
+NL-means. However, NL-means uses a wholly non-parametric approach, by
+identifying similar patches within the noisy input image and averaging these
+together, weighed according to similarity and proximity. NL-means achieves
+a PSNR of 30.37dB for σ = 20 on the same set of images. BM3D is an
+algorithm with a similar strategy, but uses more sophisticated methods to
+combine similar image patches.
+This brief list of algorithms includes some that are parametric and others
+non-parametric, some that focus on matching natural scene statistics and
+others that focus on utilizing patterns from within the noisy input image,
+and some that use generatively trained probabilistic models, some discrimi-
+nativelytrainedprobabilisticmodels, andothersthatdonotuseprobabilistic
+modelsatall. Numerousadditionaldifferencesareevidentbetweentheimple-
+mentation details of each approach. In spite of these significant differences in
+strategy, performance is reasonably similar between these varied algorithms.
+Continual improvements to denoising algorithms regularly change the domi-
+nant approach, and no category of denoising strategies has produced a clear
+enough victor to discourage further research in any other category.
+On the surface, this observation may suggest that image denoising al-
+gorithms are converging to some upper-bound on denoising performance.
+However, it is worth noting that each method is regarded as having dif-
+ferent advantages and disadvantages. Strategies that perform best for low
+noise levels may not perform as well for high noise levels. Input images that
+contain many regular textures or patterns often benefit from non-local meth-
+ods, while images with less internal regularities may benefit from algorithms
+trained from large suites of natural images. Additionally, one important
+quality of denoising methods is the ability to preserve sharp edges while re-
+moving noise. Methods that fail in this regard produce output that appear
+over-blurred. Non-local methods often perform well at maintaining sharp
+edges, as demonstrated by their residual images (the denoised image minus
+the true image). These residual images show that methods like NL-means
+perform similarly near edges as they do near smooth regions. Other methods
+such as FoE show higher residual error near edges. Since FoE achieves a
+similar overall PSNR, it suggests that performance within smooth regions is
+higher for FoE.
+When multiple regression algorithms produce similar performance using
+significantlydifferentapproaches,andwithdistinctadvantagesanddisadvan-
+tages, those algorithms are highly suitable for combination using ensemble
+learning methods. Ensemble learning is a method of combining multiple
+(possibly weak) predictors to produce one unified predictor of greater ac-
+curacy. While ensemble learning is a common and successful technique in
+machine learning, it has not been applied to image denoising. Ensemble
+learning methods benefit when the constituent algorithms are significantly
+different from one another. In this paper, we apply Bayesian ensemble learn-
+ing methods to combine two of the most distinct denoising methods: Fields
+of Experts and NL-means. We use 40 natural images from the Berkeley Seg-
+mentation Benchmark for training [7]. Another set of 80 natural images from
+theBerkeleydatabaseareusedfortesting,alongwith6canonicalimagessuch
+as Barbara and Lena. For each level of input noise, the ensemble method
+achieved statistically significant improvement over both FoE and NL-means.
+2. Background
+2.1. Image Denoising
+The goal of image denoising is to reconstruct the original image from the
+noisy image,
+where y(i) is the observed image, x(i) is the original image; and n(i) is the
+noise value at pixel i. Gaussian white noise is widely used in natural images
+for image denoising. The noise value, n(i), is the Gaussian white noise values
+withknownvarianceσ2 andzeromean. TheGaussianwhitenoisemodelsare
+made by adding random values to the original images. The ideal denoising
+algorithm is to remove the noise, n(i), and recover the original image, x(i).
+Previous methods such as Gaussian or Wiener filtering attempt to sep-
+arate the image into the two parts, the smooth and oscillatory part, by
+removing the high frequency from the low frequency [2, 8]. This would re-
+sult in a loss of fine edges in the denoised image. Low frequency noise will
+remain in the image even after denoising. Therefore, new algorithms have
+been introduced recently such as Non-local means [4] and Fields of Experts
+[5].
+2.2. Fields of Experts
+Fields of Experts (FoE) was proposed by Stefan Roth and Michael J.
+Black [9]. The goal of the FoE is to develop a framework for learning rich,
+generic prior models of natural images. To learn potential functions through
+extended neighboring pixels, a Markov Random Field model was used in the
+FoE. The key in the FoE is to extend Markov Random Field by modeling the
+local field potentials with learned filters [9]. To do this, Products of Experts
+were used [5]. In comparison with prior Markov Random Field approaches,
+all parameters in the FoE model are learned from a set of training data [9].
+One of the parameters is the clique size and 5x5 was used. Those models
+prior probability of images can be calculated with the following formula:
+(cid:89)(cid:89)
+K (cid:18)
+1 (cid:16) (cid:17)2
+(cid:126) (cid:126) (cid:126)
+whereI is5x5imagepatch, andfilterJ representsespeciallyunlikelyimage
+patches obtained by training the FoE model on an general image database.
+20,000imagepatcheswereselectedrandomlyfromtheBerkeleySegmentation
+database, and the image patches are used for the training data [7]. Figure
+1 shows the unlikely 5x5 image patches which were used as the filter, J , in
+the formula 2.
+Figure 1: Selection of the 5x5 filters learned from the training data
+Inference: For the denoising problem, the goal is to infer the most likely
+correction for the image given the prior and the noisy image. Given a noisy
+image N, we can find the denoised image D that maximizes the prior proba-
+bility:
+We can write the P(N|D) as:
+(cid:18) (cid:19)
+(cid:89) 1
+where σ is known standard deviation, and D and N are the denoised and
+noisy image at pixel j, respectively. In this study, we use the FoE algorithm
+MATLAB code provided by Roth and Black, and use the similar parameters
+to get the same results of the paper.
+2.3. Non-local Means
+Non-local Means (NLM) image denoising algorithm was suggested by An-
+toni Buades, Bartomeu Coll, and Jean-Michael Morel. NLM presumes that
+the amount of pixel weighting is based on the similarity of their neighbor-
+hoods with the neighborhood of each pixel [4]. Efros and Leung originally
+suggested the concept of the self-similarity for texture synthesis [10].
+Figure 2: Scheme of NLM strategy [4]
+Figure 2 shows the scheme of NLM strategy. The figure shows four dif-
+ferent pixels: p, q1, q2, and q3. Similar neighborhoods to ps neighborhood
+could be found in most pixels in the same column of p such as q1 and q2.
+Similar pixel neighborhoods give a large weight, w(p, q1) and w(p, q2), while
+much different neighborhoods give a small weight w(p, q3).
+To compute each pixel i of the NLM denoising image, the following for-
+mula was used [4]
+where v is the noisy image and v = {v(i)|i ∈ I}, and weights w(i,j), which
+rely on the similarity between pixel i and j, meet the following conditions
+0 ≤ w(i,j) ≤ 1 and w(i,j) = 1. A neighborhood should be defined to
+compute the similarity. The weighted Euclidean distance is used to measure
+the similarity, and the following formula is implemented to calculate the
+Euclidean distance of noisy neighborhoods:
+i j 2,a i j 2,a
+where v(N ) and v(N ) are the gray scale vectors, N and N are the square
+neighborhood of fixed size and centered around a pixel i and j, respectively;
+and a is the Gaussian kernels standard deviation. The weights w(i,j) can be
+calculated with the following formula:
+w(i,j) = 1 e− (cid:107)v(Ni)− h v 2 (Nj)(cid:107)2 2,a (7)
+where Z(i) is the normalizing constant
+Z(i) = (cid:88) e− (cid:107)v(Ni)− h v 2 (Nj)(cid:107)2 2,a (8)
+and the parameter h satisfies as a filtering degree.
+3. Application of Ensemble learning
+As discussed in the introduction, in spite of relatively comparable per-
+formance, image denoising techniques like FoE and NLM use very different
+methodologies and underlying philosophies for image denoising. This would
+seem to make these two algorithms strong candidates for ensemble learning
+methods which may be able to produce a single denoising algorithm that
+retains the advantages of both FoE and NLM. However, this problem dif-
+fers from traditional ensemble learning problems in several important ways,
+which result in both advantages and disadvantages in comparison with stan-
+dard ensemble learning scenarios.
+One significant difference is that ensemble learning is typically used to
+combine multiple models of the data or the predicted output, where each
+constituent algorithm was trained on labeled data to optimize the param-
+eters of the algorithm. In contrast, many image denoising methods utilize
+no training at all. Methods like NLM are derived primarily from a theoret-
+ical analysis of the image denoising problem, rather than machine learning
+techniques. NLM does have some parameters, such as the size of the search
+window, but these parameters are not expected to affect the behavior of the
+algorithm significantly, and so training is not emphasized.
+The lack of training in the constituent algorithms makes image denoising
+ineligible for some of the most powerful aspects of ensemble learning. Many
+ensemble learning methods, such as boosting [11] or bootstrap aggregation
+[12], achieve higher performance by training each constituent algorithm on
+different subsets of available training data. In that way, one algorithm be-
+comes an expert on one type of input, while another algorithm specializes in
+another type of input. Because NLM does not rely on training or make use
+of labeled data, such techniques are not possible here.
+Another important difference is that the bulk of ensemble learning meth-
+ods are designed for classification problems, where the predicted output is
+either binary, or at least discrete. For classification problems, the outputs
+of each constituent algorithm are typically combined using a voting scheme:
+whichever class receives the most votes (possibly weighted by the perfor-
+mance of the constituent algorithm) is the output of the ensemble learning
+algorithm. Ensemblelearningforcontinuous-valuedoutput(knownasregres-
+sion)isnotentirelyuncommon[13]. Inthesecases, outputsoftheconstituent
+algorithms are usually combined by averaging. For image denoising, averag-
+ing can improve error metrics based on sum squared error. Unfortunately,
+though, averaging multiple denoised images may lead to blurry edges and
+other undesirable artifacts that reduce perceived denoising quality. Each de-
+noising algorithm must hypothesize the most probable image structure that
+was obscured by noise in the input image. When these hypotheses disagree,
+averaging them together can result in two faint but duplicate differing im-
+age structures, rather than a single consistent denoised image. For example,
+consider the case where noise has obscured the precise location of an edge
+between two regions. If NLM hypothesizes an edge in one location, and
+FoE hypothesizes an edge in a different location, an averaging procedure will
+produce two faint edges, which is generally an unlikely result. We would
+prefer an ensemble technique that could select the single edge location that
+appears most likely. Ideally, an ensemble method should be capable of se-
+lectingasinglecoherentdenoisinghypothesisratherthancombiningmultiple
+outputs naively. This advantage of traditional ensemble methods may pro-
+vide one explanation as to why ensemble methods have not been applied to
+image denoising in the past.
+If a large number of constituent algorithms are available, more sophis-
+ticated schemes for combining algorithm output might be possible, where
+outlier responses were given less weight. Such techniques might avoid the
+pitfalls of averaging methods listed above. Unfortunately, only a handful of
+competitive image denoising algorithms exist.
+Finally, a third major difference is that some constituent denoising al-
+gorithms (in particular, FoE) provide not only a single hypothesis denoised
+image,butalsoprovideaprobabilitydistributionoverthespaceofallpossible
+denoised images. Recall that FoE outputs not only a denoised image D ,
+butalsoprovidesaprobabilitydistributionoverdenoisedimagesP (D|N),
+where N is the input noisy image. This distribution allows us to quantify the
+uncertainty in the FoE solution, or potentially, to measure the likelihood of
+the outputs of other denoising algorithms within the FoE model. As we de-
+scribe below, the availability of a probabilistic model of the output space is a
+great advantage for applying ensemble method to the image denoising prob-
+lem, because it provides a possible solution to the disadvantages of averaging
+described above.
+If all constituent algorithms provide a distribution over the space of hy-
+pothesis, then Bayesian ensemble learning methods can be used to combine
+each distribution into a single distribution. In particular, the choice of which
+model is superior for a particular input can be treated as a latent variable.
+Specifically, suppose we wish to predict output y given input x, and we have
+a database of labeled training examples Z. Also, suppose we have M differ-
+ent probabilistic predictors which each provide a distribution P (y|x) over
+possible outputs. Then we can write the probability of possible outputs y as:
+(cid:88) (cid:88)
+Thus, the Bayesian ensemble distribution is simply the weighted sum
+of each constituent distribution, weighted by performance over the training
+data Z. The downside of Bayesian ensemble methods is that the ensemble
+distribution
+P(y|x,Z)P(m|Z) is often computationally demanding to
+optimize. However, the advantage is that outputs y that score highly in
+the ensemble distribution must be considered probable according to all of
+the constituent algorithms, especially those that were most successful on
+the training data. If Bayesian ensemble methods were applied to the image
+denoising problem, this would be eliminate the pitfall of averaging two de-
+noising outputs together. The mean of two plausible solutions may not itself
+be plausible, but the optimum of a Bayesian ensemble distribution largely
+satisfied both models simultaneously.
+Unfortunately, Bayesian ensemble learning methods cannot be applied
+in the denoising problem, because many constituent denoising algorithms
+do not provide a probability distribution over denoised images. For exam-
+ple, NLM, we must combine a mixture of probabilistic and non-probabilistic
+models. To our knowledge, this circumstance has not been studied explicitly
+in past ensemble learning methods. Our goal is to retain the advantage of
+purely Bayesian ensemble approaches: the ensemble method should produce
+an output that internally consistent, considered highly plausible by the FoE
+probability distribution, while simultaneously resembles the NLM output.
+Additionally, we need to find a method that is efficient. Bayesian ensem-
+bles are often computationally intensive to optimize, in part because, being
+summations, they do not factorize.
+Our approach is to treat the NLM output as a known, given quantity.
+Thus, we want to model P(I|N,D ), where I is the hypothetical original
+image, N is the noisy image, and D is the output of NLM. By applying
+Bayes rule, we can write
+NL NL NL NL
+where terms that do not depend on I can be ignored as constants. The
+term P(N|I) is simply the noise model, which is a Gaussian of mean I and
+variance given by the strength of the image noise. The prior over noiseless
+images, P(I), can be taken from the FoE model, given by equation 2.
+To complete the ensemble model, we must choose a model for P(D |I).
+OneknownstrengthoftheNLMmethodisthattheimageresidual,definedas
+I−D , shows little image structure [4]. In other words, edges and features
+that are visible in the noisy image are faint or not visible in the residual.
+In comparison, other leading denoising images often produce residuals that
+retain structure from the noisy image. This advantage of NLM is believed to
+stem from the methodology used by NLM. Trained methods like FoE base
+their models for image structure such as edges entirely from databases of
+natural images. In contrast, NLM acquires statistics of image structure from
+the noisy input image itself. For example, FoE may misjudge the spatial
+scale, or sharpness, of edges if evidence of the edge is weak within the image,
+and other false spatial of edges solely by comparing against similar edges
+within the noisy image, and the edges with less common scales are less likely
+to be biased. For these reasons, strong structure visible in the noisy input
+image is less likely to be visible in the residuals of NLM outputs.
+One consequence of this observation is that the residual of NLM can be
+approximated as white noise. In particular, the residual of NLM is known
+to closely resemble the statistical structure of the additive noise. This allows
+us to define P(D |I) accordingly. In the case of input images with additive
+Gaussian noise, P(D |I) is Gaussian centered at I, with some σ < σ:
+(cid:32) (cid:80) (I(x,y)−D (x,y))2 (cid:33)
+Thiscompletesthedefinitionofourensemblemodel. Notethatthismodel
+completes our objective: images that optimize the ensemble distribution are
+simultaneously
+1. plausible according to the Fields of Experts model
+2. similar to the Non-local Means output
+3. close to the noisy input image
+We also must ensure that our model can be optimized efficiently. Here,
+we observe that our model can be simplified into a form that is very similar
+to the FoE probabilistic model [5]. We can start with the formula 12.
+(cid:32) (cid:33)
+NL 2σ2 2σ2 2σ2
+N NL pseudo
+In formula 13, the left side shows a component of the ensemble learning
+model, and the right side shows the same model re-arranged to have the same
+structure as FoE [5]. This new form introduces new variables such as N
+and σ . We can get these parameters N and σ by comparing
+pseudo pseudo pseudo
+the left and right side. In the left side, the parameters such as N, and D
+are all functions.
+(N2 −2NI +I2) (D2 −2D I +I2) (N2 −2N I +I2)
++ NL NL ∝ pseudo pseudo
+2σ2 2σ2 2σ2
+N NL pseudo
+Therefore, the parameter σ and N are
+pseudo pseudo
+pseudo N NL pseudo NL
+N N NL NL N NL
+Becausetheensemblelearningisusuallycomputationallyintensive,choos-
+ing the method of combining two algorithms, such an NLM and FoE in this
+case, allows us to do with extra computational effort and extra coding to
+build the ensemble learning.
+In theory, σ could be estimated empirically by finding the standard
+deviation of the residuals of NLM outputs on natural images for each noise
+level . In practice, we found that superior performance was attained by learn-
+ing σ from a set of training images.
+Figure 3 shows the pseudo code for training σ . First, a noisy image
+could be made with the original image by using the Gaussian distribution.
+The same noisy images were used for NLM and FoE in this model. The
+parametersσ andN werecalculatedwiththedenoisedimage, D ,
+pseudo pseudo NL
+which was done by the NLM, σ , the original input Gaussian sigma value
+and σ , another sigma value from the NLM denoised image. The ensemble
+learning algorithm was adapted to the NLM denoised image, D , with the
+learned parameters, σ and N . The PSNR could be computed by
+pseudo pseudo
+using the original images and denoised images after performing the ensemble
+learning. Same process was executed with different number of the input
+Gaussian noise values, σ .
+Fornaturalimagedenoising,40imagesfromBerkeleySegmentationBench-
+mark were used for training σ . The selection of σ is very important
+pseudo pseudo
+in our proposed ensemble learning. Based on the best selection of σ , we
+used 80 natural images from Berkeley database and 6 canonical images for
+testing.
+Given the original training images, I , and for a given noise level:
+1) For each training image, I
+a) Run NLM to compute D
+b) For each σ
+1) Compute σ and N
+pseudo pseudo
+2) Run FoE with σ and N
+pseudo pseudo
+3) Calculate the error between denoised images by using ensemble
+learning and original images
+2) Choose the value of σ that produced the highest average perfor-
+Figure 3: Pseudo code for training σ
+4. Experimentation and Results
+4.1. Training dataset
+First, we set aside 40 natural images randomly selected from the Berkeley
+Segmentation Benchmark to use as training images [7]. From these images,
+we learned the best value of σ to use for each input noise level σ. These
+40 images contain a diverse array of subject matter including architecture,
+landscape, people, flowers, etc.
+The noisy image was obtained from the original image by adding Gaus-
+sian noise with different noise amplitude: σ = 10,15,20,30,40,50,75 and
+100. The NLM algorithm was used to get D , and several values of σ for
+theNLMdenoisedimageweretested. Specifically, foreachtrainingimageen-
+semble learning was repeated with σ = 1,2,3,5,10,20,30,40,50,100,250,
+and 500. We used all these sigma values, NLM denoised images and FoE
+algorithm to get the ensemble learning denoised images. The 5x5 filter of
+Fields of Experts was used to obtain the denoised images. We used 5,000
+iterations to implement FoE [5].
+PSNR was calculated with for each denoised image, and the average
+PSNR value was computed for each combination of σ and σ . The av-
+erage PSNR of ensemble learning with a small σ value, such as 1, showed
+a similar result with the NLM algorithm because of N from the formula
+16. When the σ is close to a very small number, β component in the
+N is much bigger than the α component, so the N is most likely
+pseudo pseudo
+close to the D , which is the denoised image from the NLM algorithm.
+Likewise, when the σ has a large value such as 500, the N is very
+similar to the N, which is the original noisy image, and the denoised result
+of this N is almost the same as the FoE algorithm.
+The ensemble learning achieves peak performance when the σ = 30,40,
+50,100,100,3,5,10,40 for σ = 10,15,20,25,30,40,50,75,100, respectively. σ
+and N can be calculated with the selected σ and σ by using the
+formula 16. For example, when the σ is 25, σ ,α, and β have 24.25, 0.94
+and 0.06, respectively. N can be obtained with the calculated α and β.
+4.2. Results
+The performance of the ensemble denoising algorithm was evaluated over
+two image datasets, each separate from the training set. Performance was
+measured by the Peak Signal-to-noise ratio (PSNR) and the structural simi-
+larity index (SSIM) [14]. PSNR is measured as
+PSNR = 20log √ (18)
+where MSE denotes the mean squared error between the denoised image N
+and the original image I. We also measure denoising quality using structural
+similarity index (SSIM). SSIM is a measure of image similarity intended to
+resolve certain known limitations of PSNR that may cause PSNR to disagree
+withhumanperceptionofimagequality. Inparticular, acorruptedimagecan
+be perceived to be highly similar to the original if the corruptions primarily
+affect local contrast or brightness in certain regions. The PSNR of such a
+corrupted image may be very low; far lower than PSNR values produced by
+imagecorruptionsthatmaybeperceivedasmoresevere. SSIMaddressesthis
+by normalizing for contrast and brightness both globally across the image, as
+well as locally, within 8 x 8 image windows. SSIM has been shown to adhere
+significantly closer to subjective image quality grades assigned by pools of
+human subjects.
+The first result was done with the 6 canonical images (Barbara, boat,
+etc). Table 1 shows the PSNR values for 6 natural images denoised by using
+the ensemble learning under different levels of input noise. For most images
+and noise levels, the ensemble learning showed an improvement in image
+denoising comparing to the NLM and FoE. The ensemble learning showed an
+especiallystrongimprovementwhentheinputnoisevalueincreased. Figure4
+shows some results of denoising images by using the NLM, FoE and ensemble
+learning. Comparing to these results, the ensemble learning outperformed
+both NLM and FoE quantitatively. With selected σ , the PSNR result of
+the ensemble learning was 27.62dB. The PSNR results of NLM and FoE were
+27.14dB and 26.92dB, respectively.
+Table 1: The PSNR (dB) values for natural images denoised with the Ensem-
+blelearning(Fromtheleft: Non-localMeans, FieldsofExpertsandEnsemble
+Lena Barbara Boat
+σ NLM FoE Ensem. NLM FoE Ensem. NLM FoE Ensem.
+10 35.17 35.11 35.16 33.72 32.93 33.19 32.78 33.27 33.27
+15 33.36 33.32 33.41 31.80 30.25 30.6 30.97 31.40 31.42
+20 31.97 32.03 32.11 30.19 28.41 28.77 29.54 30.05 30.04
+30 29.84 29.88 29.95 27.72 25.88 26.03 27.56 27.96 27.95
+40 28.26 28.13 28.58 25.96 24.17 26.04 26.11 26.18 26.27
+50 27.14 26.92 27.62 24.70 23.13 24.78 25.04 24.93 25.28
+75 25.03 24.94 25.88 22.91 22.00 22.92 23.27 23.13 23.37
+100 23.46 21.05 24.8 21.70 18.97 21.86 22.04 20.44 22.76
+House Peppers Fingerprint
+σ NLM FoE Ensem. NLM FoE Ensem. NLM FoE Ensem.
+10 35.47 35.22 35.27 33.38 34.16 34.21 31.03 32.11 32.17
+15 33.92 33.62 33.74 31.74 32.05 32.20 29.08 29.64 29.78
+20 32.61 32.34 32.50 30.49 30.57 30.76 27.44 28.03 28.16
+30 30.05 30.34 30.40 28.11 28.10 28.20 25.09 25.77 25.79
+40 28.23 28.74 28.57 26.64 26.47 26.83 23.22 23.58 23.28
+50 26.71 27.28 27.17 25.16 24.95 25.43 21.80 21.47 21.88
+75 24.34 24.68 25.15 22.91 22.55 23.35 19.49 18.23 19.54
+100 22.85 19.75 24.03 21.5 18.84 22.04 18.20 17.63 17.57
+The denoising results of NLM often perform well at recovering sharp
+edges. In contrast, FoE often produces blurry edges by comparison, espe-
+cially when the input noisy sigma value is high. However, mottling can
+sometimes be found on the denoising results of NLM. Ensemble learning is
+able to preserve the benefits of both techniques, retaining sharp edges with
+minimal mottling. Therefore, some disadvantages from NLM and FoE could
+be mitigated by the ensemble learning.
+Figure 5 shows the close-up denoising results. Figure 5 demonstrate the
+advantages and disadvantages of NLM and FoE. Sharp edges can be found in
+Figure 4: Denoising Results. (a) Image with Gaussian noise, σ = 50 (PSNR
+= 14.18dB), (b) Denoised image using the NLM (PSNR =27.14dB), (c) De-
+noised image using the FoE (PSNR = 26.92dB), (d) Denoised image using
+the ensemble learning (PSNR = 27.62dB) with σ = 5
+Figure5: Close-updenoisingresults. Fromtheleft, NLM,FoE,andensemble
+the result of NLM, but not in the result of FoE. Mottling could be detected in
+theresultofNLM.Theensemblelearningmodelretainssharpgoodedgesbut
+also has less mottling. In other words, the ensemble learning could overcome
+some disadvantages from NLM and FoE.
+The second result was done with a subset of 80 images from Berkeley
+database [7]. These test images were disjoint from the set of training images.
+Figure 6 shows noisy images and results of ensemble learning with σ = 30.
+The result of average PSNR values at different input noise level is displayed
+in Figure 7a. The standard error is shown as the error bar. The ensemble
+learning outperformed the NLM and FoE in most cases. The ensemble learn-
+ing showed a better improvement, especially at the high levels of the input
+noise. When the input noise is 100, the average PSNR results of ensemble
+learning, NLM, and FoE are 22.75dB, 21.83dB, and 19.47dB, respectively.
+Figure 6: Other ensemble learning results with σ = 30 (Left: Noisy image,
+Right: Denoised image)
+Figure 7b shows the result of average SSIM of 80 testing images. When the
+input noise is 100, the average SSIM results of ensemble learning, NLM, and
+FoE are 0.5701, 0.3885, and 0.5062, respectively. Figure 7c and 7d show
+an improvement of the ensemble learning versus the best value of FoE and
+NLM. Ensemble learning shows a consistent improvement in PSNR over the
+two constituent denoising methods, and improvement increases as the input
+sigma increases.
+5. Conclusion
+UsinganovelBayesianensemblelearningmethod, wewereabletoachieve
+image denoising that outperformed either of the constituent denoising tech-
+nique. The results showed that the ensemble learning quantitatively had
+outperformed the NLM and FoE. The majority of PSNR results for ensem-
+ble learning showed an improved output, and its denoising performance aug-
+mented the quality of the denoised images when the input noise increased.
+Although, the PSNR of FoE dropped rapidly as the input noise level in-
+creased, ensemble learning was still able to capitalize on the FoE results to
+Figure 7: Denoising results (a) PSNR in dB. (b) Denoising SSIM results.
+From left to right, Non-local means, Fields of Experts, and Ensemble learn-
+ing. (c), (d) Improvement of the ensemble learning in PSNR and SSIM.
+The blue line plots the improvement in performance versus the best perfor-
+mance of either NLM or FoE, whichever method performed better, Values
+are averaged over all 80 testing images.
+produce an improvement over NLM, and the performance of the ensemble
+method decreased only slowly with sigma, as NLM does. For example, when
+the input sigma dropped from 75 to 100, the PSNRs of FoE were 23.19dB
+and 19.47dB, respectively. However, the PSNRs of ensemble learning were
+23.62dB and 22.75dB, respectively. Moreover, the ensemble learning method
+wasabletoretainspecificadvantagesofeachconstituentmethodwithoutlos-
+ing the benefits of each. The denoising results of FoE sometimes could lead
+to blur at some edges when the input sigma is high. Mottling sometimes is
+shown on the denoising images of NLM. However, the ensemble learning is
+available to remove the mottling from NLM and get better sharpened images
+at the edges. Therefore, the ensemble learning may have advantages over
+NLM and FoE.
+Thereremainsomefeaturesthatcouldbeimprovedtotheensemblelearn-
+ing for our future work. The calculation to get σ and N is based on
+pseudo pseudo
+the proportional value. In other words, we may need to consider the detailed
+calculation procedure to get the exact value of the σ and N . Our
+pseudo pseudo
+model for p(D |I) is simple, so this could be improved by learning it from
+natural images.
+In this paper, we focus on testing the probabilistic ensemble learning
+model on FoE and NLM. These methods were selected in part because they
+are very different from one another, in both their philosophy of approach
+as well as their strengths and weaknesses. The ensemble learning method
+developed here is flexible and can be extended to include a wide variety of
+denoising methods (such as Gaussian Mixture or Sparse coding [3], [8]). If
+we add more denoising methods, the formula 11 could be written as follow:
+P(I|D ,D )
+P(I|N,D ,D ) = P(N|I,D ,D ) (19)
+gau NL gau NL
+P(N|D ,D )
+P(N|I),P(D |I),P(D |I) are all Gaussian distribution and P(I) is
+the Fields of Experts model. Therefore, we would be available to calculate
+σ and N by using formula 14 15 16 17. Future work will include
+pseudo pseudo
+further improvements by enhancing these features of the ensemble learning.

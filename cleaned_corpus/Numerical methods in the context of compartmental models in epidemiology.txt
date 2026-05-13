@@ -1,0 +1,677 @@
+ESAIM: PROCEEDINGS, Vol. ?, 2021, 1-10
+Editors: Willbesetbythepublisher
+NUMERICAL METHODS IN THE CONTEXT OF COMPARTMENTAL MODELS
+IN EPIDEMIOLOGY
+Peter Kratz1, Etienne Pardoux1 and Brice Samegni Kepgnou1
+Abstract. Weconsidercompartmentalmodelsinepidemiology. Forthestudyofthedivergenceofthe
+stochasticmodelfromitscorrespondingdeterministiclimit(i.e.,thesolutionofanODE)forlongtime
+horizon, a large deviations principle suggests a thorough numerical analysis of the two models. The
+aim of this paper is to present three such motivated numerical works. We first compute the solution
+of the ODE model by means of a non-standard finite difference scheme. Next we solve a constraint
+optimizationproblemviadiscrete-timedynamicprogramming: thisenablesustocomputetheleading
+terminthelargedeviationsprincipleofthetimeofextinctionofagivendisease. Finally,weapplythe
+τ-leaping algorithm to the stochastic model in order to simulate its solution efficiently. We illustrate
+these numerical methods by applying them to two examples.
+R´esum´e. On consid`ere des mod`eles comportementaux en ´epid´emiologie. Afin d’´etudier l’´ecart en
+temps long entre le mod`ele stochastique et sa limite loi des grands nombres (qui est la solution d’une
+EDO),onsebasesurunprincipedesgrandesda´viations,quinousconduita`menerune´etudenum´erique
+desdeuxmod`eles,surtroisaspectsdiff´erents. Toutd’abord,nouscalculonsunesolutionapproch´eede
+l’EDO a` l’aide d’une m´ethode num´erique dite “non–standard”. Ensuite une r´esolvons num´eriquement
+un probl`eme de controˆle sous contrainte, afin de calculer le terme principal des grandes d´eviations
+du temps de sortie d’une situation end´emique. Enfin nous mettons en oeuvre l’algorithme du “τ–
+leaping”poursimulerefficacementlasolutiondusyst`emestochastique. Nousillustronscessimulations
+num´eriques en les appliquant a` deux exemples.
+Introduction
+It is well-known that deterministic ODE models of population dynamics (such as the evolution of diseases)
+are not appropriate for small population sizes N (i.e., N <103,106). Recently, it has been shown (see [1]) that
+insomecasestheODEmodelscandivergefromthecorrespondingstochasticmodelsevenforlargerpopulation
+sizes (N >106).
+We consider the “natural” stochastic extensions for many compartmental ODE models in epidemiology:
+individual based Poisson driven models. The ODE models can be recovered from these models as the law
+of large numbers limit as the population size N approaches infinity. Hence, the deterministic model can be
+consideredanappropriatefirstapproximationofthestochasticmodelforlargeN. Whilethedynamicsofmany
+oftheunderlyingdeterministicmodelsarewell-understood, theanalysisofthecorrespondingstochasticmodels
+is often difficult.
+We are interested in the long-term behavior of the epidemic process. For many deterministic models, the
+disease will finally either die out or become endemic, depending on the parameter choice and/or the initial
+1Aix-MarseilleUniversit´e,CNRS,CentraleMarseille,I2M,UMR737313453Marseille,France;e-mail:kratz@mathematik.hu-berlin.de;
+etienne.pardoux@univ-amu.fr; skbrice@yahoo.fr
+©EDPSciences,SMAI2021
+1v54630.1051:viXra
+2 ESAIM:PROCEEDINGS
+sizes of the compartments, i.e., the solution of the ODE converges to an asymptotically stable equilibrium.
+The theory of Large Deviations (also called the large deviations principle (LDP)) allows us to quantify the
+time taken by the stochastic model to diverge significantly from its deterministic limit. In particular, one can
+compute asymptotically, for large N, the expected time which is needed to transfer the epidemic process from
+the domain of attraction of one equilibrium to the one of another equilibrium. For the simplest models, this
+helps,e.g.,toanswerthequestionofwhenanepidemicbecomesextinctalthoughitshouldbeendemicaccording
+to the deterministic approximation. Particularly interesting cases are epidemiological models where the ODE
+has several stable equilibria (usually a disease-free equilibrium and an endemic equilibrium as, e.g., in [2,3]).
+The remainder of this article is structured as follows. In section 1, we formulate stochastic and deterministic
+compartmental models and introduce two specific models which we analyze throughout this article by means of
+numericalmethods(section1.1). Wefurthermoredescribehowthetimeofexitfromthedomainofattractionof
+a stable equilibrium can be computed (section 1.2). This motivates three different numerical projects which we
+outlineinsection1.3. Weaddressthesequestionsinsections2-4asfollows. Firstweapplyanon-standardfinite
+difference scheme due to [4] in order to compute the solution of the deterministic model numerically. Second,
+in section 3, by solving a control problem via dynamic programming, we compute the leading coefficient in the
+large deviations analysis of the time of exit τN by the solution of the SDE from the domain of attraction of a
+locally stable equilibrium of the ODE. Finally, we simulate the stochastic process using the so-called τ-leaping
+algorithm.
+1. Compartmental models in epidemiology
+1.1. Stochastic and deterministic models
+We consider diseases in large populations of (initially) N individuals which are split up into different groups
+(or compartments) according to the disease status of the individuals. Such groups are, e.g., the group of
+individuals susceptible to the disease, the group of infectious individuals and the group of immune individuals.
+In order to better compare the population dynamics for different values of N, we normalize the compartment
+sizes by dividing by N; instead of considering the number of individuals in the different groups, we hence
+rather consider their “proportions” with respect to the total size of the population (note that for models with
+non-constant population size, these are only initially truly proportions).
+ForaclosedsetA⊂Rd,wedefinethed-dimensionaljumpprocessZN viaasetofk jumpdirectionsh ∈Zd
+and respective Poisson rates β (z), j =1,...,k; ZN(t) denotes the “proportion” of individuals in compartment
+i=1,...,d at time t≥0:
+1 (cid:88) k (cid:16)(cid:90) t (cid:17)
+(cid:90) t (cid:88) k 1 (cid:88) k (cid:16)(cid:90) t (cid:17)
+j j N j j j
+0 j=1 j=1 0
+here x ∈ A, (P ) are i.i.d. standard Poisson processes and M (t) = P (t)−t, j = 1,...,k, are the
+j j=1,...,k j j
+associated martingales. The jump directions h and their respective rates are chosen in such a way that
+ZN(t)∈A almost surely for all t.
+The dynamics of the deterministic model corresponding to the stochastic process in (1) are given by the
+solution of the following ODE:
+(cid:90) t k
+ESAIM:PROCEEDINGS 3
+The two models are connected via a Law of Large Numbers (LLN) (see [5]): if the rates β are Lipschitz
+continuous, we have
+lim ZN,x(t)=Zx(t) a.s. uniformly on compact time intervals [0,T]. (3)
+Note also that in the case of Lipschitz continuous rates, equation (2) admits a unique solution on [0,T].
+Example 1.1. SIS model. WefirstconsiderasimpleSISmodelwithoutdemography(S(t)beingthenumber
+of susceptible individuals and I(t) = N −S(t) the number of infectious individuals at time t) . For β > 0,
+we assume that the rate of infections is βS(t)I(t)/N.1 In a similar way, we assume for γ > 0 that the rate
+of recoveries is γI(t). We ignore immunity due to earlier infection and assume that an infectious individual
+becomes susceptible after recovery. As population size is constant, we can reduce the dimension of the model
+by solely considering the proportion of infectious at time t, that is d = 1 and Z = I . Using the notation of
+equations (1) and (2), we have
+ItiseasytoseethattheODE(2)hasadiseasefreeequilibriumx¯=0. Thisequilibriumisasymptoticallystable
+if R =β/γ <1.2 If R >1, x¯ is unstable and there exists a second, endemic equilibrium x∗ =1−γ/β which
+is asymptotically stable. While in the deterministic model the proportion of infectious individuals converges to
+the endemic equilibrium x∗, the disease goes ultimately extinct in the stochastic model.
+Example 1.2. A model with vaccination. We consider a (deterministic) model with vaccination and
+demography described in [2] and its stochastic counterpart. We illustrate the different transitions in Figure 1;
+here, S and I denote the number of susceptible respectively infectious individuals as before and V denotes the
+numberofvaccinatedindividuals. Weassumethatindividualsarevaccinatedatacertainratebutcanlosetheir
+protection again; the vaccine is not perfect but decreases the rate of infection by a factor σ ∈ [0,1]: if σ = 1,
+the vaccine is useless, if σ = 0 it protects the individuals perfectly. Furthermore, we assume that individuals
+are born susceptible and die (at the same rate) independently of their disease status. This ensures that the
+population size remains constant in the deterministic model. For simplicity, we ensure constant population size
+by synchronizing births and deaths in the stochastic model. Hence, we can again reduce the dimension of the
+models; thefirstcoordinateoftheprocessdenotestheproportionofinfectiveindividuals,thesecondcoordinate
+denotes the proportion of vaccinated individuals. Using the notations of equations (1) and (2), we obtain
+1 1 1 1 2 2 2 1 2
+3 3 1 4 4 2 5 5 1 2
+6 6 1 7 7 2
+The basic reproduction number of this model is given by
+β µ+θ+ση β
+R = , R˜ := ;
+here, R˜ denotes the basic reproduction number without vaccination, i.e., V(0)=0 and φ=0 (see [2]). There
+exists a disease-free equilibrium x¯ (x¯ =0) which is asymptotically stable for R <1 and unstable for R˜ >1.
+1Thereasoningbehindthisisthefollowing. Eachindividual(inparticulareachinfectedindividual)meetsotherindividualsat
+rateα. TheprobabilitythattheencounteriswithasusceptibleisS(t)/N. Denotebyptheprobabilitythatsuchaneventyields
+anewinfection. HencethetotalrateofnewinfectionsisβS(t)I(t)/N,ifβ=pα.
+2R0 istheso-calledbasic reproduction number. Itdenotestheaveragenumberofsecondarycasesinfectedbyoneprimarycase
+duringitsinfectiousperiod,atthestartoftheepidemic.
+4 ESAIM:PROCEEDINGS
+µN (cid:45) βSI/N (cid:45)
+(birth rate) (infection rate) µI (cid:45)
+(cid:27)µS (cid:27)γI
+(death rate) (recovery rate)
+(cid:83) (cid:19)(cid:55)
+(cid:83)(cid:111) (cid:19)
+(cid:83) (cid:83)θV (cid:19)
+ηS (cid:83) (cid:83) (cid:83)(loss of vaccination) (cid:19)σβVI/N (σ∈[0,1])
+(vaccination rate) (cid:83) (cid:83) (cid:19) (infection of vaccinated)
+(cid:83) V
+(cid:83)(cid:119) (cid:19) µV(cid:45)
+Figure 1. Schematic representation of the disease transmission for the model with vaccination by [2].
+ForR <1<R˜ (andadditionalassumptionsontheparameters,see[2]again),twoendemicequilibriax∗ andx˜
+(x∗,x˜ >0) exist: one (say x∗) is locally asymptotically stable and one is unstable; the disease-free equilibrium
+is locally asymptotically stable.
+1.2. Large deviations
+Inordertoquantifythedeviationofthestochasticmodelfromthedeterministicmodel, anLDPisdesirable.
+For the models we have in mind (cf. Examples 1.1 and 1.2), some of the rates β : A → R tend to zero as x
+approaches the boundary of A (this ensures that the process does not leave the domain A). For this reason,
+general results for LDPs for Markov jump processes (see [6–8]) do not apply. [9] provides a large deviations
+principle which allows for such diminishing rates; however, their assumptions do often not apply to the more
+complicated models in epidemiology.3 [10] provides an LDP on the space D([0,T];A)4 for a large class of
+epidemiological models with compact domain A by generalyzing the results from [9]; the rate function I of
+the LDP is given as follows:5
+(cid:40)(cid:82)T
+L(φ(t),φ(cid:48)(t))dt if φ is absolutely continuous and φ(0)=x
+where L denotes the Legendre-Fenchel transform:
+L(x,y):= sup (cid:96)(p,x,y) (4)
+(cid:96)(p,x,y)=(cid:104)p,y(cid:105)− β (x)(e(cid:104)p,hj(cid:105)−1).
+By [9], we have that
+I (φ)=0 if and only if φ solves the ODE (2). (5)
+We interpret I (φ) as the action required to follow a trajectory φ, or in other words the action required to
+deviate from the solution of the ODE.
+3Theassumptionsin[9]applytotheSISmodel(Example1.1)butnottothemodelwithvaccinationinExample1.2.
+4Here, D([0,T];A) denotes the space of c`adl`ag functions on [0,T] with domain A equipped with an appropriate metric such
+thattheresultingspaceisPolish(see,e.g.,[11]).
+5See,e.g.,[12]foranintroductiontothetheoryoflargedeviationsandadefinitionoftheratefunction.
+ESAIM:PROCEEDINGS 5
+We are particularly interested in the Freidlin-Wentzell theory (see, e.g., [12,13]). First, we want to compute
+thetime τN,x atwhichtheprocessZN,x leavesthedomainofattractionofanasymptoticallystableequilibrium
+In the case of the SIS model (and R >1) we consider the set O =(0,1]; for the model with vaccination (and
+appropriate parameter choice, in particular R <1<R˜ ), we consider the set
+In other words, we are interested in time of extinction of the disease7 which should eventually become endemic
+according to the deterministic model.
+If A is compact, it can be deduced from the LDP that for all δ >0,
+where V¯ is given by the solution of the following optimization problem:
+Second, we are interested in the place, where ZN leaves the domain O. Although existing Freidlin-Wentzell
+theory cannot be applied to the epidemiological models in Examples 1.1 and 1.2, we strongly believe that the
+following holds (see [12,13] again for corresponding results for other processes): for any compact set C ⊂
+lim P(cid:2) ZN,x(τN,x)∈C (cid:3) =0.
+In particular, if there exits a z∗ ∈∂O∩(A\O) with V(x∗,z∗)<V(x∗,z) for all other z ∈∂O∩(A\O), then
+for all δ >0,
+1.3. Research questions
+In order to better understand the differences between deterministic and stochastic compartmental models
+in epidemiology, the theoretical results above suggest a thorough numerical analysis of the specific models of
+Examples 1.1 and 1.2. In the remainder of this article, we address the following questions.
+1. In order to analyze the deviation of the stochastic model from its Law of Large Numbers limit, we first
+have to compute the solution of the deterministic models in a reliable way in section 2. In order to
+avoid instabilities of the solution (such as components becoming negative), we apply a non-standard
+finite difference scheme developed in [4].
+6Wewanttoremarkherethatwecannotconsidertheexitfromthedomainofattractionofthedisease-freeequilibriumx¯,i.e.,
+ThereasonforthisisthattheabsorbingsetA˜={z∈A|z1=0}(wherez1 isthefirstcoordinateofz)cannotbeleftbothbythe
+solutionoftheODEandbythesolutionoftheSDE.
+7Respectively in the time when the process is no longer attracted by the endemic equilibrium and hence the probability of
+extinctionissignificantlyincreased,cf.theLLN,equation(3).
+6 ESAIM:PROCEEDINGS
+2. Thecomputationofthetime(andplace)ofexitfromdomaindependsonthesolutionoftheoptimization
+problem (7). We use dynamic programming to solve the optimization problem numerically and hence
+deduce the results about the time of exit according to (6) in section 3.
+3. Finally,wesimulatetheprocessZN insection4. Itisnotdifficulttosimulatetheprocessinanexactway
+by using Gillespie’s stochastic simulation algorithm (SSA) (see, e.g., [14,15]). However, the simulation
+is rather slow as soon as N becomes large, and we hence adapt the τ-leaping algorithm (see, e.g., [16]).
+2. Computation of the solution of the ODE
+Thelargedeviationstheorywilltellusaboutthedeviationsbetweenthelong–termbehaviorsofthesolution
+of the SDE and of its ODE LLN limit. Hence we are interested in the long-term behavior of the deterministic
+epidemiological models described by equation (2). Consequently we need a numerical scheme to compute the
+solution of the ODE (2) in a “reliable” way. By reliable, we mean in particular that the fixed points of the
+solution of the (discrete) numerical scheme are the same as the equilibria of the ODE (with the same local
+stability), which forces the long time bahavior of the numerical scheme to resemble that of the solution of the
+ODE.ExplicitfinitedifferenceschemesforthesolutionofODEscanhaveundesirableinstabilities. Insection2.2
+below, we consider the SIS model from Example 1.1 and illustrate that the solution of such a scheme can be
+oscillating around zero (and in particular become negative) if the parameters (particularly the step-size h) are
+notchosenwithgreatcare. Forthisreason,weapplyanon-standardfinitedifference(NSFD)methodformodels
+inepidemiologywhichrespectsthequalitativebehaviorofthesolutionoftheODE(see[4]). ThisNSFDmethod
+follows two basic rules for NSFD methods (for a detailed description of the NSFD method see, e.g., [17,18]).
+First, quadratic terms of the ODE are approximated in a non-local way (by mixed explicit/implicit terms).
+Second, non-trivial denominator functions are used for the discrete derivatives.
+The remainder of this section is structured as follows. In section 2.1, we describe the specific NSFD method
+for epidemiological models from [4] and outline in which sense the qualitative long-term behavior of the ODE
+is respected. In section 2.2, we apply the method to the SIS model (Example 1.1) and compare it to the
+corresponding explicit scheme. Finally, we apply the method to the model with vaccination (Example 1.2)
+and compute the boundary separating the domains of attraction of the stable endemic equilibrium and the
+disease-free equilibrium.
+2.1. A NSFD method for epidemiological models
+We consider deterministic models for which the ODE (2) can be rewritten in the following form
+where A(Z) = (a (Z)) ∈ Rd×d is a non-linear Metzler matrix8 and f ∈ Rd; usually, f represents the
+i,j i,j=1,...,d
+rates of birth and immigration into the different compartments (if they exist, cf. Example 1.2).
+Wefollow[4]anddiscretizetimebyfixingthetimesteph>0;wewritet =mhform∈Nandapproximate
+the solution Z of the ODE (9) at the discrete time points t by the solution Z˜ of the following implicit NSFD
+scheme (i.e., Z˜m ≈Z(t )):
+Z˜ i m+1−Z˜ i m = (cid:88) d a (Z˜m)Z˜m+1+f (i=1,...,d), Z˜0 =x;
+ψ(h) i,j j i
+the denominator function ψ is specified below and satisfies ψ(h) = h+o(h2). We first note that this scheme
+can equivalently be written as
+8AMetzlermatrixisamatrixA=(ai,j)
+i,j=1...,d
+whichsatisfiesai,j ≥0fori(cid:54)=j.
+ESAIM:PROCEEDINGS 7
+(I−ψ(h)A(Z˜m))isanM-matrix9andhenceinvertible(see[4]). Forthedefinitionofthedenominatorfunction,
+we assume that all equilibria of the ODE (9) are hyperbolic. With ϕ:R→R satisfying ϕ(h)=h+o(h2) and
+Q 2|Re(λ)|
+wherethemaximumistakenovertheeigenvaluesλoftheJacobianoftherighthandsideof (9)attheequilibrium
+points. In particular, we have ψ(h)=h+o(h2) as desired.
+The NSFD scheme (10) is elementary stable in the sense that it has exactly the same fixed points as the
+continuous ODE (2) it approximates, with the same local stability for all values of h (see [4]). In addition, it
+can be ensured that the components of the solution of the scheme remain positive by choosing h and hence
+φ(h) small enough (see [4] again). For the examples we consider, the solution of the scheme always stays in the
+“natural domain” of the solution of the ODE (2).
+2.2. The SIS model
+For the SIS model of Example 1.1, the ODE (2) becomes
+(cid:90) t (cid:90) t
+recall that in this case Z(t) denotes the number of infectious individuals at time t. This is a Riccati differential
+equation with constant coefficients which admits an explicit solution:
+x else.
+We nevertheless compute the solution of the ODE (12) numerically by a standard (explicit) difference scheme
+and by the NSFD scheme introduced in section 2.1 in order to illustrate possible instabilities of the explicit
+scheme.
+Let us first consider the following explicit scheme:
+or equivalently
+We note that if, e.g., β = 1/h and γ = 2/h, Z˜m < 0 for all m ≥ 1 which is obviously undesirable. If, e.g.,
+β = 1/h and γ = 4/h, the solution is oscillating around zero with Z˜m < 0 for m odd and Z˜m > 0 for m even.
+We illustrate the solution for the latter case in the left picture of Figure 2.
+Let us now apply the NSFD scheme to the model. We represent the ODE in the form (9) by setting
+A(Z)=−βZ+β−γ anddefinethedenominatorfunctionψaccordingtoequation(11)(forϕ(z)=1−exp(−z)).
+Thesolutiondoesnotsufferfromthesameinstabilitiesasthesolutionoftheexplicitschemeasillustratedinthe
+middlepictureofFigure2. WecomparethesolutionsofthetwoschemeswiththeexactsolutionoftheODEas
+given in equation (13) (right picture of Figure 2). We want to remark here that the NSFD scheme is of course
+by no means the only possible scheme which avoids instabilities in this simple case. However, [4] provides us
+with a theoretical basis which ensures that instabilities do not occur even for much more complicated models.
+9AnM-matrixisamatrixAwithai,j ≤0fori(cid:54)=j whichisinvertiblesuchthatallentriesofitsinversearenon-negative.
+8 ESAIM:PROCEEDINGS
+Figure2. Theleftpicturedenotesthesolutionoftheexplicitfinitedifferencescheme(14). The
+middle picture denotes the solution of the NSFD scheme. The right picture denotes the exact
+solution of the ODE according to equation (13). Z(0) = 0.3, T = 4, h = 0.1, β = 4/h = 40,
+γ = 2/h = 20. We choose here a large step size h on purpose, to show how the two schemes
+behave for large step size. Of course, both improve if we reduce h.
+2.3. The model with vaccination
+We now consider the model with vaccination from Example 1.2. We denote the proportions of susceptible,
+vaccinated and infectious individuals at time t by Z (t), Z (t) and Z (t)=1−Z (t)−Z (t), respectively. Note
+that we cannot reduce the dimension from three to two if we want to represent the ODE in the form (9) (with
+appropriate Metzler matrix A). We set
+and choose the denominator function ψ according to equation (11) for ϕ(z)=1−exp(−z). We readily observe
+that the relevant assumptions for the NSFD scheme are satisfied and apply the scheme for time step h = 0.1
+to different initial values Z(0) and a set of parameters (cf. Figure 3) such that there exists a stable disease-
+free equilibrium (x¯ = (0.14,0.86,0)(cid:62)), a stable endemic equilibrium (x∗ = (0.24,0.45,0.31)(cid:62)) and an unstable
+endemic equilibrium (x˜ = (0.23,0.59,0.18)(cid:62); cf. the corresponding discussion in Example 1.2). We illustrate
+the evolution of the proportions of vaccinated and infectious individuals for different initial values in Figure 3.
+While the disease eventually dies out in the left picture, it becomes endemic in the right picture.
+The NSFD scheme also allows us to approximately compute the characteristic boundary, i.e., the boundary
+separating the domains of attractions of the two stable equilibria x¯ and x∗ (in other words: the set of points
+for which the solution of the ODE converges to the unstable equilibrium x˜). We illustrate the characteristic
+boundary in Figure 4.
+3. Computation of V ¯
+In order to answer the question of when the disease dies out, we have to compute the quantity V¯ (cf. equa-
+tions (6) and (7)). In other words, we have to solve a control problem. We first fix the time horizon T > 0.
+We recall that we only have to consider absolutely continuous trajectories (as else I (φ)=∞) and hence we
+control the trajectory φ via its “derivative”; for t∈[0,T), s∈[t,T] and an integrable function α, we write
+(cid:90) s
+ESAIM:PROCEEDINGS 9
+Figure 3. Evolutionoftheproportionsofvaccinatedindividuals(dashedlines)andinfectious
+individuals (solid lines) for initial values Z (0)=0.5, Z (0) = 0.05 (left picture) respectively
+Z (0)=0.5, Z (0) = 0.2 (right picture). T = 600, β = 3.6, γ = 1, η = 0.3, θ = 0.02, µ = 0.03,
+σ =0.1.
+Figure 4. Thecharacteristicboundaryseparatingthedomainsofattractionsofx¯=(0,0.86)(cid:62)
+(on the left) and x∗ =(0.31,0.45)(cid:62) (on the right). The unstable equilibrium x˜=(0.18,0.59)(cid:62)
+is on the characteristic boundary. Note the slight abuse of notation due to the reduction from
+dimension three to two. The parameters are as in Figure 3.
+for x∈O, we define the set of admissible controls starting from (t,x) by
+(cid:110) (cid:12) (cid:90) s (cid:90) T (cid:111)
+The cost of an admissible control α starting from (t,x) is given by
+(cid:90) T
+10 ESAIM:PROCEEDINGS
+and thus the value function of the optimization problem becomes (t∈[0,T))
+0 if x(cid:54)∈O
+∞ else.
+The value function thus has a singularity at the terminal time T which is due to the constraint φ(T)(cid:54)∈O. For
+the models we have in mind (cf. Examples 1.1 and 1.2), it is possible to move on ∂O∩(A\O) by following the
+solution of the ODE (2) (which is free of cost, cf. (5)).10 For this reason, we have vT(t,x)≤vT˜(t,x) for T˜ <T
+and therefore
+We want to remark here that any admissible control α with φα(T) (cid:54)∈ (A\O)∩∂O (cf. (5) again) cannot be
+optimal. Therefore, it would be equivalent to require the weaker restriction x+ α(r)dr ∈A for s∈[0,T] in
+equation (15).
+In the following, we describe a discrete dynamic programming algorithm for the numerical approximation
+of V¯ (section 3.1) and apply this algorithm to the models from Example 1.1 (section 3.2) and Example 1.2
+(section 3.3).
+3.1. Approximation by discrete-time dynamic programming
+In order to numerically compute the solution of the optimization problem (16), we apply discrete-time
+dynamic programming. To this end, we discretize time and consider n+1 (n∈N) equidistant time points
+0=t <···<t =T, i.e., tn =t =m∆t for ∆t= .
+For j =0,...,n−1 let α˜ =(α˜(t )) , where α˜(t )∈Rd. We consider piecewise constant trajectories
+m m=j,...,n−1 m
+and define recursively for x∈O,
+j j m+1 m m
+We define the set of admissible controls by
+(cid:110) (cid:12) (cid:111)
+j (cid:12) m n
+The cost of an admissible control α˜ ∈A˜T,n(t ,x) is given by
+and the value function is given by
+v˜T,n(t ,x):= inf J˜T,n(t ,x,α˜). (17)
+10FortheSISmodel,wehave∂O∩(A\O)={0}. Forthemodelwithvaccination,wehave
+(recallthatx˜istheunstableendemicequilibrium).
+ESAIM:PROCEEDINGS 11
+The constraint implies that
+Furthermore, for j <n−1, the dynamic programming principle implies the following Bellman equation:
+(cid:110) (cid:111)
+Hence the solution of the optimization problem can be computed backward in time.
+Weneednexttodiscretizespace. NotealsothatintheSISmodel,thefunctionalLisexplicitlyknown,while
+this is not the case in the vaccination model. For that reason we now distinguish between the two cases.
+3.2. The SIS model
+We discretize space via a grid of the set A = [0,1] with fineness ∆x = 1/n¯, for some new integer n¯. Hence
+the grid points are given by
+xi :=i∆x for i=0,...,n¯.
+Given a function f which is only defined on the grid points, we define values of the function for arbitrary
+x∈A by its linear interpolation f . In other words, we obtain for x∈A,
+(cid:88) (cid:110) (cid:111)
+We obtain the following (backward in time) algorithm for the solution of the optimization problem (17).
+1. For x on the grid,
+We denote the solution of this minimization problem by α˜∗(t )=α˜∗(t ,x).
+2. For m<n−1, x on the grid,
+(cid:110) (cid:111)
+We denote the solution of this minimization problem by α˜∗(t )=α˜∗(t ,x).
+Note that this algorithm involves the solution of n×n¯ minimization problems. We recover an approximation
+φ˜∗ = (φ∗(t )) of the optimal trajectory starting from the stable equilibrium x∗, by the following
+m m=0,...,n
+procedure (including another linear interpolation).
+3. For m=0,...,n−1,
+0 m+1 m int m m
+Itiswell-knownthatunderappropriateassumptions,thesolutionofthisprocedureconvergestothesolution
+of the optimization problem (16) (see, e.g., [19,20]); the optimal coupling of time and space discretization is
+∆t = ∆x. We want to remark here that standard assumptions do not apply to our model. For instance, the
+function L is not Lipschitz continuous, even L(x,y)→∞ for x→∂A is possible.11 Furthermore, the terminal
+11Thisise.g. thecasefory<0andx→0. Notehoweverthattheactionrequiredtoapproachtheboundary,e.g.,atconstant
+speedoneisfiniteandwehave
+(cid:82)tL(t−s,−1)ds→0ast→0.
+12 ESAIM:PROCEEDINGS
+Figure 5. Optimaltrajectoryφ˜∗ forT =5(leftpicture), T =20(middlepicture)andT =60
+(right picture); ∆t=∆x= 1 , β =1.5 and γ =1.
+constraint results in a singularity of the value function at terminal time T. We are not aware of any analytical
+results including our set–up. We nevertheless have reasons to believe that
+V¯ ≈v¯T,n,n¯(t ,x∗) for large enough T.
+It is not in the scope of this article to provide a thorough analytical proof of the convergence of the algorithm.
+We readily observe that for the SIS model, the Legendre-Fenchel transform is given explicitly by
+(cid:16)1 (cid:17)
+θ˜:= .
+Furthermore, the boundary consists of the single point {0}; hence equation (18) becomes
+We consider the following parameters: β = 1.5, γ = 1; in particular, we have R = 1.5 > 1 and the endemic
+equilibrium x∗ = 1/3 is stable. We apply the dynamic programming algorithm described in section 3.1 with
+∆t=∆x=1/100 and T =5,10,20,40,60 (i.e., n¯ =100 and n=500,1000,2000,4000,6000). We obtain
+v5,n,n¯(t ,x∗)=0.0953, v10,n,n¯(t ,x∗)=0.0757, v20,n,n¯(t ,x∗)=0.0705,
+int 0 int 0 int 0
+v40,n,n¯(t ,x∗)=0.0702, v60,n,n¯(t ,x∗)=0.0702.
+int 0 int 0
+We hence deduce that V¯ ≈0.0702 and thus E[τN,x]≈exp(0.0702N) for large N. We illustrate the solution of
+the optimization problem in Figure 5 for T =5,20,60. We observe that it is the cheapest to move slowly near
+the stable equilibria x∗ and the unstable equilibrium x¯=0.
+3.3. The model with vaccination
+Unlike in section 3.2, the place of exit from O is a priori not clear for the model with vaccination (cf. Exam-
+ple 1.2). It seems plausible that it is cheapest to exit O at the unstable endemic equilibrium x˜. Indeed, if T
+is chosen large enough, an optimal (or near optimal) trajectory φ can move on the boundary towards x˜ after
+the exit time without generating any extra cost (cf. (5)); in this case we have lim φ(t)=x˜. Hence, we can
+assumethatx˜isindeedtheplaceofexitforthenumericalcomputationofV¯. Therefore,equation(18)becomes
+ESAIM:PROCEEDINGS 13
+However, the Legendre-Fenchel transform L cannot be computed explicitly. Here we use the following defi-
+nition of L, which is equivalent to (4) (see [10]):
+inf (cid:96)˜(µ,x) if B (cid:54)=∅
+L(x,y):= µ∈Bx,y x,y
+where for µ∈B ,
+j j j βj(x)
+(cid:110) (cid:88) (cid:111)
+B := µ∈Rk|µ >0 only if β (x)>0 and y = µ h .
+x,y + j j j j
+Since we seek to minimize
+(cid:90) T
+our discretized dynamic programming equation reads: for each x∈G (the space grid),
+(cid:110) (cid:18) x(cid:48)−x (cid:19) (cid:111)
+v(t ,x)= inf L x, ∆t+v(t ,x(cid:48))
+k x(cid:48)∈G ∆t k+1
+(cid:110) (cid:111)
+x(cid:48)∈G
+where µˆ(x,x(cid:48)) is the argument which realizes the following minimum
+µjhj=x(cid:48)
+Note that here we avoid to consider interpolation between points on the grid. We have implemented this
+algorithm on a grid whose one of the axis is the line passing through x∗ and x˜, with the following values of the
+parameters : β =3.6, θ =0.02, µ=0.03, η =0.3, σ =0.1 and γ =1.
+The approximation of V¯ which we have found is 0.3891, with ∆t = 0.05, and the ∆x = ∆x = 0.005.
+This means that E[τN,x∗] ≈ exp(0.3891N) for large N. Note that if ∆t is not small enough compared to ∆x,
+since we restrict the above minimization to x(cid:48) ∈ G, we cannot allow small speed, and we get larger values of
+V¯. We expect that more accurate results could be obtained, by doing the minimization over x(cid:48) on a finer grid,
+which necessitates to interpolate v(t ,·) between points on the grid. We have not been able to implement
+this refinement, by lack of time. This will be done in the future. It should improve the numerical estimate of
+V¯. The above quantity should be considered as an upper bound of the true value.
+4. Simulation of ZN
+In this section, we describe known exact and approximate simulation methods for the simulation of the
+solutionZN ofequation(1). Tothisend,wefixN;withthenotationsν = hj anda (z)=Nβ (z),equation(1)
+can be rewritten as
+(cid:88) k (cid:16)(cid:90) t (cid:17)
+14 ESAIM:PROCEEDINGS
+Note that our ultimate goal would be to simulate the value of τN which, from the above Large Deviations
+results, is huge, as soon as N is large. This may be seen as impossible. However, this is similar to the problem
+of rare event simulation, for which there exist specific techniques, which we intend to implement in the future.
+See also the discussion below in section 4.7.2. In the framework of this paper, we present some preliminary
+numerical work, which aims only at simulating the stochastic process ZN over a given finite time horizon.
+In the following, we first introduce the so-called stochastic simulation algorithm (SSA) proposed in [14,15]
+(section 4.1). The SSA allows for the exact simulation of the process ZN. Unfortunately, this algorithm is
+rather slow in some circumstances, typically when there are too many jumps of the Poisson processes on a
+fixed time interval. Therefore, we discuss faster approximate simulation methods in the subsequent sections: in
+section4.2, weintroducetheexplicitτ-leapingalgorithm(see[16])intheformof[21]; insection4.3, wediscuss
+modifications of the τ-leaping algorithm: implicit and mid-point τ-leaping (section 4.3.1) and the algorithm
+from [22] which ensures that the simulated process remains in its domain, e.g., by preventing the components
+of the process from becoming negative (section 4.3.2). We apply the SSA and the modified τ-leaping algorithm
+from section 4.3.1 to the specific models from Examples 1.1 and 1.2 in sections 4.4 and 4.5, respectively. We
+conclude by addressing open research questions concerning the simulation of the process ZN in section 4.7.
+4.1. The stochastic simulation algorithm
+A mathematically exact procedure for simulating the evolution of the process ZN given by equation (19) is
+the stochastic simulation algorithm (SSA) first proposed in [14,15]. The SSA changes the value of the solution
+at each jump time of one of the Poisson processes. The simplest implementation of the SSA is the so-called
+direct method:
+Whenever t<T:
+1. While in state z at time t, evaluate all functions a (z) and their sum a (z):=
+a (z).
+2. Generate the time increment τ as the realization of an exponential random variable with parameter
+a (z).
+3. Choose an index j ∈{1,...,k} according to the probability distribution aj(z) (j =1,...,k).
+ii. z ←z+ν .
+5. Record (t,z). Return to 1. if t+τ <T; else stop.
+Carrying out step 3. is mathematically straightforward: we draw one realization r of a uniform random
+variable on [0,1]; then, j is the smallest positive integer for which
+The SSA is mathematically exact. However, the task of explicitly simulating each jump makes the SSA too
+slow for practical implementation in some circumstances. The reason is that for large N, there are too many
+jumps on any fixed time interval.
+4.2. The explicit Poisson τ-leaping algorithm
+AfasterbutapproximatestochasticsimulationprocedureistheexplicitPoissonτ-leapingalgorithm(see[16]).
+The basic idea of this procedure is to advance the system by a preselected time increment τ (in contrast to the
+randomly generated time increment τ in the SSA). On the one hand, τ should be chosen large enough in order
+to ensure that “many” jumps occur during this length of time (as else, the savings in computation time are not
+significant); on the other hand, it should be small enough such that the values of the functions a are unlikely
+tochange“significantly”(aselse,theprocedureisnotaccurateenough). Thelatterrestrictioniscalledtheleap
+condition. A strategy due to [21] for satisfying this condition is to require that the changes of the functions a
+ESAIM:PROCEEDINGS 15
+during a leap τ are “likely” to be bounded by (cid:15)a (z); here, (cid:15) (0 < (cid:15) (cid:28) 1) is the error control parameter. In
+other words,
+|a (ZN(t+τ))−a (ZN(t))|≤(cid:15)a (ZN(t)) for j =1...,k with high probability.
+We estimate the largest value of τ that meets this particular requirement as follows. First, we compute
+(cid:88)∂a
+ν for j,j(cid:48) =1,...,k; (20)
+jj(cid:48)
+ij(cid:48)
+here ν denotes the i-th component of the vector ν . Subsequently, we calculate
+(cid:88) (cid:88)
+j jj(cid:48) j j jj(cid:48) j
+j(cid:48)=1 j(cid:48)=1
+(cid:40) (cid:41)
+(cid:15)a (z) (cid:15)2a2(z)
+Note that for a standard Poisson process P,
+(cid:16)(cid:90) t+τ (cid:17) (cid:16)(cid:90) t (cid:17) (cid:18)(cid:90) t+τ (cid:19)
+This procedure for the selection of τ yields the following τ-leaping algorithm.
+Whenever t<T:
+1. While in state z at time t, evaluate the functions a and their sum a (z)=
+a (z).
+2. Compute τ via the formulas (20)-(22).
+3. Fix a small integer n (typically, e.g., n=10) and a moderate integer n¯ (typically, e.g, n¯ =100).
+i. If τ < n , reject τ and execute n¯ iterations of the SSA. Then, return to step 1.
+ii. If τ ≥ n , proceed to step 4.
+4. For j =1,...,k, generate p as a Poisson random variable with mean a (z)τ.
+p ν .
+6. Record (t,z). Return to 1. if t+τ <T; else stop.
+Let us shortly comment on this algorithm. p represents an approximation of the number of jumps of type j
+duringthetimeinterval[t,t+τ[. Weremarkagainthattheapproximationbyp instep4.isjustifiedaslongas
+a (z)remainsmoreorlessconstantoverthesubsequenttimeintervaloflengthτ. Thereasonforstep3.i.isthe
+following. 1 is the mean time step to the next jump when applying the SSA. If τ is not significantly larger
+than 1 , the computation of τ (via equations (20)-(22)) is no more efficient then applying the SSA directly
+(which is also of course more accurate); as this property is likely to persist for a while, it is more appropriate
+to apply the SSA for some time before returning to the τ-selection procedure again.
+16 ESAIM:PROCEEDINGS
+The explicit τ-leaping algorithm above has been shown to provide accurate simulation results; furthermore,
+it is substantially faster than the SSA for many “not-too-stiff” systems12 (see [22]; see also [24] for theoretical
+evidence for this). We illustrate the gain of computation time by numerical experiments in sections 4.4 and 4.5
+below for a modification of this algorithm (cf. section 4.3.2).
+4.3. Modifications of the τ-leaping algorithm
+There exist several variants of the above described explicit τ–leaping algorithm. We now describe some of
+these.
+4.3.1. Implicit and mid–point τ-leaping algorithms
+One may want to freeze the rates not at the value of the solution at the beginning of the discretization
+interval, butratheratanapproximatevalueofthepositionattheendofthatinterval, orelseatthemid-point.
+The “implicit” τ-leaping algorithm is obtained by replacing a (ZN(t))τ with
+and the mid–point τ-leaping algorithm consists in replacing the same quantities by
+In [24] it is proved that the error in the mid-point τ-leaping algorithm is less than the one produced by the
+explicit τ–leaping algorithm.
+4.3.2. A modified τ-leaping algorithm
+As most numerical schemes, the τ-leaping algorithm has the disadvantage that the approximate solution
+might very well jump over the boundaries which the solution of the stochastic equation (19) can never cross.
+More precisely, the solution of (1) satisfies certain constraints. For example, in the case of constant total
+population, we have that ZN(t) ≥ 0, 1 ≤ i ≤ d, and ZN(t) := 1− (cid:80)d ZN(t) ≥ 0. We would like that the
+approximate solution satisfies these constraints as well. However, this might not be the case with a standard
+τ-leaping algorithm. In particular, if for some 0≤i≤d, ZN(t) is very small, then some of the Poisson driving
+processes may push it over to a negative value during the next time interval of length τ. Because of that, at
+the beginning t of each time step, we define
+L := min ZN(t), where ν :=− ν ,
+and choose a critical value n . The critical directions will be chosen by comparing L to n .
+ThemodifiedPoissonτ-leapingprocedurerequiresthatacriticalPoissonprocesscannotjumpmorethanonce
+inatimeintervaloflengthτ. ThatmakesitimpossibleforacriticalPoissonprocesstodriveanycomponentof
+ZN to a negative value. The theoretical justification for each step in this modified τ-leaping procedure is given
+in [22].
+Whenever t<T:
+1. While in state z at time t, evaluate the functions a (z) and their sum a (z)=
+a (z).
+2. Identify the currently critical Poisson processes as those P for which
+a (z)>0 and L <n .
+12I.e.,systemsforwhichthedifferencebetweenthesmallestandthelargestjumpratesisnottoolarge(see,e.g.,[22]).
+ESAIM:PROCEEDINGS 17
+3. Modify the τ-selection procedure from equations (20)-(22) by only taking into account those jump
+directions j(cid:48) corresponding to the non-critical Poisson processes. Denote the resulting time step by τ(cid:48).
+If there is no non-critical Poisson process, set τ(cid:48) =∞.
+4. Fix a small integer n (typically, e.g.,n=10) and moderate integer n¯ (typically, e.g, n¯ =100).
+i. If τ(cid:48) < n , reject τ(cid:48) and execute n¯ iterations of the SSA. Then, return to step 1.
+ii. If τ(cid:48) ≥ n proceed to step 5.
+5. Compute the sum ac(z) of the functions a (z) of the critical Poisson processes. Generate τ(cid:48)(cid:48) as a
+realization of the exponential random variable with parameter ac(z).
+6. i. If τ(cid:48) <τ(cid:48)(cid:48), set τ =τ(cid:48). For all the critical Poisson processes P , set p =0. For all the non-critical
+PoissonprocessesP ,generatep asarealizationofthePoissonrandomvariablewithmeana (z)τ.
+ii. Ifτ(cid:48)(cid:48) ≤τ(cid:48), setτ =τ(cid:48)(cid:48). Generateanintegerj accordingtotheprobabilitydistributiona (z)/ac(z)
+(i.e., j runs over the index values of the critical Poisson processes). Set p = 1, and for all the
+other critical Poisson process, set p =0. For all the non-critical Poisson processes P , generate p
+as a realization of the Poisson random variable with mean a (z)τ.
+p ν .
+8. If z is not in its domain, replace τ(cid:48) ←τ(cid:48)/2, and return to step 6.
+9. Record (t,z). Return to 1 if t+τ <T; else stop.
+Remark 4.1. It may seem strange to use a uniform critical value n , independent of the value of the rate
+of each Poisson process. It would be natural to compare each L with the corresponding a (ZN(t))τ, which
+however would require to compute a first value of τ. We intend to search for improvements in that direction in
+the future.
+Remark 4.2. Although the modified τ–leaping algorithm is designed so as to reduce the chance of a negative
+value of any of the ZN(t), it cannot completely rule them out. This is the reason for step 8. of the algorithm.
+We suspect that this step might introduce a bias in the simulation, in that it tends to delete simulations
+with exceptionally large values of some of the Poisson process increments, and also to reduce the chance of
+approaching or hitting any of the boundaries, which is specially annoying for our purposes.
+Weintendtochecktwootherpossibleapproaches. Thefirstoneconsistsinprojectingthecomputedpoint,if
+itisoutsidethedomain. Thesecondconsistsinreplacingτ byτ/2,butwithoutresimulatinganewindependent
+valueofthePoissonprocessincrement,butratherbysimulatingthenewincrementsaccordingtotheconditional
+lawofP (t+τ(cid:48))−P (t),giventhepreviouslysimulatedvalueofP (t+τ)−P (t),which,ifP (t+τ)−P (t)=k,
+j j j j j j
+follows a binomial law with parameters k and τ(cid:48)/τ.
+4.4. The SIS model
+Inthissection,weapplythesimulationalgorithmsfromsections4.1and4.3.2totheSISmodel(Example1.1).
+We consider an endemic situation (β = 1.5, γ = 1, hence R = 1.5 > 1 and x∗ = 1/3) and compare the
+performanceoftheSSAtothemodifiedτ-leapingalgorithm. Ifthepopulationsizeisrelativelysmall,N =2000,
+weobservethatthecomputationtimesaresimilarforbothalgorithms(evensmallerfortheSSA).Acloserlook
+at the realized trajectory of the τ-leaping procedure confirms that almost all jumps are of size 1/2000. This
+suggests that in most cases, the selected time step τ(cid:48) is rejected and the SSA is applied (cf. steps 3. and 4. i. of
+the algorithm). Hence, there is no significant gain in computation time. If we let N = 20000, the number of
+jumps (and hence the computation time) for the SSA increases approximately by a factor ten. The τ-leaping
+algorithm is significantly faster which suggests that the time step τ(cid:48) is now rarely refused. While the SSA
+becomes inefficient for very large time horizons (e.g., T = 600) and population sizes (e.g., N = 200000), the
+process can still be simulated efficiently by the τ-leaping algorithm.
+18 ESAIM:PROCEEDINGS
+Figure 6. Realized trajectories of the SSA for N =2000 (left picture) and N =20000 (right
+picture). Z(0)=0.1, T =50, β =1.5, γ =1.
+Figure7. Realizedtrajectoriesofthemodifiedτ-leapingprocedureforN =2000(leftpicture)
+and N =20000 (right picture). The parameters are as in Figure 6.
+We illustrate realized trajectories of the SSA and the modified τ-leaping algorithm in Figures 6 and 7,
+respectively (left pictures: N =2000, right pictures: N =20000). We observe that they approach the solution
+of the ODE as N increases for both algorithms as predicted by the LLN (cf. (3); see [5]).
+4.5. The model with vaccination
+We now apply the same algorithms to the model with vaccination (Example 1.2). We consider the bistable
+situationfromsection2.3(cf.Figure3fortheparameters)andobservethesamequalitativepropertiesconcerning
+computationtimesasfortheSISmodelinsection4.4. InFigures8and9, weillustratetherealizedtrajectories
+for the SSA and the modified τ-leaping algorithm, respectively (left pictures: N = 2000, right pictures: N =
+20000). For simplicity, we only display the proportions of infectious individuals. As in section 4.4, we observe
+that the trajectories approach the solution of the ODE as N →∞.
+It is tempting to compare those figures, in order to obtain the error induced by the tau–leaping scheme,
+compared to the exact SSA scheme. However, this would require that the two schemes are computed using the
+ESAIM:PROCEEDINGS 19
+Figure 8. Realized trajectories for the proportion of infectious individuals simulated by the
+SSA (left picture: N =2000, right picture: N =20000). Z (0)=0.2, Z (0)=0.7, T =50. All
+other parameters are as in Figure 3.
+Figure 9. Realized trajectories for the proportion of infectious individuals simulated by the
+τ-leaping algorithm (left picture: N =2000, right picture: N =20000). All parameters are as
+in Figure 8.
+same realization of the Poisson processes. This is not what we have done here. We intend to do this in a near
+future, in order to confront simulations with the predictions of the theory concerning the error induced by the
+tau–leaping algorithm, see e.g. [23], [24].
+4.6. Computation time
+In the next table we present the computation times (in seconds) of the SSA and modified tau-leaping for
+different population sizes in the SIS model. All programs were written and executed in Matlab. We remark
+that from N =20000 on, the computation time of the tau-leaping scheme is spectacularly smaller than that of
+the SSA scheme. We also note that the computation time of the tau–leaping scheme seems to be a decreasing
+function of N. The reason is probably that the larger N, the less frequently the scheme uses SSA steps.
+20 ESAIM:PROCEEDINGS
+SSA Population size N Time horizon T Computation time
+2000 50 2.8
+20000 50 24.66
+200000 50 225.44
+Modified tau-leaping
+2000 50 2.3
+20000 50 3.02
+200000 50 1.05
+The next table presents the computation times of the SSA and modified tau-leaping for different population
+sizes in the SIV model. The same comments as for the SIS model apply.
+SSA Population size N Time horizon T Computation time
+2000 50 4.51
+20000 50 36.4
+200000 50 352.64
+Modified tau-leaping
+2000 50 2.95
+20000 50 1.04
+200000 50 0.67
+4.7. Open questions
+We conclude by describing two further open questions concerning the simulation of the process ZN. We
+discuss briefly the simulation of models where some jump types are significantly more frequent than others
+(section 4.7.1). Finally, we discuss the simulation of rare events with the help of large deviations theory
+(section 4.7.2).
+4.7.1. Models with different time scales
+The simulation algorithms described in sections 4.1-4.3 tend to become inefficient or inaccurate if some of
+the jump rates are much larger than others (cf. also Footnote 12). In epidemiology, this is typically the case for
+so-calledhost-vectordiseases(e.g.,malaria),wherethediseaseistransmittedfromvectors(mosquitoes)tohosts
+(humans) and vice versa. In the particular case of malaria, the jumps concerning only the mosquito population
+have a much shorter time scale than those also concerning the human population (see, e.g., the model in [3]).
+It is hence time consuming to simulate a significant number of jumps within the human population.
+In order to overcome this problem, we simulate only the jumps with small rates via τ-leaping. Within the
+interval [t,t+τ[13, the jumps with large rates are approximated by the solution of the ODE (cf. section 2).14
+We intend to analyze the efficiency and accuracy of this procedure. In particular, we are interested in whether
+the large deviations behavior (cf. section 1.2) is changed by this partial ODE approximation significantly.
+4.7.2. Simulation of rare events
+We are particularly interested in sampling the probability of the event that the process ZN exits the domain
+of attraction of a stable equilibrium before a given time T (cf. section 1.2). If N is large and T is relatively
+small, the probability of this event is typically extremely small. Applying a na¨ıve Monte Carlo (MC) approach
+is therefore inefficient and we rely on rare events simulation techniques. In [25], the application of Importance
+Sampling is explained in the context of diffusion processes. We intend to adapt this method in the following
+way. Via a change of measure, we transfer the process ZN to a jump process Z˜ (see, e.g., [6] for a Girsanov
+theoremforprocessesofthetypeofZN)forwhichtheeventofinterestismuchmoreprobable. Then,weapply
+MC simulation to the process Z˜ and associate a weight with each realization (hence the average in the MC is
+13Here,τ isthetimestepchosenbytheτ-selectionprocedureappliedtoonlythesmallrates.
+14The initial value z for this computation can either be chosen explicitly, i.e., z=ZN(t) or implicitly/at the mid-point of the
+interval(cf.thesomehowrelatedissueinsection4.3.1).
+ESAIM:PROCEEDINGS 21
+replaced by a weighted average). In order to choose the process Z˜ appropriately (i.e., such that the probability
+of exit is “maximized”), we use the theory of large deviations: the “cheapest” way to exit the domain is given
+by the trajectory φ∗ (cf. sections 1.2 and 3); hence, we change the rates of the process in such a way that the
+corresponding rate function I(φ∗) becomes small (ideally, φ∗ is approximately the solution of the ODE for the
+modified rates).
+Acknowledgements: This research was supported by the ANR project MANEGE, the DAAD, the Labex Archim`ede
+and CEMRACS.
+We thank Nicolas Champagnat and Tony Leli`evre for useful discussions concerning the τ–leaping algorithm.

@@ -1,0 +1,602 @@
+Domain Adaptations for Computer Vision Applications
+OscarBeijbom,
+obeijbom@ucsd.edu
+DepartmentofComputerScienceandEngineering,UniversityofCalifornia,SanDiego.
+Abstract 2009,BergamoandTorresani,2010],althoughrelatedfield,
+suchascovariateshift[Shimodaira,2000]hasalongerhis-
+Abasicassumptionofstatisticallearningtheoryisthat tory. Itisperhapsindicativeofthefieldbeingsonew, that
+trainandtestdataaredrawnfromthesameunderlyingdis- the proposed methods are of such different characteristic.
+tribution. Unfortunately, this assumption doesn’t hold in To the best of our knowledge, there is only one previous
+manyapplications. Instead,amplelabeleddatamightexist survey of domain adaptation [Jiang, 2008], which focused
+in a particular ‘source’ domain while inference is needed onlearningtheoryandnaturallanguageprocessingapplica-
+in another, ‘target’ domain. Domain adaptation methods tions. Also[PanandYang,2009]didathoroughsurveyon
+leveragelabeleddatafrombothdomainstoimproveclassi- therelatedfieldoftransferlearning.
+fication on unseen data in the target domain. In this work
+wesurveydomaintransferlearningmethodsforvariousap- 1.1.RelatedFields
+plication domains with focus on recent work in Computer
+Asmentionedintheintroduction,theshortageoflabeled
+Vision.
+data is a fundamental problem for applied machine learn-
+ing. It is important enough that several areas of research
+is devoted to various aspects of this problem. In the ac-
+1.Introduction
+tivelearningparadigm,labelsareacquiredinaninteractive
+The shortage of labeled data is a fundamental problem fashiontomaximizethebenefitofeachnewlabel[Kapoor
+inappliedmachinelearning. Whilehugeamountsofunla- et al., 2007]. Related approaches include [Branson et al.,
+beleddataisconstantlybeinggeneratedandmadeavailable 2011], where a ‘human-in-the-loop’ determines which la-
+inmanydomains,thecostofacquiringdatalabelsremains bels to update, thus making the ‘most’ out of the acquired
+high. Even,worse,sometimesthesituationmakesithighly labels. Crowd sourcing through, e.g. Amazon mechanical
+impracticalorevenimpossibletoacquirelabelleddata(e.g. turk (mTurk), allows for rapid collection of large amounts
+whentheunderlyingdistributionisconstantlychanging). oflabels,andmuchresearchisdevotedtotheefficientdis-
+Domain adaptation (sometimes referred to as domain tributionoftasksandtheinterpretationandweightingofre-
+transfer learning) approach this problem by leveraging la- trievedlabels[Welinderetal.,2010]. Furtherareasinclude
+belled data in a related domain, hereafter referred to as weakly supervised method, e.g. multiple instance learn-
+‘source’domain,whenlearningaclassifierforunseendata ing[Dietterichetal.,1997]orlatentstructurealSVMs[Yu
+in a ‘target’ domain. The domains are assumed to be re- andJoachims,2009]wherethelevelofsupervisionislower
+lated,butnotidentical(inwhichcaseitbecomesastandard than the given task demands. Other approaches include
+machinelearningproblem). semi-supervisedlearningthatmakeuseofsmallamountsof
+Thissituationoccurinmanydomains. Afewexamples labelleddatatogetherwithlargeamountsofunlabeleddata.
+are: eventdetectioninacrossvideocorporafromdifferent Notably the concept of co-training [Blum and Mitchell,
+domains (e.g. different tv - stations), named entity recog- 1998]isapopularapproach.
+nition across different text corpora (e.g. sports text corpus More closely related to domain adaptation is transfer
+andnewscorpus),objectrecognitioninimagesacquiredin learning[PanandYang,2009].Intransferlearning(TL)the
+differentdomains(webcamversusAmazonstockphotos). marginaldistributionofthesourceandtargetdataaresim-
+Domainadaptation(DA)onlyrecentlystartedreceiving ilar but different tasks are considered. To make this prob-
+significant attention [Daume´III, 2009, Chelba and Acero, lemtractable,itistypicallyassumedacommonprioronthe
+2004, Daume´III and Marcu, 2006], in particular for com- model parameters across tasks. A computer vision exam-
+puter vision applications [Saenko et al., 2010, Kulis et al., ple is ‘one-shot learing’ [Fei-Fei et al., 2006] where new
+2011, Gopalan et al., 2011, Jhuo et al., 2012, Duan et al., visualcategoriesareleanedusingasingletrainingexample
+1v0684.1121:viXra
+by leveraging data from other labelled categories. This is predicts the class, y of an unseen sample from the target
+different from domain adaptation where the marginal data with high probability, P (Y = yˆX = x ). is differ-
+distributionsofsourceandtargetaredifferent,butthetask entdependingonthedataassumptions. InsupervisedDA,
+issimilar. = ,inunsupervisedDA = ,andsemi
+D S ∪T D S ∪T
+Another related field is model-adaptation. Here, unla- supervisedDA: = .
+beled data, sometimes referred to as background data or
+2.2.Overview
+auxiliary data is used to regularize the class specific mod-
+els. This paradigm has had much success in speaker veri-
+As mentioned in the introduction domain adaptation is
+fication [Reynolds et al., 2000], and has also been applied
+a relatively new field. It is also relatively loosely defined
+tocomputervisionproblems[Dixitetal.,2011,L.Fei-Fei,
+withregardstoe.g. how‘related’arethedomains,andhow
+2007]. The methods used in this field, such as Adapted
+‘few’labelledsamplesexistinthetargetdomain. Also,the
+Gaussian Mixture Models [Reynolds et al., 2000] could
+generalproblemstatementappliestoseveralapplicationdo-
+triviallybeusedinadomaintransfersettingbydiscarding
+mains, such as natural language processing and computer
+sourcedatalabels,andlettingthesourcedataconstitutethe
+vision. For all these reasons, there is a big variety in the
+backgroundmodel.
+proposedmethods. Inspiredbythecategorizationproposed
+Cross-Modal classification / retrieval makes very simi- in[Jiang,2008],webeginbyconsideringinstanceweight-
+lar assumptions on the data compared to DA but assume ingmethodsforrelaxationoftheDAassumptionsinSec.3.
+instance, rather than class, level relationship between the Weconsidermethodsutilizingthesourcedatatoregularize
+domains. In Cross-Modal classification, ample data from target models in Sec. 4. We then survey method seeking
+both domains are available at train time, and the unknown common representation across domains in Sec. 5. Section
+samplecancomefromanyofthemodalities. 6makeconnectionstotransferlearning, andSec.7briefly
+surveymethodformulti-modallearning.
+3.InstanceWeighting
+In this section we introduce notation and provide a
+overviewofthepaper. Following [Jiang, 2008], we first consider two relax-
+ations of the DA problem. For the analysis we will use
+2.1.Notation
+the empirical risk minimization framework proposed by
+Let X denote the input, and Y the output random vari- [Vapnik, 1999] for standard supervised data. Here we let
+able. Let P(X,Y) denote the joint probability distribu- θ Θbeamodelparameterfromagivenparameterspace,
+tionofXandY.Let,similarlyP(X)andP(Y)denotethe andθ∗ betheoptimalparameterchoiceforthedistribution
+marginalprobabilitydistributions.Inthedomainadaptation P(X,Y). Let further l(x,y,θ) be a loss function. In this
+scenario,asmentionedintheintroduction,wehavetwodis- frameworkwewanttominimize
+tinctdistributions.LetP (X,Y)denotethesourcedistribu-
+tionwhere,typically,we s haveaccesstoamplelabelleddata, θ∗ = argmin P(x,y)l(x,y,θ) (1)
+(X,Y) be the target distribution that we seek to (x,y(cid:88))∈X×Y
+estimate. We also let P(X = x,Y = y) P(x,y) refer
+≡ P(X,Y)isunknownbutwecanestimateitwiththeempir-
+tothejointprobability,thusdifferentiatingitfromP(X,Y)
+icaldistribution,P˜(X,Y).
+thatrepresentstheprobabilitydistribution.
+Dataisavailablefromthreesets: labelleddatafromthe
+sourcedomain
+Rds,drawnfrom θ˜ = argm
+a joint source probability distribution, P
+(X,Y); labelled (x,y(cid:88))∈X×Y
+data from the target domain, = (xt,l,yt) Nt,l,xt,l N
+Rdt, drawn from a joint target T l distri { buti i on, P i
+} ( i X = , 1 Y); an ∈ d = argm
+n l(x i ,y i ,θ). (3)
+unlabeled data,
+Rdt from a (cid:88) i=1
+marginal target distribution P t (X). It is commonly as- [Jiang, 2008] extend this to the DA problem and arrive at
+sumed Ns Nt,l, and d s = d t . The target and source thefollowingformulation
+labels are generally assumed to belong to the same space,
+e.g. forthek-classclassificationtask,ys,yt Zk. Wefur- θ∗ = argmin P (x,y)l(x,y,θ) (4)
+ther let Di be the data matrix for domain i, ∈ with one data t θ∈Θ t
+samplepercolumn,i t,s .
+The goal of domai ∈ n { adap } tation (DA) can thus be sum- argmin Ns P t (xt i ,y i t) l(xs,ys,θ). (5)
+marized as that of learning a function yˆ = f(x u |D ) that ≈ θ∈Θ (cid:88) i=1 P s (xs i ,y i s) i i
+Daume´III&Marcu
+We see that weighing the loss of (source) training sample
+by Pt(x,y) provides a solution that is consistent with the
+Ps(x,y) !2 !2
+empiricalriskminimizationframework. Clearly,ifwehad
+a good estimate of P (X,Y) we would already be done,
+t " "i "g "o
+sothisdoesn’treallyhelpus, buttheformulationisuseful
+forthediscussionbelow. Inthefollowingweconsidertwo
+relaxations of the DA problem formulation. Class imbal-
+ance: P (X Y = y) = P (X Y = y)andcovariateshift: y n y n i y n o
+| | x n N z n i x n i Ni x n o z n o N o
+3.1.ClassImbalance
+One way to relax the DA problem formulation is to as- #i #g #o
+sume P (X Y) = P (X Y), but P (Y) = P (Y). This
+iscalledclas | simbalance, | populationdrifto (cid:54) rsamplingbiaFsi.gure1: Fi ( g L u e r f e t) 1 t . h T e h s e ta M nd E a G rd A l m og o is d t e i l c p r r e o g p re o s s s e i d on in m [ o D d a e u l; m ( e´ R II i I gh a t n ) d th M e a M rcu e , gaModel.
+2006]. Thismodelassumesthedataisinfactgeneratedbythree
+Consider,forexample,trainingdatasampledfromaremote
+distributions, a target, a common and and source. The MEGA
+sensing application. Test data collected a at a later ocAcac-cording to this model, the z s are binary random variables that we assume are
+modellearnsaclassifiernforeachspace.Leftisthestandardlogis-
+sionmayhavedifferentclassdistributionduetoachdarnagwendfromaBernoullidistributionwithparameterπ(i) (forin-domain)andπ(o) (forout-
+ticregressionmodel.
+landscape. Taking the assumptions into account, thoef-rdaotimoain). Furthermore, we assume that there are three λ vectors, λ(i), λ(o) and λ(g)
+Pt(x,y) becomes corresponding to q(i), q(o) and q(g), respectively. For instance, if z n = 1, then we assume
+Ps(x,y) that x¯ n shouldderbethcelsaessaifisesdumuspitnigonλs(i). Finally, we model the binary vectors x( n i)s (respec-
+P (x,y) P (y) P (xy) tively x( n o)s) as being drawn independently from Bernoulli distributions parameterized by
+P s t (x,y) = P s t (y)P s t (x | y) d ψ r ( a i) w (a6 n n) a d cc ψ or (g d ) in ( g re t s o pe ψ ct (i i ) v . e T ly h , iP Pψ s t c (( ( o o x x ) rr , , a e y y n s ) )p d o ψ nd = (g s )) t . oP P a At n g( (a ax x¨ı i v )n )e , P P B wt a ( ( h y y y e e n | s x x z) a) n ssu = m 1 p , ti w on e o a v ( s 8 e s r u ) m th e e t g h e a n t er x at n iv i e s
+, p p a ro ra b ( m a 7 b ) e i t l e it r i s e , s ψ of . t A h l e lo x w n in v g ec ν to t r o s. ra F n in ge al o ly v , e w r= e
+i p , l o a
+, P c g e t
+h o .e m f m ul o l n| hi B er e a t r a ch p i r c io a r lm ov o e (d r 9e t )l h i e s: na¨ıveBayes
+and we only need to consider Pt(y). This approach w ψ( fa ν s ) | a,b Again, awe ∼ ll B foetu(an,dbe)dsolutioλn (ν c ) a | nσ2beidentifiedby ∼ a N pporro(0-,σ2I)
+e d x a p ta lo to re m d a in ke [ t L he in cl e a t s a s l d ., is 2 t 0 ri 0 b 2 u ] t . io P W n s s ( e y e ) c q a u n al a . lso re-sample x t z h ( n n ( i) e f i) | | π zn ( ( i i ) ) ,ψ p 2 ( f r 0 i) i 0, a ψ0 te ] ( f g i ) e n x s p ta l n o ∼ ∼ c re e B B d w e e r r t e( (hψ πi i g ( s z f i h ) n ( ) i) a t ) i p n p g ro o a f c t h h x zen ( n ( a o o l fn ) ) o d | | ssπ zsn ( ( f o h o u ) ) o, n ψw c ( f t o i ) t o ,hψ n a . ( ft g) t [ h S e hi w m ∼ ∼ e o i d g B B ae eh r r i t ( ( r e π ψ a d ( , z f o n ( ) o ) ) ) (5)
+yn (i) | x( n i),zmn (i) o,λde(i)l,bλe(gt)te ∼ resGtiibmbsa(txe ( n i) t,hλezdn (i) a)taygn ( i o v ) e | nx( na o) b,zian (o s ) e,λd(so)a,mλ(pg)lin ∼ gGfuibnbcs-(x( n o),λzn (o))
+3.2.CovariateShift tion. The quantity Pt(x) can be estimated using e.g. non-
+We term this model the “MaxPism(xu)m Entropy Genre Adaptation Model” (the Mega
+parametrickernelestimation[SugiyamaandMu¨lcer,2005,
+Model). ThecorrespondinggraphicalmodelisshownontherightinFigure1. Thegener-
+Covariance shift [Shimodaira, 2000], is another relax-
+ativestoryfoSrhainmiond-daoimraa,in20d0a0t]a.po[iHntuxa(ni)gisetasalf.o,ll2o0w0s:7] proposed to di-
+ation of DA. Here, given an observation, the class dis-
+rectlyestimatetheratio,i.e. thedifferencebetweenthetwo
+tributions are same in the source and target domains,1b.uStelect whether x(i) will be truly in-domain or general-domain and indicate this by
+distributions. TheyusetheKernelMeanMatch,
+the marginal data distributions are different. P (Y X) =z(i) i,g . Choose z(i) = i with probability π(i) and z(i) = g with probability
+e P x s a ( m Y p | X le, ), in bu a t c P tiv t ( e X le ) ar (cid:54) = nin P g s , ( w X h ) e . re Th th is e s P it s u ( a X tio ) n t te a n r d i | se to , 2 f .b o F 1 e r o − r π ∈ ea (i c ) { . h co } mponent N 1 f s of N x s (iβ),i φch(o x o s is)e − x( f i N ) 1 t t o N be t 1φ(w x it t ih) p 2 r,obabilit ( y 10 ψ )z f (i) and 0 with
+biased to lie near the margin of the classifier. At a firs p t robability1 ψz(cid:12)(i(cid:12)). (cid:88) i=1 (cid:88) i=1 (cid:12)(cid:12)
+glance,thissituationappearsnottopresentaproblem,since − f(cid:12)(cid:12) (cid:12)(cid:12)
+metric tha(cid:12)t(cid:12)measures the distribution distance(cid:12)(cid:12)in a Repro-
+P (Y X) = P (Y X), which we can estimate from3t.hCehooseaclassy accordingtoEq(3)usingtheparametervectorλz(i).
+t | s | ducingKernelHilbertSpace.
+data.Hereiswhyitbecomesaprobleminpractice.Assum-
+ing,firstofall,thatthemodelfamilyweuseismismatched 4.SourceDistributionA106sPrior
+tothedata,i.e. regardlessofwhatparameterwechoosethe
+modelwon’tfittheunderlyingdistribution. Underthisas- Often, the simplifying assumptions of theprevious sec-
+sumption,covariateshiftbecomesaproblemforthefollow- tiondoesn’thold.Thissectiondiscussmethodthatuseprior
+ingreason. Theoptimalfitofthesourcedatawillbesuch probabilitiesestimatedonthesourcedatatoregularizethe
+that it minimize model error in the dense area of P (X) model. Wefirstcoverpriorsinthebayesiansense,andthen
+(because these areas will dominate the error). Now, since someexamplesofdiscriminativemethods.
+P (X)isdifferentfromP (X),thelearnedmodelwillnot
+t s 4.1.BayesianPriors
+beoptimalforthetargetdata(again,sincethemodelfamily
+ismismatched). Maximum a posterior (MAP) estimation of model pa-
+Asintheprevioussection, Pt(x,y) canbesimplifiedun- rametersiscentralinbayesianstatistics.Inthissettingprior
+28 DigitalSignalProcessingVol.10,Nos.1–3,January/April/July2000
+already-trainedSVMinthesourcedomainasinputtosub-
+sequenttraining. Thesourcedataisthususedtoregularize
+theoutputmodelinasimilarwayasinSec.4.1.
+[Yang et al., 2007] propose the adaptive support vector
+machine(ASVM).Thebasicideaistolearnanewdecision
+boundarythatisclosetothatlearnedinthesourcedomain.
+The source data is thus acting as a regularizer on the final
+model.ThismethodpresumetheexistenceofaSVMmodel
+fs(x)trainedonthesourcedomaindata. Theyletthefinal
+decisionfunction, f(x)bethesumoffs(x)andwTφ(x).
+FigFuIGre.3.2.PiFctoirgiaulreexamfprloemoftw[Rosetyepnsoinldasdapetitngaal.h,yp2ot0he0si0ze]displleuaksetrramtoidnelg.(at)hTehe
+adtraaipnitnegdvecGtoMrs(Mx’s)amreoprdoebalb.iliTstihcaellylmefatppfiedginutroetheshUoBMwmsixtthueresu.(nb)ivTheerasdaalptGedMmixMture Thefinalclassifierisattainedbysolvingthefollowingcon-
+parametersarederivedusingthestatisticsofthenewdataandtheUBMmixtureparameters.The
+esadtiamptaatitoendisdfartoamdepetnhdeent,bsaocUkBMgrmoiuxtnurdepdaraamtaetetrosgareetahdaeprtedwbyitdhiffetrhenetasmpoeunatks.er- strainedoptimizationproblem.
+specifictraindata.Therightshowstheadaptedmodel.
+knowledge about the
+.
+rporated in a prio
+ThisisthesameastheexpectationstepintheEMalgorithm. (cid:88)
+proFbinaablliyl,itthyesoefntehwespuaffircaiemntetsetartsis,tiPcs(fθro)m. Sthpeectriafiincinagllyda,tianasrteeaudsedofto s.t.ξ i 0
+:
+i tocreatetheadapted
+fs(x i )+wTxt i ) ≥ 1 − ξ i .
+w ˆi= α i wni/T +n(1 − α i w)wi γ (11) One problem with this formulation is that it doesn’t strive
+θ∗ = σ µ ˆ ˆ i 2 ia= = r!α α gi i m v m E E i i (θ (a x xx 2 ) ) + +i (cid:89) = ( ( 1 1 1 − − Pα α i m ( i v y) ) µ ( i σ i | i 2 "x + i ; µ θ 2 i ) ) − , µ ˆ 2 i . (11( ( 1 1 )2 3 ) ) f s o o r urc a e l s a o r l g u e tio m n a . r T g h in is , is bu o t nl r y at r h e e a r so a nab so le lu f t o io r n situ cl a o ti s o e n t w o h t e h r e e
+The adaptation coefficients controlling the balance between old and new
+oensetimsoatlevseasre { α i w,α i m,α i v } fortheweights,meansandvariances,respectively. P t (X,Y) is similar to P s (X,Y). To address this [Jiang
+Thescalefactor,γ,iscomputedoveralladaptedmixtureweightstoensurethey etal.,2008]proposedtheCross-DomainSVM(CDSVM).
+sumtounity.Notethatthesufficientnstatistics,notthederivedparameters,
+CDSVMrelaxtheconstraintsthatthefinalmodelneedtobe
+ed.
+i (cid:89) q
+.
+tioncoefficient s
+.
+Indomainadaptationwecαρanes n tiim,atethepriorprobabili(t1y4) They do this by introducing additional constraints that the
+fromthesourcedomainas
+oldsupportvectors,justlikethetargetdatapoints,shouldbe
+whererρisafixedrelevancefactorforparameterρ.9 Theparameterupdating correctlyclassified. Theseconstraintsareonlyactivewhen
+asdescribedinEqs.(11)–(14)canbederivedfromthegeneralMAPestimation
+Nt,l the old support vectors are close to any part of the target
+equations for a GMM using constraints on the prior distribution described
+in[27](Sθe ∗ cti=onVa,rEgqsm.( θ 4a7x)aPnd(θ(4 | 8 S ))l.)TheparPam(eyt i t er | xu t i p,daθt)in.gequation(fo1r3th)e data. Specifically,theysolvethefollowingconstrainedop-
+i=1 timizationproblem
+9ThanksgotoMichaelNewmanofDragonSy(cid:89)stemsforearlydiscussionsabouttheuseofa
+relevancefactorintheadaptationcoefficient.
+[Chelba and Acero, 2004] pursued this approach in adapt-
+ingamaximumentropycapitalizer. [Daume´IIIandMarcu, min w 2+C ξ +C σ(vs, )ξ¯
+2006] argued that this two step process (first estimating w 2|| ||2 i j T l j
+(cid:88) (cid:88)
+P(θ)fromS andthenestimatingθ)wasnon-intuitiveand
+l s.t.y (wTφ(x ) b) 1 ξ ,ξ 0, (x ,y )
+suggested an ensemble model that considered three classi- i i − ≥ − i i ≥ ∀ i i ∈T l
+fiers simultaneously, one for the target, one for the source ysi(wTφ(v j s) − b) ≥ 1 − ξ¯,ξ¯ ≥ 0, ∀ (v j s,y j s) ∈V s .
+and one for the joint portion of the data. This generative
+Here vs are the support vectors of fs(x) with signs
+model,thattheydenoteMEGA,isshowninFig.1. j ∈ V s
+ys. Theauthorsletσ(vs, )beagaussianthatdetermines
+WhenP(θ )isestimatedwithunlabeleddata,theprob- j T l
+|S which vectors are close. [Bergamo and Torresani, 2010]
+lem is technically no longer domain adaptation but rather
+providesasurveyofotherSVM-basedDAmethods.
+modeladaptation. AdaptedGaussianMixtureModelshave
+successfullybeenappliedtospeakerverification[Reynolds
+5.Commonrepresentation
+et al., 2000, W. M. Campbell, 2006], and recently also
+for computer vision [Dixit et al., 2011]. Figure 2 show a Theperhapsmostintuitivewaytododomainadaptation
+schematicillustrationofadaptedGMM. is to create a feature map such that the source and target
+distributionsarealigned. Inotherwords, findingfunctions
+4.2.DiscriminativePriors
+g (X)andg (X)forwhich
+In this section we survey work that investigate modify-
+ing the support vector machine (SVM) algorithms for the t | t s | s
+domainadaptationproblem. Thesemethodstypicallyusea
+wherefunctionsg (X)andg (X)mightbeequal,relatedor on the right is ‘required’ then the query word is likely a
+evenidentity,dependingonthemethod.[Jiang,2008]note noun. This, then, helps disambiguate words such as ’sig-
+thattheentropyofY g(X)islikelytoincreasecomparedto nal’, which can be both a noun and an adjective. This al-
+Y Xsincethefeaturerepresentationusuallyissimplerafter gorithmworksonunsuperviseddata,andthereforedoesn’t
+themapping,andthusencodelessinformation. Thismeans maximize the correspondence between P (Y g (X)) and
+thatBayeserrorislikelytoincrease,andagoodalgorithm P (Y g (X))directly,butratheronrelatedtasks.
+fordomainalignmentshouldtakethisintoaccount. Asim- Severalrecentpapersfromthecomputervisioncommu-
+ple,andstraightforwardwayofdoingthisisbyfeaturese- nitypursuethisidea. [Saenkoetal.,2010],andlater[Kulis
+lection. [SatpalandSarawagi,2006]proposedamethodfor et al., 2011] proposed variations on a metric learning for-
+thisthatremovefeaturestominimizeanapproximateddis- mulation, where they not only learn a mapping that aligns
+tance function between the source and target distributions. thefeaturespacesbutthatalsomaximizeclassseparation.
+Specificallytheyminimize d(Ek ,Ek )where
+k∈K Sl Tu minr(W)+λ cW. (21)
+f(cid:80)(x ,y ) i,j
+Ek = k l l (15) (cid:88)
+Sl N Here Dt and Ds are the target and source (labelled) data
+(xl,(cid:88)yl)∈Sl
+matrices respectively, with one sample per row. Saenko et
+E T k u = f k (x l ,y)P(y | x l ,w), (16) al.chosetor(W)andc i ()as,
+(x(cid:88)l)∈Tu(cid:88) y
+a o r b e je t c h t e iv e e x f p u e n c c t t a i t o i n on is of feature value k for S l and T u . The cW i,j = || xt i ,xs j|| W ≤ u | y i t =y j s
+xt,xs l yt =ys, (22)
+|| i j|| W ≥ | i (cid:54) j
+argm w, a K x w k f k (x,y) − logz w (x) (17) where || a,b || Q is the Mahalanobis distance between a and
+(x,(cid:88)y)∈Slk (cid:88) ∈K bwithrespecttomatrixQ. Withtheseconstraintsthisfor-
+s.t. d(Ek ,Ek ) (cid:15) (18) mulationsisknownasinformationtheoreticmetriclearning
+Sl Tu ≤ (ITML) [Davis et al., 2007], and the algorithmic contribu-
+tionofthepaperistoenforcethateachpairofdatapointsare
+[Duan et al., 2009] took another aproach towards the fromthesourceandtargetdomain,respectively. Theystate
+samegoal.Theyfollow[Borgwardtetal.,2006]andusethe thatthisiscrucialtoensureadomaintransfertransformis
+MaximumMeanDiscrepancy(MMD)criterion,tocompare learned.
+datadistributionsbasedonthedistancebetweenthemeans The authors note that since logdet(W) is only defined
+ofsamplesfromthetwodomainsintheReproducingKer- for positive definite matrices, one can decompose W as
+nelHilbertSpace(RKHS), W = LTL. The mapping, therefore, is symmetric since
+(Dt)TWDs = (Dt)TLTLDs = (LDt)T(LDs). [Kulis
+1 1 2 et al., 2011] address this by changing regularizer to the
+k Ns i − Nt i squaredfrobeniusnorm. Theyalsochangedtheconstraints
+(cid:12)(cid:12) (cid:88) i=1 (cid:88) i=1 (cid:12)(cid:12) toencodesimilarityofdatasamplesratherthantheMaha-
+(cid:12)(cid:12) (cid:12)(cid:12)
+The authors integ(cid:12)r(cid:12)ate this distance with the standa(cid:12)r(cid:12)d SVM lanobisdistance. Thenewformulationbecomes
+lossfunction 1
+k k,f cW = max(0,xtWxs u)2 yt =ys
+i,j i j − | i j
+thusjointlyfinding(1)akernelthatminimizedist (Ds,Dt) max(0,l xtWxs)2 yt =ys. (23)
+k − i j | i (cid:54) j
+and (2) a SVM decision function, SVM , that separate
+k,f Kulis et al. show how to kernelize this formulation. Their
+the data in kernel space. To make this tractable they iter-
+method show minor improvements on the ‘Saenko Items’
+atively solve for (the parameters of) a parameterized mix-
+dataset (Table 2) compared to [Saenko et al., 2010,
+tureofkernelfunctionsandthe(αparametersof)theSVM
+Daume´III,2009]andbaselinemethods.
+lossfunction. TheyshowimprovementsontheTRECVID
+[Jhuo et al., 2012] very recently proposed a formula-
+datasetoverrelatedapproaches.
+tion where the goal is to map the source data, by a matrix
+[Blitzer et al., 2006] proposed Structural Correspon-
+W Rd×d, to an intermediate representation where each
+dence Learning (SCL). SCL finds a feature representation ∈
+transformedsamplecanbereconstructedbyalinearcombi-
+that maximize the correspondence between unlabeled data
+nationofthetargetdatasamples,
+insourceandtargetdomain,byleveragingpivotfeaturethat
+behavesimilarlyinbothdomains. Forexample,iftheword WDs =DtZ, (24)
+augmentationby
+approachesforobjectrecognitionandnaturallanguagepro-
+cessing, andthepaperisconcludedinSection5. Figure1
+illustratesthemotivationbehi(cid:104)ndour(cid:105)approach.
+(cid:104) (cid:105)
+2.RelatedWork
+This ‘frustratingly easy’ method show promising perfor-
+One of the earliest works on semi-supervised domain
+mance doing named-entity recognition on several text
+adaptation was performed by Daume´ III and Marcu [16]
+datasets. Under a linear classification algorithm, this is
+where they model the data distribution corresponding to
+equivalenttodecomposingthemodelparametersforclassk
+sourceandtargetdomainstoconsistofacommon(shared)
+asσ +σ ,whereσ issharedbyalldomains. Thisformu-
+compconenktandacomcponentthatisspecifictotheindivid-
+Fi F s g p i u o g r n u e d r i e 3 ng . 1 F . to i S g t a w u y r o e w c e f la ro h ss a m e v s e [ + G lab o a e n p l d e a d la d n , a a t e n a t d Xa u l n ., f l r a 2 o b m 0 e 1 le t 1 d h ] e d i a s l t o l a u u s r X˜ c tr e a f d t r i o o n m m g a t t i h n h e e c ta o p r r g r r o e e - t - u l n a a i t l o io u d n s om a i n s a d i b n P a s s . o i n c T t a h i l l l i , s y 2 w 0 id 0 a e s 4 n ] f t o i f c o l a l r o l w th to e e d t p h b u e y rp o m o n s e e e th p o o r f o d t p s ra o t n h se s a f d t e c r b o y l m ea [ b E r i n n v i e g n e g - .
+po d s o e m d a m in e b t e h lo o n d g . ingtoclass . In × steadofassumingsomerelevantfeatures co-traininganddomainadaptationusinglabelsfromeither
+× The authors [Daume´III, 2009] provide a different analysis
+ortransformationsbetweenthedomains,wecharacterizethedomainshift domains [36], and semi-supervised variants of the EM al-
+betweenXandX˜ bydrawingmotivationfromincrementallearning. By
+].
+w tio v p hi on ee i w n r tt e o i s nZg osno th ∈ la e vGe gR r e af nn so e s t r r m ,al l t a ×i on vN wn es m s r u. aa b n T n s i p fk ha o ec lsd ey o s Gl pS uN r 1 t o ,id a o pn n o ( d gs s r S . e ee 2 t n ho a ef n t d fhoe re lls d oo d uw o rc t i s en r ga e n s fd p o e tr c am t r i g v eu e t l l y aa ) s- , r o e f ce [ n C tl h y e , lb co a - a re n g d u A la c ri e z r a o t , io 2 n 00 a 4 p ] p . roaches that work on aug-
+wefirstsamplepointsalongthegeodesicbetweenthem(dashedlines)to mentedfeaturespacetojointlymodelsourceandtargetdo-
+obtain‘meaningful’intermediatesubspaces(yellowdots). Wethenana- m 7 a . i M ns u [1 l 5 ti ] - , M an o d d tr a a l ns L fe e r a c r o n m i p n o g nent analysis that projects
+.
+.
+the I t n wo th d is om se a c in ti s o o n n , t w o e th d e i r s e c p u r s o s d t u h c e in c g o k n e c r e n p e t l o H f il m be u r l t ti s - p m ac o e dal
+to preserve some properties of domain-specific data dis-
+s.t.WS =TZ+W,
+learning. In this setting, correspondences are assumed to
+tributions [31] have been proposed. Under certain as-
+assume the availabilitWy WofTlab=elIs.in all domains. Spec(i2fi5c) be on instance, rather then category, level. Also, here it
+sumptions characterizing the domain shift, there have also
+examplescenariosinclude,arobottrainedonobjectsinin- iscommonlyassumedampletraindataisavailableinboth
+beentheoreticalstudiesonthenatureofclassificationerror
+Todosoorlvseetttihnigsspwroibthletmhetghoeaylroeflarxectohgenrizainnkgctohenmstrianinotuttodothoer domains. Similarly to Sec. 5, the common goal of most
+acrossnewdomains[6,4]. Alongsimilarlines,therehave
+nuucnlceoanrsntroarimnedancdontdhietinonasp,polrywahveenrtshioenusoefrthhaesAfeuwgmlabeenlteedd methods is to estimate transformations L nad L so that
+been efforts focusing on domain shiftissuestfor 2Dsobject
+LdagatraanagnedMloutsltoipfliuenrla(AbeLleMd)dmateathcoodrre[Lspionnedtinalg.,t2o0s1a0m].e ob- rPecso((gXnit T ioLnsa=pplxicYatio=nsk.)F=orPint (sXtan T cLe,tS=aexnkYo e=t akl)[ . 3 T 3] his
+jeActncoathteegrorrieecse,nwthmereethoondefworouclodmwpaunttertovgiseinoenraalilzseoopvreor- pcraonpobseeddoanmebetyrilce | tlteianrgni e n . g g.aLppsr=oacIh,tthhautscmoualp | dpiunsgetlhabeetlaerdget
+poaslleaavmailaapbpleindgattoaawciothmomutorneqreupirriensgenmtaatniuoanl[eGffoopratliannleatbaell.-,
+ddaotamafoinr tfoewthecastoeugorcreiedsofmroamin,thoervtaircgeevtedrosma.aOinnetocopurelddiactlso
+20in1g1.].HMavointigvastaeidbythiant,cruenmsuenptearlvilseeadrnDinAg,isthaenyicnrheearteentilny-
+tchoendsoidmeraimnacphpaninggebfoorthunsplaabceelsedinttaorgaetccoamtemgoorniessp.aBcee.rgW- e
+hard problem since we may not have any knowledge on
+termediate representation between the source and domain awmiollabnedgiTnotrhriessasneict[i7o]npbeyrforervmieewdianngeCmapniorinciaclaalnCaolyrsreislaotifon
+howthedomainchangehasaffectedtheobjectcategories.
+databyviewingthegenerativesubspacescreatedfromthese sAevnearlaylsvisa,riParnitnscoipfaSlVCMomfoprotnheinstpAronbalelyms.isL,aLiiannedarFDoxis[c2r6im] i-
+doCmoanitnrsibaustipoonisn:tsInosnteaadGorafsassmsuamniianngmsoamniefoilndf.orImntaetriomnedoin- pnearnfotrAmneadlyosbijse.cWtreecthoegnnictioonnsfidroemrr3ecDenptowinotrcklouutdilsizbiynggethne-se
+atteheretprarenssefonrtmataiotinosncoarnfethateunrebsearcercoossvedroemdabiynss,awmepplirnogpothsee emraeltihziondgst[hSehsamrmalalaemtaolu.,n2t0o1f2l]a.beledtrainingdataontothe
+geaoddaetsai-cdrpivatehn.uTnhsuepfienrvailsfeedaatuprperoreapchretsheanttiastipornimisarailsytamcokteid- poolofweaklylabeleddataobtainedfromtheinternet.
+fevaattuerdebvyecitnocrr,efmroemntaelalceharlnoicnagt.ioSninacleonhgumthaenpsaatdha.pTth(beeyttuesr)e 7.1U.nBsuapcekrvgirsoedunDdA,ontheotherhand,isaharderproblem
+pabrettiwaleleenasetxstrqeumaeredsotmoalienasrnifathmeyod‘gelraodnuathlliys’ewxatelkndtherdoufegah- sincewedonothaveanylabeledcorrespondencebetween
+In this section we recap the formulations of Principal
+tutrheerpeaptrhesbeentwtaetieonnt.hTeadbolme1ainshso(we.gt.h[e3e4v,a1l2u]a)t,iowneopfrothpiossae:nd the domains to estimate the transformation between them.
+ComponentAnalysis(PCA),LinearDiscriminantAnalysis
+severalotherdiscussedmethods. Differing from the set of many greedy (and clustering-
+Representingthegenerativesubspacesofsamedimen- (LDA)andCanonicalCorrelationAnalysis(CCA).
+• sion obtained from X and X˜ as points on the Grass- type P ) r s i o n l c u i t p io a n l s C f o o m r t p h o is ne p n ro t b A le n m al [ y 3 s 5 is , : 2 P 3, C 1 A 1 , ], is B a li p tz o e p r u e l t ar al di-
+6.TransferLearning [10, 9] proposed a structural correspondence learning ap-
+mannmanifold,andsamplepointsalongthegeodesic mensionality reduction method that projects the data into
+proach that selects some ‘pivot’ features that would occur
+Asbmetewneteionntehdetiwnothtoeoibnttariondiunctetiromne,ditaratenssfuebrsplaecaernrienpg-,
+.
+.
+sometirmeseesnctaatliloendsmthualttai-rteasckonlesiasrtneinntgwiisthdtihffeeurenndterflryoimngDgAe-. a l l o i w ze s d . L th e e t rxe1su.l.t.sxonf b [1 e 0 t ] he by in p p r u e t s d en at t a in . g L a et t w he1or b e e ti t c h a e l d an es a i l r - ed
+In tranosmfeertrlyeaorfnitnhges(pTaLc)etshpeanjnoeindtbpyrothbeasbeilsiutybsopfaceeasc;h task ypsriosjeocntitohnedfeiraetcutrieonre.pLreesteanltsaoti w on1 T f w un1c=tion1s. Tthhaet msheoaunldobfethe
+l upsreodjetcotemdindiamtaizieswdo
+Tmx¯a,inwdhievreergx¯en=ce
+elxlia.sTchlaesvsiafiricaan-ce
+data•distributionP(X). Normally,thestatespaceoftheY toiofntheerrporro,juecntdeedrdcaetrataiisn domain shift assumptions. More
+convey on the labeled X, and learn a discriminativek
+.
+.
+.
+).
+n insights along this line of work was provided by [8, 29].
+o a it r n
+o o r m { u d
+r a is i m
+r s e i k , b th | a u
+o n ti d d
+n i f n ko o
+kh t c = h a o n e 1 m d
+ablesθd1a.ti.n.gθ klabelPedΘd(θat)a . inthetarget,ifany. wherethemanifoldsonwhi (cid:88) cihthesourceandtargetdomain
+DA,whileformallydifferent,canbethoughtofasaspe- liearealignedbypreservinganotionofthe‘neighborhood
+whichcanbeexpressedintermsofthedatacovariancema-
+ciOalrgcaasneizaotfiotrnanosffetrhleeapranpinegr:wiSthecttiwono t2asrkesv,ieownseroenlattehde structure’ of the data points. All these methods primarily
+sowuorcrke.,aSnedcotinoeno3ndtihsecutasrsgeest,thwehperroepΩos(eYd)m=ethΩo(dY. )S.ection focus on natural language processing. However in visual
+4Tphroevcidlaessseicxppearpimerenbtyal[dDeatauimlse´aInIId, c2o0m09p]arcisaonnsbewvitihewDeAd objectrecognit
+lativelyle
+in this framework. Daume´ propose a simple feature space N − −
+Domain Naive - train Metric learning Manifold [Gopalan et al., Low-rank A-SVM (Su-
+onalldata (Supervised) 2011] (Supervised) pervised)
+[Kulis et al., [Jhuo et al., [Yang et al.,
+2011] 2012] 2007]
+Source Target Naive asymm symm Unsupervised Supervised RDALR A-SVM
+webcam dslr 22.13 1.2 25 27 19 1.2 37 2.3 32.89 1.2 25.96 0.7
+dslr webcam 32.17 0.8 30 31 26 0.8 36 1.1 36.85 1.3 33.01 0.8
+amazon webcam 41.29 1.3 48 44 39 2.0 57 3.5 50.71 0.8 42.23 0.9
+Table1.EvaluationofdiscussedmethodontheDAdatasetintroducedin[Kulisetal.,2011]. ThenaivemethodtrainonS ∪T. The
+methodsaretrainedon8imagespercategory(ifsourceiswebcamordslror20image(foramazon)fromthesourcedomainand3per
+categoryforthetargetdomain.Thebestresultforeachexperimentismarkedinbold.
+as uTSu. We now maximize the projected variance with findsprojectiondirectionsws andwt tomaximizethecor-
+respect to w . The constrained maximization problem can relationbetweentheprojecteddata. Moreformally,itfinds
+bewrittenas projectiondirectionsbysolvingthefollowingoptimization
+w =argmaxw TΣ w
+w1 ρ = max corr(Dtwt,Dsws) (33)
+s.t.w Tw =1 (30) wt,ws
+= max (cid:104) (cid:105) (34)
+Linear Discriminant Analysis: While PCA is very wt,ws Dtwt Dsws
+popularforunsuperviseddatadimensionalityreductionpur- || |||| ||
+posesitisagnostictoclass,andmightprojectdataindirec- = max ts (35)
+tions that are unsuitable for class discrimination. Linear wt,ws w x TΣ tt wtwsTΣ ss ws
+DiscriminantAnalysis(LDA)findsprojectiondirectionsby
+whereΣ isthecovarian(cid:112)cematrixbetweendataindomains
+minimizingthewithinclassscattermatrixwhilemaximiz- ij
+i and j, i,j s,t . Note that this formulation requires
+ing the between class scatter. LDA can be derived as fol- ∈ { }
+thesamenumberofsamplesfromeachdomain,butnotthe
+lows. Let = x1,...x1 and = x2,...x2 be
+X 1 { 1 l1} X 2 { 1 l2} samedimensionality.Wealsonotethattheoptimizationcan
+samplesfromtwodifferentclasses. Thedataprojectiondi-
+bewrittenasaconstrainedoptimizationas
+rectionw isgivenbysolving
+wt T 0 Σ wt
+w =argmaxw TS w max ts (36)
+1 w1 1 B 1 wt,ws
+(cid:21) (cid:20)
+(cid:21)(cid:20)
+s.t.w 1 TS W w 1 =1 (31) wt T Σ 0 wt
+s.t. tt =1 (37)
+where (cid:20) (cid:21) (cid:20) (cid:21)(cid:20) (cid:21)
+The optimization problem Eq. (33) (or Eq. (36)) can be
+S B :=(m 1 m 2 )(m 1 m 2 )T formulated as a generalized eigenvalue problem which
+S := (x m )(x m )T (32) can be solved as efficiently as regular eigenvalue prob-
+− − lems [Hardoon et al., 2004]. For more details [Hardoon
+∈X(cid:105)
+etal.,2004]providesanexcellentanalysisonCCAandthe
+are the within and between scatter matrices, and m is the kernelizedversionKCCA.
+mean of samples in . Note the very similar forms of
+X (cid:105) 7.2.GeneralizedMultiviewAnalysis
+Eq.(30)andEq.(31). Eq.(30)isaregulareigenvalueprob-
+lem,whileEq.(31)isageneralizedeigenvalueproblem. GMAwasproposedby [Sharmaetal.,2012]asaunify-
+Canonical Correlation Analysis: Developed by ingframeworkforlearningmultimodaldiscriminativelin-
+[Hotelling, 1936] CCA is a data analysis and dimension- earprojections. TheyarguethatmethodssuchasPCAand
+ality reduction method, that can be though of as a multi- LDA do not handle multi-view data. On, the other hand,
+modal extension to PCA. CCA finds basis vectors for two methods such as CCA is not supervised. Other methods
+setsofvariablessuchthatthecorrelationsbetweenthepro- such as SVM-2K [Farquhar et al., 2005], CDSVM [Jiang
+jectionsof thevariables ontothesebasis variablesare mu- etal.,2008],ASVM[Yangetal.,2007]meetthesecriteria
+tuallymaximized. UsingnotationfromSec.2.1,weletDs butdonotgeneralizewelltounseenclasses. Theunifying
+beans byds matrixwithrowsxs,andDt similarly. CCA frameworkofGMAis
+John Blitzer, Ryan McDonald, and Fernando Pereira. Domain
+adaptationwithstructuralcorrespondencelearning.Conference
+max wt T A t αZ t Z s T wt (38) onEmpiricalMethodsinNaturalLanguageProcessing,2006.
+wt,ws (cid:20) ws (cid:21) (cid:20) αZ s Z t T µA s (cid:21)(cid:20) ws (cid:21) 5
+s.t. wt T B t 0 wt =1. (39) AvrimBlumandTomMitchell.Combininglabeledandunlabeled
+ws 0 γB s ws datawithco-training. InConf.onComputationallearningthe-
+(cid:20) (cid:21) (cid:20) (cid:21)(cid:20) (cid:21)
+ory,1998. 1
+PCAcanberecovered(inthei’thview)throughthisframe-
+work by setting A = Σ ,B = I. Similarly, LDA can K.Borgwardt,A.Gretton,M.Rasch,H.-P.Kriegel,B.Schlkopf,
+be recovered A = SB,B = SW, with SB and SW de- andA.Smola. Integratingstructuredbiologicaldatabykernel
+fined as above. CCA can be recovered as A = 0,B = maximummeandiscrepancy. Bioinformatics,2006. 5
+DiWi(Xi)T,andZ =X .
+i i SteveBranson,PietroPerona,andSergeBelongie.Strongsupervi-
+Usingthisframeworktheyproposetwomethods,Gener-
+sionfromweakannotation: Interactivetrainingofdeformable
+alizedMultiviewLDAandGeneralizedMultiviewMarginal part models. In IEEE International Conference on Computer
+Fisher Analysis (GMMFA). Here we recap only GMLDA. Vision(ICCV),2011. 1
+As noted above, LDA in the i’th view can be achieved by
+setting A = SB,B = SW. By setting Z = M , a ma- CiprianChelbaandAlexAcero. Adaptationofmaximumentropy
+capitalizer:Littledatacanhelpalot.ComputerSpeechAndLan-
+trix with columns that are class means, they enforce class
+guage,2004. 1,4,6
+mean alignment across classes. The authors also note that
+thetwostepprocessofLDA+CCAorviceversaneedsto HalDaume´III.Frustratinglyeasydomainadaptation.CoRR,2009.
+beconsideredasabaselinemethod. Similarapproachesin- 1,5,6
+clude[Rasiwasiaetal.,2010]whointroducedsemanticcor-
+HalDaume´IIIandDanielMarcu.Domainadaptationforstatistical
+relation matching, which uses logistic regression to com-
+classifiers. JournalofArtificialIntelligenceResearch,2006. 1,
+bineCCAwithsemanticmatching. Theyalsointroducethe
+WikiTextdataset(Table2).
+Theproposedmethodoutperformsallbaselinemethods Jason Davis, Brian Kulis, Suvrit Sra, and Inderjit Dhillon.
+on multiPIE and VOC2007 and is on par with the domain Information-theoreticmetriclearning. IninNIPS2006Work-
+specificapproachby [Rasiwasiaetal.,2010]ontheWiki- shoponLearningtoCompareExamples,2007. 5
+Textdataset.
+Thomas G. Dietterich, Richard H. Lathrop, and Toms Lozano-
+Prez. Solvingthemultipleinstanceproblemwithaxis-parallel
+Name Description Instance or
+rectangles. ArtificialIntelligence,89(1-2):31–71,1997. ISSN
+Class corre-
+0004-3702. 1
+M. Dixit, N. Rasiwasia, and N. Vasconcelos. Adapted gaussian
+MultiPIE Facerecognitiondataset Instance
+modelsforimageclassification. CVPR,2011. 2,4
+containing face images
+underdifferentPoseIllu- LixinDuan, IvorW.Tsang, DongXu, andStephenJ.Maybank.
+minationandExpression Domaintransfersvmforvideoconceptdetection.CVPR,2009.
+WikiText Each item is represented Instance 1,5
+using a text and an im-
+Theodoros Evgenious and Massimiliano Pontil. Regularized
+age.
+multi-task learning. international conference on Knowledge
+Pascal 5011 / 4952 (training / Instance
+discoveryanddatamining,2004. 6
+VOC2007 testing)image-tagpairs
+Office Object images from Class (subset Jason D.R. Farquhar, David R. Hardoon, Hongying Meng, and
+dataset Amazon, SLR and withinstance) John Shawe-Taylor. Two view learning: Svm-2k, theory and
+practice. NIPS,2005. 7
+LiFei-Fei,R.Fergus,andP.Perona. One-shotlearningofobject
+Table2.Computervisiondatasetsfordomainadaptationmethod
+categories. PAMI,2006. 1
+benchmark.
+RaghuramanGopalan,RuonanLi,andRamaChellappa. Domain
+adaptation for object recognition: An unsupervised approach.
+References ICCV,2011. 1,6,7
+AlessandroBergamoandLorenzoTorresani. Exploitingweakly- David R. Hardoon, Sandor Szedmak, and John Shawe-Taylor.
+labeled web images to improve object classication: a domain Canonical correlation analysis: An overview with application
+adaptationapproach. NIPS,2010. 1,4 tolearningmethods. NeuralComputing,2004. 7
+Harold Hotelling. Relations between two sets of variates. MasashiSugiyamaandKlaus-RobertMu¨lcer.Input-dependentes-
+Biometrika,1936. 7 timationofgeneralizationerrorundercovariateshift. Statistics
+&Decisions,2005. 3
+JiayuanHuang,ArthurGretton,BernhardSchlkopf,AlexanderJ.
+Smola,andKarstenM.Borgwardt.Correctingsampleselection VladimirN.Vapnik. TheNatureofStatisticalLearningTheory.
+biasbyunlabeleddata. InInNIPS.MITPress,2007. 3 Springer,1999. 2
+I-Hong Jhuo, Bong Liu, D.T. Lee, and Shih-Fu Chang. Robust D.A.ReynoldsW.M.Campbell,D.E.Sturim. Supportvectorma-
+visualdomainadaptationwithlow-rankreconstruction. CVPR, chinesusinggmmsupervectorsforspeakerverificaion. Signal
+2012. 1,5,7 ProcessingLetters,2006. 4
+JingJiang. Aliteraturesurveyondomainadaptationofstatistical PeterWelinder,SteveBranson,SergeBelongie,andPietroPerona.
+classifiers. Techreport,2008. 1,2,5 Themultidimensionalwisdomofcrowds. InNeuralInforma-
+tionProcessingSystemsConference(NIPS),2010. 1
+WeiJiang,EricZavesky,Shih-FuChang,andAlexLoui. Cross-
+domainlearningmethodsforhigh-levelvisualconceptclassifi-
+Jun Yang, Rong Yan, and Alexander G. Hauptmann. Cross-
+cation. ICIP,2008. 4,7
+domain video concept detection using adaptive svms. Inter-
+nationalConferenceonMultimedia,2007. 4,7
+Ashish Kapoor, Kristen Grauman, Raquel Urtasun, and Trevor
+Darrell. Activelearningwithgaussianprocessesforobjectcat-
+Chunnam John Yu and Thorsten Joachims. Learning structural
+egorization. InComputerVision,2007.ICCV2007.IEEE11th
+svmswithlatentvariables,2009. 1
+InternationalConferenceon,2007. 1
+B.Kulis,K.Saenko,andT.Darrell.Whatyousawisnotwhatyou
+get: Domain adaptation using asymmetric kernel transforms.
+CVPR,2011. 1,5,7
+P.PeronaL.Fei-Fei,R.Fergus.Learninggenerativevisualmodels
+fromfewtrainingexamples:Anincrementalbayesianapproach
+tested on 101 object categories. Computer Vision and Image
+Understanding,2007. 2
+Yi Lin, Yoonkyung Lee, and Grace Wahbe. Support vector ma-
+chines for classificaion in nonstandard situations. Machine
+learning,2002. 3
+Zhouchen Lin, Minming Chen, and Yi Ma. The augmented la-
+grangemultipliermethodforexactrecoveryofcorruptedlow-
+rankmatrices. Analysis,2010. 6
+S.JialinPanandQ.Yang. Asurveyontransferlearning. IEEE
+TransactionsonKnowledgeandData,2009. 1
+N.Rasiwasia,J.C.Pereira,E.Coviello,G.Doyle,G.R.G.Lanck-
+riet, R. Levy, and N. Vasconcelos. A new approach to cross-
+modal multimedia retrieval. Proceedings of the international
+conferenceonMultimedia,2010. 8
+DouglasA.Reynolds, ThomasF.Quatieri, andRobertB.Dunn.
+Speaker verification using adapted gaussian mixture models.
+Digitalsignalprocessing,2000. 2,4
+K. Saenko, B. Kulis, M. Fritz, and T. Darrell. Adapting visaul
+categorymodelstonewdomains. ECCV,2010. 1,5
+EepkumarSatpalandSunitaSarawagi.Domainadaptationofcon-
+ditionalprobabilitymodelsviafeaturesubsetting,2006. 5
+A.Sharma,A.Kumar,andH.Daume´III. Generalizedmultiview
+analysis:Adiscriminativelatentspace. CVPR,2012. 6,7
+HidetoshiShimodaira. Improvingpredictiveinferenceunderco-
+varianceshiftbyweightingthelog-likelihoodfunction.Journal
+ofstatisticalplanningandinference,2000. 1,3

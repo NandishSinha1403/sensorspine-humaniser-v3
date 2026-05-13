@@ -1,0 +1,1628 @@
+]hp-tnauq[
+2v02160.0151:viXra
+Quantum Cryptography
+Beyond Quantum Key Distribution
+Anne Broadbent and Christian Schaffner†
+Quantum cryptography is the art and science of exploiting quantum mechanical effects in
+order to perform cryptographic tasks. While the most well-known example of this discipline is
+quantum key distribution (QKD), there exist many other applications suchas quantum money,
+randomness generation,secure two- and multi-party computation and delegatedquantum com-
+putation. Quantum cryptography also studies the limitations and challenges resulting from
+quantum adversaries—includingthe impossibility of quantum bit commitment, the difficulty of
+quantum rewinding and the definition of quantum security models for classical primitives.
+Inthisreviewarticle,aimedprimarilyatcryptographersunfamiliarwiththequantumworld,
+wesurveythe areaoftheoreticalquantumcryptography,withanemphasisonthe constructions
+and limitations beyond the realm of QKD.
+Keywords: Quantumcryptography conjugate coding quantummoney quantum keydistri-
+bution limited-quantum-storagemodels delegatedquantumcomputation device-independence
+quantum bit commitment quantum two-party computations quantum rewinding superposi-
+tion queries quantum random oracle model.
+Mathematics Subject Classification: 94A60 81P94
+∗Department of Mathematics and Statistics, University of Ottawa, Canada; abroadbe@uottawa.ca.
+†Institute for Logic, Language and Computation (ILLC), University of Amsterdam, and Centrum Wiskunde &
+Informatica (CWI), The Netherlands;c.schaffner@uva.nl.
+1 Introduction 3
+1.1 Overview . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+1.2 Further topics . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+2 Basics of Quantum Information 7
+2.1 State Space . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+2.2 Unitary Evolution and Circuits . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+2.3 Measurement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+2.4 Quantum No-Cloning . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+2.5 Quantum Entanglement and Nonlocality . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+2.6 Physical Representations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+3 Quantum Cryptographic Constructions 10
+3.1 Conjugate Coding . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+3.2 Quantum Key Distribution . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+3.3 Bit Commitment implies Oblivious Transfer. . . . . . . . . . . . . . . . . . . . . . . . . 13
+3.3.1 Oblivious Transfer (OT) and Bit Commitment (BC) . . . . . . . . . . . . . . . 13
+3.3.2 Quantum Protocol for Oblivious Transfer . . . . . . . . . . . . . . . . . . . . . . 14
+3.4 Limited-Quantum-Storage Models. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+3.5 Delegated Quantum Computation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+3.6 Quantum Protocols for Coin Flipping and Cheat-Sensitive Primitives . . . . . . . . . 17
+3.7 Device-Independent Cryptography . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+4 Quantum Cryptographic Limitations and Challenges 19
+4.1 Impossibility of Quantum Bit Commitment . . . . . . . . . . . . . . . . . . . . . . . . . 19
+4.2 Impossibility of Secure Two-Party Computation using Quantum Communication . . 20
+4.3 Zero-Knowledge Against Quantum Adversaries —“Quantum Rewinding” . . . . . . . 20
+4.4 Superposition Access to Oracles — Quantum Security Notions . . . . . . . . . . . . . 21
+4.5 Position-Based Quantum Cryptography . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+5 Conclusion and Open Problems 23
+6 Acknowledgements 24
+7 References 25
+1 Introduction
+The relationship between quantum information and cryptography is almost half-a-century old: a
+1968 manuscript of Wiesner (published more than a decade later [Wie83]), proposed quantum
+money as the first ever application of quantum physics to cryptography, and is also credited for
+the invention of oblivious transfer—a key concept in modern cryptography that was re-discovered
+years later by Rabin [Rab81]. Still today, the two areas are closely intertwined: for instance, two of
+the most well-known results in quantum information stand out as being related to cryptography:
+quantum key distribution (QKD) [BB84] and Shor’s factoring algorithm [Sho94].
+Thereis nodoubtthat QKDhas taken thespotlight interms of theuseof quantum information
+for cryptography (in fact, so much that the term “quantum cryptography” is often equated with
+QKD—a misconception that we aim to rectify here!); yet there exist many other uses of quantum
+information in cryptography. What is more, quantum information opens up the cryptographic
+landscape to allow functionalities that do not exist using classical information alone, for example
+uncloneable quantum money. We note, however, that the use of quantum information in cryptog-
+raphy has its limitations and challenges. For instance, we know that quantum information alone is
+insufficient to implement information-theoretically secure bit commitment; and that a proof tech-
+nique called rewinding (which is commonly used in establishing a zero-knowledge property for a
+protocol) doesnotdirectly carry over tothequantumworldandmustre-visited inlight ofquantum
+information.
+In this paper, prepared on the occasion of the 25th anniversary edition of Designs, Codes
+and Cryptography, we offer a survey of some of the most remarkable theoretical uses of quantum
+information forcryptography, as wellas anumberoflimitations andchallenges thatcryptographers
+face in light of quantum information. We assume that the reader is familiar with cryptography,
+but we do not assume any prior knowledge of quantum information. Quantum cryptography is
+a flourishing area of research, and we have chosen to give an overview of only a limited number
+of topics. The reader is, of course, encouraged to follow up by consulting the references. To
+the best of our knowledge, prior survey work on the topic of “quantum cryptography beyond key
+exchange” is limited to a 2006 survey by Mu¨ller-Quade [Mu¨l06] and a 1996 survey by Brassard
+and Cr´epeau [BC96]; see also an interesting personal account by Brassard [Bra05]. A number of
+surveys that focus on QKD exist and are listed in Section 3.2.
+1.1 Overview
+The predictions of quantum mechanics defy our everyday intuition: concepts such as superposition
+(a particle can be in multiple places or states at the same time), entanglement (particles are
+correlated beyond what is possible classically) and quantum uncertainty (observing one property
+of a particle intrinsically degrades the possibility of observing another) are partly responsible for
+the bewildering possibilities in the quantum world. Section 2 of this survey contains a brief
+introduction to the mathematical formalism of quantum information as it pertains to quantum
+cryptography (no prior knowledge of quantum mechanics is assumed). Topics covered in this
+section include the mathematical formalism for the representation and manipulation of qubits (the
+fundamental unit of quantum information). We also include a brief survey of concepts such as the
+quantum no-cloning theorem, entanglement and nonlocality — all of which play an important role
+in quantum cryptography.
+Section 3 of this survey is devoted to quantum cryptographic constructions. The principal
+appeal in using quantum information for cryptography is in establishing a qualitative advantage.
+We usethe word “classical” hereand throughout to mean “non-quantum”.
+More precisely, the goal is to develop quantum cryptographic protocols that achieve some function-
+ality in a way that is fundamentally advantageous compared to using classical information alone.
+This quantum advantage can be of the following types:
+• aquantumprotocolachieves information-theoretic (statistical) security; anyclassicalprotocol
+achieves this task with computational security at best;
+• a quantum protocol achieves computational security; no classical protocol can achieve this
+task, even with computational security.
+Many of the quantum constructions that we cover in this survey (whether they are of the first
+or second type) are inspired by the original proposal of Wiesner called conjugate coding. This
+construction embodies many unique features of quantum information, as we explain in Section 3.1.
+In particular, conjugate coding is used in constructions for physically unforgeable quantum money
+(Item2),aswellasinquantumkeydistribution—amethodthatallowstheinformation-theoretically
+secure expansion of shared keys (Section 3.2). Another application of conjugate coding in quantum
+cryptography is in showing that two basic cryptographic primitives, bit commitment and obliv-
+ious transfer are (information-theoretically) equivalent in the quantum world (Section 3.3)—an
+equivalence that is provably false in the classical world. Technologically speaking, perfect quan-
+tum communication and storage is a challenge; in building protocols in the bounded- and limited-
+storage quantum models (collectively known as limited-storage models), ingenious cryptographers
+have turned this challenge to their advantage (Section 3.4)—once again, the key ingredient in the
+construction being conjugate coding. Motivated by the perspective that quantum computations
+will, in the future, be outsourced to remote locations (again, because of technological challenges
+involved in building quantum computers), cryptographers have studied protocols for the delegation
+of quantum computations, which wecover inSection 3.5. InSection 3.6, wereview thepossibility of
+quantum primitives that accomplish a security against malicious participants that is typically too
+weak for cryptographic applications (since it does not provide exponential security), yet is still of
+interestduetotheadvantagethatquantuminformationprovides: thisisembodiedinquantumpro-
+tocols for weak coin flipping and imperfect bit commitment. Finally, we survey device-independent
+cryptography (Section 3.7) which can beseen as a culmination of many of the constructions already
+mentioned: thanks to this sophisticated technique, it is possible to achieve cryptographic tasks
+such as quantumkey distributionand randomnessexpansion/amplification, with untrusted devices,
+which are quantum devices that are assumed to have originated from an adversary. Thevery possi-
+bility of achieving this result stems from one of the most mysterious quantum phenomena, namely
+nonlocality (which is introduced in Section 2.5).
+While quantum information provides a number of advantages for cryptography, it also has its
+uniquelimitations and challenges, which we survey in Section 4. Thefirstlimitations that we sur-
+veyareintermsofimpossibility results,namelytheimpossibilityofinformation-theoretically secure
+quantum bit commitment (Section 4.1) and of information-theoretically secure two-party quantum
+computation (Section 4.2). Next, we cover two topics that are applicable to purely classical proto-
+cols, in which essentially the only concern is that the adversary is capable of quantum information
+processing: quantum rewinding (Section4.3)andsuperposition attacks (Section4.4). Weemphasize
+that the cryptographic challenges encountered here are not related to the superior computational
+power of a quantum adversary, but rather stem from quantum phenomena such as the no-cloning
+theorem (which forces us to develop an alternative to the common rewinding method used in order
+to establish the zero-knowledge property of interactive protocols), and of quantum superposition
+(which requires a new framework describing interactions with oracles—namely in the quantum ran-
+dom oracle model). Finally, in Section 4.5, we survey the research area of position-based quantum
+cryptography, where players use their geographical position as cryptographic credential; while the
+current main result in this area is a no-go theorem for quantum protocols for the task of posi-
+tion verification, the possibility of position-based quantum cryptography against resource-bounded
+adversaries remains a tantalizing open question.
+One of the lessons learned from all these impossibility results is that quantum security is defi-
+nitely a tricky business—quantum cryptographers should take this as a warning: the desire to find
+a “quantum advantage” (i.e. an application where quantum information outperforms all classical
+solutions) is extremely strong, and cryptographers must bevigilant since thequantum world comes
+with an abundance of subtleties.
+We note that the bibliographic entries in this survey are available as an open-source BibT X
+1.2 Further topics
+Already, theliterature on quantumcryptography is vast, and inthis surveywe have chosen tofocus
+on only a few topics. We briefly mention here some topics that are not included in this survey:
+• Everlasting security. A protocol has everlasting security if it is secure against adversaries
+that are computationally unlimited after the protocol execution. This type of security is
+very difficult to obtain classically, even under strong setup assumptions such as a common
+reference string or signature cards [Unr13]. Even though we do not treat the notion explicitly
+in this survey, many quantum-cryptographic protocols such as QKD (Section 3.2) and the
+limited-quantum-storage protocols (Section 3.4) come with the important benefit of everlast-
+ing security. In fact, everlasting security might be the most important reason to use QKD in
+the first place [SML10].
+• Quantum functionalities. In this survey, we focus mainly on classical functionalities, but
+quantum functionalities areofcoursealsoofinterest: assumingfullquantumcomputersforall
+parties, one can study the secure realization of a quantum ideal functionality. This includes
+topics such as the encryption of quantum messages in the information-theoretic [AMTdW00,
+BR03,HLSW04,Leu02], entropic [Des09,DD10] and computational [BJ15] settings, quan-
+tum secret sharing [CGL99], multi-party quantum computation [BCG 06], authentication of
+quantum messages [BCG 02], two-party secure function evaluation [DNS10,DNS12], quan-
+tum anonymous transmission [CW05,BBF 07], quantum one-time programs [BGS13] and
+quantum homomorphic encryption [YPF14,BJ15].
+• Key recycling. Using quantum information, it is possible to detect eavesdropping such
+that key re-use is possible (if no eavesdropping is detected), while maintaining information-
+theoretic security. This idea was originally proposed by Bennett, Brassard and Breidbart in
+1982 [BBB14] and was worked out in detail by Damg˚ard, Pedersen and Salvail in [DPS14].
+• Quantum uncloneability. Because quantuminformation cannot, ingeneral, beduplicated,
+(see Section 2.4), we can achieve functionalities related to copy-protection that cannot be
+obtained in the classical world. These include uncloneable encryption [Got03], quantum
+copy-protection [Aar09] and revocable time-release encryption [Unr14b].
+• Isolation assumptions. Themulti-prover interactive proofscenario [BGKW88]enables the
+information-theoretic implementation of primitives that are unachievable in the single-prover
+setting. However, the study of quantum information has shed new light on the “isolation”
+assumptions that are required in order to establish security [CSST11]. Related to this is the
+study of protocols which are secure against provers sharing correlations that are very strong,
+yet do not allow signalling: [KRR14,FF15]. One particular way to enforce isolation is to
+spatially separate the players by a far enough distance: the relativistic no-signalling principle
+ensuringthatnoinformationcantravel fasterthanthespeedoflight betweenthetwo sites. A
+relativistic (classical) bit-commitment scheme was first proposed by Kent [Ken99] and lately
+improved and experimentally implemented [LKB 15]. See also related work [LKB 13].
+• Leakage resilience using quantum techniques. In leakage resilient computation, we are
+interested in protecting computations from attacks according to various leakage models. In
+one of these models (the “split-state” model), it was shown [DDN15] that quantum infor-
+mation allows a solution to the orthogonal-vector problem, while no classical solution exists.
+Also, related work [LRR14] shows that techniques from fault-tolerant quantum computation
+can be used to construct novel leakage-resilient classical protocols.
+• Quantum cryptanalysis. Historically, the study of quantum algorithms is closely related
+toquantum cryptanalysis, whichisthestudyofquantumalgorithms forcryptanalysis. Thisis
+evidenced by some of the very early work on quantum algorithms, including Shor’s algorithm
+for computing discrete logarithms and integer factoring in quantum polynomial-time [Sho94],
+Grover’s search algorithm [Gro96,BBHT98] (which provides a square-root speedup in term
+of query complexity, for searching in an unstructured database). Recent work in the area
+of quantum cryptanalysis includes [Reg04,Hal05,Hal07,BJLM13,CJS13,LMvdP13]. See also
+[Mos09,BvD10] for surveys on quantum algorithms, as well as the Quantum Algorithm Zoo.
+• Merkle puzzles in a quantum world. The first unclassified proposal for secure commu-
+nication over insecure channels was made by Merkle in 1974 (published years later [Mer78]).
+The main idea is that honest parties can establish a secure communication channel by ex-
+pending work proportional to N, yet any successful attack requires a computational effort
+proportional to N . In a nutshell, Grover’s search algorithm [Gro96] implies that quantum
+computers break the security of Merkle’s scheme. However, [BHK 11] show how to restore
+security in the quantum context: either by using a new classical protocol (in which case an
+adversary can break the scheme by expending work proportional to N (which is shown
+to be optimal), or by using a quantum protocol (in which case the quadratic security can
+essentially be restored).
+• From classical to quantum security. What can we say about the relationship between
+security in the classical setting versus the quantum setting? In this context, Unruh [Unr10]
+shows that if a protocol is statistically secure in the universal composability (UC) frame-
+work [Can01,Unr10], then the same protocol is quantum UC secure as well, and Fehr, Katz,
+Song, Zhou and Zikas [FKS 13] classified the feasibility of cryptographic functionalities in
+the universal composability (UC) framework , and showed that feasibility in the quantum
+world is equivalent (for a large family of functionalities) to classical feasibility, both in the
+computational and statistical setting. See also [HSS11,Son14].
+• Post-quantum cryptography. The area of post-quantum cryptography [BBD09] 4 finds
+A primitive is feasible if it can beimplemented in the UCmodel from secure channels only.
+The term is quite well-established by now, but chosen somewhat unfortunately, because the research area is
+concerned with cryptography which is still secure at the beginning and not after the end of the era of large-scale
+quantumcomputers.
+alternatives to the RSA and discrete-log assumptions in (classical) cryptography, in order
+to circumvent quantum attacks stemming from Shor’s algorithm. This area is traditionally
+consideredatopicrelated toclassical cryptography, buttheissuesarisingfromtheproblemof
+quantum rewinding (Section 4.3) and the superposition model for oracle access (Section 4.4)
+may be considered part of post-quantum cryptography as well.
+• Quantum public keys. The use of quantum states as public keys presents fundamental
+challenges intermsof verifiability andre-usability; nevertheless, thesetypesofkeys have been
+studied in the context of quantum digital signatures [GC01,DWA14] and quantum public-key
+identification [IM11].
+• Distributed quantum computation. Quantum information in known to provide advan-
+tages in distributed computation, namely in terms of quantum Byzantine agreement [BH05]
+and a quantum leader election in anonymous networks [TKM12].
+• Experimental implementations. Experimental implementations of quantum cryptog-
+raphy are mostly focused on QKD (see [ABB 14]), but also include quantum coin flip-
+ping [MTVUZ05,NFHM08,BBB 11], quantum secret sharing [TZG01], delegated quantum
+computation [BKB 12,FBS 14], limited-quantum-storage cryptography [NJC 12,ENN 14],
+and device-independent randomness generation [PAM 10,CMA 13].
+2 Basics of Quantum Information
+This section contains the rudiments of quantum information that are used in the main text; we
+assume of the reader only basic knowledge of linear algebra. The reader should be warned that
+quantum theory is actually much more rich, subtle and beautiful! Textbook references on quantum
+information include: [NC00,KLM07,Mer07,Wil13,Wat15].
+2.1 State Space
+The bit is the fundamental unit of information for classical information processing. In quantum
+information processing, the corresponding unit is the qubit, which is described mathematically by
+a vector of length one in a two-dimensional complex vector space. We use notation from physics
+to denote vectors that represent quantum states, enclosing vectors in a ket, yielding, i.e. ψ . We
+can write any state on one qubit as a ψ = α 0 +β 1 , where the states 0 and 1 form a basis
+for the underlying two-dimensional vector space, and where α, β are complex numbers satisfying
+α 2 + β 2 = 1. If neither α nor β are zero, then we say that ψ is in a superposition (linear
+combination) of both 0 and 1 . The quantum state of two or more qubits can be described by a
+tensorproduct. Hence,thefourbasisstatesfortwoqubitsare 0 ⊗0 , 0 ⊗1 , 1 ⊗0 , 1 ⊗1 which
+is usually abbreviated as 00 , 01 , 10 , 11 . Extending the concept of superposition to multiple
+qubits, we see that a system of n qubits can be in any superposition of the n-bit basis states
+00...0 , 00...1 ,..., 11...1 . Hence, an n-qubit state is described by 2 complex coefficients. In
+case of bipartite quantum states shared among Alice and Bob, subscripts can be used to indicate
+which player holds which qubits. For instance, the 2-qubit state 0 ⊗ 0 = 00 means that
+Alice and Bob both hold a qubit in state 0 .
+2.2 Unitary Evolution and Circuits
+Basic evolutions of a quantum system are described by linear operations that preserve the norm;
+formally, these operations can be expressed as unitary complex matrices (a complex matrix U is
+unitary if UU† = I, where U† is the complex-conjugate transpose of U). Quantum algorithms
+are commonly described as circuits (rather than by quantum Turing machines) consisting of basic
+quantumgates fromauniversalset. Commonlyusedsingle-qubitgates arethenegation (X), phase
+(Z) and Hadamard (H) gates, expressed by the following unitary matrices:
+0 1 1 0 1 1 1
+X = , Z = , H = . (1)
+An example of a two-qubit gate is the controlled-not operation (CNOT):
+2.3 Measurement
+Inadditiontounitaryevolution, wespecifyanoperationcalledmeasurement, which,inthesimplest
+case, takes a qubit and outputs a classical bit. If we measure a qubit ψ = α 0 +β 1 , we will
+get as outcome a single bit, which takes the value 0 with probability α and the value 1 with
+probability β . We further specify that, after the process of measurement, the quantum system
+collapses to the measured outcome. Thus, the quantum state is disturbed and it becomes classical:
+any further measurements have a deterministic outcome. We have described measurement with
+respect to the standard basis; of course, a measurement can be described according to an arbitrary
+basis;theprobabilitiesoftheoutcomescanbecomputedbyfirstapplyingthecorrespondingchange-
+of-basis, followed by the standard basis measurement. Measurements can actually be described
+muchmoregenerally: e.g.wecandescribeoutcomesofmeasurementsofastrictsubsetofaquantum
+system—the mathematical formalism to describe the outcomes uses the density matrix formalism,
+which we do not describe here.
+Asasimpleexampleofquantummeasurements,considerthestates ψ1 = 0 and ψ2 = 1 0 +
+β 1 . Then measuring the state ψ1 yields the outcome 1 with unit probability and the state
+∣ ⟩) ∣ ⟩ 1
+remains 0 , while measuring ψ2 yields the outcome 0 or 1, each with probability
+post-measurement state is 0 if we observed outcome 0 and 1 if we observed 1.
+2.4 Quantum No-Cloning
+Oneofthemostfundamentalpropertiesofquantuminformationisthatitisnotphysicallypossible,
+in general, to clone a quantum system [WZ82] (i.e. there is no physical process that takes as input
+a single quantum system, and outputs two identical copies of its input). A simple proof follows
+from the linearity of quantum operations . At the intuitive level, this principle is present in almost
+all of quantum cryptography, since it prevents the classical reconstruction of the description of
+5 Assume a quantum operation A which takes as input a qubit in state ψ (together with a “helping” qubit in
+state 0 ) and outputs ψ ψ . Hence, A 0 0 0 0 and A 1 0 1 1 . By linearity of A, it must hold that
+⟩+2∣ ⟩∣ ⟩ which is not equalto thestate ∣
+⟩+2∣ ⟩ which we would expect as output
+from a perfect copyingoperation A. Hence, such an A does not exist.
+a given qubit system. For instance, given a single copy of a general qubit α 0 +β 1 , it is not
+possible to “extract” a full classical description of α and β, because measuring disturbs the state.
+At the formal level, however, we generally require more sophisticated tools to prove the security of
+quantum cryptography protocols (see Section 3.1).
+2.5 Quantum Entanglement and Nonlocality
+A crucial and rather counter-intuitive feature of quantum mechanics is quantum entanglement, a
+physical phenomenon that occurs when quantum particles behave in such a way that the quantum
+state ofeach particle cannotbedescribedindividually. Asimpleexampleofsuchanentangled state
+aretwo qubitsinthestate 00 + 11 √2. WhenAlice measuresherqubit(insystemA), she
+obtains a random bit a∈ 0,1 as outcome and her qubit collapses to the state a she observed.
+At the same time, Bob’s qubit (in system B) also collapses to a and hence, a subsequent
+measurement by Bob yields the same outcome b = a. It is important to realize that this collapse
+of state at Bob’s side occurs simultaneously with Alice’s measurement, but it does not allow the
+players to send information from Alice to Bob. It simply provides Alice and Bob with a shared
+random bit. In general, quantum entanglement does not contradict the fundamental non-signaling
+principle of the theory of relativity stating that no information can travel faster than the speed
+of light.
+It turns out that by measuring entangled quantum states, Alice and Bob are able to produce
+correlations that are stronger than all correlations they could obtain when sharing only classical
+randomness. In this case, physicists say that the correlations violate a Bell inequality [Bel64].
+The most well-known example of such an inequality was proposed by Clauser, Horne, Shimony
+and Holt [CHSH69]. It can be described as a so-called non-local game among two players Alice
+and Bob. In this CHSH game, Alice and Bob can initially discuss in order to establish a joint
+strategy. Once the game starts, they are separated and cannot communicate. They receive as
+input uniformly random bits x and y and have to output bits a and b respectively. They win
+the game if and only if a⊕b = x∧y (imagine a third party, called a referee who chooses x and
+y, receives a and b and checks whether the relationship a⊕b = x∧y holds). A possible classical
+strategy for Alice and Bob is to ignore their inputs and always output a = b = 0. This strategy
+lets them win the game with probability 3 4. It can be checked that there exist no better strategy
+for two classical players who are not allowed to communicate. In other words, we have the Bell
+inequality Pr classical players win CHSH ≤ 3 4. However, if Alice and Bob share a maximally
+entangled state (e.g. an EPR pair 00 + 11 √2), they can perform a quantum measurement
+which allows them to win the CHSH ( g ∣ am ⟩ e w ∣ ith ⟩)/ probability cos 2 π 8 ≈0.85 which is strictly larger
+than 3 4, hence violating the Bell inequality. Many experimental tests of this inequality have been
+performed and consistently found violations of this inequality, thereby proving that the world is
+actually more accurately described by quantum mechanics rather than by classical mechanics.
+2.6 Physical Representations
+The mathematical model of quantum mechanics is currently the most accurate description of the
+physical world. This theory is without doubt the most successful and well-tested physical theory of
+all times; it describes a wide range of physical systems, and thus offers a large number of possible
+physicalsystemswhichcanserveasquantumdevices. Thesepossibilitiesincludephotonicquantum
+However,this“spookyactionatadistance”puzzledEinsteinalot,andwastheinspirationforhisveryinfluential
+paperco-authoredwithPodolskyandRosen[EPR35]. Nowadays,weoftencalltwoqubitsinthemaximallyentangled
+state 00 11 √2 an EPR pair.
+computing, superconduction qubits, nuclear magnetic resonance, ion trap quantum computing and
+atomic quantum computing (see, e.g. [dMM03]). For our purposes, at the abstract level, all of
+these systems are described by the same formalism; however there may be experimental reasons to
+prefer one implementation over the other (e.g. photons are well-suited for long-distance quantum
+communications, but other systems such as superconducting qubits are better suited for quantum
+interactions.)
+3 Quantum Cryptographic Constructions
+In this section, we survey a number of quantum cryptographic protocols (see Section 1.1 for a brief
+overview of these topics). Many of these protocols share the remarkable feature of being based on
+a very simple pattern of quantum information called conjugate coding. Because of its paramount
+importanceinquantumcryptography, wefirstpresentthisnotioninSection 3.1. Wethenshowhow
+conjugate coding is the crucial ingredient in the quantum-cryptographic constructions for quantum
+money (Item 2), quantum key distribution (Section 3.2), a quantum reduction from oblivious
+transfer to bit commitment (Section 3.3), the limited-quantum-storage model (Section 3.4) and
+delegated quantum computation (Section 3.5). Further topics covered in this section are quantum
+coin-flipping (Section 3.6) and device-independent cryptography (Section 3.7).
+3.1 Conjugate Coding
+Conjugate coding [Wie83] is based on the principle that we can encode classical information into
+conjugate quantum bases. This primitive is extremely important in quantum cryptography—in
+fact, the vast majority of quantum cryptographic protocols exploit conjugate coding in one way
+or another. Conjugate coding is also called quantum coding [BBB14] and quantum multiplex-
+ing [BBBW82].
+The principle of conjugate coding is simple: for clarity of presentation and consistency with
+commonly used terminology, we associate a qubit with a photon (a particle of light), and use
+photon polarization as a quantum degree of freedom. Among others, photons can be polarized
+horizontally , vertically ( ), diagonally to the left ( ), or diagonally to the right ( ).
+Photon polar ( iz ∣↔ at ⟩ io ) n is a quantu ∣ m ↕⟩ property, and by associati ∣ n ⤢ g ⟩ = 0 , = 1 , = 1 0 + ∣⤡ 1 ⟩
+and = 1 0 − 1 , we can apply quantum operations to these states, as in Section 2.
+Each set R = , and D = , forms a basis (called the rectilinear and diagonal
+bases, respectively), and can thus be used to encode a classical bit (see Table 1). R and D are
+conjugate bases.
+encoded bit 0 0 1 0 1 1 0 0 0 0
+basis choice R D D D R R D R R D
+quantum encoding
+Table 1: Example of conjugate coding. Here, we use the abbreviation R for the rectilinear basis
+and D for the diagonal basis.
+Therelevanceofconjugatecodingtocryptographyissummarizedbytwokey featuresthatwere,
+remarkably, already mentioned and exploited in Wiesner’s work [Wie83]:
+1. Measuring in one basis irrevocably destroys any information about the encoding in its conju-
+gate basis.
+2. The originator of the quantum encoding can verify its authenticity; however, without knowl-
+edge of the encoding basis, and given access to a single encoded state, no third party can
+create two quantum states that pass this verification procedure with high probability.
+Inordertoexplainthefirstproperty,recallthewell-knownHeisenberguncertaintyrelation [Hei27],
+which forbidslearning both the position and momentum of a quantum particle precisely and simul-
+taneously. In terms of photon polarization, and for a single photon, let us denote by PX the distri-
+bution of outcomes when measuring the photon in the rectilinear basis and by QX the distribution
+when measuring in the diagonal basis. Following Heisenberg, Maassen and Uffink [MU88] showed
+an uncertainty relation: H PX +H QX ≥ 1 (where H is the Shannon entropy, an information-
+theoretic measure of uncertainty given by H PX = −∑ x pxlog 2 px). Intuitively, such a relation
+quantifies the fact that one can know the outcome exactly in one basis, but consequently has com-
+pleteuncertaintyintheotherbasis. Lookingahead,wewillseethatsuchuncertaintyrelationsplaya
+keyroleinprovingsecurityofquantumcryptographicprotocols,e.g.inthelimited-quantum-storage
+setting (Section 3.4). The second property above is explained by noting that a quantum encoding
+can be verified by measuring each qubit in its encoding basis and checking that the measurement
+result corresponds to the correct encoded bit. Intuitively, the no-cloning theorem (Section 2.4)
+prevents a third party from forging a state that would pass this verification procedure; however,
+formalizing this concept requires more work (see Item 2).
+What is more, the technological requirements of conjugate coding are very basic: the single-
+qubit “prepare-and-measure” paradigm of conjugate coding is feasible with today’s technology—
+thus, many protocols derived from conjugate coding inherit this desirable property (which is, in
+fact considered the gold standard for “feasible” quantum protocols).
+In the late 1960’s, Wiesner [Wie83] had the visionary idea that quantum information could be
+used to create unforgeable bank notes. His ideas were in fact so much ahead of their time that it
+took years to publish them! (According to [BBB14], Wiesner’s original manuscript was written in
+In a nutshell, Wiesner’s proposal consists in quantum banknotes created by encoding quantum
+particles using conjugate coding (Section 3.1), with both the classical information and basis choice
+being chosen as random bitstrings. Thus, a banknote consists of a sequence of single qubits,
+chosen randomly from the states , , , . As discussed in Section 3.1, the originator
+of the quantum banknote (typically called “the bank”) can verify that a quantum banknote is
+genuine, yet quantum mechanics prevents essentially any possibility of counterfeiting. Clearly such
+a functionality is beyond what classical physics can offer: since any digital record can be copied,
+classicalinformationsimplycannotbeusedforuncloneability (notevencomputationalassumptions
+will help).
+Wiesner’s work was improved and extended in many ways: early work of Bennett, Brassard,
+Breidbart and Wiesner [BBBW82] showed how to combine computational assumptions with con-
+jugate coding in order to achieve a type of public verifiability for the encoded states (they coined
+their invention unforgeable subway tokens). Further work on publicly-verifiable (also called public-
+key quantum money) includes schemes based on the computational difficulty of some knot-theory
+related problems [FGH 12] (see also [AFG 12]), verification “oracles” [Aar09] and hidden sub-
+spaces [AC12].
+Returning to Wiesner’s scheme (which is often called private-key quantum money in order
+to distinguish it from the public-key quantum money schemes), we note that the first proof of
+security in the case of multiple qubits is based on semi-definite programming, and appeared only
+recently [MVW13] (this result is tight, since it also gives an explicit optimal attack). We also note
+work on variants of Wiesner’s scheme in which quantum encodings are returned after validation: in
+all cases (whether the post-verification state is always returned [FGH 10], or the post-verification
+state is returned only for encodings that are deemed valid [BNSU14]), the resulting protocol has
+been found to be insecure.
+We also note that further work has studied the possibility of private-key quantum money
+that can be verified using only classical interaction with the bank [Gav12,MVW13], quantum
+coins [MS10] (which provide a perfect level of anonymity), as well as noise-tolerant versions of
+Wiesner’s scheme [PYJ 12].
+3.2 Quantum Key Distribution
+Quantum key distribution (QKD) is by far the most successful application of quantum information
+to cryptography. By now, QKD is the main topic of a large number of surveys (see, for instance,
+[Ben92,BC96,GRTZ02,BEM 07,Feh10]). Due to abundance of very good references on this topic,
+we survey it only briefly here.
+The “BB84” protocol [BB84,BB14] was the first to show how conjugate coding could be used
+for an information-theoretically secure key agreement protocol. In a nutshell, the protocol consists
+in Alice sending a sequence of single qubits, chosen randomly from the states , , , .
+Bob chooses to measure them according to his own random choice of measurement bases. They
+communicate their basis choice for each encoded qubit; eavesdropper detection is performed by
+comparing the measurement results on a fraction of the bases on which their choices coincide—if
+successful, this procedure gives a bound on the secrecy and similarity of the remaining shared
+string, which can be used to distill an almost-perfect shared secret between Alice and Bob. In
+order to prevent man-in-the-middle attacks, this procedure requires authenticated classical chan-
+nels. Usually, authentication is achieved by an initial shared classical secret between Alice and
+Bob. Thus, QKD is more accurately described as a key-expansion primitive. We note that, as a
+theoretical or experimental tool, it is often useful to consider a protocol equivalent to BB84, where
+the random choice of encoding basis (rectilinear of diagonal) is delayed; thus a quantum source
+would produce a sequence of maximally entangled states 00 + 11 √2, with both Alice and Bob
+(∣ ⟩ ∣ ⟩)/
+then measuring in their random choice of bases. That an entangled system could be used in lieu of
+single qubits was suggested by Ekert [Eke91], butnote that Ekert’s idea was to base security on the
+observation of a Bell-inequality violation — which implies a set of different measurements than in
+the rectilinear/diagonal bases. Theentanglement-based (“purified”)BB84 protocol was introduced
+by Bennett, Brassard and Mermin in [BBM92].
+We briefly mention that the formal security of QKD was originally left open, and that a long
+sequence of works (e.g. [LC99,May01]) culminated in a relatively accessible proof by Shor and
+Preskill, based on the use of quantum error correction [SP00]. Further work by Renner [Ren05]
+showed a very different approach for proving the security of QKD based on exploiting the sym-
+metries of the protocol (and applying a de Finetti style representation theorem), and splitting the
+security analysis into the information-theoretic steps of error-correction and privacy amplification.
+OtherproofsofQKDaremoredirectlybasedonthecomplementarity ofthemeasurements[Koa09].
+It is a sign for the complexity of QKD security proofs that most articles on this topic focus only
+on subparts of the security analysis and only very recently did a first comprehensive analysis of
+security appear [TL15].
+The huge success of QKD is due in part to the fact that it is readily realizable in the laboratory
+(thefirstdemonstrationappearedin1992[BBB 92]). Inlightofpracticalimplementations,security
+proofs for QKD need to be re-visited in order to obtain concrete security parameters—this is the
+realm of finite-key security [SR08,TLGR12,HT12,TL15]. Furthermore, wenote thatwhenitcomes
+to real-world implementations, QKD is vulnerable to side-channel attacks, which are due to the
+fact that physical implementations deviate from the idealized models used for security proofs (this
+is often referred to as quantum hacking [LWW 10]).
+We further note that the assumption of an initial short shared secret (for authenticating the
+classical channel) in the implementation of QKD can be replaced with a computational assumption
+or an assumption about the storage capabilities of the eavesdropper (see Section 3.4). The result
+is everlasting [Unr13] or long-term [SML10] security: information-theoretic security is guaranteed
+except during the short period of time during which we assume a computational (or memory)
+assumption holds.
+3.3 Bit Commitment implies Oblivious Transfer
+Oblivious transfer (OT) and bit commitment (BC) are two basic and important primitives for
+cryptography. In the classical case, it is easy to show that OT implies BC (in the information-
+theoretic setting), but the implication in the other direction does not hold. In stark contrast, OT
+and BC are known to be equivalent in the quantum world. In the following sections, we introduce
+these primitives (Section 3.3.1) and describe a quantum reduction from oblivious transfer to bit
+commitment (Section 3.3.2).
+3.3.1 Oblivious Transfer (OT) and Bit Commitment (BC)
+Wiesner’s paper about quantum cryptography [Wie83] introduced “a means for transmitting two
+messages either but not both of which may be received”. This classical cryptographic primitive
+was later rediscovered (under a slightly different form) by Rabin [Rab81], and was given in the
+form of 1-out-of-2 Oblivious Transfer (OT)) by Even, Goldreich and Lempel [EGL85]. In OT,
+Alice sends two messages m0,m1 to Bob who receives only one of the messages mc according to
+his choice bit c. Security for Alice (against dishonest Bob) guarantees that Bob receives only one
+of the two messages, whereas security for Bob (against dishonest Alice) ensures that Alice does
+not learn anything about Bob’s choice bit . In the version by Rabin [Rab81], this primitive is
+essentially a secure erasure channel where Alice sends a single bit to Bob. This bit gets erased with
+probability 1/2 (in this case Bob receives –), but Alice does not learn whether the bit was erased.
+In fact, it is known that Rabin OT is equivalent to 1-out-of-2 OT [Cr´e88].
+The importance of OT is embodied by the fact that it is universal for secure two-party compu-
+tation [Kil88] (i.e. using several instances of 1-out-of-2 OT, any function can be securely evaluated
+among two parties such that nodishonestplayer can learn any information abouttheother player’s
+input—beyond what can already be inferred from the output of the computed function). Due to
+this universality, the innocent-looking OT primitive gives an excellent indicator for the crypto-
+graphic power of a model.
+Bit Commitment (BC) is a cryptographic primitive that captures the following two-party func-
+tionality: Alice has a bit b that she wants to commit to Bob, but she wants to prevent Bob from
+reading b until she chooses to reveal it (concealing or hiding). Although Bob should not be able to
+determine b before Alice reveals it, Alice should be unable to change the bit after it is committed
+(binding). A physical-world implementation of bit commitment would be for Alice to write b on
+a piece of paper, lock it in a safe, and send the safe to Bob. Since Bob cannot open the safe, he
+See [Unr13][Lemma 7] for a proof in the UC framework; the stand-alone impossibility is folklore and can be
+derived from theimpossibility of OT in theplain model [Lo97] (see also Section 4.2).
+In fact, formalizing these innocent-looking requirementscorrectly turnsout to be rathertricky [CSSW06,FS09]
+Aprimeexampleofasecuretwo-partycomputationisYao’smillionaire’sproblem[Yao82]: twomillionaireswant
+to compare their fortune without telling the other specifically how much money they own. This problem can be
+solved bythe secure computation of the greater-than function.
+cannot determine b (concealing), and since Alice has physically given the safe to Bob, she cannot
+change b after the commitment phase (binding). When Alice wishes to reveal the bit, she sends
+the key to Bob.
+3.3.2 Quantum Protocol for Oblivious Transfer
+In [BBCS01], Bennett, Brassard, Cr´epeau, and Skubiszewska suggested a very natural quantum
+protocol for OT (assuming BC): suppose Alice would like to obliviously send m0 and m1 so that
+Bob receives the message mc according to his choice bit c. She uses conjugate coding to send n
+quantumstates each chosen randomlyfromthestates , , , toBob. Letusdenoteby
+x∈ 0,1 n the string of encoded bits and by θ ∈ R,D {∣↕n⟩ th ∣↔ e s ⟩ tr ∣ i ⤡ ng ⟩ o ∣ f ⤢ b ⟩ a } sis choices. Bob measures
+the { rece } ived qubits in a random basis θ ∈ R,D {n of h } is choice, resulting in outcomes x ∈ 0,1 n .
+After Alice tells Bob the bases θ ∈ R,D
+as using, Bob can partition the set of indic
+two disjoint sets I0 ⊍I1 = 1,2,...,n : depending on his OT choice bit c, he puts all the indices
+where he measured correctly in Ic and the rest in I1 c. Bob then informs Alice about I0,I1 (in this
+fixed order, independent of c). Alice picks two independent hash functions f0,f1 (mapping from
+n 2 bits to 1 bit) and sends si = fi xI ⊕mi for i = 0,1 to Bob. Here, xI denotes the substring
+/ ( ∣ i) ∣
+of x with bit indices in I. Bob will be able to recover mc by computing fc
+Ic) ⊕sc.
+While it is easy to show that the above protocol is correct and secure against dishonest Alice
+(i.e.AlicedoesnotlearnanythingaboutBob’schoicebitc),itisclearlyinsecureagainstadishonest
+Bob who is able to store all quantum states until Alice tells Bob the basis string θ. Such a Bob
+can then measure all positions in the correct basis and hence recover both m0 and m1. The
+idea of [BBCS01] was to force Bob to perform the measurement by requiring him to commit to the
+basesθ andoutcomes x . Alicethenchecks afractionofthesecommitments before Aliceannounces
+the basis string θ.
+A long line of research [CK88,MS94,Yao95,May96a,BBCS01] has worked towards proving the
+security of this protocol. However, the crucial tools for an actual proof were eventually developed
+by Damg˚ard, Fehr, Lunemann, Salvail, and Schaffner [DFL 09] nearly two decades after the orig-
+inal protocol was proposed; Unruh subsequently used these techniques to formally establish the
+equivalence of BC and OT in the quantum UC model [Unr10].
+3.4 Limited-Quantum-Storage Models
+As we will see in Section 4.1, bit commitment is impossible to construct in the quantum world.
+Moregenerally, ithasbeenshown(see Section 4.2)thatsecuretwo-party computation isimpossible
+in the plain quantum model, without any additional restrictions on the adversaries. One option
+in order to obtain security is to make computational assumptions. However, as we discuss below,
+it is also possible to obtain information-theoretic security, while making instead some reasonable
+assumptions about the storage capabilities of the adversary.
+One of the challenges in building quantum devices is the difficulty of storing quantum informa-
+tion in a physical system (such as atomic or phototonic systems) under stable conditions over a
+long period of time—building a reliable quantum memory is a major research goal in experimental
+quantum physics (see e.g. [SAA 10] for a review produced by the European integrated project
+Qubit Applications (QAP)). Despite continuous progress over the last years, large-scale quantum
+memories that can reliably store quantum information are currently out of reach. As we discuss
+in this section, ingenious quantum cryptographers have turned this technological challenge into an
+advantage for quantum cryptography!
+The bounded-quantum-storage model, introduced by Damg˚ard, Fehr, Salvail and Schaffner
+in[DFSS05], is amodelwhich assumesthatan adversary can only storealimited numberof qubits.
+Generally, protocols inthismodelrequirenoquantumstorage forthehonestplayers, andaresecure
+against adversaries that are unable to store a constant fraction of the qubits sent in the protocol.
+Thismodelisinspiredbytheclassicalbounded-storagemodel,asintroducedbyMaurer[Mau92,
+CM97]. Inthis model,honestpartiesarerequiredtostoreΘ n bits, butprotocols (for OTandkey
+agreement) are insecure against attackers with storage capabilities of Ω n bits. Unfortunately,
+this gap between storage requirements for honest and dishonest players can never be bigger than
+quadratic[DM04,DM08]. Combinedwiththefactthatclassicalstorageisconstantlygettingsmaller
+and cheaper, this quadratic gap puts the classical-bounded-storage assumption on a rather weak
+footing. In sharp contrast, the quantum bounded-storage model gives an unbounded gap between
+the quantum-storage requirements of the honest and dishonest players, making this model model
+robust to technological improvements.
+In the bounded-quantum storage model, a protocol for OT was proposed [DFSS05]. Again, it
+is based on conjugate coding and is essentially identical to the protocol outlined in the previons
+Section 3.3.2, except that there is a waiting time ∆t (say, 1 second) right after the quantum
+phase, before Alice sends her basis string θ to Bob. In this time, a dishonest receiver Bob is
+forced to use his (imperfect) quantum memory and therefore loses some information about Alice’s
+string x which intuitively leads to the security of the oblivious transfer. In a subsequent series of
+works [DFR 07,DFSS07,DFSS08], protocols for BC, OT and password-based identification (i.e.
+the secure evaluation of the equality function) were presented. For an overview of these results,
+see [Sch07,Feh10].
+The noisy-quantum-storage model, as introduced by Wehner, Schaffner and Terhal [WST08]
+captures the difficulty of storing quantum information more realistically. Whereas in the bounded-
+quantum-storage model, the physical number of qubits an attacker can store is limited, dishonest
+players areallowed arbitrary(butimperfect)quantumstorage inthenoisy-quantum-storage model.
+Beyond Limited Quantum Storage. Continuing the idea of assuming realistic technological
+restrictions on the adversary, researchers have developed protocols that are secure under the as-
+sumption that certain classes of quantum operations are hard to perform. A natural class to study
+consists of adversaries who can store perfectly all qubits they receive, but who cannot perform any
+quantum operations, except for single-qubit measurements (adaptively in arbitrary bases) at the
+end of the protocol. Such a model was first studied by Salvail in [Sal98], and later by Bouman,
+Fehr, Gonza´les-Guill´en and Schaffner [BFGGS13] and Liu [Liu14a,Liu14b,Liu15] under the name
+of “isolated-qubit model”.
+Cryptographic Proof Techniques. In Section 3.1, we mentioned uncertainty relations (and
+in particular entropic uncertainty relations—which quantify uncertainty in information-theoretic
+terms). These relations play a key role in the security proofs for protocols in the limited-quantum-
+storage model. We refer to [WW10] for a survey by Wehner and Winter on this topic. In fact,
+one can argue that the areas of limited-quantum storage models and entropic uncertainty relations
+have benefited a lot from each other, as research questions in one area have led to results in the
+other and vice versa. This fruitful co-existence is witnessed by a series of publications: [NBW12,
+BFGGS13,BBCW13,BFW14,DFW15].
+Composability It is natural to ask whether limited-quantum-storage protocols for basic tasks
+such as OT can be composed to yield more involved two- or multi-party secure computations. This
+question was answered in the positive in a number of works, including: Fehr and Schaffner [FS09],
+Wehner and Wullschleger [WW08] (for sequential composition) and Unruh [Unr11] (for bounded
+concurrent composition).
+Implementations. The technological requirements to implement limited-quantum-storage pro-
+tocols in practice are modest and rather similar to already available QKD technology (often, the
+actual quantum phase is the same as in QKD). A small but significant difference is that it makes
+sense to run secure computations among players which are located within a few meters of each
+other, whereas the task of distributing keys demands large separations between players. This dif-
+ference allows experimenters to optimize some parameters (such as the rate) differently for secure-
+computation protocols. The experimental feasibility of these protocols was analyzed theoretically
+in [WCSL10] and demonstrated practically in [NJC 12,ENN 14].
+3.5 Delegated Quantum Computation
+Quantum computers are known to enable extraordinary computational feats unachievable by to-
+day’s devices [Sho94,Gro96,Mos09]. However, technologies to build quantum computers are cur-
+rently intheir infancy; thecurrentstate-of-the-art suggests that, whenquantumcomputers become
+a reality, these devices are likely to be available at a few location only. In this context, we envisage
+the outsourcing of quantum computations from quantum computationally weak clients to universal
+quantum computers (a type of quantum cloud architecture). This scenario has appealing crypto-
+graphic applications, such as the delegated execution of Shor’s algorithm [Sho94] for factoring, and
+thus breaking RSA public keys [RSA78]. From the cryptographic point of view, this scenario raises
+many questions in terms of the possibility of privacy in delegated quantum computation.
+Pioneering work of Childs [Chi05] and Arrighi and Salvail [AS06] studied this problem for the
+first time. The first practical and universal protocol for private delegated quantum computation,
+called “universal blind quantum computation” (uBQC) was given by Broadbent, Fitzsimons and
+Kashefi[BFK09]. InuBQC,theclientonlyneedstobeabletopreparerandomsingle-qubitauxiliary
+states (the client requires no quantum memory or quantum processor). Via a classical interaction
+phase, the client remotely drives a quantum computation of her choice, such that the quantum
+server cannot learn any information aboutthe computation that is performed—withonly theclient
+learning the output. The uBQC protocol has been demonstrated experimentally [BKB 12].
+It is remarkable that uBQC is also based on conjugate coding! For the first time, it is an
+application where the states derived from conjugate coding are used to directly achieve computa-
+tional cryptographic tasks (versus other applications of conjugate coding which essentially directly
+measure these states in order to extract classical information). This relationship with conjugate
+coding is more clearly apparent in a related protocol called “quantum computing on encrypted
+data” (QCED) [FBS 14,Bro15]. Here, the computation (as given by a quantum circuit) is public,
+but is executed remotely on an encrypted version of the data (reminiscent of the work on classical
+fully homomorphic encryption [Gen09,RAD78]). In this situation, QCED shows that it is possi-
+ble to achieve delegated quantum computation where the client only needs to send random states
+in , , , (hiding of the computation itself can be achieved via a universal circuit
+construction).
+We mention further that the verifiability of delegated quantum computations has been ad-
+dressed in [ABE10,FK12,BGS13,KDK15], and that the protocol of [FK12] has been the object of
+an experiment [BFKW13]. Also, security of delegated quantum computation has been analyzed in
+terms of a strong notion of composability [DFPR14]. Furthermore, work of Reichardt, Unger and
+Vazirani shows that delegated quantum computation is achievable for a purely classical client, if
+we are willing to make the assumption of two universal quantum computers that cannot communi-
+cate [RUV13] (see also Section 3.7, as well as recent work [GKW15,HPF15] that improves on this
+result using uBQC).
+3.6 Quantum Protocols for Coin Flipping and Cheat-Sensitive Primitives
+Inaclassiccryptographypaper[Blu83],Blumdescribeshowto“flipacoin over thetelephone”with
+thehelpof bitcommitment: Alicecommits toarandombita,Bob tells Alice anotherrandombitb,
+and Alice opens the commitment to a. The outcome of the coin is a⊕b which cannot be biased by
+any of thetwo players (intuitively, becauseat least one randombitof an honest player was involved
+in determining the outcome). A coin flip with this property is called a strong coin flip. In contrast,
+for a weak coin flip, Alice and Bob have a desired outcome, i.e. Alice “wins” if the outcome is 0,
+and Bob “wins” if the outcome is 1. A weak-coin-flipping protocol with bias ε guarantees that no
+dishonestplayercanbiasthecointowardshisorherdesiredoutcomewithprobabilitygreaterthanε.
+In the classical world, coin-flippingcan be achieved undercomputational assumptions. However, in
+the information-theoretic setting, it was shown [HMU06,HW11] that one of the players can always
+achieve his desired outcome with probability 1.
+In the quantum world, we note that the general impossibility results for quantum two-party
+computation(Section4.2)arenotapplicabletocoinflipping,sincetheparticipantsinacoinflipping
+protocol have no inputs, and instead aim to implement a randomized functionality. Nevertheless,
+Kitaev showed [Kit] (see also [ABDR04]) that any quantum protocol for strong coin-flipping is
+insecure since it can be biased by a dishonest player. Formally, the bias of any strong coin-flipping
+protocol is bounded from below by 1 − 1 . Interestingly, Mochon [Moc07] managed to expand
+Kitaev’s formalism of point games to prove the existence of a weak coin-flipping protocol with
+arbitrarily small bias ε > 0. Unfortunately, Mochon’s 80-page proof has never been peer-reviewed
+and is rather difficult to follow. Aharonov, Chailloux, Ganz, Kerenidis and Magnin [ACG 14] have
+managed to simplify this proof considerably.
+Based on this result, Chailloux and Kerenidis [CK09] derived an optimal strong-coin-flipping
+protocol with the best possible bias
+, matching Kitaev’s lower bound. Also based on a weak-
+coinflip,ChaillouxandKerenidis[CK11]gavethebestpossibleimperfectquantumbitcommitment.
+For the optimality, they prove that in any quantum bit commitment protocol, one of the players
+can cheat with significant probability . Such a result shows that an imperfect bit commitment
+cannot be amplified to a perfect one—which severely limits the applicability of the scheme to the
+cryptographic setting.
+Cheat Sensitivity. Quantum mechanics offers the possibility to construct imperfect crypto-
+graphic primitives in the sense that they are correct (as long as the players are honest), but
+they are insecure, i.e. they do allow one of the players (say Alice) to cheat. However, the other
+player Bob has the possibility to check if Alice has been cheating (possibly by sacrificing the pro-
+tocol outcome he would have obtained if he followed the protocol without checking). Hence, a
+cheating Alice has non-zero probability to be detected. These protocols are called cheat sensi-
+tive [ATVY00,HK04,BCH 08,GLM08,GLM10,JSG 11,CLM 14]. In this context, it is argued
+that one could set up a game-theoretic environment: a player caught cheating has to pay a huge
+fine (or undergo another punishment) and is therefore deterred from actually doing it.
+We note, however, thattheapplications ofcheat sensitive protocols tothecryptographicsetting
+are limited: while quantum protocols for imperfect and cheat-sensitive primitives can provide nice
+10 Formally, max P A∗,P B∗ 0.739 where P A∗ is the average over the probabilities that a dishonest committer Alice
+successfully reveals bit b 0 and successfully reveals b 1; and P B∗ is the probability that a dishonest verifier Bob
+guesses thecommitted bit = b after the commitment phas = e. P A∗ = P B∗ = 1 2 holdsfor a perfect bit-commitment protocol.
+examples of separations between the classical and quantum worlds, they fulfill their purpose as
+long as they are considered as “final products”, for instance in case of private information retrieval.
+However, it is difficult to argue that a strong coin flip with a constant bias, an imperfect bit
+commitment, or imperfect OT are cryptographically useful primitives, because they do not inherit
+the cryptographic importance of their perfect counterparts which can be used as building blocks
+for more advanced cryptographic primitives. In the case of cheat sensitivity, it is often unclear how
+such primitives behave under composition. In fact, it is a challenging open question to come up
+with a composability framework for cheat-sensitive quantum primitives.
+3.7 Device-Independent Cryptography
+An exciting feature of quantum cryptography is that it allows the possibility of device-independent
+cryptography in the sense that protocols can be run on untrusted devices which have possibly
+been constructed by the adversary. The crucial insight is that the “quantumness” of two (or more)
+devicescanbetestedandguaranteedbyusingthedevicestoviolateaBellinequality, i.e.toproduce
+correlations that are stronger than allowed by classical mechanics. As outlined in Section 2.5, the
+most well-known example of such an inequality is the CHSH game [CHSH69]. The key observation
+of device-independent cryptography is that in order to violate the CHSH inequality, a certain
+amount of intrinsic quantum randomness has to be present in the players’ outputs. That we could
+exploit this relationship for cryptography was originally pointed out by Ekert [Eke91], and further
+studied by Mayers and Yao [MY98] and Barrett, Hardy and Kent [BHK05]. In fact, this latter
+work shows not only how to accomplish cryptography with untrusted devices, but also how to do
+away completely with assumptions on the validity of quantum mechanics: instead, it shows how to
+accomplish QKD solely based on the non-signaling principle [HRW10,MPA11]!
+The relation between the CHSH violation and the amount of entropy in the outcomes of the
+measurements can be quantified exactly [PAM 10]. In fact, on the topic of self-testing quantum
+devices [MY04,MDMO06,MYS12,MS13], Reichardt, Unger and Vazirani have shown a strong
+robustness result [RUV13] in the sense that being close to winning the CHSH-game with optimal
+probability implies that the players must essentially be in possession of a state which is close to an
+EPR pair. This is an extremely powerful result which has various applications.
+The two qubits of an EPR state are maximally entangled. Quantum mechanics forbids any
+third party to be entangled with such a state (a phenomenon called monogamy of entanglement).
+Hence, measurements on an EPR state result in shared randomness which is guaranteed to be
+unknown to any eavesdropper. In a similar vein, one can argue that the measurement outcomes
+of Alice and Bob while successfully playing the CHSH game cannot be known to any adversary
+even if this adversary has built the devices herself and is possibly still entangled with them.
+Thiseffect leads totheinteresting cryptographicapplications of device-independent randomness
+amplification and expansion and device-independent quantum key distribution. In randomness am-
+plification, the task at hand is to obtain near-perfect randomness from a weak random source using
+untrustedquantumdevices(withoutusinganyadditionalrandomness);thisideawasoriginallypro-
+posed by Colbeck and Renner [CR12]. In randomness expansion, one wants to expand a few truly
+randombitsintomorerandombits,again usinguntrustedquantumdevices; thisideawas originally
+proposedbyColbeckandKent[Col06,CK11]. Providingformalsecurityproofshasturnedouttobe
+rather challenging and was first established against classical adversaries [PAM 10,PM13,FGS13],
+In fact, the first formal security proof of QKD by Shor and Preskill [SP00] exploited this monogamy of entan-
+glement by showing that a QKD protocol can be transformed (in a series of steps) into a protocol that distills pure
+EPR states which Eve cannot be entangled with. These EPR states are then measured by Alice and Bob to obtain
+thesecure shared key.
+and later also against quantum adversaries [VV12,MS14]. A combination of the latest protocols
+allows to arbitrarily amplify very weak sources of randomness in a device-independent fashion.
+Experimental realizations of device-independent randomness include [PAM 10,CMA 13].
+In device-independent quantum key distribution, we make the additional assumption that there
+is no communication between the adversary and the quantum devices. The first formal proof for
+a device-independent quantum key distribution scheme was given by Vazirani and Vidick [VV14].
+Currentresearch inthisareaaimstoproposemorepractical device-independentQKDschemesthat
+retain their functionality at realistic levels of noise.
+4 Quantum Cryptographic Limitations and Challenges
+Inthissection, wesurveyanumberoflimitations andchallenges ofquantumcryptography(seeSec-
+tion 1.1 for abrief overview of thesetopics). We cover theimpossibility of information-theoretically
+securequantumbitcommitment(Section4.1)aswellastheimpossibilityofinformation-theoretically
+secure two-party quantum computation (Section 4.2). Next, we survey the challenges imposed by
+quantuminformation inthecontext ofquantum rewinding (Section 4.3)andsuperpositionaccess to
+oracles inaquantumworld(Section 4.4). Finally, wediscussimpossibilityresultsforposition-based
+quantum cryptography (Section 4.5).
+4.1 Impossibility of Quantum Bit Commitment
+Theten-year period following the publication of the firstquantum key distribution protocol [BB84]
+saw only a handful of cryptographers working in quantum cryptography. This era was a period of
+vivid optimism. Indeed, the concept that quantum mechanics could allow unconditionally secure
+key expansion is mind-boggling, so why stop there? The next natural step to examine was obliv-
+ious transfer, which is an important building block for cryptography [Kil88] (see Section 3.3.1 for
+definitions of bit commitment and oblivious transfer).
+From this early period of quantum cryptography, we know of a quantum reduction from bit
+commitment to oblivious transfer [BBCS01] (see Section 3.3). Hence, the holy grail of oblivious
+transfer is achievable, if only we have access to a bit commitment! Thus, researchers explored
+the possibility of quantum bit commitment (i.e. of using quantum information in order to build bit
+commitment), withthehopesoffoundingallofcryptographyontheuniqueassumptionofquantum
+mechanics. This line of work started in [BC91], culminating in a claim of a unconditionally secure
+quantum bit commitment protocol [BCJL93]. However, the optimism for quantum cryptography
+lasted only a few years as Mayers [May96b] founda subtle flaw in the original argument of security.
+This result was generalized to rule out all quantum protocols for bit commitment by Mayers, and
+Lo and Chau [May97,LC97]. Note that the possibility of bit commitment in the limited-quantum-
+storage model (Section 3.4) introduces an extra physical assumption, and does not contradict the
+impossibility as discussed here!
+We now briefly review the main impossibility argument [BCMS97] (for ease of presentation, we
+focus on the exact case) . First, consider the following sketch of impossibility for perfectly se-
+cure classical bit commitment: suppose such a protocol exists. Then by the information-theoretic
+security requirement, at the end of the commitment phase, Bob’s view of the protocol must be
+independent of b (since, otherwise, the protocol would not be perfectly hiding). But this inde-
+pendence implies that Alice can choose to reveal either b = 0 or b = 1 in the reveal phase, with
+See also a more recent proof exploiting “quantum combs” [CDP+13], as well as a more general result about the
+impossibility of “growing” quantum bit commitments [WTHR11].
+both being accepted by Bob. Hence, the bit commitment cannot be binding. It is interesting that
+the same proof structure is applicable to the quantum case, albeit by invoking some slightly more
+technical tools. Namely, we first consider a purified version of the protocol, which consists in all
+parties acting at the quantum level (measurements are replaced by a unitary process via a stan-
+dard technique). Next, by the information-theoretic hiding property, the reduced quantum state
+that Bob holds at the end of the commit phase must be identical, whether b = 0 or b = 1. This
+condition is enough to break the binding property, since it means [Uhl76] that Alice can locally
+perform a unitary quantum operation on her system in order to re-create a joint state consistent
+with either b=0, or b=1, at her choosing 13 . Hence, she can chose to open either b=0 or b=1 at a
+later time, and Bob will accept: the commitment scheme cannot be binding.
+Goingbacktotheoriginalpaperonquantumbitcommitment[BCJL93],wenotethatasubtlety
+in the definition of the binding property is the origin of the false claim of security: while it is true
+that the protocol is such that Alice is unable to simultaneously hold messages that would unveil a
+commitment to b = 0 and as b =1 (and thus, to be able to choose to open b =0 and b = 1), this is
+insufficient to prove security, since in fact Alice is able to delay her choice of commitment until the
+very end of the protocol—at which point she can choose to open as either b = 0 or b = 1 (but not
+necessarily both at the same time!).
+4.2 Impossibility of Secure Two-Party Computation using Quantum Commu-
+Given the impossibility of quantum bit commitment, the next question to ask is: are there any
+classical primitives that may be implemented securely using quantum communication? In fact, the
+possibility for OT was stated as a open problem in [BC96]. Unfortunately, this hope was shattered
+ratherquickly, asimpossibilityresultsweregivenbyLoin[Lo97]forone-sidedcomputations(where
+only one party receives output). This result already shows the impossibility of 1-out-of-2 OT—
+the proof technique follows closely the technique developed for the impossibility of quantum bit
+commitment (see Section 4.1).
+It took almost ten years until Colbeck showed the first impossibility result for two-sided com-
+putations, namely that Alice can always obtain more information about Bob’s input than what
+is implied by the value of the function [Col07]. In a similar vein, Salvail, Schaffner and Sotakova
+proved in [SSS14] that any quantum protocol for a non-trivial primitive leaks information to a
+dishonest player. What is worse, even with the help of a trusted party, the cryptographic power of
+any primitive cannot be “amplified” by a quantum-communication protocol.
+Buhrman, Christandl and Schaffner [BCS12] have strengthened the above impossibility results
+by showing that the leakage in any quantum protocol is essentially as bad as one can imagine:
+even in the case of approximate correctness and security, if a protocol is “secure” against Bob,
+then it is completely insecure against Alice (in the sense that she can compute the output of the
+computation for all of her possible inputs). For impossibility results in the universal composability
+(UC) framework, see [FKS 13].
+4.3 Zero-Knowledge Against Quantum Adversaries —“Quantum Rewinding”
+Zero-knowledge interactive proofs, as introduced by Goldwasser, Micali, and Rackoff [GMR89] are
+interactive proofs with the property that the verifier learns nothing from her interaction with the
+honest prover, beyond the validity of the statement being proved. These proof systems play an
+Technically,Uhlmann’stheorem statesthatanytwopurificationsofBob’sreducedquantumstatearerelated by
+a unitary transform.
+important role in the foundations of cryptography, and are also fundamental building blocks to
+achieve cryptographic functionalities (see [Gol02] for a survey).
+In zero-knowledge interactive proofs, the notion that the verifier “learns nothing” is formalized
+via the simulation paradigm: if, for every cheating verifier (interacting in the protocol on a positive
+instance), there exists a simulator (who does not interact with the prover) such that the output
+of the verifier is indistinguishable from the output of the simulator, then we say that the zero-
+knowledge property holds. In the classical world, a common proof technique used for establishing
+the zero-knowledge property is rewinding: a simulator is typically built by executing the given
+verifier—except that some computation paths are culled if the random choices of the verifier are
+not consistent with the desired effect. This selection is done by keeping a trace of the interaction,
+thus, if the interaction is deemed to have followed an incorrect path, the simulation can simply
+reset the computation (“rewind”) to an earlier part of the computation (see [Gol02] and references
+therein).
+In the quantum setting, such a rewinding approach is impossible: the no-cloning theorem tells
+us that it is not possible, in general, to keep a secondary copy of the transcript in order to return
+to it later on. This problem is further aggravated by the fact that, in the most general case, the
+verifier starts with some auxiliary quantum information (which we do not, in general, know how
+to re-create)—thus even a “patch” that would emulate the rewinding approach in the simple case
+would appear to fail in the case of auxiliary quantum information. We emphasize that the above
+concerns about the zero-knowledge property are applicable to purely classical protocols: honest
+parties are completely classical, but we wish to establish the zero-knowledge property against a
+verifier that may receive, store and process quantum information (these concerns are independent
+of the computational power of the verifier—they simply relate to the computational model!).
+The fundamental difficulty in proving the zero-knowledge property in the quantum world was
+first discussed by van de Graaf [vdG97]; while some progress was made on this question [DFS04],
+it is the breakthrough result of Watrous [Wat06] that restored confidence that the zero-knowledge
+property of many standard classical zero-knowledge proofs is maintained in a quantum world.
+In a nutshell, Watrous introduced the technique of quantum rewinding, which establishes that
+under some reasonable (and commonly satisfied) conditions, the success probabilities of certain
+processes with quantum inputs and outputs can be amplified. This technique therefore provides
+an alternative to the classical rewinding paradigm, and is used to show that the Goldreich-Micali-
+Wigderson graph 3-coloring protocol [GMW91] is zero-knowledge against quantum attacks. We
+briefly mention that quantum rewinding is established using a technique resembling amplitude
+amplification [BHMT00] as is related to Grover’s quantum search algorithm [Gro96].
+Further work on quantum rewinding has dealt with extending the domain of applicability to
+proofs ofknowledge [Unr12]. However,[ARU14]showlimitationstothistechnique(sothat,infact—
+relativetoanoracle—thereexistsclassicalprotocolsthatareinsecureagainstquantumadversaries).
+See also [DFS04].
+4.4 Superposition Access to Oracles — Quantum Security Notions
+Post-quantum cryptography [BBD09] (see Section 1.2) investigates classical cryptographic schemes
+which remain secure in the presence of quantum adversaries. In classical cryptography, security
+is often defined in terms of an interactive game between an adversary and a challenger: a scheme
+is deemed secure if the adversary can only win the game with negligible probability. When such
+notions are used to prove post-quantum security, one must consider quantum adversaries which
+are potentially able to communicate quantumly with the challenger. An example is the chosen-
+plaintext-attack (CPA) learning phase that is present in game-based security definitions, for in-
+stance for defining indistinguishability (IND) security of encryption schemes [GM84,KL07], where
+it is natural to consider attackers that can query superpositions of plaintexts to be encrypted and
+are returned superpositions of according ciphertexts from the challenger.
+Another important example relates to the random-oracle (RO) model. A common technique
+used in classical cryptography is to assume that hash functions are perfect random oracles which
+adversariescanevaluate. Itiswell-knowninclassicalcryptographythattheRO-methodologycomes
+with a plethora of techniques that can be employed in order to give formal proofs. Unfortunately,
+mostofthesetricksdonotworkinaquantumcontextforthefollowingreason: aquantumadversary
+can always evaluate a classical hash function on an arbitrary superposition of inputs. Therefore,
+in the quantum random oracle (QRO) model, it is necessary to give the adversary superposition
+access to the oracle. As a consequence, standard techniques from the classical RO model (such as
+planting the challenge in a random one of the RO queries of the adversary) fail in the more realistic
+QRO model setting (the adversary might make a single quantum query with all input values in
+superposition).
+Boneh, Dagdelen, Fischlin, Lehmann, Schaffner, and Zhandry [BDF 11] first showed how to
+correctly define the random-oracle model in the quantum setting. They also showed a separation
+between the classical and quantum RO models. Zhandry [Zha12] showed how to plant challenges
+in the QRO model at the beginning of the execution, and Unruh [Unr15] showed how to reprogram
+the RO during runtime. Security definitions allowing superposition access have subsequently been
+studied by Boneh and Zhandry [Zha12,BZ13] in the context of encryption, digital signatures and
+the construction of pseudo-random functions. See also related work by Damg˚ard, Funder, Nielsen
+andSalvail[DFNS14],whostudysuperpositionattacks onsecret-sharingandmulti-partyprotocols.
+4.5 Position-Based Quantum Cryptography
+In cryptography, digital keys or biometric features are used to verify the identity of a person. The
+goalofposition-basedcryptographyistousethegeographical position ofanentityasacryptographic
+credential. As a physical analogy, consider the scenario of a bank, where typically, the mere fact
+that a bank teller is behind the counter (her position) suffices as a credential in order to initiate
+the exchange of sensitive information.
+A central building block of position-based cryptography is the task of position verification, a
+problempreviouslystudiedinthefieldofwireless security [BC93,SSW03,VN06,Bus04,CˇH05,SP05,
+ZLFW06,CˇCˇS06]. The goal is to prove to a set of verifiers that one is at a certain geographical
+location. Protocols typically exploit the relativistic no-signaling principle that messages cannot
+travel faster than the speed of light. By responding to a verifier in a timely manner, one can guar-
+antee that one is within a certain distance of that verifier [BC93]. It was shown in [CGMO09] that
+classical position-verification protocols based only on this relativistic principle can be broken by
+multiple attackers who simulate being at the claimed position while physically residing elsewhere
+in space. Because of the no-cloning property of quantum information (see Section 2.4), it was
+believed that with the use of quantum messages one could devise protocols that were resistant to
+suchcollaborative attacks. Severalschemeswereproposed[KMS11,Mal10a,CFG 10,Mal10b,LL11]
+that later turned out to be insecure. Finally, Buhrman, Chandran, Fehr, Gelles, Goyal, Ostrovsky
+and Schaffner showed that also in the quantum case, no unconditionally secure schemes are possi-
+ble [BCF 14], as long as the colluding adversaries share a large enough amount of entanglement:
+attackers can break the protocol if the number of pre-shared EPR pairs is exponential in the size
+of the messages of the protocol [BK11]. This exponential overhead in resources (in terms of entan-
+glement and quantum memory) leads to the main open problem in this research area, namely to
+find quantum protocols which remain secure under the assumption that adversarial resources are
+restricted to a polynomial amount, while at the same time, honest players can perform the schemes
+efficiently.
+Historically, position-based schemes were first studied by Kent, Monroe and Spiller in 2002
+under the name of “quantum tagging”. A US-patent was granted in 2006 [KMSB06], but the
+results appeared in the scientific literature only in 2010 [KMS11]. Somesimple position-verification
+schemesarestudiedin[KMS11,BFSS13]. Theonlyquantumingredientintheseprotocolsisasingle
+qubit sent to the prover who is required to route this qubit back to the correct verifier depending
+on the classical information he also receives from the verifiers. Note that the actions of the honest
+players are simple enough that they can be implemented using current quantum technology.
+In order to analyze how much entanglement colluding adversaries need to break these simple
+schemes, a new model of (classical) communication complexity (called the garden-hose model) was
+introduced by Buhrman, Fehr, Schaffner and Speelman [BFSS13]. This model connects attacks
+on position-based quantum protocols to various interesting problems in classical complexity theory
+and communication complexity, as witnessed in related work [CSWX14,KP14]. In particular, the
+garden-hose complexity ofafunction gives anupperboundontheamountof entanglement required
+to break the security of the position-verification protocol based on that function. However, it is
+an open question whether more advanced techniques will allow to also prove lower bounds on the
+entanglement required to break these simple position-verification protocols.
+In [Unr14a], Unruh introduces a helpful methodology for analyzing quantum circuits in space-
+time and gives a position-verification protocol in three dimensions which is secure in the quantum-
+random-oracle model. Furthermore, [BCF 14,Unr14a] give schemes for position-based authentica-
+tion which allows the verifiers to be convinced that a message originated from a certain location.
+However, it remains an open problem to find efficient schemes which do not use random oracles.
+5 Conclusion and Open Problems
+Since its inception almost 50 years ago, quantum cryptography has developed into an active and
+exciting multidisciplinary area of research that combines state-of-the-art techniques from cryptog-
+raphy, quantum physics, complexity theory, information theory and beyond. While experimental
+implementations are still at the prototype level, our theoretical understanding of the power and
+limitations of quantum cryptography is continuously expanding.
+Ongoingworkonquantumcryptographyconsistsinimprovingexistingschemesaswellasfinding
+further applications and proof techniques. As final words, we mention here some open problems of
+interest.
+• What types of cryptosystems can quantum algorithms break? The area of post-quantum
+cryptography bases classical cryptography on computational problems which are hard even
+for quantum computers. More research on quantum algorithms for quantum cryptanalysis
+is needed to fully understand how difficult these problems are. This understanding is also
+crucial when choosing the security parameters for post-quantum cryptographic schemes.
+• Can we make device-independent protocols that are feasible in practice? It is a challenging
+open problem to develop device-independent protocols (for key distribution, butpossibly also
+for other applications) which can tolerate a realistic amount of noise.
+• Can quantum protocols verify the position of a player? As outlined in Section 4.5, one of
+the main open questions in the area of position-based cryptography is to find a protocol
+which can be executed efficiently (with current technology) by honest players, but requires
+an exponential amount of resources (such as entangled qubits) for attackers to break it.
+• How can we construct quantum-secure pseudorandom permutations (qPRP)? Related to the
+topic of quantum security notions (Section 4.4), Zhandry[Zha12] has shown how to construct
+quantum-security pseudo-random functions (qPRF). Classically, it is well-known that using
+the PRF in a three-round Feistel network yields a pseudo-random permutation. However,
+this construction is probably insecure in the quantum setting [KM10]. It is an open question
+how to construct quantum-secure pseudo-random permutations.
+• Which cryptographic functionalities can be achieved by quantum protocols? The impossibil-
+ity results from Section 4.2 are all concerned with deterministic classical functionalities. In
+Section 3.6, we have seen that quantum protocols for (weak or biased strong) coin flipping
+exist. Hence what exactly is the set of randomized classical functionalities that can be imple-
+mented by quantum protocols? More generally, can these impossibility results be extended
+to quantum functionalities?
+• Does quantum information allow for devices that hide the inner workings of a computer pro-
+gram? Due to its diverse and far reaching applications, program obfuscation has been long
+considered as a holy grail of cryptography. However, hopes of attaining highly secure ob-
+fuscation were diminished in 2011 by an impossibility proof [BGI 12] (note, however that
+weaker security notions are attainable [GGH 13]). The situation is completely different in
+the quantum case, since the proof technique is not applicable (essentially due to the no-
+cloning theorem). As such, a positive result establishing that quantum information allows
+program obfuscation wouldunleash anumberof powerfulprimitives, andwould yield another
+qualitative advantage of quantum information over its classical counterpart.
+• What are the limits of the delegated quantum computation scenario? In Section 3.5, we
+reviewed results on how a quantum computationally weak client can outsource a quantum
+computation. An open question that remains is to establish the ultimate limits in terms of
+the power of the client: can a fully classical client delegate a private quantum computation
+to a single quantum server, while ensuring privacy and/or verifiability? In the computational
+setting, this question is related to that of quantum fully homomorphic encryption: can we
+encrypt quantum data such that any quantum circuit can be applied to the encrypted data
+(without revealing the key, of course!)?
+• Can we build quantum public-key money from standard assumptions? Current techniques for
+quantum public-key money rely on ad hoc assumptions (see Item 2). An open problem is to
+construct these primitives on standard cryptographic assumptions (such as the existence of
+quantum-secure one-way functions [MRV07,Ajt96,Pei15]).
+6 Acknowledgements
+It is a pleasure to acknowledge conversations with Gilles Brassard, Gus Gutoski, Serge Fehr and
+Louis Salvail in the preparation of this document. We thank Romain All´eaume, Matthias Chris-
+tandl,ClaudeCr´epeau,IvanDamg˚ard,JosephFitzsimons,TommasoGagliardoni,AndreasHu¨lsing,
+Stacey Jeffery, Elham Kashefi, Raza Ali Kazmi, Anthony Leverrier, Renato Renner, Christoph Si-
+mon, Fang Song, Douglas Stebila, Dominique Unruh, Thomas Vidick, Stefan Wolf, and Ronald de
+Wolf for very useful feedback on an initial version of this document. We also thank Ronald Mullin
+for his invitation to submit this paper to the 25th anniversary edition of Designs, Codes and Cryp-
+tography, and an anonymous reviewer for helpful comments. We are deeply indebted to Barbara
+Caic¸araSantosforhelpinmanagingourreferencesdatabase. A.B.’sworkissupportedbyCanada’s
+NSERC. C.S. is supported by an NWO VIDI grant, and the EU 7th framework project SIQS.
+7 References
+[Aar09] S. Aaronson. Quantum copy-protection and quantum money. In 24th Annual Con-
+ference on Computational Complexity—CCC 2009, pages 229–242, 2009.
+[ABB 14] R.All´eaume, C.Branciard,J.Bouda,T.Debuisschert, M.Dianati, N.Gisin,M.God-
+frey, P. Grangier, T. La¨nger, N. Lu¨tkenhaus, P. P. C. Monyk, M. Peev, A. Poppe,
+T. Pornin, J. Rarity, R. Renner, G. Ribordy, M. Riguidel, L. Salvail, A. Shields,
+H. Weinfurter, and A. Zeilinger. Using quantum key distribution for cryptographic
+purposes: A survey. Theoretical Computer Science, 560: 62–81, 2014.
+[ABDR04] A. Ambainis, H. Buhrman, Y. Dodis, and H. Ro¨hrig. Multiparty quantum coin
+flipping.In19thAnnualConference onComputational Complexity—CCC 2004,pages
+250–259, 2004.
+[ABE10] D.Aharonov,M.Ben-Or,andE.Eban. Interactiveproofsforquantumcomputations.
+In Innovations in Computer Science—ICS 2010, pages 453–469, 2010.
+arXiv:0810.5375.
+[AC12] S. Aaronson and P. Christiano. Quantum money from hidden subspaces. In 44th
+Annual ACM Symposium on Theory of Computing—STOC 2012, pages 41–60, 2012.
+[ACG 14] D. Aharonov, A. Chailloux, M. Ganz, I. Kerenidis, and L. Magnin. A simpler proof
+of existence of quantum weak coin flipping with arbitrarily small bias, 2014.
+arXiv:1402.7166.
+[AFG 12] S. Aaronson, E. Farhi, D. Gosset, A. Hassidim, J. Kelner, and A. Lutomirski. Quan-
+tum money. Communications of the ACM, 55(8): 84–92, 2012.
+[Ajt96] M. Ajtai. Generating hard instances of lattice problems. In 28th Annual ACM
+Symposium on Theory of Computing—STOC 1996, pages 99–108, 1996.
+[AMTdW00] A. Ambainis, M. Mosca, A. Tapp, and R. de Wolf. Private quantum channels. In
+41st Annual Symposium on Foundations of Computer Science—FOCS 2000, pages
+547–553, 2000.
+[ARU14] A. Ambainis, A. Rosmanis, and D. Unruh. Quantum attacks on classical proof sys-
+tems: The hardness of quantum rewinding. In 55th Annual Symposium on Founda-
+tions of Computer Science—FOCS 2014, pages 474–483, 2014.
+[AS06] P. Arrighi and L. Salvail. Blind quantum computation. International Journal of
+Quantum Information, 4(5): 883–898, 2006.
+[ATVY00] D. Aharonov, A. Ta-Shma, U. Vazirani, and A. Yao. Quantum bit escrow. In 32nd
+Annual ACM Symposium on Theory of Computing—STOC 2000, pages 705–714,
+2000.
+[BB84] C. H. Bennett and G. Brassard. Quantum cryptography: Public key distribution
+and coin tossing. In International Conference on Computers, Systems and Signal
+Processing, pages 175–179, 1984.
+[BB14] C. H. Bennett and G. Brassard. Quantum cryptography: Publickey distribution and
+coin tossing. Theoretical Computer Science, 560: 7–11, 2014.
+[BBB 92] C. H. Bennett, F. Bessette, G. Brassard, L. Salvail, and J. Smolin. Experimental
+quantum cryptography. Journal of Cryptology, 5(1): 3–28, 1992.
+[BBB 11] G. Berl´ın, G. Brassard, F. Bussi`eres, J. A. Slater, and W. Tittel. Experimental loss-
+tolerant quantum coin flipping. Nature Communications, 2: 561, 2011.
+[BBB14] C. H. Bennett, G. Brassard, and S. Breidbart. Quantum cryptography ii: How to re-
+use a one-time pad safely even if P=NP. Natural Computing, 13(4): 453–458, 2014.
+[BBBW82] C. H. Bennett, G. Brassard, S. Breidbart, and S. Wiesner. Quantum cryptography,
+or unforgeable subway tokens. In Advances in Cryptology—CRYPTO 1982, pages
+267–275, 1982.
+[BBCS01] C.H.Bennett,G.Brassard,C.Cr´epeau,andM.-H.Skubiszewska. Practicalquantum
+oblivious transfer. InAdvances in Cryptology—CRYPTO 1991, pages 351–366, 2001.
+[BBCW13] M. Berta, F. G. S. L. Branda˜o, M. Christandl, and S. Wehner. Entanglement cost of
+quantum channels. IEEE Transactions on Information Theory, 59(10): 6779–6795,
+2013.
+[BBD09] D.J.Bernstein, J.Buchmann,andE.Dahmen,editors. Post-Quantum Cryptography.
+Springer, 2009.
+[BBF 07] G. Brassard, A. Broadbent, J. Fitzsimons, S. Gambs, and A. Tapp. Anonymous
+quantum communication. Advances in Cryptology—ASIACRYPT 2007, 4833: 460–
+473, 2007.
+[BBHT98] M. Boyer, G. Brassard, P. Høyer, and A. Tapp. Tight bounds on quantum searching.
+Fortschritte der Physik, 46(4-5): 493–505, 1998.
+[BBM92] C. H. Bennett, G. Brassard, and N. D. Mermin. Quantum cryptography without
+Bell’s theorem. Physical Review Letters, 68(5): 557–559, 1992.
+[BC91] G. Brassard and C. Cr´epeau. Quantum bit commitment and coin tossing protocols.
+In Advances in Cryptology—CRYPTO 1990, pages 49–61, 1991.
+[BC93] S.BrandsandD.Chaum. Distance-boundingprotocols. In Advances in Cryptology—
+EUROCRYPT 1993, pages 344–359, 1993.
+[BC96] G. Brassard and C. Cr´epeau. 25 years of quantum cryptography. ACM SIGACT
+News, 27(3): 13–24, 1996.
+[BCF 14] H. Buhrman, N. Chandran, S. Fehr, R. Gelles, V. Goyal, R. Ostrovsky, and
+C. Schaffner. Position-based quantum cryptography: Impossibility and Construc-
+tions. SIAM Journal on Computing, 43(1): 150–178, 2014.
+[BCG 02] H. Barnum, C. Cr´epeau, D. Gottesman, A. Smith, and A. Tapp. Authentication
+of quantum messages. In 43rd Annual Symposium on Foundations of Computer
+Science—FOCS 2002, pages 449–458, 2002.
+[BCG 06] M. Ben-Or, C. Cr´epeau, D. Gottesman, A. Hassidim, and A. Smith. Secure mul-
+tiparty quantum computation with (only) a strict honest majority. In 47th Annual
+Symposium on Foundations of Computer Science—FOCS 2006, pages249–260, 2006.
+[BCH 08] H. Buhrman, M. Christandl, P. Hayden, H.-K. Lo, and S. Wehner. Possibility, im-
+possibility, and cheat sensitivity of quantum-bit string commitment. Physical Review
+A, 78(2): 022316, 2008.
+[BCJL93] G. Brassard, C. Cr´epeau, R. Jozsa, and D. Langlois. A quantum bit commitment
+scheme provably unbreakable by both parties. In 34th Annual Symposium on Foun-
+dations of Computer Science—FOCS 1993, pages 362–371, 1993.
+[BCMS97] G. Brassard, C. Cr´epeau, D. Mayers, and L. Salvail. A brief review on the impossi-
+bility of quantum bit commitment, 1997.
+arXiv:quant-ph/9712023.
+[BCS12] H. Buhrman, M. Christandl, and C. Schaffner. Complete insecurity of quantum
+protocolsforclassicaltwo-partycomputation. Physical ReviewLetters,109(16), 2012.
+[BDF 11] D. Boneh, O¨. Dagdelen, M. Fischlin, A. Lehmann, C. Schaffner, and M. Zhandry.
+Random oracles in a quantum world. In Advances in Cryptology—ASIACRYPT
+2011, pages 41–69, 2011.
+[Bel64] J.S.Bell. OntheEinstein-Podolsky-Rosen paradox. Physics 1, pages 195–200, 1964.
+[BEM 07] D. Bruß, G. Erd´elyi, T. Meyer, T. Riege, and J. Rothe. Quantum cryptography: A
+survey. ACM Computing Surveys—CSUR, 39(2), 2007.
+[Ben92] C.H.Bennett. Quantumcryptography: Uncertaintyintheserviceofprivacy. Science,
+257(5071): 752–753, 1992.
+[BFGGS13] N.J.Bouman,S.Fehr,C.Gonza´lez-Guill´en, andC.Schaffner.Anall-but-oneentropic
+uncertainty relation, and application to password-based identification. In 7th Confer-
+ence on the Theory of Quantum Computation, Communication, and Cryptography—
+TQC 2012, pages 29–44, 2013.
+[BFK09] A. Broadbent, J. Fitzsimons, and E. Kashefi. Universal blind quantum computation.
+In50th Annual Symposium on Foundations of Computer Science—FOCS 2009, pages
+517–526, 2009.
+[BFKW13] S. Barz, J. F. Fitzsimons, E. Kashefi, and P. Walther. Experimental verification of
+quantum computation. Nature Physics, 9(11): 727–731, 2013.
+[BFSS13] H. Buhrman, S. Fehr, C. Schaffner, and F. Speelman. The garden-hose model. In
+Innovations in Theoretical Computer Science—ITCS 2013, pages 145–158, 2013.
+[BFW14] M. Berta, O. Fawzi, and S. Wehner. Quantum to classical randomness extractors.
+IEEE Transactions on Information Theory, 60(2): 1168–1192, 2014.
+[BGI 12] B.Barak,O.Goldreich,R.Impagliazzo, S.Rudich,A.Sahai,S.Vadhan,andK.Yang.
+Onthe(im)possibility of obfuscatingprograms. Journal of the ACM,59(2): 6:1–6:48,
+2012.
+[BGKW88] M. Ben-Or, S. Goldwasser, J. Kilian, and A. Widgerson. Multi-prover interactive
+proofs: how to remove intractability assumptions. 20th Annual ACM Symposium on
+Theory of Computing—STOC 1988, pages 113–131, 1988.
+[BGS13] A.Broadbent, G.Gutoski, andD.Stebila. Quantumone-time programs. InAdvances
+in Cryptology—CRYPTO 2013, pages 344–360, 2013.
+[BH05] M. Ben-Or and A. Hassidim. Fast quantum Byzantine agreement. In 37rd Annual
+ACM Symposium on Theory of Computing—STOC 2005, pages 481–485, 2005.
+[BHK05] J. Barrett, L. Hardy, and A. Kent. No signaling and quantum key distribution.
+Physical Review Letters, 95(1): 010503, 2005.
+[BHK 11] G. Brassard, P. Høyer, K. Kalach, M. Kaplan, S. Laplante, and L. Salvail. Merkle
+puzzles in a quantum world. In Advances in Cryptology—CRYPTO 2011, pages 391–
+410, 2011.
+[BHMT00] G. Brassard, P. Høyer, M. Mosca, and A. Tapp. Quantum amplitude amplification
+andestimation. QuantumComputation andQuantumInformation,305: 53–74, 2000.
+[BJ15] A.BroadbentandS.Jeffery. Quantumhomomorphicencryption forcircuits oflow T-
+gate complexity. In Advances in Cryptology—CRYPTO 2015, pages 609–629, 2015.
+[BJLM13] D. J. Bernstein, S. Jeffery, T. Lange, and A. Meurer. Quantum algorithms for the
+subset-sum problem. In Post-Quantum Cryptography—PQCrypto 2013, pages 16–33,
+2013.
+[BK11] S.BeigiandR.Ko¨nig. Simplifiedinstantaneous non-localquantumcomputation with
+applications to position-based cryptography. New Journal of Physics, 13(9), 2011.
+[BKB 12] S. Barz, E. Kashefi, A. Broadbent, J. F. Fitzsimons, A. Zeilinger, and P. Walther.
+Demonstration of blind quantum computing. Science, 335(6066): 303–308, 2012.
+[Blu83] M. Blum. Coin flipping by telephone a protocol for solving impossible problems.
+ACM SIGACT News, 15(1): 23–27, 1983.
+[BNSU14] A. Brodutch, D. Nagaj, O. Sattath, and D. Unruh. An adaptive attack on Wiesner’s
+quantum money, 2014.
+arXiv:1404.1507.
+[BR03] P. O. Boykin and V. Roychowdhury. Optimal encryption of quantum bits. Physical
+Review A, 67(4): 042317, 2003.
+[Bra05] G. Brassard. Brief history of quantum cryptography: A personal perspective. IEEE
+Information Theory Workshop on Theory and Practice in Information-Theoretic Se-
+curity, pages 19–23, 2005.
+[Bro15] A. Broadbent. Delegating private quantum computations. Canadian Journal of
+Physics, 93(9): 941–946, 2015.
+[Bus04] L. Bussard. Trust Establishment Protocols for Communicating Devices. PhD thesis,
+Eurecom-ENST, 2004.
+[BvD10] D.BaconandW.vanDam. Recentprogressinquantumalgorithms. Communications
+of the ACM, 53(2): 84–93, 2010.
+[BZ13] D. Boneh and M. Zhandry. Secure signatures and chosen ciphertext security in a
+quantum computing world. In Advances in Cryptology—CRYPTO 2013, pages 361–
+379, 2013.
+[Can01] R. Canetti. Universally composable security: A new paradigm for cryptographic
+protocols. In 42nd Annual Symposium on Foundations of Computer Science—FOCS
+2001, pages 136–145, 2001.
+[CˇCˇS06] S. Cˇapkun, M. Cˇagalj, and M. Srivastava. Secure localization with hidden
+and mobile base stations. In 25th IEEE International Conference on Computer
+Communications—INFOCOM 2006, pages 1–10, 2006.
+[CDP 13] G.Chiribella,G.M.D’Ariano,P.Perinotti,D.Schlingemann,andR.Werner. Ashort
+impossibility proof of quantum bit commitment. Physical Review Letters, 377(15):
+1076–1087, 2013.
+[CFG 10] N.Chandran,S.Fehr,R.Gelles,V.Goyal, andR.Ostrovsky. Position-basedquantum
+cryptography, 2010.
+arXiv:1005.1750.
+[CGL99] R. Cleve, D. Gottesman, and H.-K. Lo. How to share a quantum secret. Physical
+Review Letters, 83(3): 648–651, 1999.
+[CGMO09] N.Chandran,V.Goyal, R.Moriarty, andR.Ostrovsky. Position basedcryptography.
+In Advances in Cryptology—CRYPTO 2009, pages 391–407, 2009.
+[CˇH05] S. Cˇapkun and J.-P. Hubaux. Secure positioning of wireless devices with application
+to sensor networks. In 24th Annual Joint Conference of the IEEE Computer and
+Communications Societies—INFOCOM 2005, pages 1917–1928, 2005.
+[Chi05] A. M. Childs. Secure assisted quantum computation. Quantum Information & Com-
+putation, 5(6): 456–466, 2005.
+[CHSH69] J. F. Clauser, M. A. Horne., A. Shimony, and R. A. Holt. Proposed experiment to
+test local hidden-variable theories. Physical Review Letters, 23(15): 880–884, 1969.
+[CJS13] A.Childs,D.Jao,andV.Soukharev. Constructingellipticcurveisogeniesinquantum
+subexponential time. Journal of Mathematical Cryptology, 8(1): 1–29, 2013.
+[CK88] C. Cr´epeau and J. Kilian. Achieving oblivious transfer using weakened security as-
+sumptions. In 29th Annual Symposium on Foundations of Computer Science—FOCS
+1988, pages 42–52, 1988.
+[CK09] A. Chailloux and I.Kerenidis. Optimal quantumstrong coin flipping. In 50th Annual
+Symposium on Foundations of Computer Science—FOCS 2009, pages527–533, 2009.
+[CK11] A. Chailloux and I. Kerenidis. Optimal bounds for quantum bit commitment. In
+52nd Annual Symposium on Foundations of Computer Science—FOCS 2011, pages
+354–362, 2011.
+[CLM 14] P. Chan, I. Lucio-Martinez, X. Mo, C. Simon, and W. Tittel. Performing private
+database queries in a real-world environment using a quantum protocol. Scientific
+Reports, 4: 5233, 2014.
+[CM97] C. Cachin and U. Maurer. Unconditional security against memory-bounded adver-
+saries. In Advances in Cryptology—CRYPTO 1997, pages 292–306, 1997.
+[CMA 13] B. G. Christensen, K. T. McCusker, J. B. Altepeter, B. Calkins, T. Gerrits, A. E.
+Lita, A. Miller, L. K. Shalm, Y. Zhang, S. W. Nam, N. Brunner, C. C. W. Lim,
+N. Gisin, and P. G. Kwiat. Detection-loophole-free test of quantum nonlocality, and
+applications. Physical Review Letters, 111(13): 130406, 2013.
+[Col06] R. Colbeck. Quantum And Relativistic Protocols For Secure Multi-Party Computa-
+tion. PhD thesis, University of Cambridge, UK, 2006.
+arXiv:0911.3814.
+[Col07] R. Colbeck. Impossibility of secure two-party classical computation. Physical Review
+A, 76(6): 062308, 2007.
+[CR12] R. Colbeck and R. Renner. Free randomness can be amplified. Nature Physics, 8:
+450–453, 2012.
+[Cr´e88] C. Cr´epeau. Equivalence between two flavours of oblivious transfers. In Advances in
+Cryptology—CRYPTO 1987, pages 350–354, 1988.
+[CSST11] C. Cr´epeau, L. Salvail, J.-R. Simard, and A. Tapp. Two provers in isolation. In
+Advances in Cryptology—ASIACRYPT 2011, pages 407–430, 2011.
+[CSSW06] C. Cr´epeau, G. Savvides, C. Schaffner, and J. Wullschleger. Information-theoretic
+conditions for two-party secure function evaluation. In Advances in Cryptology—
+EUROCRYPT 2006, pages 538–554, 2006.
+[CSWX14] W. Y. Chiu, M. Szegedy, C. Wang, and Y. Xu. The garden hose complexity for the
+equality function. In Algorithmic Aspects in Information and Management, pages
+112–123, 2014.
+[CW05] M. Christandl and S. Wehner. Quantum anonymous transmissions. In Advances in
+Cryptology—ASIACRYPT 2005, pages 217–235, 2005.
+[DD10] S.P.DesrosiersandF.Dupuis. Quantumentropicsecurityandapproximatequantum
+encryption. IEEE Transactions on Information Theory, 56(7): 3455–3464, 2010.
+[DDN15] I. Damg˚ard, F. Dupuis, and J. B. Nielsen. On the orthogonal vector problem and
+thefeasibility of unconditionally secureleakage-resilient computation. InInformation
+Theoretic Security, pages 87–104, 2015.
+[Des09] S. P. Desrosiers. Entropic security in quantum cryptography. Quantum Information
+Processing, 8(4): 331–345, 2009.
+[DFL 09] I. Damg˚ard, S. Fehr, C. Lunemann, L. Salvail, and C. Schaffner. Improving the
+security of quantum protocols via commit-and-open. In Advances in Cryptology—
+CRYPTO 2009, pages 408–427, 2009.
+[DFNS14] I. Damg˚ard, J. Funder, J. B. Nielsen, and L. Salvail. Superposition attacks on cryp-
+tographic protocols. In Information Theoretic Security, pages 142–161, 2014.
+[DFPR14] V. Dunjko, J. F. Fitzsimons, C. Portmann, and R. Renner. Composable security of
+delegatedquantumcomputation. Advances inCryptology—ASIACRYPT 2014, pages
+406–425, 2014.
+[DFR 07] I. B. Damg˚ard, S. Fehr, R. Renner, L. Salvail, and C. Schaffner. A tight high-order
+entropicquantumuncertaintyrelationwithapplications. InAdvancesinCryptology—
+CRYPTO 2007, pages 360–378, 2007.
+[DFS04] I. Damg˚ard, S. Fehr, and L. Salvail. Zero-knowledge proofs and string commitments
+withstanding quantum attacks. In Advances in Cryptology—CRYPTO 2004, pages
+254–272, 2004.
+[DFSS05] I. Damg˚ard, S. Fehr, L. Salvail, and C. Schaffner. Cryptography in the bounded
+quantum-storage model. In 46th Annual Symposium on Foundations of Computer
+Science—FOCS 2005, pages 449–458, 2005.
+[DFSS07] I. B. Damg˚ard, S. Fehr, L. Salvail, and C. Schaffner. Secure identification and QKD
+inthebounded-quantum-storagemodel. InAdvances in Cryptology—CRYPTO 2007,
+volume 4622, pages 342–359, 2007.
+[DFSS08] I. B. Damg˚ard, S. Fehr, L. Salvail, and C. Schaffner. Cryptography in the bounded-
+quantum-storage model. SIAM Journal on Computing, 37(6): 1865–1890, 2008.
+[DFW15] F.Dupuis, O.Fawzi, andS.Wehner. Entanglement samplingandapplications. IEEE
+Transactions on Information Theory, 61(2): 1093–1112, 2015.
+[DM04] S.Dziembowski and U. Maurer. On generating the initial key in the bounded-storage
+model. In Advances in Cryptology—CRYPTO 2004, pages 126–137, 2004.
+[DM08] S. Dziembowski and U. Maurer. The bare bounded-storage model: The tight bound
+on the storage requirement for key agreement. IEEE Transactions on Information
+Theory, 54(6): 2790–2792, 2008.
+[dMM03] F.deMartini andC.Monroe. Experimental Quantum Computation and Information.
+International School of Physics Enrico Fermi. IOS Press, 2003.
+[DNS10] F. Dupuis, J. B. Nielsen, and L. Salvail. Secure two-party quantum evaluation of
+unitaries against specious adversaries. In Advances in Cryptology—CRYPTO 2010,
+pages 685–706, 2010.
+[DNS12] F. Dupuis, J. B. Nielsen, and L. Salvail. Actively secure two-party evaluation of
+any quantum operation. In Advances in Cryptology—CRYPTO 2012, pages 794–811,
+2012.
+[DPS14] I. Damg˚ard, T. B. Pedersen, and L. Salvail. How to re-use a one-time pad safely and
+almost optimally even if P = NP. Natural Computing, 13(4): 469–486, 2014.
+[DWA14] V.Dunjko, P.Wallden, andE.Andersson. Quantumdigital signatures withoutquan-
+tum memory. Physical Review Letters, 112: 040502, 2014.
+[EGL85] S. Even, O. Goldreich, and A. Lempel. A randomized protocol for signing contracts.
+Communications of the ACM, 28(6): 637–647, 1985.
+[Eke91] A. K. Ekert. Quantum cryptography based on Bell’s theorem. Physical Review
+Letters, 67(6): 661–663, 1991.
+[ENN 14] C. Erven, N. Ng, N.Gigov, R.Laflamme, S. Wehner, and G.Weihs. An experimental
+implementation of oblivious transfer in the noisy storage model. Nature Communi-
+cations, 5: 3418, 2014.
+[EPR35] A. Einstein, B. Podolsky, and N. Rosen. Can quantum-mechanical description of
+physical reality be considered complete? Physical Review Letters, 47(10): 777–780,
+1935.
+[FBS 14] K. A. G. Fisher, A. Broadbent, L. K. Shalm, Z. Yan, J. Lavoie, R. Prevedel, T. Jen-
+newein, and K. J. Resch. Quantum computing on encrypted data. Nature Commu-
+nications, 5: 3074, 2014.
+[Feh10] S. Fehr. Quantum cryptography. Foundations of Physics, 40(5): 494–531, 2010.
+[FF15] S. Fehr and M. Fillinger. Multi-prover commitments against non-signaling attacks.
+In Advances in Cryptology—CRYPTO 2015, pages 403–421, 2015.
+[FGH 10] E. Farhi, D. Gosset, A. Hassidimand, A. Lutomirski, D. Nagaj, and P. Shor. Quan-
+tum state restoration and single-copy tomography for ground states of hamiltonians.
+Physical Review Letters, 105(19): 190503, 2010.
+[FGH 12] E. Farhi, D. Gosset, A. Hassidim, A. Lutomirski, and P. W. Shor. Quantum money
+fromknots. InInnovations in Theoretical Computer Science—ITCS 2012, pages276–
+289, 2012.
+[FGS13] S. Fehr, R. Gelles, and C. Schaffner. Security and composability of randomness
+expansion from Bell inequalities. Physical Review A, 87(1): 012335, 2013.
+[FK12] J. F. Fitzsimons and E. Kashefi. Unconditionally verifiable blind computation, 2012.
+arXiv:1203.5217.
+[FKS 13] S. Fehr, J. Katz, F. Song, H. Zhou, and V. Zikas. Feasibility and completeness of
+cryptographic tasks in the quantum world. In Theory of Cryptography, pages 281–
+296, 2013.
+[FS09] S. Fehr and C. Schaffner. Composing quantum protocols in a classical environment.
+In Theory of Cryptography, pages 350–367, 2009.
+[Gav12] D. Gavinsky. Quantum money with classical verification. In 27th Annual Conference
+on Computational Complexity—CCC 2012, pages 42–52, 2012.
+[GC01] D. Gottesman and I. Chuang. Quantum digital signatures. 2001.
+arXiv:quant-ph/0105032.
+[Gen09] C. Gentry. Fully homomorphic encryption using ideal lattices. In 41st Annual ACM
+Symposium on Theory of Computing—STOC 2009, pages 169–178, 2009.
+[GGH 13] S. Garg, C. Gentry, S. Halevi, M. Raykova, A. Sahai, and B. Waters. Candidate
+indistinguishability obfuscation and functional encryption for all circuits. In 54th
+Annual Symposium on Foundations of Computer Science—FOCS 2013, pages 40–49,
+2013.
+[GKW15] A. Gheorghiu, E. Kashefi, and P. Wallden. Robustness and device independence of
+verifiable blind quantum computing. New Journal of Physics, 17(8): 083040, 2015.
+[GLM08] V.Giovannetti, S.Lloyd, andL.Maccone. Quantumprivatequeries. Physical Review
+Letters, 100(23): 230502, 2008.
+[GLM10] V. Giovannetti, S. Lloyd, and L. Maccone. Quantum private queries: Security anal-
+ysis. IEEE Transactions on Information Theory, 56(7): 3465–3477, 2010.
+[GM84] S. Goldwasser and S. Micali. Probabilistic encryption. Journal of Computer and
+System Sciences, 28(2): 270–299, 1984.
+[GMR89] S. Goldwasser, S. Micali, and C. Rackoff. The knowledge complexity of interactive
+proof systems. SIAM Journal on Computing, 18(1): 186–208, 1989.
+[GMW91] O. Goldreich, S. Micali, and A. Wigderson. Proofs that yield nothing but their
+validity for all languages in NP have zero-knowledge proof systems. Journal of the
+ACM, 38(3): 690–728, 1991.
+[Gol02] O. Goldreich. Zero-knowledge twenty years after its invention, 2002.
+Online: www.wisdom.weizmann.ac.il/~oded/PSX/zk-tut02v3.pdf.
+[Got03] D. Gottesman. Uncloneable encryption. Quantum Information & Computation, 3(6):
+581–602, 2003.
+[Gro96] L. K. Grover. A fast quantum mechanical algorithm for database search. In 28th
+Annual ACM Symposium on Theory of Computing—STOC 1996, pages 212–219,
+1996.
+[GRTZ02] N. Gisin, G. Ribordy, W. Tittel, and H. Zbinden. Quantum cryptography. Reviews
+of Modern Physics, 74(1): 145–195, 2002.
+[Hal05] S. Hallgren. Fast quantum algorithms for computing the unit group and class group
+ofanumberfield. In37rd Annual ACM Symposium on Theory of Computing—STOC
+2005, pages 468–474, 2005.
+[Hal07] S. Hallgren. Polynomial-time quantum algorithms for Pell’s equation and the princi-
+pal ideal problem. Journal of the ACM, 54(1): 4:1–4:19, 2007.
+[Hei27] W. Heisenberg. Schwankungserscheinungen und quantenmechanik. Zeitschrift fuer
+Physik, 40(7): 501–506, 1927.
+[HK04] L. Hardy and A. Kent. Cheat sensitive quantum bit commitment. Physical Review
+Letters, 92(15): 157901, 2004.
+[HLSW04] P. Hayden, D. Leung, P. W. Shor, and A. Winter. Randomizing quantum states:
+Constructions and applications. Communications in Mathematical Physics, 250(2):
+371–391, 2004.
+[HMU06] D. Hofheinz, J. Mu¨ller-Quade, and D. Unruh. On the (im-)possibility of extending
+coin toss. In Advances in Cryptology—EUROCRYPT 2006, pages 504–521, 2006.
+[HPF15] M. Hajduˇsek, C. A. P´erez-Delgado, and J. F. Fitzsimons. Device-independent verifi-
+able blind quantum computation, 2015.
+arXiv:1502.02563.
+[HRW10] E. H¨anggi, R. Renner, and S. Wolf. Efficient device-independent quantum key distri-
+bution. In Advances in Cryptology—EUROCRYPT 2010, volume 6110, pages 216–
+234, 2010.
+[HSS11] S. Hallgren, A. Smith, and F. Song. Classical cryptographic protocols in a quantum
+world. In Advances in Cryptology—CRYPTO 2011, pages 411–428, 2011.
+[HT12] M. Hayashi and T. Tsurumaru. Concise and tight security analysis of the Bennett-
+Brassard1984protocolwithfinitekeylengths.NewJournalofPhysics,14(9): 093014,
+2012.
+[HW11] E. H¨anggi and J. Wullschleger. Tight boundsfor classical and quantum coin flipping.
+In Theory of Cryptography, pages 468–485, 2011.
+[IM11] L. M. Ioannou and M. Mosca. Unconditionally-secure and reusable public-key au-
+thenticationn. In 6th Conference on the Theory of Quantum Computation, Commu-
+nication, and Cryptography—TQC 2011, pages 121–142, 2011.
+[JSG 11] M. Jakobi, C. Simon, N. Gisin, J.-D. Bancal, C. Branciard, N. Walenta, and
+H. Zbinden. Practical private database queries based on a quantum-key-distribution
+protocol. Physical Review A, 83(2): 022301, 2011.
+[KDK15] T. Kapourniotis, V. Dunjko, and E. Kashefi. On optimising quantum communi-
+cations in verifiable quantum computing. In Asian Quantum Information Science
+Conference—AQIS 2015, pages 23–25, 2015.
+[Ken99] A. Kent. Unconditionally secure bit commitment. Physical Review Letters, 83(7):
+1447–1450, 1999.
+[Kil88] J. Kilian. Founding cryptography on oblivious transfer. In 20th Annual ACM Sym-
+posium on Theory of Computing—STOC 1988, pages 20–31, 1988.
+[Kit] A.Kitaev. Quantumcoinflipping. Talkatthe6thworkshoponQuantumInformation
+Processing - QIP 2003.
+[KL07] J. Katz and Y. Lindell. Introduction to Modern Cryptography (Chapman & Hall/Crc
+Cryptography and Network Security Series). Chapman & Hall/CRC, 2007.
+[KLM07] P. Kaye, R. Laflamme, and M. Mosca. An introduction to quantum computing. Ox-
+ford, 2007.
+[KM10] H. Kuwakado and M. Morii. Quantum distinguisher between the 3-round Feistel
+cipher and the random permutation. In IEEEE International Symposium on Infor-
+mation Theory—ISIT 2010, pages 2682–2685, 2010.
+[KMS11] A. Kent, W. J. Munro, and T. P. Spiller. Quantum tagging: Authenticating location
+via quantum information and relativistic signaling constraints. Physical Review A,
+84(1): 012326, 2011.
+[KMSB06] A. Kent, W. Munro, T. Spiller, and R. Beausoleil. Tagging systems, 2006.
+10/903,220.
+[Koa09] M. Koashi. Simple security proof of quantum key distribution based on complemen-
+tarity. New Journal of Physics, 11(4): 045018, 2009.
+[KP14] H. Klauck and S. Podder. New bounds for the garden-hose model. In 34th interna-
+tional Conference on Foundation of Software Technology and Theoretical Computer
+Science—FSTTCS 2014, pages 481–492, 2014.
+[KRR14] Y.T.Kalai, R. Raz, andR.D. Rothblum. How todelegate computations: Thepower
+of no-signaling proofs. In 46th Annual ACM Symposium on Theory of Computing—
+STOC 2014, pages 485–494, 2014.
+[LC97] H.-K. Lo and H. F. Chau. Is quantum bit commitment really possible? Physical
+Review Letters, 78(17): 3410–3413, 1997.
+[LC99] H.-K. Lo and H. F. Chau. Unconditional security of quantum key distribution over
+arbitrarily long distances. Science, 283(5410): 2050–2056, 1999.
+[Leu02] D.W. Leung. QuantumVernam cipher. Quantum Information & Computation, 2(1):
+14–34, 2002.
+Online: arXiv:quant-ph/0012077.
+[Liu14a] Y.-K. Liu. Building one-time memories from isolated qubits. In 5th Conference on
+Innovations in Theoretical Computer Science—ITCS 2014, pages 269–286, 2014.
+[Liu14b] Y.-K. Liu. Single-shot security for one-time memories in the isolated qubits model.
+In Advances in Cryptology—CRYPTO 2014, pages 19–36, 2014.
+[Liu15] Y.-K. Liu. Privacy amplification in the isolated qubits model. In Advances in
+Cryptology—EUROCRYPT 2015, pages 785–814, 2015.
+[LKB 13] T. Lunghi, J. Kaniewski, F. Bussi`eres, R. Houlmann, M. Tomamichel, A. Kent,
+N. Gisin, S. Wehner, and H. Zbinden. Experimental bit commitment based on quan-
+tum communication and special relativity. Physical Review Letters, 111(18): 180504,
+2013.
+[LKB 15] T.Lunghi,J.Kaniewski,F.Bussi`eres, R.Houlmann,M.Tomamichel, S.Wehner,and
+H. Zbinden. Practical relativistic bit commitment. Physical Review Letters, 115(03):
+030502, 2015.
+[LL11] H.-K. Lau and H.-K. Lo. Insecurity of position-based quantum-cryptography proto-
+cols against entanglement attacks. Physical Review A, 83(1): 012322, 2011.
+[LMvdP13] T. Laarhoven, M. Mosca, and J. van de Pol. Solving the shortest vector problem
+in lattices faster using quantum search. In Post-Quantum Cryptography—PQCrypto
+2013, pages 83–101, 2013.
+[Lo97] H.-K. Lo. Insecurity of quantum secure computations. Physical Review A, 56(2):
+1154–1162, 1997.
+[LRR14] F. G. Lacerda, J. M. Renes, and R. Renner. Classical leakage resilience from fault-
+tolerant quantum computation, 2014.
+arXiv:1404.7516.
+[LWW 10] L.Lydersen,C.Wiechers, C.Wittmann, D.Elser,J.Skaar,andV.Makarov. Hacking
+commercial quantum cryptography systems by tailored bright illumination. Nature
+Photonics, 4: 696–689, 2010.
+[Mal10a] R. A. Malaney. Location-dependent communications using quantum entanglement.
+Physical Review A, 81(4): 042319, 2010.
+[Mal10b] R.A.Malaney. Quantumlocation verification innoisychannels. InProceedings of the
+Global Communications Conference—GLOBECOM 2010, pages 1–6. IEEE, 2010.
+[Mau92] U. M. Maurer. Protocols for secret key agreement by public discussion based on
+common information. In Advances in Cryptology—CRYPTO 1992, pages 461–470,
+1992.
+[May96a] D. Mayers. Quantum key distribution and string oblivious transfer in noisy channels.
+In Advances in Cryptology—CRYPTO 1996, pages 343–357, 1996.
+[May96b] D. Mayers. The trouble with quantum bit commitment, 1996.
+arXiv:quant-ph/9603015.
+[May97] D. Mayers. Unconditionally secure quantum bit commitment is impossible. Physical
+Review Letters, 78(17): 3414–3417, 1997.
+[May01] D. Mayers. Unconditional security in quantum cryptography. Journal of the ACM,
+48(3): 351–406, 2001.
+[MDMO06] F. Magniez, M. Dominic, M. Mosca, and H. Ollivier. Self-testing of quantum circuits.
+In Automata, Languages and Progamming, pages 72–83, 2006.
+[Mer78] R. C. Merkle. Secure communications over insecure channels. Communications of
+the ACM, 21(4): 294–299, 1978.
+[Mer07] N. D. Mermin. Quantum computer science: An introduction. Cambridge University
+Press, 2007.
+[Moc07] C. Mochon. Quantum weak coin flipping with arbitrarily small bias, 2007.
+arXiv:0711.4114.
+[Mos09] M.Mosca. Quantumalgorithms. InEncyclopedia of Complexity and Systems Science,
+pages 7088–7118, 2009.
+[MPA11] L. Masanes, S. Pironio, and A. Acin. Secure device-independent quantum key distri-
+bution with causally independent measurement devices. Nature Communications, 2:
+238, 2011.
+[MRV07] C. Moore, A. Russell, and U. Vazirani. A classical one-way function to confound
+quantum adversaries, 2007.
+arXiv:quant-ph/0701115.
+[MS94] D. Mayers and L. Salvail. Quantum oblivious transfer is secure against all individual
+measurements. In Workshop on Physics and Computation. PhysComp 1994, pages
+69–77, 1994.
+[MS10] M.MoscaandD.Stebila. Quantumcoins. Error-Correcting Codes, Finite Geometries
+and Cryptography, 523: 35–47, 2010.
+[MS13] C. A. Miller and Y. Shi. Optimal robust self-testing by binary nonlocal XOR games.
+In 8th Conference on the Theory of Quantum Computation, Communication, and
+Cryptography—TQC 2013, pages 254–262, 2013.
+[MS14] C. A. Miller and Y. Shi. Robust protocols for securely expanding randomness and
+distributingkeys usinguntrusted quantum devices. In 46th Annual ACM Symposium
+on Theory of Computing—STOC 2014, pages 417–426, 2014.
+[MTVUZ05] G. Molina-Terriza, A. Vaziri, R. Ursin, and A. Zeilinger. Experimental quantum coin
+tossing. Physical Review Letters, 94(4): 040501, 2005.
+[MU88] H. Maassen and J. B. M. Uffink. Generalized entropic uncertainty relations. Physical
+Review Letters, 60(12): 1103–1106, 1988.
+[Mu¨l06] J. Mu¨ller-Quade. Quantum cryptography beyond key exchange. Informatik-
+Forschung und Entwicklung, 21(1): 39–54, 2006.
+[MVW13] A. Molina, T. Vidick, and J. Watrous. Optimal counterfeiting attacks and general-
+izations for Wiesner’s quantum money. In Theory of Quantum Computation, Com-
+munication, and Cryptography - TQC 2012, pages 45–64, 2013.
+[MY98] D. Mayers and A. Yao. Quantum cryptography with imperfect apparatus. In 39th
+Annual Symposium on Foundations of Computer Science—FOCS 1998, pages 503–
+509, 1998.
+[MY04] D. Mayers and A. Yao. Self testing quantum apparatus. Quantum Information &
+Computation, 4(4): 273–286, 2004.
+[MYS12] M. McKague, T. H. Yang, and V. Scarani. Robust self-testing of the singlet. Journal
+of Physics A, 45(45): 455304, 2012.
+[NBW12] N. H. Y. Ng, M. Berta, and S. Wehner. Min-entropy uncertainty relation for finite-
+size cryptography. Physical Review A, 86(4): 042315, 2012.
+[NC00] M. A. Nielsen and I. L. Chuang. Quantum Computation and Quantum Information.
+Cambridge University Press, 2000.
+[NFHM08] A. T. Nguyen, J. Frison, K. P. Huy, and S. Massar. Experimental quantum tossing
+of a single coin. New Journal of Physics, 10(8): 083037, 2008.
+[NJC 12] N. H. Y. Ng, S. K. Joshi, C. Chen Ming, C. Kurtsiefer, and S. Wehner. Experimental
+implementation of bit commitment in the noisy-storage model. Nature Communica-
+tions, 3: 1326, 2012.
+[PAM 10] S. Pironio, A. Ac´ın, S. Massar, A. B. de la Giroday, D. N. Matsukevich, P. Maunz,
+S. Olmschenk, D. Hayes, L. Luo, T. A. Manning, and C. Monroe. Random numbers
+certified by Bell’s theorem. Nature, 464: 1021–1024, 2010.
+[Pei15] C. Peikert. A decade of lattice cryptography. Cryptology ePrint Archive, Report
+2015/939, 2015.
+[PM13] S. Pironio and S. Massar. Security of practical private randomness generation. Phys-
+ical Review A, 87(1): 012336, 2013.
+[PYJ 12] F. Pastawski, N. Y. Yao, L. Jiang, M. D. Lukin, and J. I. Cirac. Unforgeable noise-
+tolerant quantum tokens. Proceedings of the National Academy of Sciences of the
+United States of America, 109(40): 16079–16082, 2012.
+[Rab81] M. Rabin. How to exchange secrets by oblivious transfer. Technical Report TR-81,
+Harvard University, 1981.
+[RAD78] R. L. Rivest, L. Adleman, and M. L. Dertouzos. On data banks and privacy homo-
+morphisms. In Foundations of Secure Computation, pages 169–177, 1978.
+[Reg04] O.Regev. Quantumcomputationandlatticeproblems. SIAMJournal on Computing,
+33(3): 738–760, 2004.
+[Ren05] R. Renner. Security of quantum key distribution. International Journal of Quantum
+Information, 06(01): 1–127, 2005.
+[RSA78] R. L. Rivest, A. Shamir, and L. Adleman. A method for obtaining digital signatures
+and public-key cryptosystems. Communications of the ACM, 21(2): 120–126, 1978.
+[RUV13] B.W.Reichardt, F.Unger, andU.Vazirani. Classicalcommandof quantumsystems.
+Nature, 496: 456–460, 2013.
+[SAA 10] C. Simon, M. Afzelius, J. Appel, A. Boyer De La Giroday, S. J. Dewhurst, N. Gisin,
+C.Y.Hu, F. Jelezko, S.Kro¨ll, J.H.Mu¨ller, J.Nunn,E.S.Polzik, J.G. Rarity, H.De
+Riedmatten, W. Rosenfeld, A. J. Shields, N. Sk¨old, R. M. Stevenson, R. Thew, I. A.
+M. C. Weber, H. Weinfurter, J. Wrachtrup, and R. J. Young. Quantum memories:
+A review based on the European integrated project”qubit applications (QAP)”. Eu-
+ropean Physical Journal D, 58(1): 1–22, 2010.
+[Sal98] L. Salvail. Quantum bit commitment from a physical assumption. In Advances in
+Cryptology—CRYPTO 1998, pages 338–353, 1998.
+[Sch07] C. Schaffner. Cryptography in the Bounded-Quantum-Storage Model. PhD thesis,
+University of Aarhus, 2007.
+arXiv:0709.0289.
+[Sho94] P. W.Shor. Algorithms for quantumcomputation: discrete logarithms andfactoring.
+In35th Annual Symposium on Foundations of Computer Science—FOCS 1994, pages
+124–134. IEEE, 1994.
+[SML10] D. Stebila, M. Mosca, and N. Lu¨tkenhaus. The case for quantum key distribution.
+In Quantum Communication and Quantum Networking, volume 36, pages 283–296,
+2010.
+[Son14] F. Song. A note on quantum security for post-quantum cryptography. In Post-
+Quantum Cryptography—PQCrypto 2014, pages 246–265, 2014.
+[SP00] P. W. Shor and J. Preskill. Simple proof of security of the BB84 quantum key
+distribution protocol. Physical Review Letters, 85(2): 441–444, 2000.
+[SP05] D. Singelee and B. Preneel. s using secure distance boundingprotocols. In 2nd IEEE
+International Conference on Mobile Adhoc and Sensor Systems—MASS 2005, pages
+7 pp.–840, 2005.
+[SR08] V. Scarani and R. Renner. Quantum cryptography with finite resources: Uncon-
+ditional security bound for discrete-variable protocols with one-way postprocessing.
+Physical Review Letters, 100(20): 200501, 2008.
+[SSS14] L. Salvail, C. Schaffner, and M. Sota´kov´a. Quantifying the leakage of quantum pro-
+tocols for classical two-party cryptography. International Journal of Quantum Infor-
+mation, 13(04): 1450041, 2014.
+[SSW03] N. Sastry, U. Shankar, and D. Wagner. Secure verification of location claims. In 2nd
+ACM Workshop on Wireless Security—WiSe 2003, pages 1–10, 2003.
+[TKM12] S. Tani, H. Kobayashi, and K. Matsumoto. Exact quantum algorithms for the leader
+election problem. ACM Transactions on Computation Theory—TOCT, 4(1): 1:1–
+1:24, 2012.
+[TL15] M.Tomamichel and A.Leverrier. Arigorous and complete proofof finitekey security
+of quantum key distribution, 2015.
+arXiv:1506.08458.
+[TLGR12] M. Tomamichel, C. C. W. Lim, N. Gisin, and R. Renner. Tight finite-key analysis
+for quantum cryptography. Nature Communications, 3: 634, 2012.
+[TZG01] W. Tittel, H. Zbinden, and N. Gisin. Experimental demonstration of quantum secret
+sharing. Physical Review A, 63: 042301, 2001.
+[Uhl76] A. Uhlmann. The transition probability in the state space of a *-algebra. Reports on
+Mathematical Physics, 9(2): 273–279, 1976.
+[Unr10] D. Unruh. Universally composable quantum multi-party computation. In Advances
+in Cryptology—EUROCRYPT 2010, pages 486–505, 2010.
+[Unr11] D. Unruh. Concurrent composition in the bounded quantum storage model. In
+Advances in Cryptology—EUROCRYPT 2011, pages 467–486, 2011.
+[Unr12] D.Unruh. Quantumproofsofknowledge. InAdvances in Cryptology—EUROCRYPT
+2012, pages 135–152, 2012.
+[Unr13] D. Unruh. Everlasting multi-party computation. In Advances in Cryptology—
+CRYPTO 2013, pages 380–397, 2013.
+[Unr14a] D. Unruh. Quantum position verification in the random oracle model. In Advances
+in Cryptology—EUROCRYPT 2014, pages 1–18, 2014.
+[Unr14b] D.Unruh.Revocablequantumtimed-releaseencryption. InAdvances inCryptology—
+EUROCRYPT 2014, pages 129–146, 2014.
+[Unr15] D. Unruh. Non-interactive zero-knowledge proofs in the quantum random oracle
+model. In Advances in Cryptology—EUROCRYPT 2015, pages 755–784, 2015.
+[vdG97] J. van de Graaf. Towards a formal definition of security for quantum protocols. PhD
+thesis, Universit´e de Montr´eal, 1997.
+[VN06] A.VoraandM.Nesterenko. Securelocationverificationusingradiobroadcast. Trans-
+actions on Dependable and Secure Computing, 3(4): 377–385, 2006.
+[VV12] U. V. Vazirani and T. Vidick. Certifiable quantum dice: or, true random number
+generation secure against quantum adversaries. In 44th Annual ACM Symposium on
+Theory of Computing—STOC 2012, pages 61–76, 2012.
+[VV14] U. V. Vazirani and T. Vidick. Robust device independent quantum key distribu-
+tion. In 5th Conference on Innovations in Theoretical Computer Science—ITCS
+2014, pages 35–36, 2014.
+[Wat06] J. Watrous. Zero-knowledge against quantum attacks. In 38th Annual ACM Sympo-
+sium on Theory of Computing—STOC 2006, pages 296–305, 2006.
+[Wat15] J. Watrous. Theory of quantum information, 2015.
+[WCSL10] S. Wehner, M. Curty, C. Schaffner, and H.-K. Lo. Implementation of two-party
+protocols in the noisy-storage model. Physical Review A, 81(5): 052336, 2010.
+[Wie83] S. Wiesner. Conjugate coding. ACM SIGACT News, 15(1): 78–88, 1983.
+[Wil13] M. M. Wilde. Quantum information theory. Cambridge University Press, 2013.
+[WST08] S.Wehner,C.Schaffner,andB.M.Terhal. Cryptographyfromnoisystorage. Physical
+Review Letters, 100(22): 220502, 2008.
+[WTHR11] S. Winkler, M. Tomamichel, S. Hengl, and R. Renner. Impossibility of growing
+quantum bit commitments. Physical Review Letters, 107(9): 090502, 2011.
+[WW08] S.WehnerandJ.Wullschleger. Composablesecurityinthebounded-quantum-storage
+model. In Automata, Languages and Programming, pages 604–615, 2008.
+[WW10] S. Wehner and A. Winter. Entropic uncertainty relations- a survey. New Journal of
+Physics, 12(2): 025009, 2010.
+[WZ82] W. K. Wootters and W. H. Zurek. A single quantum cannot be cloned. Nature, 299:
+802–803, 1982.
+[Yao82] A. C. Yao. Protocols for secure computations. In 23rd Annual Symposium on Foun-
+dations of Computer Science—FOCS 1982, pages 160–164, 1982.
+[Yao95] A. C.-C. Yao. Security of quantum protocols against coherent measurements. In 27th
+Annual ACM Symposium on Theory of Computing—STOC 1995, pages 67–75, 1995.
+[YPF14] L. Yu, C. A. P´erez-Delgado, and J. F. Fitzsimons. Limitations on information-
+theoretically-secure quantum homomorphic encryption. Physical Review A, 90(5):
+050303, 2014.
+[Zha12] M. Zhandry. How to construct quantum random functions. In 53rd Annual Sympo-
+sium on Foundations of Computer Science—FOCS 2012, pages 679–687, 2012.
+[ZLFW06] Y. Zhang, W. Liu, Y. Fang, and D. Wu. Secure localization and authentication in
+ultra-widebandsensornetworks. IEEEJournalonSelectedAreasinCommunications,
+24(4): 829–835, 2006.

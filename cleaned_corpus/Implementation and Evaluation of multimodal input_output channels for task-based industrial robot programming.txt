@@ -1,0 +1,2999 @@
+TECHNISCHE UNIVERSITÄT MÜNCHEN
+FAKULTÄT FÜR INFORMATIK
+Lehrstuhl für Echtzeitsysteme und Robotik
+Implementation and Evaluation of multimodal input/output
+channels for task-based industrial robot programming
+Implementierung und Evaluierung multimodaler
+Ein-/Ausgabekanäle zur aufgabenbasierten
+Programmierung industrieller Roboter
+Masterarbeit in Robotics, Cognition, Intelligence
+Author: Stefan Profanter
+Supervisor: Prof. Dr.-Ing. Alois Knoll
+Advisor: Alexander Perzylo
+Submission Date: 15.10.2014
+1v76940.3051:viXra
+Ichversichere,dassichdieseMasterarbeitselbständigverfasstundnur
+die angegebenen Quellen und Hilfsmittel verwendet habe.
+I assure the single handed composition of this master thesis only sup-
+ported by declared resources.
+München, den 15.10.2014
+StefanProfanter
+Industrial robots are used in many diferent felds of application: from huge welding
+production lines for automobiles to assembly tasks in Small and Medium-sized Enter-
+prises(SMEs). Suchrobotsystemsrequirespeciallytrainedemployees,whoknowhow
+toprogramtheserobotsandhowtoteachthemnewtasksusingTeachPadsandspecifc
+programming languages like KRL (Kuka) or RAPID (ABB).
+Programmingtheserobotsisnotveryintuitive,andtheprogrammerhastobeadomain
+expert for e.g. welding and programming to know how the task is optimally executed.
+ForSMEssuchemployeesarenotafordable,norcost-efective. Thereforeanewsystem
+isneededwheredomainexpertsfromaspecifcarea,likeweldingorassembly,caneas-
+ily program a robot without knowing anything about programming languages or how
+to use TeachPads. Such a system needs to be fexible to adapt to new tasks and func-
+tions. These requirements can be met by using a task based programming approach
+wheretherobotprogramisbuiltupusingahierarchicalstructureofprocess,tasksand
+skills. Italsoneedstobeintuitivesothatdomainexpertsdon’tneedmuchtrainingtime
+on handling the system. Intuitive interaction is achieved by using diferent input and
+outputmodalitieslikegestureinput,speechinput,ortouchinputwhicharesuitablefor
+the current task.
+Thismasterthesisfocusesontheimplementationofauserinterface(GUI)fortaskbased
+industrialrobotprogrammingandevaluatesdiferentinputmodalities(gesture,speech,
+touch,peninput)fortheinteractionwiththesystem. Theevaluationisbasedonauser
+studyconductedwith30participantsasaWizard-Of-Ozexperiment,wherenonexpert
+usershad toprogram assembly and weldingtasksto an industrialrobot,using thepre-
+viously developed GUI and various input and output modalities.
+The fndings of the task analysis and user study are then used for creating a semantic
+description which will be used in the cognitive robotics-worker cell for automatically
+inferringrequiredsystemcomponents,andtoprovidethebestsuitedinputmodality.
+Zusammenfassung
+Industrieroboter haben ein weitreichendes Anwendungsgebiet: von großen Schweiß-
+fießbändernfürdieFahrzeugindustriebishinzuMontageaufgabeninKleinenundMit-
+telständischenUnternehmen(KMU).DieseRobotersystemeerfordernspeziellausgebil-
+detes Personal für die Programmierung der Roboter unter Verwendung von TeachPads
+und speziellen Programmiersprachen wie KRL (Kuka) oder RAPID (ABB).
+DieProgrammierungdieserRoboteristwederintuitivnochschnellerlernbar;zusätzlich
+solltederProgrammierereinFachexpertefürz.B.Schweißensein,umeineefzienteund
+korrekteAusführungderAufgabenzugewährleisten.FürKMUssindAngestelltefürnur
+diesenZweckwederfnanzielltragbarnochkostenefzient.AusdiesemGrundwerden
+neue Systeme benötigt, bei dem Fachexperten für z.B. Schweißen oder Montage ohne
+spezielles Vorwissen im Bereich der Roboterprogrammierung in der Lage sind, diese
+Industrieroboter zu programmieren. Solche Systeme haben eine hohe Anforderung an
+die Flexibilität und Anpassung an neue Aufgaben.Diese Anforderungen können durch
+VerwendungvonaufgabenbasierterProgrammierung erreichtwerden,beiderdasPro-
+gramm hierarchisch in Prozesse, Aufgaben und Fähigkeiten aufgeteilt ist. Das System
+muss zusätzlich intuitiv bedienbar sein, um aufwändige Schulungen zu vermeiden. In-
+tuitive Interaktion wird erreicht durch verschiedene Ein- und Ausgabekanäle wie z.B.
+Gesten, Spracheingabe oder Touch Eingabe passend für die aktuelle Aufgabe.
+DerSchwerpunktdieserMasterarbeitliegtinderImplementierungeinergrafschenBe-
+nutzeroberfäche für die aufgabenbasierte Programmierung von Industrierobotern und
+derEvaluierungverschiedenerEingabekanäle(Gesten,Sprache,Touch,Stifteingabe)zur
+Interaktion mit dem System. Die Evaluierung basiert auf einer Benutzerstudie mit 30
+Teilnehmern, durchgeführt als ein Wizard-of-Oz Experiment. Dabei mussten die un-
+erfahrenen Benutzer verschiedene Aufgaben wie z.B. Schweißen oder Montage unter
+Verwendung der grafschen Benutzeroberfäche und verschiedenen Eingabemodalitä-
+ten dem Roboter beibringen.
+Die Ergebnisse der Aufgabenanalyse und der Benutzerstudie werden anschließend
+für die Erstellung einer semantischen Beschreibung verwendet, die in der kognitiven
+Roboter-Arbeiter Zelle zur automatischen Inferenz der erforderlichen Systemkompo-
+nentenundzurVorauswahlderambestengeeignetenEingabemodalitätverwendetwer-
+den kann.
+1 Introduction 1
+1.1 Motivation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+1.2 Industrial robot characteristics . . . . . . . . . . . . . . . . . . . . . . . 2
+1.3 History of industrial robots . . . . . . . . . . . . . . . . . . . . . . . . . 3
+1.4 Programming concepts for industrial robots . . . . . . . . . . . . . . . 6
+1.4.1 Online programming . . . . . . . . . . . . . . . . . . . . . . . . 7
+1.4.2 Ofine programming . . . . . . . . . . . . . . . . . . . . . . . . 8
+1.5 Contribution . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+2 Related Work 11
+2.1 Multimodal interaction . . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+2.2 Intuitive programming and interaction with robots . . . . . . . . . . . 12
+2.3 User study . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+2.4 Evaluation of multimodal systems . . . . . . . . . . . . . . . . . . . . . 15
+3 Input & Output Modalities 17
+3.1 Why multimodality? . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+3.2 Overview . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+3.2.1 Human Input Channels . . . . . . . . . . . . . . . . . . . . . . 18
+3.2.2 Human Output Channels . . . . . . . . . . . . . . . . . . . . . 19
+3.2.3 Computer Input Modalities . . . . . . . . . . . . . . . . . . . . 20
+3.2.4 Computer Output Modalities . . . . . . . . . . . . . . . . . . . 24
+3.2.5 Fusion of modalities . . . . . . . . . . . . . . . . . . . . . . . . 27
+4 Domains & Tasks 29
+4.1 Skill, Task and Process . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+4.2 Skills . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+4.3 Task Analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 33
+4.4 Domains . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+4.4.1 Assembly . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+4.4.2 Welding . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+4.4.3 Woodworking . . . . . . . . . . . . . . . . . . . . . . . . . . . . 40
+4.4.4 Metal processing & Bonding materials . . . . . . . . . . . . . . 43
+4.5 Semantic description . . . . . . . . . . . . . . . . . . . . . . . . . . . . 46
+5 Graphical User Interface 51
+5.1 Frameworks & Technologies . . . . . . . . . . . . . . . . . . . . . . . . 51
+5.2 Design . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 52
+5.3 Implementation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 54
+5.4 Integration . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 56
+6 User Study 59
+6.1 Hypothesis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 60
+6.2 User Study Design . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 60
+6.2.1 Phase 1: Introduction to the Evaluation & Background Ques-
+tionnaire . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 61
+6.2.2 Phase 2: Introduction to the Application & Expectation Ques-
+tionnaire . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 61
+6.2.3 Phase 3: User Experiment & Experience Questionnaire . . . . . 65
+6.2.4 Phase 4: Opinion Questionnaire . . . . . . . . . . . . . . . . . . 66
+6.2.5 Open discussion . . . . . . . . . . . . . . . . . . . . . . . . . . 67
+7 Evaluation 69
+7.1 Participants . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 69
+7.2 Expectation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 70
+7.3 Input modalities . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 72
+7.4 Opinion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 75
+7.5 Video analysis & Open discussion . . . . . . . . . . . . . . . . . . . . . 77
+8 Conclusions 81
+8.1 Future Improvements . . . . . . . . . . . . . . . . . . . . . . . . . . . . 83
+A Qestionnaires 85
+A.1 English Questionnaire . . . . . . . . . . . . . . . . . . . . . . . . . . . . 86
+A.1.1 Background Information . . . . . . . . . . . . . . . . . . . . . . 86
+A.1.2 Expectations . . . . . . . . . . . . . . . . . . . . . . . . . . . . 86
+A.1.3 Experience . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 88
+A.1.4 Opinion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 89
+A.2 German Questionnaire . . . . . . . . . . . . . . . . . . . . . . . . . . . 91
+A.2.1 Hintergrund Informationen . . . . . . . . . . . . . . . . . . . . 91
+A.2.2 Erwartungen . . . . . . . . . . . . . . . . . . . . . . . . . . . . 92
+A.2.3 Erfahrung . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 94
+A.2.4 Meinung . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 95
+Bibliography 99
+1 Introduction
+Since the frst industrial robots were developed in the 1970s, the research in intuitive
+robot programming got more an more important. Large companies with a lot size of
+a few thousand can aford specially trained robot programmers for their manufactur-
+ingsystems,butforSmallandMedium-sizedEnterprises(SMEs),buyingarobotisstill
+something which isn’t proftable. Current industrial robot systems are complex to pro-
+gram. SMEs normally have small lot sizes and don’t want to have big stocks. Conse-
+quently, concepts like fexibility and agility are fundamental in actual manufacturing
+plants [JN Pires, 2006]. [Wallhof et al., 2010] states that "Flexibility and adaption to
+rapidly changing market demands is one of the highest design criteria for the working
+cells and production facilities of the future."
+Therefore research groups all over the world try to build systems which combine hy-
+bridassembly(collaborationbetweenhumanandrobot)andeasierprogramming,even
+with no special knowledge in industrial robot programming. By using diferent input
+modalities, not specially trained employees should be able to work with the robot and
+reprogram/adapttherobottoanewproductioncycle. Relativelyfewrecentroboticsys-
+temsarecurrentlyequippedwithmultimodaluserinterfacesthatpermittoprogramthe
+robot, or simply control the robot using natural means [Burger, Ferrané, and Lerasle,
+2010]. A multimodal system is "a system that features multiple input devices (multi-
+sensor interaction) or multiple interpretations of input issued through a single device"
+[Chatty, 1994].
+Thegoalofthisthesisistodevelopamultimodaluserinterface(UI)forindustrialrobot
+programming,usedforindustrialmanufacturingtasks,andevaluatethemultimodalin-
+teraction with the system. The focus hereby lies on the evaluation of multimodality
+usingdiferentinputmethodssuchastouch,gesturesandaugmentedreality. Thefnd-
+ingsfromtaskanalysisandtheevaluationarethenusedtocreateasemanticdescription
+which can be used within cognitive human-robot worker cells.
+1 Introduction
+1.1 Motivation
+Currentindustrialrobotsrequireafairlycomplexandtimeconsumingteach-inprocess
+for each task it has to execute. New tasks are defned using TeachPads, or by manually
+specifying each coordinate and each single step of the task. Using such a TeachPad re-
+quiresspecialtrainingandalotofexperienceandthereforetheyarenotveryintuitive.
+Using a multimodal approach to program these robots would make the teach-in pro-
+cesslesscomplicated. Amultimodalinterfacecanincludegestures,speech,haptics,eye
+blinks, touch input and many others. Such multimodal interfaces have many advan-
+tages: they are more robust against errors and even prevent many errors due to the
+natural interaction with the system. They help users to correct errors or recover from
+them more easily and bring more bandwidth to the communication. Multimodal sys-
+temscanadapteasiertodiferentsituationsandenvironments. [JaimesandSebe,2007]
+Among those advantages, fexibility ofers the user to select the most adequate modal-
+ities in his specifc situation, according to his preferences and capabilities. Multimodal
+interfaces permit diverse user groups to control on how they interact with the system
+andthereforeaccommodateabroaderrangeofusersthantraditionalinterfaces-includ-
+ing users of diferent ages, skill levels, native language or even temporary illnesses or
+permanenthandicaps. Multimodalinterfacesevenimprovetheefciencybymorethan
+10% to 25% when using multiple modalities at the same time. [Oviatt, 2012]
+1.2 Industrial robot characteristics
+A robot in general is a system or machine guided by a controller or electrical circuit
+having actors to interact with the world. It is in most of the cases equipped with sen-
+sorstoperceivethesurroundingenvironmentandactbasedonthecurrentworldstate.
+Industrial robots are a specifc subclass of robots located at a fxed position, repeating
+tasksoverandoveragainwhileprovidingthepossibilitytoreprogramandperformnew
+tasks. The main diference to other numerically controlled machines is the versatility
+of the robot: it can be equipped with diferent tools and has a much larger workspace
+compared to the volume of the robot itself.
+The Robot Institute of America uses the following defnition:
+A robot is a re-programmable multifunctional manipulator designed to
+move materials, parts, tools or specialized devices through variable pro-
+grammed motions for the performance of a variety of tasks. [Tzafestas,
+1 Introduction
+The most important statement in this defnition is the word "re-programmable" which
+gives the robot two main characteristics: namely utility and adaptability. Those two
+characteristics are very important for industrial robots, and even more when used in
+SMEs (Small and Medium-sized Enterprises) [Wallén, 2008].
+The International Organization for Standardization, ISO, uses another defnition
+for a robot, "A manipulating industrial robot is an automatically controlled, re-
+programmable, multi-purpose, manipulative machine with several degrees of freedom,
+which may be either fxed in place or mobile for use in industrial automation applica-
+tions" [Tzafestas, 2013].
+In summary, an industrial robot shall be easily re-programmable without modifying
+its physical structure. The robot should also be able to work independently and au-
+tonomously, and it should be fexible to provide easy adaption to new tasks.
+1.3 History of industrial robots
+The frst industrial robot as we know it today was developed in 1954 by George Devol,
+who patented the frst multijoined robotic arm called Programmed Transfer Article,
+but he was uncertain on how the machine can be used. In 1956 Devol met Joseph
+Engelberger and founded the new company Unimation (from Universal Automation).
+They visited 15 diferent car factories and around 20 other industries to determine the
+needs regarding industrial robots. The result of this gathering of requirements was the
+robot Unimate which was released in the year 1961 and installed in a General Motor’s
+(GM)factorytoserveadiecastingmachine(seeFigure1.1). Itwasafairlysimplerobot
+able to perform only one task [Westerlund, 2000].
+Figure1.1:Thefrstindustrialrobot,Unimate,sequencedandstackedhotpiecesofdie-castmetal.
+1 Introduction
+After installing another 66 robots for GM, Devol and Engelberger were convinced that
+the industrial robot had a future, but at this time the market wasn’t ready yet: the
+manufacturingindustrywasn’tveryinterestedinindustrialrobots,whereasmediawas
+theopposite. Engelberger,DevolandtheirrobotswereregularguestsontheAmerican
+television,wheretherobotsservedcofeeorappearedincommercialswheretheyserved
+beer. The robot changed to be a "funny toy" instead of a scary object [Wallén, 2008].
+The frst robots in Europe were installed in the year 1967 at Svenska Metallverken in
+Upplands, Sweden. Those robots did simple monotonous tasks like picking up objects
+and placing them somewhere. These simple pick and place robots were followed by
+robotsforspot-welding,whichwereinstalledin1969atGMforspot-weldingcarbodies,
+and in 1972 at Fiat, where the frst spot-welding line was set up [Westerlund, 2000].
+VictorScheinmann,amechanicalengineeringstudentworkingintheStanfordArtifcial
+IntelligenceLaboratory(SAIL),designedin1969theStanfordArm. This6-DOF(degrees
+of freedom) all-electric robot manipulator introduced the non-anthropomorphic kine-
+maticconfguration,whichmadesolvingtheequationsforrobotkinematicseasierand
+therefore increased the computation speed. Subsequent robot designs were strongly
+infuenced by Scheinman’s concepts [Hägele, Nilsson, and Pires, 2008].
+Trallfa, a norwegian company, saw the potential of the robots and wanted to install a
+Unimate robot for painting their wheelbarrows as a fexible spray painting device due
+to the bad working environment and thereby difculties to recruit new personnel. The
+Unimaterobotwastooexpensive,thustheydevelopedarobotontheirowncostingonly
+15000Norwegiancrowns(theUnimatewouldhavecost600000Norwegiancrowns). In
+1967theypresentedtheirelectro-hydrauliceasytoprogramrobot. In1985ASEA(later
+ABB) took over Trallfa and integrated the painting robots into their industrial robot
+portfolio [Westerlund, 2000].
+In1973therewerealready3000robotsinoperationaroundtheworld,30%ofthemwere
+Unimation robots [Hägele et al., 2008; Wallén, 2008].
+The frst microcomputer, the Intel 8008, was built into ASEA’s IRB 6, their frst proto-
+typeofanindustrialrobot. Duetothelimitedspaceof8KBtheprogramwasextremely
+complicated. The IRB introduced some new concepts such as fully electrical (drive and
+controlsystems),ananthropomorphicstructureandtheuseofmicrocomputer. Thefrst
+customerofIRB6wasasmallcompanywithonly20employees: MagnussonsiGenarp
+AB.Theyusedtherobotforstainlesssteelpipeproductionforthefoodindustry. Using
+theserobotshewasthefrstintheworldtooperateanunmannedfactory24/7. TheIRB
+6 has proved to be very robust: life-times of more than 20 years in harsh productions
+were reported.
+The PUMA (programmable universal machine for assembly, 1979) from Unimation be-
+cameoneofthemostpopularrobotarmsduetoitsdexteritywhichwasclosetotheone
+of a human arm [Hägele et al., 2008; Westerlund, 2000].
+1 Introduction
+In the end of the 1970s and the beginning of the 1980s, the development of robots was
+mainly concentrated on assembly tasks. Arc welding on the other hand required bet-
+ter motors and control systems. Takeo Kanade, a japanese computer scientist, solved
+thisproblembybuildingadirectdrivearm,wheremotorsaredirectlyinstalledintothe
+joints of the arm. In the mid 1980s, industrial robots were used for machine tending,
+material transfer, painting and welding.
+In 1978, the selective compliance assembly robot arm (SCARA) was developed. It is par-
+ticularlysuitedforassemblytasksduetotherigidityintheverticalaxisandcompliance
+in the horizontal axis. Its low cost design and fast motions contributed signifcantly to
+create a world-wide boom in high-volume electronics production and consumer prod-
+ucts (see Figure 1.2).
+In 1986, Honda began a robot research program that started with the premise that
+the robot "should coexist and cooperate with human beings, by doing what a person
+cannot do, and by cultivating a new dimension in mobility to ultimately beneft soci-
+ety."[Donohoe, 2007]
+(a) SCARA (b) Kukalightweightrobot
+Figure 1.2: (a) The SCARA (selective compliance assembly robot arm) has a high rigidity in the
+From early on, the reduction of the mass and inertia was a primary target in robot re-
+searchwiththeultimategoalofaweight-to-loadratioof1:1,similartothehumanarm.
+KUKA reached this goal in the year 2006 by presenting the 7-DOF KUKA lightweight
+robot (see Figure 1.2).
+Apart from the traditional cartesian design, the company Güdel introduced a curved-
+track gantry in 1998. This new design allowed the robot to circulate and change its
+location.
+1 Introduction
+In 2005 the frst commercial robot for synchronized, two-handed manipulation was in-
+troducedbyMOTOMAN.Thissystemfeatures13axesofmotionandisidealforplacing
+it on a site that was previously accommodated by human workers.
+In the following years research mainly focused on simultaneous and synchronous op-
+eration of robots on a single workpiece and the increased usage of vision systems for
+object identifcation, localization, and quality control.
+Decreasing costofrobotsystemsandadvancementin automationfexibility makesthe
+usage of industrial robots for Small and Medium-sized Enterprises (SMEs) more and
+more attractive. Unfortunately these systems are not yet fexible and intuitive enough
+to achieve a widespread use for SMEs.
+1.4 Programming concepts for industrial robots
+Thedevelopmentofmodernmotion-orientedrobotprogramminglanguagesdatesback
+to the mid 1970s. One of the frst languages was VAL (Variable Assembler Language),
+usedforUnimationindustrialrobots. Itusesaclearandselfexplanatoryinstructionset.
+VALalsosupportslibrariesandroutineswhichallowtheprogrammertocreatesubtasks
+andreusecode. AnexampleVALprogramisshowninListing1.1. Duetoit’ssimplicity
+it was fairly impossible to specify complex arithmetic computations or to use complex
+sensor data. VAL was also used for programming PUMA robots. Stäubli currently uses
+VAL3 for their robots.
+PROGRAM PICKPLACE
+1. MOVE P1
+2. MOVE P2
+3. MOVE P3
+4. CLOSEI 0.00
+5. MOVE P4
+6. MOVE P5
+7. OPENI 0.00
+8. MOVE P1
+Listing 1.1: A simple VAL program moving the robot to a save position (P1), then to ap-
+proach position (P2), moving to the object (P3), closing the gripper and placing the object on
+languages_for_Industrial_Robots)
+Already in the early 1970s reasearch groups started to focus on so called task-oriented
+programming languages. One of the frst examples are IBM’s AUTOPASS system and
+the LAMA system proposed by MIT. The basic idea behind this approach is to make
+1 Introduction
+robot programming easier by relieving the programmer from knowing all the specifc
+hardware details, achieved by avoiding to code every tiny motion/action. Instead the
+programmer is specifying in an intuitive way what the robot should do and how it
+should do it.
+Itturnedoutthatthemostdifcultpartinautomaticandtaskbasedrobotprogramming
+is the execution and control of automatically generated action/motion sequences and
+automated generation of collision-free paths. Besides some simple applications, like 4-
+DOF assembly of PCBs, this is still a subject of current research. [Wahl and Thomas,
+2002].
+Current programming concepts can be divided into two main categories: Online pro-
+gramming and Ofine programming:
+1.4.1 Online programming
+Inonlineprogramming,theprogramiswrittendirectlyontherobotsystemorbyusing
+the robot itself. The most popular method is Teach-In where the programmer can use
+a so called TeachPad (see Figure 1.3) which allows direct robot controlling by moving
+the robot through a 6D mouse and touch input. With the TeachPad the programmer
+cangeneratenew programsbyinsertingtheinstructionsanddefningthepositionand
+poseforeachcommandmovingittothespecifcposition. Theseprogramsarestilltext
+based and require sufcient knowledge about the used programming language.
+directindustry.com
+1 Introduction
+1.4.2 Ofline programming
+Ofineprogramminghasthemainadvantagethatyoudon’tneedtherobottowritepro-
+grams. TheprogrammerwritestheprogramonaPCwhichisindependentoftherobot
+system. When fnished the program is uploaded to the robot and executed directly.
+The most commonly used ofine programming concept is text-based programming:
+tasksaredefnedonthebasisofproblemorientedmodernprogramminglanguages. The
+advantagecomparedtoonlineprogrammingisthattheprogramcanbeeasilychanged
+and documented. Unfortunately each robot manufacturer has its own programming
+language which requires a specially qualifed programmer.
+CADbasedprogramspecifcationisanotherofineprogrammingconceptwhererobots
+areprogrammedbasedontechnicaldrawingsansimulations. Theprogrammercanuse
+a3Dsoftwareinwhichtherobotandworkpieceareshownas3Dmodelsandtherobot
+can be moved and positions can be programmed. This allows to detect planning and
+construction errors early and the scene can be viewed from any position. The disad-
+vantageisthatallthemodelsoftheworkpiece,robotandtoolsmustbeidenticaltothe
+real one to avoid errors. Flexible pipes are also hard to visualize within the simulation
+butareanimportantfactorwhenplanningrobotmovementsbecausetheyresultinsig-
+nifcant movement restrictions. Additionally you need to calibrate the robot to ft the
+simulated world to the real world.
+1.5 Contribution
+This master thesis contributes to the feld of intuitive robot programming by evaluat-
+ing diferent input modalities for task-based robot programming and by providing an
+ontology which can be used by cognitive robot cells for semantic reasoning about in-
+put modalities and task parameters. The evaluation is performed through a user study
+conducted with 30 participants using a newly developed touch-friendly user interface
+which integrates the four input modalities: speech, gesture, touch and pen.
+Chapter2(RelatedWork)givesanoverviewoverpreviouslypublishedworkforintuitive
+robotprogramming,human-robotinteraction,multimodalsystemsanduserstudiesfor
+multimodal interaction. In Chapter 3 (Input & Output Modalities) diferent human in-
+put and output channels are described which can be used for interacting with com-
+puter systems through computer input and output modalities. It also includes a histor-
+ical overview of the diferent modalities and evaluates advantages and disadvantages.
+Chapter4(Domains&Tasks)introducesthehierarchicalstructurefortask-basedrobot
+programmingusingProcess,TaskandSkillnotation. Thischapterdescribessomebasic
+1 Introduction
+skills required from a robot system and lists example tasks including their parameters
+for diferent domains like assembly, welding, woodworking or metal processing. The
+input modalities, Skills, Tasks, Parameters and system components are then modeled
+within an ontology. This ontology maps abstract descriptions of tasks to basic instruc-
+tionsfortherobotanddescribescausalrelationsbetweenlowlevelsystemcomponents
+like sensors and higher level task descriptions.
+Chapter5(GraphicalUserInterface)givesanoverview overtheimplementationofthe
+graphical user interface developed for task-based robot programming with the main
+goaltoprovideaneasyunderstandableandintuitiveinterfacefordomainexpertstopro-
+gram a robot. The used technologies and frameworks are listed and the basic structure
+of the software is described, which was built up to allow easy integration of new soft-
+warecomponentsandquickadaptiontonewfunctionsandrequirements. Thischapter
+alsoincludesadescriptionhowthisGUIwasintegratedintothealreadyexistingsystem
+using ROS (Robot Operating System).
+Chapter 6 (User Study) describes the structure of the user study which was conducted
+to evaluate diferent input modalities for task based robot programming. It describes
+thefourmainphasesofthestudyandhowthestudywasconductedusingtheWizard-
+of-Oz approach. In Chapter 7 (Evaluation) follows the evaluation of the user study and
+analysis of the results. The results of the study are analyzed and assessed.
+ThelastChapter8(Conclusions)summarizestheresultsofthismasterthesisandhigh-
+lightstheoutcomesoftheuserstudy. Italsogivesanoutlookforfurtherimprovements
+of the system and challenges for further research projects.
+2 Related Work
+Thismasterthesisisrelatedtodiferentfeldsofresearch. Multimodalinputisusedfor
+human-robot interaction to provide an intuitive interface for task-based programming
+andinteractingwithrobots. Auserstudyisthenconducted,whichevaluatespreviously
+defned input modalities and the multimodal system in general.
+Thefollowingsectionsgiveabriefoverviewonrelatedworkinthoseareasbysumma-
+rizing previous research projects and publications.
+2.1 Multimodal interaction
+A review of major approaches in multimodal human-computer interaction, especially
+forbody,gesture,gazeandafectiveinteractionisgivenin[JaimesandSebe,2007]. They
+statethatmostresearchersprocessdiferentchannels(visual,audio)independently. Ad-
+ditionally multimodal fusion is still in its infancy and a combination of low-level fea-
+tures,high-levelreasoning,andnaturallanguageprocessingislikelytoprovidethebest
+emotioninferenceinthecontextofMMHCI(multimodalhuman-computerinteraction).
+A more comprehensive survey of existing and recent advances in the feld of HCI can
+be found in [Karray, Alemzadeh, Saleh, and Arab, 2008].
+[Ruiz, Chen, and Oviatt, 2010] give an overview over the advantages of multimodal
+input interfaces (Robustness, Naturalness, Flexibility, Minimising errors) and evaluate
+cognitive load and performance in relation to multimodal interfaces. [Hinckley and
+Wigdor, 2012] and [Oviatt, 2012] provide a comprehensive overview on diferent input
+modalitiesandevaluatethesebasedonvariousaspectslikeinputspeedoruserfeedback
+possibilities and clear up some myths about multimodal interfaces by discussing how
+users normally react to them.
+[Kawamura, Nilas, Muguruma, and Adams, 2003] presents an agent-based architecture
+formixed-initiative interactionbetweena humananda robot. The platform providesa
+basis for developing various agents that control robots and user interface components.
+This agent-based approach allows an efcient interaction between human and robots
+through an adaptive interface where an Adaptive User Interface Manager shows only
+the most relevant information from each agent for the current mission.
+2 Related Work
+In [Iba and Paredis, 2004] a multimodal robot programming framework is described
+that allows the user to program a robot interactively through an intuitive interface
+using hand gesture and spontaneous speech recognition. [Hahn, 2010] examines
+diferentnew inputmodalitieswithafocusongestureandspeechinputandconcludes
+that there’s still some work to do especially in the sector of human voice detection.
+2.2 Intuitive programming and interaction with
+When working together with a robot, multimodal interaction can be used to instruct
+the robot to perform specifc tasks or support the human worker. [Bannat, Gast, Rehrl,
+and Rösel, 2009] present a system where the human can give commands via three dif-
+ferentinputmodalities(speech,gazeandsoft-buttons). Theyshowthatitispossibleto
+use multimodality in a working hybrid assembly process where humans are working
+together with an industrial robot.
+[Wahl and Thomas, 2002] describe a system which allows intuitive task-oriented robot
+programming using symbolic spatial relations (SSR), defned in [Ambler and Popple-
+stone, 1975]. SSRs describe relations between assembly parts, e.g. "shaft1 of bulb fts
+hole1 of rack". They state that there’s still a tremendous gap between commercially
+available robot programming languages and methods developed in research laborato-
+ries all over the world.
+Afurtherstepintomoreintuitiveteachingmethodsforsmallandmediumenterprisesis
+describedin[SchraftandMeyer,2006]: theypresentamethodforadaptingtrajectories
+by transforming them into sequences of geometric primitives. Then these primitives
+cangetchangedaccordingtothespecifctaskresultinginasignifcantlyfasterteach-in
+process. Another approach of defning welding and gluing trajectories is described in
+[Meyer,Hollmann,Parlitz,andHägele,2007]wheretheusercanprogramtherobotby
+demonstration supported by graphical and verbal interfaces. [J.N. Pires, Godinho, and
+Araújo,2007]exploresthepossibilitytoobtainrobotprogramsfromtechnicaldrawings
+onasheetofpaperusingadigitalpenincombinationwithCADmodels. Heshowsthat
+this approach is very useful and powerful, especially for Small and Medium-sized En-
+terprises.
+AnotherCAD-basedhuman-robotinterfaceallowingnon-expertuserstoteacharobot,
+is presented in [Neto, Mendes, Araújo, Pires, and Moreira, 2012]: they show that it is
+possibletogeneraterobotprogramsfromcommonCADdrawingsandrunthemonthe
+robot. The programmer opens a 3D CAD Drawing and can draw robot trajectories di-
+rectly into the model.
+In [Carø e, Hvilshø j, and Schou, 2014] an intuitive programming system for a mobile
+2 Related Work
+KUKALWRisdevelopedwhichusesahierarchicalstructure(task,skillanddeviceprim-
+itives) to generate a robot program. This tool is called Little Helper ++. The developed
+TerminalandGraphicalUserInterfacestillrequirestheusertodefnealargenumberof
+parameters since the system doesn’t use any knowledge base for automatic reasoning.
+Theyconcludethattheskill-basedapproachisbenefcialforprogrammingandexecut-
+ingcomplexindustrialtasks,especiallywhentryingtoabstractfromcomplexlowlevel
+robot functionalities as used for task-based robot programming.
+[Neto,Pires,andMoreira,2010]describeasystemusingahand-heldaccelerometer(Wii
+Remote Controller) in combination with speech input for high-level robot program-
+ming. They use Artifcial Neural Networks (ANNs) for gesture recognition to control
+the movement of the robot and reach a recognition rate up to 96%.
+Combining diferent input modalities with augmented reality (AR) even improves the
+intuitivenessofhuman-robotinteraction. [Ameri,Akan,andCürüklü,2010]useimages
+fromacameramountedonthegripperenhancedwithinformationoverlaysandshows
+that it helps human workers to operate and program a robot easier and faster.
+[Gaschler,Springer,Rickert,andKnoll,2014]presentintheirpaperanovelaugmented
+reality system for defning virtual obstacles, specifying tool positions, and specifying
+robottasks. A 3Dinputdeviceisusedtodefnepointsinrealworld,anoverlayprojec-
+tion and monitor give the user feedback on the current system state.
+Ahybridassemblystationforhuman-machinecoworkerisdescribedin[Wallhofetal.,
+2010]: The robot learns new tasks from worker instructions using voice, gaze and tac-
+tileinteractionbackedbyaknowledge-basedsystemcontrollerthatisorchestratingthe
+skillsofconnectedmodulesandisrepresentingsensoreventsandtheworktasksasfrst
+order logic predicates. [Rigoll, 2011] states that such hybrid assembly stations require
+completerepertoireofmultimodalrecognitiontechniques,advancedoutputgeneration,
+aswellasintelligentknowledgeprocessinginordertobeabletoassisthumanworkers
+in assembly tasks with and without additional support from robots.
+For robots who collaborate with human workers it’s important to know which action
+the human is currently performing and if it is safe for the robot to move. [Hartmann,
+2011]developedforhisPhDthesisasystemwhichusesvisualtrackersandinertialmea-
+surementunitsandisabletorecognizelow-levelactivitiesandcomplextaskswhichare
+sequences of low-level actions. He demonstrated that for task level recognition the in-
+corporation of context knowledge is essential for recognition from uncertain inputs.
+Another gesture based control and programming system is proposed by [Lambrecht,
+Kleinsorge,andKruger,2011]wheretheusercandefnetrajectoriesusinghandgestures
+and program an assembly sequence through task demonstration [Lambrecht, Klein-
+sorge, Rosenstrauch, and Kruger, 2013]. Lambrecht constructs a virtual scene recon-
+struction and pose estimation of the objects using 2D cameras from which the sub-
+sequent poses of the objects can be derived. Out of these subsequent poses, a robot
+program is generated.
+[Gleeson, MacLean, Haddadi, Croft, and Alcazar, 2013] produced a gestural lexicon by
+2 Related Work
+observing human interactions during an industrial based assembly task. The gestures
+were then implemented on a robot arm and evaluated in human-robot trials. Glesson
+concludes that the gestures they found are intuitive to understand, even if they are ex-
+ecuted by a robot arm.
+Most of the systems presented above are optimized for a specifc domain or task and
+arenotveryfexibleoradaptive. Usingthosesystemsoftenrequiresspecialknowledge
+about robotics and is therefore not suitable for domain experts of other areas working
+in Small and Medium-sized Enterprises. By integrating knowledge databases, most of
+these parameters could be inferred automatically making it easier to program the sys-
+tem and to be more fexible and adaptive. For some of the projects the graphical user
+interface is not that intuitive or the system heavily relies on speech input which isn’t
+appropriate for usage in loud environments like assembly factories.
+2.3 User study
+Designingauserstudyisaresearchfeldonitsown. Therearevariouswaysaquestion-
+naire can be structured or how to focus on diferent aspects. A comparison of diferent
+survey types and implementations in human-computer interaction is given in [Ozok,
+2012]. Ozoklistsandcomparesvarioussurveytypes,designtechniquesandevaluation
+techniques. He also discusses implementation challenges for user studies in open and
+controlled environments.
+[Kühnel,Westermann,Weiss,andMöller,2010]compareintheirpublicationestablished
+questionnairesandinteractionparametersandevaluatediferentratingmethodsforus-
+abilitymeasurements(SUS,CSUQ,SUMI)andtomeasureintuitiveuseanduserinterface
+satisfaction (QUIS). They state that AttrakDif, SUS and USE are suitable for usability
+evaluation of systems with multimodal interfaces but the selection of an appropriate
+questionnaire depends on the goal of the evaluation.
+[Dahlbäck,Jönsson,andAhrenberg,1993]argumentintheirpaper"WizardofOzStud-
+ies-WhyandHow"thatWizardofOzstudiesarerequiredtoconsidertheuniquequali-
+tiesofman-machineinteraction. Dialogsbetweenhumanandhumandiferfromdialogs
+betweenhumanandmachineandthereforeitmayhaveamajorinfuenceifausertalks
+to a machine instead of a human which makes data from human-human interaction
+an unreliable source for designing natural language processing systems. Dahlbäck de-
+scribes diferent factors which infuence how we speak to a human or a machine an
+so it’s necessary to use Wizard of Oz studies to fully evaluate the requirements for the
+system.
+2 Related Work
+SUXES is a user experience evaluation method for spoken and multimodal interaction
+describedin[TurunenandHakulinen,2009]. Itcapturesuserexpectationsanduserex-
+periences, making it possible to analyze the state of the application and its interaction
+methods and compare the results. It’s suitable for iterative development and prototyp-
+ing, while the most important feature is the collection of user expectations.
+2.4 Evaluation of multimodal systems
+Therealreadyarediferentuserstudiesandevaluationsofmultimodalsystemsforvari-
+oustypesoftasksordomains. Thissectionpresentssomeofthesestudiesandhighlights
+their result related to multimodal input and output.
+[Ren, Zhang, and Dai, 2000] found out, that for CAD applications, users prefer
+pen+speech+mouse input. Within another independent study by Ren, users preferred
+pen+speechformapapplications. Notonlythetypeofthetaskbutalsothecomplexity
+infuences the choice of modality: [Oviatt, Coulston, and Lunsford, 2004] reports that
+the likelihood of multimodality increases with the cognitive load of the task.
+[Bellik, Rebaï, and Machrouh, 2009] show that the output modality used by the system
+infuences the choice of the user too: if the system uses verbal output, users tend to
+usespeechinput,whilegraphicsoutput(icons)leadtotouchscreenuse. Anotherinfu-
+encing factor is the situational context in terms of privacy of the situation, where the
+interaction takes place. [Jöst, Häuß ler, Merdes, and Malaka, 2005] and [Wasinger and
+Krüger, 2006] proof a declining willingness to use multimodal input with decreasing
+intimacy of the relationship between the user and other persons around and that they
+prefer to use non-observable modalities like handwriting and touch gestures.
+The computer literacy (expert vs. non expert users) additionally infuences the choice
+of modality. Expert users prefer to interact multimodally, whereas non expert users
+showed no preference between unimodal and multimodal [Angeli and Gerbino, 1998].
+Similar results were gained by [Althof, McGlaun, Spahn, and Lang, 2001] who found
+out that experts tend to use haptic devices (Mouse, Touchscreen in combination with
+Speech), whereas normal computer users and beginners prefer combinations of ad-
+vanced input devices (speech in combination with hand gestures).
+[Naumann,2009]comparedmultimodalitybetweenolderandyoungerusers. Heshows
+thatolderusersratedmotioninteractionworsethanyoungerusersandthatolderusers
+showed a generally lower performance. Overall he states that motion control was the
+onlymodalitynotsuitableforolderusersandthatpriorknowledgeinfuencesthechoice
+of modality.
+[WasingerandKrüger,2006]examinedtheroleofgenderwhenchoosingmultimodality:
+womenfeellesscomfortableusingspeechinapublicenvironmentthanmendo. [Schüs-
+sel,Honold,andWeber,2013]confrmedthisresultintheirWizardofOzstudywith53
+2 Related Work
+subjects to study the infuencing factors on multimodal interaction using speech, ges-
+tures,touchandarbitrarymultimodalcombinations. Femalesalmostonlyusethetouch
+screen, males are much more diverse.
+In1994[SturmanandZeltzer,1994]investigatedGlove-baseinputfordiferentapplica-
+tions and systems. Sturman’s conclusion is that glove-based input or, more generally,
+whole-handinput,requirestheusertowearaspecialdevicewhichisagainstthegoalof
+devicelessnaturalcomputerinteraction. Untilnownotmuchhaschanged: togetaccu-
+ratehandtrackingdata,there’sstilladatagloverequirednonetheless,thedevelopment
+of 3D sensors like the LeapMotion or Kinect 2 sensor.
+[Cohen,Johnston,McGee,andOviatt,1998]conductedauserstudycomparingagraph-
+ical user interface with a pen/voice multimodal interface for the task of military force
+laydown. Using this interface the participant reached a speed improvement of 3.2 to
+8.7-fold. Cohen states that multimodal interaction leads to substantial speed an ef-
+ciency advantages of multimodal interaction over direct manipulation-based graphical
+user interfaces.
+3 Input & Output Modalities
+Currenthuman-computerinteraction(HCI)isbasedonthe35-year-oldWindows-Icons-
+Menu-Pointer (WIMP) paradigm. Recent increase in computing power and develop-
+mentofnewsensorsledtonewpossibilitiesformoreintuitiveuserinterfacesandinput
+modalities, that should be used in modern systems especially for robots.
+Multimodality is defned by [Chatty, 1994] as "a System that features multiple input
+devices (multi-sensor interaction) or multiple interpretations of input issued through a
+single device". [Nigay and Joëlle Coutaz, 1993a] uses a quite similar defnition of mul-
+timodality: "it is the capacity ofthe system to communicate with a user along diferent
+types of communication channels and to extract and convey meaning automatically".
+This means that a multimodal system uses speech, gestures and other human input
+channels to allow the user to interact with the system.
+This chapter gives an overview over diferent input and output channels for human-
+humanorhuman-computerinteractionfollowedbycomputerinputandoutputmodal-
+ities. Laterchaptersarebasedonthedefnitionoftheseinputandoutputmodalitiesand
+use them within the semantic description for tasks and parameter input.
+3.1 Why multimodality?
+The main goal for using multimodal interfaces is to support more fexible, powerfully
+expressive, and low cognitive load means of human-computer interaction. They are
+expected to be easier to learn and are preferred by users for many applications. Some
+of the more notable advantages are [Maybury and Wahlster, 1998; Ruiz et al., 2010]:
+Robustness Using diferent input methods at the same time increases the likelihood
+of correct recognition, resulting in an increase of the quality of communication
+between the user and the system. For example if using speech and gestures the
+user says "Take this green object" and points to a specifc item, the system can
+infer the task that it should do from speech, thus knows that it should pick a
+green object. By using the gesture it can then determine which object the user
+meant.
+3 Input & Output Modalities
+Naturalness Human-computer interaction is mainly based on the well-established
+practices of human-human interaction where the user can choose the desired
+modality and thus resulting in a high degree of naturalness. This increases the
+communicative bandwidth and therefore leads to a higher expressivity.
+Flexibility & Eficiency Flexibilityallowsindividualuserstoperceiveandstructure
+the communication in diverse ways for specifc contexts and allows the user to
+select the modality which is in his opinion the most suitable for the current task.
+Users can also achieve faster error-correction when using multimodal interfaces.
+Perceptability Especially modalities with spatial context, like gestures or pen selec-
+tion,increasestheperceptabilityfortheuserandgiveshimabetterunderstanding
+on how the task will be executed.
+3.2 Overview
+In human-computer interaction there are two main parties involved: a human which
+uses the system and the computer itself which interprets the input from the human.
+Thefollowingsectiongivesanoverviewwhichinputchannelsahumanbodyprovides.
+Thenextsectiondescribespossiblesensorswhichcanprocesstheseinputchannelsand
+convert them to the appropriate data format for the computer system.
+3.2.1 Human Input Channels
+Thehumanbodyhasdiferentreceptorcellswithwhichahumancanperceivetheworld.
+Table 3.1 lists the seven main input modalities of the human body, giving a brief intro-
+duction on how we interact with other humans.
+Obviouslynotallofthesechannelsareofthesameinterestforhuman-computerinter-
+action, especially in the feld of intuitive industrial robot programming. The senses of
+taste and smell might not be very interesting for HCI. This is not due to the fact that
+therearen’tanycorrespondingoutputdevicesavailableyet,butduetothefactthatit’s
+not a very useful channel. One might think of smoke detection to automatically stop a
+robot if there’s smoke, but for a simple smoke detector you don’t need such a complex
+sensor or chemical analysis as the human nose, you can take a vision system and mea-
+sure the cleanness of the air.
+Proprioceptionontheothersideismuchmoreimportant. It’stheselfawareness(Kines-
+thesis) of the body which can be divided into three submodalities: position sense (po-
+3 Input & Output Modalities
+Sensory system Modality Stimulus energy
+Visual Vision Light
+Auditory Hearing Sound
+Vestibular Balance Gravity
+Somatosensory Somatic senses:
+Touch Pressure
+Proprioception Displacement
+Temperature sense Thermal
+Pain Chemical, thermal, mechanical
+Itch Chemical
+Gustatory Taste Chemical
+Olfactory Smell Chemical
+Table 3.1: The seven main input channels of a human body. These diferent sensory modalities
+arenotprocessedinisolation. Multimodalareasexistincorticalandsub-corticalareas,suchasthe
+posterior parietal cortex and the superior culliculus. Source [Kandel, Schwartz, and Jessell, 2000;
+Schomaker,2001]
+sition of the body including all joint angles), sense of movement (direction, duration
+andspeed),andforcesense(appliedforcethroughthemuscles,orestimatingweightby
+hand).
+3.2.2 Human Output Channels
+Humanoutputchannelsareoutputmodalitieswhichweusetointeractwiththeworld
+orchangetheworldstate. Theoutputchannelsareofbiginterestforhuman-computer
+interactionbecausetheydefnehowausercaninputdataintothesystem,controlitor
+change the world state.
+The human body has four main output modalities:
+Speech is the most expressive output modality. Using words we can explain complex
+relations and facts to other people, we can express feelings and describe tasks.
+Unfortunatelyitisalsothemostdifculttaskforacomputersystemtoelaborate
+speech data and interpret it (see Section 7.3).
+Force & Movement Using the muscles, a human body can apply forces to an object
+forgripping,holdinganddeformingit. Thisforcemayalsocauseobjectstomove
+inspaceinanarbitrarydirection. Ifanobjecthasappropriatesensorsitcansense
+itsposeintheworldandinferadditionalinformation. Applyingforcetoasurface
+isanimportantoutputmodalityusedincurrenttouchinputdevices,whichspread
+3 Input & Output Modalities
+rapidly. The combination of force and movement allows us for example to write
+or draw on paper.
+Gesture & Appearance The human gesture is another expressive output modality
+which can indicate a position by pointing somewhere, give commands or even
+communicatewholesentences(signlanguage). Thisalsoincludestheappearance
+of the human body, e.g. is the human standing, sitting or looking at a specifc
+spot.
+Air Our lungs can produce in average 2 PSI (0.14 Bar) air pressure which can be used
+to blow away small parts or remove dust.
+3.2.3 Computer Input Modalities
+Humanoutputchannelsproducephysicalenergypatternsvaryingovertime: potential,
+kineticandelectrophysiologicalenergy. Theresultingforce,movementandairpressure
+signals need to be transformed to use them as an input for computer systems. There’s
+a various number of transducer devices available; the following list gives an overview
+over the most important ones.
+Keyboard & Mouse
+Keyboard and Mouse are by far the most widely used input modalities for computers.
+In the 1870s the frst teleprinter devices were used to simultaneously type and trans-
+mit stock market data across telegraph lines. Since the frst computers were developed
+(ENIAC,1946),keyboardsarethemainmeansofdataentry. Intheyear1984themouse
+was introduced as a consumer device and since then mainly used in combination with
+graphical user interfaces.1
+Due to the high circulation level of Keyboard and Mouse, they are well known to
+most of the users and don’t need additional training time. Therefore they are also
+known for high performance and precision when used as input devices but also for
+their un-intuitiveness. This input modality can be used for diferent input operations
+[Schomaker, 2001]:
+• Text input: naming objects and writing text which is displayed directly
+3 Input & Output Modalities
+• Actions: special keys like or generally have the function of accepting
+or canceling an action. The mouse can be used to select items or change their
+position (dragging).
+• Navigation: usingthecursorkeys,theusercannavigatethroughitemsintheuser
+interface. Themouseisamoreintuitivewayforselectinganitemandnavigating
+through diferent user interface levels.
+Speech Input
+Inhuman-humaninteractionspeechisthemostimportantmodalityforcommunication
+anddescribingtasks. Ahumancanevenexplaincomplexrelationsandsituationstoan-
+other human being. Therefore it’s a good idea to use it as an intuitive input modality
+for computer systems.
+BellLaboratoriesdesignedin1952theAudrey systemwhichcouldonlyunderstanddig-
+its spoken by a single voice. Ten years later, IBM demonstrated at the World’s Fair its
+Shoebox machine, which could understand 16 words spoken in English. Carnegie Mel-
+lon’s "Harpy" speech recognition system could understand 1011 words (approximately
+the vocabulary of an average three-year-old) and was the result of the Department of
+Defense DARPA Speech Understanding Research program from 1971 to 1976. In the
+1980s, the development of Hidden Markov Models was an important breakthrough for
+speech recognition. Using Hidden Markov Models (HMMs) unknown sounds could be
+combined to meaningful words. In the early stages of these systems the user needed
+to dictate the sentences rather than fuently saying a sentence. In 1997, the software
+DragonNaturallySpeaking wasreleasedatwhatyoucouldspeaknaturallyatabout100
+words per minute. Until near the end of the 2010 decade the technology seemed to
+be stalled at 80 percent accuracy. Then Google released Google Voice Search, an ap-
+plication for mobile phones to use speech as an input method for search queries. In
+combination with its huge cloud infrastructure they were able to get much better re-
+sults,nowincorporatingmorethan230billionwordsfromactualuserqueries. [Pinola,
+Mostmodernmobiledevicesandevendesktopmonitorsnowadayshaveatouchscreen,
+on which the user can control the system through simple or multi-touch gestures.
+Rather than using keyboard and mouse, touch input enables the user to directly in-
+teract with what is displayed.
+The frst fnger-driven touchscreen was invented by E.A. Johnson in 1965, described
+3 Input & Output Modalities
+in his article [Johnson, 1965]. His invention was a predecessor of current capacitive
+touchscreens and could only process one touch at a time with only binary information
+indicating if touched or not. Pressure sensitivity would arrive much later.
+In1970theAmericaninventorG.SamuelHurstdevelopedthefrstresistivetouchscreen
+usingaconductivecoversheetandanotheronethatcontainedtheX-andY-axis. Pres-
+sure on the cover sheet caused voltage to fow between the X and Y wires. Resistive
+touchscreens tend to be very afordable to produce and are durable even in harsh en-
+vironments. One of the most widely used touch-capable devices at this time was the
+PLATO IV terminal from the University of Illinois. It used infrared emitters and detec-
+tors that could sense where the user’s fnger came down on the screen. At the begin-
+ning of the 1980s, Hewlett-Packard began heavily commercializing touchscreens with
+their HP-150 personal computer which also used infrared sensors. In 1993, IBM and
+BellSouthlaunchedtheSimonPersonalCommunicator,oneofthefrstcellphoneswith
+touchscreentechnology. Attheendofthe1990s,WayneWesterman,agraduatestudent
+at the University of Delaware introduced the idea of multitouch capacitive displays as
+we know them today in his doctoral dissertation [Westerman, 1999]. In the following
+years more and more companies integrated touchscreens into their products. One of
+those products was Microsoft’s Surface 30-inch tabletop which used cameras mounted
+inside the table looking upwards to the surface detecting fnger and hand touches. The
+fnal breakthrough for touchscreens is marked by the release of the frst iPhone from
+Apple in June 2007. The combination of a capacitive multi-touchscreen with an intu-
+itiveconceptofoperationwasanoveltyatthistimeandthereforeahugesuccess. [Ion,
+3D input devices
+The frst 3D input devices were developed even before the invention of computers. In
+1926 C. B. Mirick invented an electrical two-axis joystick used for a remote controlled
+aircraft. In1944Duringthesecondworldwar,Germanengineersdevelopedatwo-axis
+joystick used to guide missiles against maritime and other targets. In the 1960s the use
+ofjoysticksbecamewidespreadinradio-controlledmodelaircraftsbyPhillKraft. Kraft
+Systems became an important OEM supplier of joysticks to the computer industry 2.
+Until now, diferent devices for 3D input have been developed, which are based on dif-
+ferent technologies. Following list gives an overview over the most widely used tech-
+niques.
+Joystick A joystick consists of a stick that pivots on a base, and buttons mounted on
+thestickandbaseforadditionalinput. Itismainlyusedinaviationandtocontrol
+3 Input & Output Modalities
+video games. Most of the joysticks have three to four degrees of freedom (pitch,
+yaw, roll and sometimes up/down).
+Wired glove The frst wired glove, the Sayre Glove, was invented in 1977 used to
+monitorhandmovements. Itwasequippedwithfexibletubes,alightsourceand
+photocells at the other end. This glove could measure fnger and hand bending
+[Sturman and Zeltzer, 1994]. Nowadays wired gloves use diferent techniques to
+detectbendingandglobalpositions,likethe5thGloveorimagebaseddatagloves
+proposed by [Pamplona and Fernandes, 2008] using visual marker at each fnger
+tip and a camera to track movements.
+Spaceball Thespaceball,alsoknownasSpaceMouseorSpaceNavigatorisa3Dmotion
+controller mainly used for manipulating and navigating computer-generated 3D
+imagery. Itsmaincomponentisaballshapedcontrolelementwhichcanbemoved
+in 6 degrees of freedom.
+Position tracking
+A tracking system determines the position and orientation of the user. Mechanical
+tracker systems physically connect the user to a point of reference and measure the
+relative position change. Such trackers are quick and accurate but severely restrict the
+user’s range of motion. Mechanical tracker systems are mainly used for medical surg-
+eries.
+For optical tracking, diferent systems are available which use a camera only setup in
+combination with generative (model based) and discriminative (classifcation, regres-
+sion) algorithms [Emídio de Campos, 2006]. [Gaschler, 2011] uses special visual mark-
+erswhichrefectinfraredlightemittedbyLEDsandrecordedbyastereovisionsystem.
+The user can hold a tool with buttons in his hand and the system tracks its six degrees
+of freedom pose. The buttons are used for clicking or selecting objects.
+Inertial trackers use gravity, inertia and the earth’s magnetic pole to track the orienta-
+tion. These devices don’t require any additional hardware and are very compact, how-
+ever sufer from orientation drift and cumulative errors.
+Gesturerecognitionenableshumanstointeractwithmachinesinanaturalwaywithout
+usinganyadditionalmechanicaldevices. Thefrstdevicesusedforgesturerecognition
+were wired gloves (see previous paragraph). Current research mainly focuses on the
+usageofcameraswheretheuserdoesn’tneedanyspecialglove. Depth-awarecameras
+3 Input & Output Modalities
+usestructuredlightortime-of-fighttogenerateadepthmapfromwhichaspecifcges-
+ture can be recognized [Liu and Jia, 2004].
+The leap motion sensor 3 is even more accurate than cameras: it can track the move-
+mentofalltenoftheuser’sfngers. ItusesthreeseparateinfraredLEDemittersandtwo
+infrared cameras and achieves an accuracy ofabout 0.5 to 0.01mm. The only disadvan-
+tage compared to camera systems is its rather limited sensory space (500mm x 400mm
+x 500mm) [Guna, Jakus, Pogačnik, Tomažič, and Sodnik, 2014].
+The user’s line of sight can be used as an additional input information for computer
+systems. It gives an indication at which location the user’s attention is focused. Using
+this data, a system can show additional properties of the object the user looks at, and
+hide information that isn’t of current interest.
+There are a number of methods for measuring eye movement, the most popular vari-
+ant uses video images from which the eye position is extracted. Other methods use
+for example Electrooculography (measuring the electric potential diference) or optical
+tracking (infrared light used to detect eye rotations).
+For direct or indirect input in two dimensions there are special pens available. It’s a
+mechanicalintermediaryespeciallysuitedforprecisecontrolandselectionofsmallob-
+jects. Direct input means that the user can select or interact directly on the screen,
+indirect input uses a special surface which detects the pen movements. A wide variety
+of techniques exists. Using resistive, pressure sensitive, capacitive, or electromagneti-
+cal transducer technology, the position of a pencil can be accurately measured. Such a
+pen can provide diferent information like the position (x,y, velocity, acceleration), pen
+force, height above the plane, angles and additional hardware button status.
+3.2.4 Computer Output Modalities
+There are many ways how machines can communicate with the user which appeal to
+diferent input channels of the human body. This section describes the most important
+output channels: visual, acoustical and tactile/haptic output.
+3 Input & Output Modalities
+Visual output
+Visual output is by far the most commonly used output channel for computer systems
+and other technical devices. There’s a wide variety of devices which produce an image
+or a signal stimulating the visual sense of a human:
+Monitor Computer displays are the predominant output channel for technical sys-
+tems. Early electronic computers were ftted with a panel of light bulbs indi-
+cating the states of the registers inside the computer (Zuse Z3 Terminal, 1941).
+Cathode-ray tubes (CRTs) were frst used for memory and it didn’t take long be-
+foretheywereusedasprimitivegraphicaldisplayswhichcouldshowvectorlines
+only (5WAC Console, 1950). In the early 1960s, CRTs were more and more used
+for displaying text (Uniscope 300, 1964). At this time another display technology
+emerged: theliquidcrystaldisplay(LCD)mainlyusedforpocketcalculatorsinthe
+late 1970s (Sharp PC-1211, 1980). In the early 1980s, the frst color displays were
+build into computer systems (IBM 5153 CGA, 1983). Throughout the 1980s and
+1990s, LCD technology continued to improve, especially the contrast and color
+capabilities got better, driven by a market boom in laptop computers (TI Extensa
+570CDT, 1990). Around 1997 vendors like ViewSonic, IBM or Apple introduced
+color LCD desktop monitors which could compete with CRT monitors at a rea-
+sonable price. Since then LCD monitorsoutsold CRT monitorsand are now used
+for a wide variety of systems. A recent trend emphasizes monitors that support
+3D visualization, higher resolutions and accurate color representation.4
+The biggest defciency of monitors appears in the spatial vision stimuli: objects
+look diferently from diferent angles of view. The lack of spatial efects has a
+diminishing efect on the sensation of reality and involvement in the content of
+the scene. A more advanced aspect of this problem is the lack of full immersion
+invisualscenes,whichisbeingtriedtobesolvedwithaugmentedrealitydevices.
+Video projector Videoprojectorsreceiveavideosignalandprojectitonaprojection
+screen using a lens system. The frst projectors date back to the 1970s using
+CRT (cathode ray tubes). In the 1980s, the trend to use PCs for presentations led
+to the development of the Epson VPJ-700. Its successor the ELP-3000 became a
+tremendous hit in 1994. In the following years diferent companies successfully
+reducedthesizeandincreasedtheimagequalityandbrightnessoftheprojectors.
+Augmented Reality allowsvirtualimagerytobeseamlesslycombinedwiththereal
+world. Around 1960, Morton Heilig created a simulator called Sensorama which
+producedvisualsounds,vibrationandsmell. Thefrstartifcialrealitylaboratory,
+3 Input & Output Modalities
+the Videoplace, was developed in the mid 1970s and surrounded the user with an
+artifcial reality which responded to the users movements and actions.
+Until recent years most of the research has been focused on the technology for
+providing the AR experience rather than methods for interacting with the vir-
+tual content. In the last few years, especially the interaction got more and more
+important due to better sensors and increasing computing power. The latest de-
+velopments aim at wearable computers like the Google Glass augmented reality
+glasses announced in 2013. It is connected via Bluetooth to the Smartphone and
+Internet and responds to voice commands, frame touch and head movement.
+Printer Electricalprinterareusedasastaticoutputmethodproducingimagesoreven
+objects for permanently visualizing data to the user. In 1953, the frst computer
+printerwasconstructedtobeusedwiththeUnivaccomputerbyRemingtonRand.
+Since then, various technologies had been adopted. The IBM 3800 was the frst
+laser printer introduced in 1975, which printed more than 100 pages per minute.
+The frst inkjet printer appeared in 1976, and was produced by Hewlett-Packard
+(HP), but it took until 1988 to become a home consumer item due to unsolved
+problems with clogged print heads. In 1970 the frst dot-matrix printer, the LA30
+by Digital Equipment Corporation, could print at a speed of 30 characters per
+second and was quite loud. In the last years 3D printing, also known as additive
+manufacturing, got more and more popular. It uses additives to form solid 3D
+objects of virtually any shape from a digital model.
+Acoustic output
+Acoustic output is achieved by using loudspeaker connected to a computer or other
+electronic devices. It produces sound in response to an electrical signal input.
+The predecessors of the loudspeaker were horns which didn’t use electricity and had a
+disadvantage that they couldn’t amplify the sound very much. The frst electric loud-
+speakerwasinstalledbyJohannPhilippReisinhistelephonein1861. Itwascapableof
+reproducingcleartonesandmufedspeech. Primarilyfurtherdevelopmentsinthefeld
+oftelecommunicationwereaccompaniedbynewdevelopmentsofbetterloudspeakers.
+In the frst half of the 19th century new techniques allowed better sound quality and a
+wider range of applications aside from telephones.
+Nowadaysloudspeakerarebuiltintoalmosteverydeviceandarenexttocomputerdis-
+plays one of the most important output modalities. They can give acoustic feedback to
+the user or play diferent sounds, e.g. for warning or confrmation.
+3 Input & Output Modalities
+Haptic output
+Haptic output or feedback is a recent development especially in the feld of virtual
+reality. The word derives from the Greek haptikos meaning "being able to come into
+contact with". It’s a generalization of the terms tactile and force feedback. Tactile,
+or touch feedback applies to sensations felt by the skin which allows users to feel
+things like texture of surfaces, temperature and vibration. Force feedback reproduces
+virtual forces applied to the object within the virtual world like weight, inertia or solid
+boundaries.
+The frst commercial tactile device was the Touch Master in 1993, the frst commercial
+force feedback device was the PHANTOM arm in 1993. The most popular design on
+the market is a linkage-based system, which consists of a robotic arm attached to a
+pen where the arm tracks the position of the pen and is capable of exerting a force
+to the tip of the pen. Another quite popular design for force feedback is the tension
+based system, in which the object or glove is connected with a cage through cables
+and a motor. These motors can then exert force on the cables or increase the friction.
+[Berkley, 2003]
+3.2.5 Fusion of modalities
+Fusionofinputmodalitiesisapowerfulandcomplexwayofimprovingtheinteraction
+oftheuserwithaspecifcsystem. It’sthecombinationandsimultaneousprocessingof
+diferent input modalities and allows a more intuitive way of interaction. A user can
+give a speech command like "Take that object" and at the same time point to a specifc
+object. Thereforethesystemhastounderstandfromthespeechcommandthattheuser
+wants the system to take something, and by evaluating the gesture, defne this some-
+thing as a specifc object.
+Thecombinationofmodalitieshasbeensystematicallydescribedatthefusionlevelwith
+the CASE model [Nigay and Joëlle Coutaz, 1993b] and at the user level with the CARE
+properties [J Coutaz, Nigay, Salber, and Blandford, 1995]. [Nigay and Joëlle Coutaz,
+1993b] defne the design space along three dimensions: Levels of Abstraction (e.g. pro-
+cess speech as signal, sequence of phonemes, or interpreted as a meaningful sentence),
+Use of Modalities (sequential or parallel), and Fusion (Combined, Independent). This
+design space is then used for creating a system which is able to understand commands
+like"Putthatthere". CAREstandsforComplementarity,Assignment,Redundancy,and
+Equivalence that may occur between interaction techniques and models the diversity
+on the user level of multimodal systems.
+Thefusionofspeechandgestureinputandthedynamicusageofthosetwomodalitiesis
+evaluatedin[Vallee,Burger,andErtl,2009]. Thefnalresultoftheuserstudystatesthat
+3 Input & Output Modalities
+there exist multiple factors which infuence the user’s satisfaction and that the fusion
+of speech and gesture input is robust enough for commanding a service robot.
+There’sasignifcantdiferencebetweenhuman-humaninteractionandhuman-machine
+interaction (cf. [Dahlbäck et al., 1993]) and therefore it makes sense to think about
+specifccombinationsofinputmodalitieswhicharenotthatcommoninhuman-human
+interaction but may be quite suitable for human-machine interaction.
+4 Domains & Tasks
+Industrial robots are used in many diferent production domains and therefore require
+high fexibility on the usage of diferent tools. Assembly requires a gripper for pick
+and place tasks whereas welding needs a special welding gun to perform the required
+tasks. Not only the robot hardware but also the teaching process for industrial robots
+needstoprovidethemandatoryfexibilitytohandlediferentdomainsandvarioustasks.
+EspeciallyforSmallandMedium-sizedEnterprises(SMEs)intuitiveprogrammingofin-
+dustrial robots is essential due to the small lot sizes resulting in short reprogramming
+cycles.
+Thefrstsectionintroducestheconceptofskills,tasksandprocessesdescribingthehi-
+erarchicalabstractionofanintuitiveteach-inprocess. TheSkillssectiongoesintomore
+detailaboutwhichskillsarerequiredfromtherobotorthesystem. TaskAnalysismainly
+focuses on which information is needed from the user to design a new system and to
+increase the acceptance rate of such systems. The Domains section gives an overview
+overthemostoccurringdomainsinproductionprocessesandliststheinputmodalities
+which could be used for a specifc task within this domain. The last section, Seman-
+tic description, combines the knowledge of previous sections into an abstract semantic
+descriptionofthetasks,theirparameters,inputmodalitiesandrequiredsystemcompo-
+nents. This ontology can then be used in cognitive robot cells for automatic reasoning
+on which input modality can be used and is preferred by the user.
+4.1 Skill, Task and Process
+To hide the complexity of a robot system presented to a non-expert worker for
+teaching a new work-fow, the skills of a robot and human need to be abstracted.
+This reduces the workload and makes it easier to adapt an existing program to a
+new product. Especially for human-robot cooperative working, the actions of a
+human need to be known to the robot, and therefore inserted in an abstracted man-
+nerintotheprocesssotherobotcaninformthehumanwhatitisexpectedforhimtodo.
+4 Domains & Tasks
+skill A skill is a basic action-block which is performed by the robot and normally re-
+quires additional parameters for its execution, e.g. move to position, close gripper,
+open gripper or actions requiring additional atomic steps like drill hole (switch
+on, move downwards to drill the hole, move out of hole, switch of). Skills are
+provided by the hardware and are very basic operations available to the user.
+task The introduced skills can be combined to reach a specifc goal. Such a combina-
+tion is called a task, e.g. pick object combines the skills move to object and close
+gripper. Ataskcanhavediferentskillmappingsprovidingthesamefunctionality,
+thustheremayexistmultipleskillimplementationsforthesametaskthatusefor
+example diferent sensors or algorithms. Since tasks are mainly object based,e.g.
+pick object, they need a specifc knowledge base and sensor system in the back-
+groundtodetecttheobjectandmapitspositiontoabsolutecoordinatesreachable
+bytherobot. Theknowledgebasealsodefnesadditionalparametersfortheskills,
+which can be automatically inferred from the information given by the user, like
+the electrical current needed for a welding gun if a specifc type of metal should
+be welded.
+Ataskmayalsobeaspecifcjobwhichneedstobecarriedoutbyahumanworker,
+suchashandlingfexibleparts(cables,labels,gasket). Thesespecifchumantasks
+canbeinsertedintheprocesstotelltherobotthatitneedstowaitforthehuman
+worker to fnish his job.
+process A process combines all the tasks needed for the production step and thus it
+can be seen as a program which is executed in a loop for each product. It is an
+abstract high-level description of a robot program.
+Figure4.1showsanassemblyprocessstrippeddownintotasksandskills. Byproviding
+predefnedskillsandlow-leveltaskstotheprogrammer,thewholeassemblyprocessis
+easier to program and can be easily adapted to new assembly workpieces.
+4.2 Skills
+A Skillisabasicrepresentationofanactionarobotiscapableexecuting. Intask-based
+robot programming, skills can be seen as commands which are called by a task and re-
+quire diferent parameters. The skills are provided by the hardware or robot controller
+andthereforeintroduceaHardwareAbstractionLayer(HAL)forhigherleveltasks. The
+HALmakesitpossibletoeasilyswitchbetweendiferentrobotsystemsusingthesame
+high level task.
+Skills are not only implemented by the robot controller itself, but also by other system
+componentslikecomputervisionorvisualoutputdevices. Thefollowinglistgivessome
+4 Domains & Tasks
+Assemble Gearbox
+Pick bearing Place on axis Push down
+Detect object Detect object Close gripper
+Open gripper Move to Move down
+Move to Open gripper
+Close gipper
+Figure 4.1: Hierarchical abstraction of an assembly process into process, tasks and skills. The
+processdescribespartsofanassemblyofagearboxwherethebearingisputontheaxisandneeds
+tobepusheddownuntilittouchesthecollar.
+examples for skills which are used in Section 4.4. Each skill requires a set of parame-
+terswhichareinferredonthetasklevelbyaninferenceengineorknowledgedatabase
+based on other parameters defned for the task. For some of the skills uncertainties are
+specifed which may arise when implementing or executing the skill.
+move to (6D pose,speed,acceleration): Movestherobottothespecifed
+position using the given speed with given maximum acceleration. The position
+coordinate should be given as the Tool Center Point (TCP) and the orientation
+based on the current tool attached to the robot arm.
+Uncertainties: Whatisthebasecoordinatesystem(e.g. robotbase,wordbase)? Is
+ittheToolCenterPoint(TCP)coordinate? IstheTCPcorrectlysetup? What’sthe
+initialorientationofthetoolonwhichthegivenanglesarebased? Whenusinga
+7-DOF robot arm, does the 7th DOF matter for the current task or not?
+dual arm move to (6D Pose, 6D Pose, speed, acceleration): Moves
+two robot arms simultaneously to the specifed Tool Center Point (TCP) coordi-
+nates and given orientation.
+4 Domains & Tasks
+Uncertainties: Which parameter is for which arm? Do the arms need to move
+simultaneously or is sequentially/delayed also allowed (e.g. to avoid collisions
+between the arms)?
+detect object (3D object model): Detectsthepositionandposeoftheobject
+which looks similar to the given 3D object model within the workplace.
+Uncertainties: If there are multiple objects of the same type detected, which po-
+sition should be returned? What is the orientation of a symmetric object (e.g.
+circular object or sphere)?
+open gripper (): Opens the gripper to release the object currently grabbed or to
+grab a new object.
+Uncertainties: How to handle the situation if there’s currently another tool at-
+tached to the robot arm (does the robot have an automatic tool changer)?
+close gripper (force): Closesthegripperuntilthespecifedforceisreached. Used
+to grab objects.
+Uncertainties: Is the gripper attached to the robot?
+set welding current (welding current): Sets the electrical current for the
+welding gun. The current is dependent on the material which is being welded.
+set welding speed (welding speed): Sets the moving speed for the welding
+gun. It is dependent on the material and the type of welding.
+weld point (6D Pose): Weldasinglepointatgivenpositionkeepingthewelding
+gun at the given orientation.
+Uncertainties: Istheweldinggunattachedtotherobot? Seeuncertaintiesformove
+to skill.
+weld seam (6D Pose array): Weldaseamalongthegivenpointsandorienta-
+tion and interpolates between the points.
+Uncertainties: Is the welding gun attached to the robot? Which interpolation
+methodshouldbeusedbetweenthepoints? Seeadditionaluncertaintiesformove
+to skill.
+saw along trajectory (6D Pose array): Usesasawingbladetosawalongthe
+given points and orientation and interpolates between the points.
+Uncertainties: Is the sawing tool attached to the robot? Which interpolation
+method should be used between the points? Which sawing technique should be
+4 Domains & Tasks
+used(sawingblade,lasercutting,stitching)? Seeadditionaluncertaintiesformove
+to skill.
+switch on/of grind/deburring/milling tool (): Switches the tool attached to
+the robot arm on or of. This tool can be for example a grinding, deburring or
+milling tool.
+Uncertainties: Isthecorrecttoolattachedtotherobot? Isthecurrenttoolposition
+safetoswitchiton? Shouldthetoolonlybeswitchedofiftherobotisn’tcurrently
+moving?
+drill screw (depth,force): Drillsascrewintothematerialatcurrentrobotarm
+position stopping at given depth and drilling with given force.
+Uncertainties: Is the drilling tool attached to the robot? How is the screw fed to
+thedrillingtool? Istherobotatthecorrectposition? How cantherobotdetectif
+the screw is set tight?
+apply glue (amount,6D Pose array): Appliesthegivenamountofgluemov-
+ing along the points given as parameter. The connection between the points is
+interpolated.
+Uncertainties: Is the gluing tool attached to the robot? Which interpolation
+method should be used between the points? How can the robot detect a clogged
+glueoutlet? Howmuchtimedoestherobothavetoapplytheglueuntilitisdry?
+See additional uncertainties for move to skill.
+4.3 Task Analysis
+Tounderstandtheneedsofaworkerprogramminganindustrialrobotandtodetermine
+thetypeofrequiredparameters,ataskanalysisshouldbecarriedoutoneachtaskwithin
+every domain.
+Catherine Courage defnes Task Analysis as:
+Task analysis means understanding users’ work. Thus, task analysis en-
+compasses all sorts of techniques, including naturalistic observations and
+interviews, shadowing users or doing "day in the life of" studies, conduct-
+ing ethnographic interviews, and observing and listening to users who are
+performingspecifctasks. Itincludesgatheringinformationthatleadstoin-
+sightsaboutusers’livesatworkorathome,toscenariosandusecases,and
+sometimes to detailed fowcharts of work processes or specifc procedures.
+[Courage, Jain, Redish, and Wixona, 2012]
+4 Domains & Tasks
+The most important statement of this defnition is that task analysis is "information
+gatheringthatleadstoinsightsaboutusers’work"whichallowsthesystemdesignerto
+ft the new system to the needs of the workers and therefore increases the acceptance
+of new systems which is especially important for Small and Medium-sized Enterprises
+(SMEs).
+It’s also important to understand the user, the task he is performing and the user’s en-
+vironment(physical,technological,cultural,socialandpolitical). Itmayhelptoanswer
+the following questions [Courage et al., 2012]:
+1. Users: Who are they? What do they know about the technology? What do they
+know about the domain? How motivated are they?
+2. Tasks: What are the tasks the user needs to accomplish?
+3. Users’ environments: Physical situation in which the tasks occur; technology
+available to the users; social, cultural, language considerations.
+The following section will mainly focus on the users’ environment for task analysis.
+4.4 Domains
+This section gives an overview over typical application domains for industrial robots,
+primarily suited for Small and Medium-sized Enterprises (SMEs), which play a major
+role within the SMErobotics 1 project, namely Assembly, Welding, Woodworking and
+Metal processing & Bonding materials. Each domain is described briefy and contains a
+list of the characteristic tasks within this domain.
+Thislistoftasksforeachdomainshouldgiveanoverviewoverthemostcommonlyre-
+quiredtasksforthedomainsandisbyfarnotcomplete. Eachtaskiskeptfairlygeneral
+to ease the adaption to more complex and in more detail specifed tasks. It is briefy
+explained how the task can be used and which skills are required from the robot. Ad-
+ditionally all the parameters necessary to execute the task, including type and input
+modalities, are listed.
+Especially when using robots to execute the task, there may arise a huge number of
+uncertainties and problems which a human worker automatically resolves but a robot
+can’t resolve on its own. Therefore each task description also includes a few examples
+for uncertainties with which the programmer of such a system has to cope with.
+4 Domains & Tasks
+4.4.1 Assembly
+Assembly is a manufacturing process in which parts are added subsequently to an as-
+sembly until the fnal product is produced. It is one of the most required production
+steps within Small and Medium-sized Enterprises (SMEs). When using a robot for as-
+semblytasks,ithastocopewithincreasingcomplexityduetogrowingproductquality
+requirementsandtohandlesmallcomponents. Themainreasonforthehighcomplexity
+is the difculty of conventional industrial robots to adjust to any sort of change. Espe-
+ciallyforSMEs,havingsmalllotsizesandthereforeahighproductvariety,adaptability
+andfexibilityisimportant. Theycan’tafordasinglerobotforonespecifcproduction
+step. Instead SMEs need a robot that can be used for diferent assembly steps and pro-
+vides the required accuracy, e.g. for mounting a bearing onto a shaft.
+Programmingarobottoexecuteaspecifcprocesswithintheassemblydomaininvolves
+diferent types of tasks. The following list gives an overview over the most common
+taskswithinassemblyandanalyseseachtaskregardingtheproblemsanduncertainties
+which may arise and lists the required parameters which are needed by the robot to
+successfully execute the task:
+Pick Object
+The Pick object task is defned as moving the robot to an object and closing the
+gripper to lift that specifc object.
+Required skills: move to, detect object, close gripper
+Parameters:
+• Object to pick: The user needs to defne which object the robot should pick up.
+– Type: 3D model of the object
+– Input modalities: Point by hand (gesture pointing to the object), Speech
+(nameobjectordescribeposition),Touch(selectfromobjectlibrary),
+PenInput(pointwith3Dpentoobjectandclick),Keyboard&Mouse
+(type the name and select from library)
+Uncertainties: Is the object already on the table or is it palletized. If the user
+points in between of two objects, which one should be selected? If the same
+typeofobjectismultipletimesonthetable,theuserhastoidentifywhichone
+to pick (e.g. "Robot pick the left bearing"). If objects are already assembled
+and the robot should disassemble them, how does the user defne if the robot
+shouldtaketheassemblyordisassembletheassemblybyremovinganobject.
+4 Domains & Tasks
+Doestheobjectrequireaspecifcgrippingposition,thatthesystemshouldn’t
+infer automatically? What happens if the object to pick isn’t there anymore?
+Place Object
+The Place object task tells the robot where to place the previously picked object.
+Required skills: move to, open gripper, detect object
+Parameters:
+• Locationtoplace: Locationonthetableoranyotherplaneareawheretherobot
+should place the object which is currently in it’s gripper.
+– Type: 3D coordinate
+– Input modalities: Point by hand (point to a location on the table/object),
+Speech (describe the location, e.g. center of the table), Touch (coor-
+dinate input), Pen Input (point to a location and click), Keyboard &
+Mouse (coordinate input)
+Uncertainties: Should the object be placed directly on the table or stacked onto
+another object which is already on the table? Are intermediate positions re-
+quired, i.e. must the robot move exactly above the object to move it down
+straight or is there a specifc path to follow, so that the object is maneuvered
+around obstacles? How does the robot know if it is a non rigid body? How
+shouldtherobothandlenonrigidbodiesandavoidcollisionsduetounknown
+object dimension?
+Pick & Hold
+Pick & Hold is a task where the robot picks an object and holds it at a specifc pose
+in front of a human worker so that he can assemble or work with the object.
+Required skills: move to, open gripper, detect object
+Parameters:
+• Object to pick: The object which should be picked up by the robot.
+See Pick Object task on page 35.
+• Hold pose: Pose of the object where the robot should hold it.
+4 Domains & Tasks
+– Type: 6D pose
+– Input modalities: Point by hand (use gestures, e.g. draw a rectangle in the
+airwheretheobjectshouldbe),Speech(defnetheposebydescribing
+it),Touch(usea3Dvisualization),PenInput(likepointbyhand,draw
+in the air and defne the space), Keyboard & Mouse (defne pose by
+setting coordinates and rotations manually)
+Uncertainties: How can it be defned that the objects should be rotated after a
+specifcstep(e.g. thehumanworkerneedstoassemblesomethingonthefront
+and back side of the object)? How tell the robot that the assembly step is fn-
+ishedanditshouldcontinuewiththenexttask? Howcantherobotcheckifthe
+human executed his work so that the next steps don’t fail? (cf. uncertainties
+for Pick Object task on page 35).
+Assemble objects
+TheAssembleobjectstaskisusedtoassembletwoobjectsbasedonadefnedassem-
+bly pose.
+Required skills: move to, open gripper, close gripper, detect object, dual arm
+Parameters:
+• Object to assemble: The object which should be picked and assembled with an-
+other object.
+See Pick Object task on page 35.
+• Assembly: Analreadyassembledobjectorasingleobjectwithwhichtheprevi-
+ously selected object should be assembled.
+See Pick Object task on page 35.
+• Assembly constraints: How should the objects be put together/assembled.
+– Type: object constraints
+– Input modalities: Speech (defne constraints, e.g. "Put bearing on axis and
+align them concentric"), Touch (3D editor where the user can defne
+constraints between objects), Keyboard & Mouse (defne constraints
+similar to a programming language)
+Uncertainties : Doestheassemblysteprequireaspecifctrajectory/pathorcanit
+beinferredautomaticallybytherobot? Howcantheuserdefneatrajectoryif
+4 Domains & Tasks
+thesystemdoesn’tfndany? Doestheassemblysteprequireahumanworker
+(especiallyfornonrigidassemblyobjectslikecablesorgaskets)? Howdoesthe
+robot know how the objects should be put together (just push or is a rotation
+needed,likescrewing)? Iftheobjectsareholdtogetherwithclips,howdoesthe
+robotgetfeedbackthattheclipislatched(humanworkersnormallylistenfor
+the "click" sound)? How much force is needed? Can the objects be assembled
+on the table or is a dual arm assembly station needed? How does the system
+know if an object should be put for example onto an axis and then pushed to
+the collar?
+4.4.2 Welding
+In welding, usually metals or thermoplastics are joined by coalescing the materials.
+There are many diferent welding methods, requiring various hardware components
+andtechniques. Inthissectionthefocusliesonthemainlyusedshieldedmetalarcweld-
+ing and Flux-cored arc welding.
+It’sacomplexmanufacturingstepwherediferentparametersmustbesetcorrectly(e.g.
+current, speed, angle) to reach the required product quality. These parameters must be
+set manually or can sometimes be automatically inferred or read from a knowledge
+database. Thus programming a robot to weld two materials and bond them together
+involves diferent types of tasks. The following list gives an overview over the most
+common tasks within welding, analyses each task regarding the problems and uncer-
+tainties which may arise, and lists the required parameters which are needed by the
+robot to successfully execute the task:
+Define material
+For welding it is important to know which materials are welded to set the correct
+weldingparameterslikecurrentandspeed. Theseparameterscanbeinferredfrom
+a knowledge base or can be predefned values for each material.
+Required skills: set welding current, set welding speed
+Parameters:
+• Material: The material of the object to weld.
+– Type: material (string or id)
+– Inputmodalities: Speech(nameofthematerial),Touch(selectmaterialfrom
+a list), Keyboard & Mouse (write name of the material)
+4 Domains & Tasks
+• Thickness: Thickness of the material to be welded.
+– Type: number (unit millimeters)
+– Input modalities: Speech (say the number), Touch (select a thickness using
+a slider), Keyboard & Mouse (write the number into a text feld)
+Uncertainties: Can the system automatically infer the material based on its
+knowledge about the object? How to handle two diferent materials which
+need to be welded together? If the material has varying thickness, how to
+defne it and how should the robot cope with it?
+Point welding
+Point welding is a process where two materials, mostly plates or fat parts, are
+bonded together by one or multiple welding points.
+Required skills: move to, weld point
+Parameters:
+• Object to weld: The object where point welding should be applied.
+See Pick Object task on page 35.
+• Position: Single point or vertex where the welding gun should apply current to
+weld the parts together.
+– Type: 3D point or vertex
+– Input modalities: Point by hand (point on an object already lying on the
+table), Speech (describe the point), Touch (use a touch-friendly 3D
+visualization), Pen Input (use the pen to select a position), Keyboard
+& Mouse (3D visualization or manual coordinate input)
+• Material: Material of the object to weld.
+See previous Defne material task.
+Uncertainties: Howcantherobotcheckifthetwopartsarecorrectlyalignedbe-
+foreweldingthemtogether? Isthereafxationoranotherrobotarmrequired
+toholdthepartsataspecifcposition,oraretheyalreadyassembledinapre-
+viousstep? Iftheweldingpointisn’treachable,howshouldtherobotbehave?
+What’s the best orientation of the welding gun for optimal results?
+4 Domains & Tasks
+Seam welding
+With seam welding, two materials or parts of an assembly are connected along an
+edge or seam. These parts are often aligned perpendicular and therefore there is a
+well defned edge between those two.
+Required skills: move to, weld seam
+Parameters:
+• Object to weld: The object where seam welding should be applied.
+See Pick Object task on page 35.
+• Edge: Edgedefnedofmultiplepointsoranedgeontheobject,whichtherobot
+should follow for seam welding.
+– Type: List of 3D points or an edge
+– Input modalities: Point by hand (point along an edge on an object already
+lying on the table), Speech (describe the edge), Touch (use a touch-
+friendly 3D visualization), Pen Input (use the pen to select one or
+multiple connected edges), Keyboard & Mouse (3D visualization or
+manual coordinate input)
+• Material: Material of the object to weld.
+See previous Defne material task.
+Uncertainties: How can the robot weld along twisted planes or edges? Does the
+welding require special steps like flling a gap or seam (move over the same
+edge multiple times)?
+See also previous Point welding task.
+4.4.3 Woodworking
+Woodworking or wood processing describes manufacturing and machining of work-
+piecesmadeofwood,someofwhicharesolddirectlyasgoodsandsomeascomponents
+assembled with other materials into functional products.
+Especiallyinthefeldofprefabricatehouses,robotsareusedtohandletheheavyobjects
+and provide accurate machining of the workpieces. Since each house is diferent from
+previouslyproducedones,thisfeldofapplicationforroboticsrequiresahighfexibility
+and easy adaption to changes.
+4 Domains & Tasks
+The following list gives an overview over the most required and used tasks for wood-
+working whereas this domain also requires diferent tasks from the Assembly domain
+in Section 4.4.1. Each task is analyzed regarding the problems and uncertainties which
+may arise and the required parameters which are needed by the robot to successfully
+execute the task:
+Sawing is one of the main tasks within the woodworking domain. It’s used to cut
+outpartsofawoodpanelortotrimplanksandbiggerpanels. Itrequiresaspecially
+equipped robot using a saw blade to cut through the material.
+Required skills: saw along trajectory
+Parameters:
+• Object to saw: The object where the robot needs to cut out parts or trim.
+See Pick Object task on page 35.
+• Startposition: positionwherethetrajectoryshouldstart. Thispositionnormally
+needsadrilledholetoinsertthesawbladeifthetrajectoryisaclosedloop.
+– Type: 3D or 6D pose
+– Input modalities: Point by hand (point on an object already lying on the
+table), Speech (describe the point), Touch (use a touch-friendly 3D
+visualization), Pen Input (use the pen to select a position), Keyboard
+& Mouse (3D visualization or manual coordinate input)
+• Trajectory: The path or trajectory along which the sawing blade should move
+to cut through the material or wood.
+– Type: list of 3D or 6D points/poses
+– Inputmodalities: Pointbyhand(pointalongthepathonanobject),Speech
+(describe the path, e.g. circle at the center with a diameter of 30cm),
+Touch(useatouch-friendly3Dvisualization),PenInput(usethepen
+tomovealongthepath,likedrawingonthewood),Keyboard&Mouse
+(3D visualization or manual coordinate input)
+Uncertainties: Is the hole in the wood to insert the sawing blade already there?
+Is another robot arm needed to hold the cut of part to avoid squeezing of the
+blade? Should the robot use other cutting technologies like laser cutting or
+stitch sawing?
+4 Domains & Tasks
+The grinding task describes the process of reducing unevenness on wood or other
+materials by using a rotating grinding paper. It’s often used to make a surface
+smoother or to reduce the thickness by a small amount.
+Required skills: move along, grind on, grind of
+Parameters:
+• Trajectory: The path or trajectory along which the robot should grind.
+– Type: list of 3D or 6D points/poses
+– Inputmodalities: Pointbyhand(pointalongthepathonanobject),Speech
+(describe the path, e.g. circle at the center with a diameter of 30cm),
+Touch(useatouch-friendly3Dvisualization),PenInput(usethepen
+tomovealongthepath,likedrawingonthewood),Keyboard&Mouse
+(3D visualization or manual coordinate input)
+• Grinding depth: Defnes how much material the robot should grind of.
+– Type: number (unit millimeters)
+– Input modalities: Speech (say the number), Touch (select a depth using a
+slider), Keyboard & Mouse (write the number into a text feld)
+• Coarseness: number defning the coarseness of the grinding paper to use.
+– Type: list of available grinding papers.
+– Inputmodalities: Speech(saythenumber),Touch(selectacoarsenessusing
+a slider or select from a list), Keyboard & Mouse (write the number
+into a text feld)
+Uncertainties: If a plane area should be grinded, how can this be defned? How
+cantherobothandletwistedplanes? Howcantherobotexchangethegrinding
+paperifadiferentcoarsenessisneeded? Howmuchforcedoestherobotneed
+toapplyforeachcoarseness? Inwhichdirectionshouldtherobotmove(when
+grinding wood, it’s important to consider the fgure of the wood)?
+Deburring/Rounding corner
+The Deburring or Rounding corner task is used to remove sharp edges of an object.
+4 Domains & Tasks
+Required skills: movealong,switchdeburringtoolon,switchdeburringtoolof
+Parameters:
+• Deburring type: deburring can be achieved either by grinding or cutting of the
+edgeinanangleof45degreeorbygrindingtheedgeinaroundedshape.
+– Type: list (values: rounded, fat)
+– Input modalities: Speech (say/describe the deburring type), Touch (select
+from a list), Keyboard & Mouse (select from a list)
+• Radius: radius for rounded deburring or depth for fat deburring
+– Type: number (unit millimeters)
+– Input modalities: Speech (say the number), Touch (select a depth using a
+slider), Keyboard & Mouse (write the number into a text feld)
+• Edge: Edgedefnedbymultiplepointsoranedgeontheobjectwhichtherobot
+should deburr.
+– Type: List of 3D points or an edge
+– Input modalities: Point by hand (point along an edge on an object already
+lying on the table), Speech (describe the edge), Touch (use a touch-
+friendly 3D visualization), Pen Input (use the pen to select one or
+multiple connected edges), Keyboard & Mouse (3D visualization or
+manual coordinate input)
+Uncertainties: Whichdeburringtoolshouldbeused(drill,grindingpaper)? How
+handle twisted or peaked edges? What’s the optimal angle for the deburring
+tool?
+4.4.4 Metal processing & Bonding materials
+Machining in general describes a process in which a piece of raw material is processed
+until it reaches a desired fnal shape. This process consists commonly of a controlled
+materialremoval,alsoknownassubtractivemanufacturing,andisoneofthemaintasks
+within metal processing, but also for processing wood or other materials.
+Bonding materials, in contrary, can be seen as material adding, since it connects two
+materials so that they are fxed in a specifc relative position.
+The following list contains two example tasks for metal processing, especially for ma-
+chining, and one example task for material bonding using adhesives, including the re-
+quired parameters and possible uncertainties and problems. Some of the tasks of the
+4 Domains & Tasks
+Woodworking domain in Section 4.4.3 can also be adapted to the metal processing do-
+main and are therefore not listed within this section.
+Milling is a task where the robot removes or cuts out a special amount of material
+from the workpiece and is mainly used for creating recesses.
+Required skills: move to, milling tool on, milling tool of
+Parameters:
+• Object to mill: The object where the robot needs to mill material of.
+See Pick Object task on page 35.
+• Milling depth: Defnes how much material the robot should mill of.
+– Type: number (unit millimeters)
+– Input modalities: Speech (say the number), Touch (select a depth using a
+slider), Keyboard & Mouse (write the number into a text feld)
+• Trajectory: The path, trajectory or area along which the milling tool should
+move to mill out the material.
+– Type: list of 3D or 6D points/poses or an arbitrary polygon
+– Inputmodalities: Pointbyhand(pointalongthepathonanobject),Speech
+(describe the path, e.g. circle at the center with a diameter of 30cm),
+Touch(useatouch-friendly3Dvisualization),PenInput(usethepen
+to move along the path or defne the area), Keyboard & Mouse (3D
+visualization or manual coordinate input)
+Uncertainties: Which milling tool should be used? How fast should the milling
+head move? If an area is selected, how should the robot move in this area to
+mill of with an optimal result?
+Screwingisusedtofxatetwoormoreobjectssothatthemovementbetweenthese
+objects is minimized. It requires holes and the corresponding screws to hold them
+together.
+4 Domains & Tasks
+Required skills: move to, drill screw
+Parameters:
+• Screw type: screw type to use. It can be selected from a list of available screws.
+– Type: list
+– Inputmodalities: Speech(say/describethescrew),Touch(selectfromalist),
+Keyboard & Mouse (select from a list)
+• Objects to screw: Objects which should be screwed together.
+See Pick Object task on page 35.
+• Hole: Hole on the objects through which the screw should be rotated.
+– Type:
+– Input modalities: Point by hand (select the holes on the objects), Speech
+(describe the hole, e.g. third hole from bottom), Touch (use a touch-
+friendly3Dvisualization),PenInput(usethepentoselecttheholes),
+Keyboard & Mouse (3D visualization or manual coordinate input)
+Uncertainties: Istheholeforthescrew alreadydrilled? Ifaholewasdrilledina
+previous step, the selection of the hole for screwing needs a simulated/modi-
+fed model where the hole exists. How is the screw put into the hole to start
+screwing? Howmuchrotationalforceisrequired? Howmuchpushingforceis
+required? How can the robot check if the objects are correctly aligned before
+screwing?
+Adhesive bonding
+Adhesive bonding or gluing is used to connect diferent materials and fxate their
+relative position to each other.
+Required skills: move to, apply glue
+Parameters:
+• Glue type: glue type to use. It can be selected from a list of available glues and
+should be dependent on the material to glue together.
+– Type: list
+– Input modalities: Speech (say/describe the glue), Touch (select from a list),
+Keyboard & Mouse (select from a list)
+4 Domains & Tasks
+• Trajectory: Thepath,trajectoryorareaalongwhichtheglueshouldbeapplied.
+– Type: list of 3D or 6D points/poses
+– Inputmodalities: Pointbyhand(pointalongthepathonanobject),Speech
+(describethepath),Touch(useatouch-friendly3Dvisualization),Pen
+Input (use the pen to move along the path), Keyboard & Mouse (3D
+visualization or manual coordinate input)
+• Amount of glue: Amount of glue to apply when moving along the trajectory.
+– Type: number (unit milliliters or grams)
+– Input modalities: Speech (say the number), Touch (select an amount using
+a slider), Keyboard & Mouse (write the number into a text feld)
+Uncertainties: Cantheamountofgluebeautomaticallyinferred? Whichpattern
+shouldbeusedtoapplygluetoabiggerarea(e.g. S-shapeorjustlines)? How
+arethepartsputtogetherafterapplyingtheglue? Howmuchtimeremainsto
+put the parts together?
+4.5 Semantic description
+Asemanticdescriptionorontologydescribesrelationsbetweendiferentobjectsandis
+usedtoformallyrepresentknowledgefromaspecifcdomain. BasedontheTaskAnaly-
+sisfromprevioussectionswithinthischapter,anontologywascreated,thatrepresents
+the hierarchical structure of Process, Tasks, Skills and shows the relations of diferent
+system components like sensors with for example software components and task pa-
+rameters.
+This ontology can then be used to automatically infer, if a specifc input modality is
+available to the system, and which input modality is the preferred one for each task
+parameter.
+The top level ontology is shown in Figure 4.2. Figure 4.3 lists all the available tasks
+within the ontology, Figure 4.4 shows a subset of skills that are mapped to tasks. A
+taskcanhavediferentskillmappingsprovidingthesamefunctionality. Figure4.5lists
+all parameters which may be required by a task. Figure 4.6 shows the relations for the
+ObjectModelparameter: itshowsalltheparameterswhichrequireanobjectmodel,
+showsitsdatatypeandthepreferredinputmodality. Theobjectmodelparametertypeis
+alsousedbytheDetectObjectskill,showninFigure4.7. Theontologyadditionally
+includes a representation of all input and output modalities (Figure 4.8) as well as the
+main hardware and software components (Figure 4.9).
+Domains&Tasks
+has subclass has subclass has subclasshas subclass has subclass has subclass has subclass
+Task Process DataType Component CommunicationModality Parameter Skill
+Figure4.2:ThetoplevelhierarchycontainsProcesses,TasksandSkills,ParametersforeachTask,datatypesoftheparameter,hardwareand
+softwaresystemcomponentslikesensorsorspecifcsoftwarealgorithmsforexamplespeechrecognitionandcommunicationmodalitiesforinput
+andoutput.
+Thing Process
+has subclassisImplementedBy(Subclass some)
+has subclass has subclass has subclass has subclass
+WoodworkingTask ProcessingTask AssemblyTask WeldingTask
+has subclasshas subclass has subclass has subclasshas subclass has subclass has subclasshas subclass has subclass has subclass has subclass has subclass has subclass
+DeburringCorner Sawing Grinding Milling Screwing AdhesiveBonding AssembleObjects PlaceObject PickHold PickObject SeamWelding DefineMaterial PointWelding
+Figure4.3:Aprocessisimplementedbyoneormoretasks.Thetaskscanbeseparatedintodiferentgroups:woodworking,processing,assembly
+andwelding.
+Domains&Tasks
+has subclass
+has subclass has subclass has subclass has subclass has subclass has subclass
+MoveTo CloseGripper WeldingSkill OpenGripper ProcessingSkill DetectObject
+Figure4.4:Askillisusedbytasksandrepresentsthelowesthierarchicalrepresentationofaprocess. MoveTo,CloseGripper,OpenGripperand
+DetectObjectarecommonskills.ThereareadditionalskillsforeachdomaingroupedintoWeldingSkillandProcessingSkill.
+has subclass
+has subclass has subclass has subclass has subclass has subclass has subclass has subclass has subclasshas subclass has subclass has subclass has subclass has subclass has subclass has subclass has subclass
+GlueType Coarseness Amount Material Force Depth ElectricalCurrent ObjectPose ObjectModel Acceleration Position Radius ScrewType Trajectory Speed AssemblyConstraints
+Figure4.5:EachTaskorSkillrequiresspecifcparametersforsuccessfulexecution.Thisfgurelistsalltheparametersusedwithintheontology.
+DetectObject Parameter PointWelding Milling Screwing PickObject SeamWelding AssembleObjects PickHold
+requiresParameter(Subclass all) has subclass requiresParameter(Subclass all) requiresParameter(Subclass all)requiresParameter(Subclass all) requiresParameter(Subclass all) requiresParameter(Subclass all) requiresParameter(Subclass all) requiresParameter(Subclass all)
+ObjectModel
+isOfType(Subclass some)has subclass preferredInputModality(Subclass some)
+StringIdentifier Assembly GestureInput
+Figure4.6:ThisFigureshowsanexamplepartialontologyfortheObjectModelparameter. Itisasubclassof Parameterandisrequiredby
+diferentskills(DetectObject)andtasks(PointWelding,Milling,Screwing,PickObject,SeamWelding,AssembleObjects,PickHold).Itisofthedata
+typeStringIdentifier,andhasasubclassAssembly(whichisaspecialobjectmodel)andthepreferredinputmodalityforsettingan
+objectmodelisgestureinput.Thisontologyisusedforinferringdatatypesanddecidingwhichinputchannelshouldbeproposedbythesystem.
+Domains&Tasks
+PlaceObject PickObject AssembleObjects PickHold Skill
+requiresSkill(Subclass some) requiresSkill(Subclass some)requiresSkill(Subclass some) requiresSkill(Subclass some) has subclass
+DetectObject
+requiresParameter(Subclass all)
+ObjectModel
+Figure4.7:SimilartopreviousFigure,thisoneshowsapartoftheontologywhichrepresentstheDetectObjectskill. It’srequiredby
+diferenttasksandrequiresanObjectModelparameter(seeFigure4.6).
+has subclass
+CommunicationModality
+has subclass has subclass
+InputModality OutputModality
+has subclass has subclass has subclasshas subclasshas subclass has subclass has subclass has subclass has subclasshas subclass has subclass has subclass has subclass
+TouchInput PenInput GestureInput GazeInput MouseInput KeyboardInput SpeechInput DisplayOutput AcousticOutput HapticOutput AugmentedRealityOutput ProjectorOutput PrinterOutput
+Figure4.8:Communicationmodalitiesareusedtointeractwiththesystem.Theyaredividedintotwogroups:inputandoutputmodalitiesand
+referencedbyparametersanddatatypes.
+has subclass
+has subclass has subclass
+HardwareComponent SoftwareComponent
+has subclass has subclass has subclass has subclass has subclass has subclass has subclass
+Sensor Display Robot TouchEvaluationSoftware SpeechRecognitionSoftware Tracking3DSoftware GestureRecognitionSoftware
+has subclass has subclass has subclass has subclass has subclass has subclasshas subclass has subclass has subclass has subclass
+MicrophoneSensor PenTrackingSensor LeapMotionSensor TouchSensor KinectSensor Projector TouchDisplay ColorDisplay SingleArmRobot DualArmRobot
+Figure4.9:Toknowifaspecifcinputoroutputmodalityisavailable,thesystemhastoknowwhichhardwareandsoftwarecomponentsare
+builtintotherobotcell.Thecomponentontologyrepresentsthosecomponents(e.g.Sensors,Display,Robotoravailablesoftware). 49
+5 Graphical User Interface
+Each and every system requires some kind of visualization or visual feedback for the
+user so that he knows what the system is currently doing and which data is required
+from the human operator. It’s common ground to use a graphical user interface pre-
+sentedonadisplaytoprovidethefeedbackandgiveawaytointeractwiththesystem.
+For this master thesis a graphical user interface (GUI) was developed with the main
+goal to ofer an intuitive touch friendly user interface for task-based industrial robot
+programming, and to provide a visual feedback component for current performed ac-
+tionsoftherobot. Flexibilityandportability(multidevicesupport)wasamaingoalfor
+this user interface. It is based on the abstract semantic description introduced in the
+previouschapterandusedfortheuserstudy(describedinthenextchapter)thatisone
+of the main parts of this thesis.
+5.1 Frameworks & Technologies
+The frst step for the development of the graphical user interface was to evaluate dif-
+ferent frameworks and technologies to build on to. The main requirement for the user
+interfacewasfexibilityandportability. Flexibilityisimportanttoallowquickextension
+and implementation of new system components and functions. The goal of portability
+is to provide a system which can run on diferent devices (Windows, Linux, OS X, An-
+droid, iOS) with varying screen resolutions.
+Togetaportableapplicationwhichrunsunderdiferentoperatingsystems,webdevel-
+opmenttechnologieslikeHTML5,JavascriptandCSS3arethebestcandidates. Usinga
+responsive CSS design additionally comes with user friendly visualization on diferent
+screen sizes. Using so called Web-Applications, the user can open the application on
+his smartphone, tablet or workstation PC. This is a main advantage compared to pro-
+prietaryprogrammedappsforeachoperatingsystem. AdrawbackofWeb-Appsisthat
+theyconstantlyneedaconnectiontothewebserverdeliveringtheapp. Sincetheappli-
+cation will be used within factory and production halls, this disadvantage shouldn’t be
+a big problem.
+Flexibilityisreachedbyusingstandardizedcomponentinterfaces,wellknownprogram-
+minglanguagesandsoftwareengineeringpracticessuchastheModel-View-Controller
+5 Graphical User Interface
+design pattern.
+AfterdecidingthattheclientsideshouldbewrittenasaWeb-Application,thenextstep
+wastodecidewhichserversoftwaretouse. Afterconsideringdiferentpossibilitieslike
+PHP1 and Zend Framework2 or Perl3 and Catalyst Framework4 the decision fell for us-
+ingNode.js5 andexpress6 ontheserverside. Thishastheadvantagethattheclient-and
+server-side uses the same programming language, namely JavaScript, and it’s possible
+to reuse components for diferent parts of the software.
+Ontheclientsidebackbone.js7andBootstrap8isused. Backbone.jsisaJavaScriptlibrary
+which provides a powerful basis for Single-Page Web Applications using the Model-
+View-Controller design pattern. The Boostrap HTML, CSS and JavaScript framework
+developed by Twitter is useful for designing responsive Web Applications.
+The Less CSS pre-processor9 is a useful tool for writing well structured and quickly
+adaptable and manageable CSS code.
+The GUI also required some kind of 3D visualization to show object models and to
+allow interaction with these models. Since the application is running in the browser,
+is was straightforward to use WebGL for this kind of visualization. There are diferent
+JavaScript libraries available, which integrate WebGL and provide easy access to its
+functions. One of the most advanced and widely used libraries is the three.js library 10
+which was used for the implementation within this GUI.
+5.2 Design
+ThebasicideaforthedesignwastocreateaSingle-PageApplicationthatavoidsloading
+and processing time for each clicked link and it has the possibility to dynamically add
+and remove parts from the page based on the user’s input.
+These dynamically added and removed parts are called cards. Cards are grouped using
+so called pages. Figure 5.1 shows a frst mockup of the GUI explaining the concept of
+cards and pages.
+Opening a new page adds it to the right hand side of the rightmost page currently
+shown by using a fy-in animation which moves the page from right to left until it
+5 Graphical User Interface
+reaches its fnal position. If the number of pages don’t ft on the current screen, the
+leftmostpageisremovedfromthecurrentviewbymovingitoutoftheviewattheleft
+side and the remaining pages slide over to the left, to fll the free space. Each page’s
+size is dynamically adapted to the required size of each card within this page.
+Page 1 Page 2
+Moves out of viewport New page moves to the left
+Figure5.1:FirstmockupoftheGUI.Thetopbarcontainsthemainnavigation. Ifanewpagegets
+added and there isn’t enough space, the old one is moved out to the left and the new page flls the
+newavailablespace. Apagecontainscards(boxes)whicharecontainersfordata.
+A page has no real border or visible boundary and has a gray background. The cards
+have a white background and a visible border and can be seen as diferent sections
+within the page. The cards can have diferent width and height values depending on
+the size of its content. A frst version of the GUI showing the described page and card
+design can be seen in Figure 5.2. Using this concept allows to have a well defned fow
+where the user has to go through the shown information from left to right, from page
+topageandthenwithinapagefromtoptobottomthroughthediferentsectionscalled
+cards.
+5 Graphical User Interface
+Figure5.2:BasicdesignoftheGUI:itconsistsofavariablenumberofpages. Eachpagecontains
+anynumberofcards. Cardsarelikesectionswithinthepagecontainingdiferentinformation. Card
+1belongstothefrstpage. Card2and Card3aresectionswithinthesecondpage.
+5.3 Implementation
+WhenimplementingtheGUIthemainfocuslayoneasyextensibilityfornewfunctions
+and easy understandable code to provide new developers a code basis that doesn’t re-
+quire much familiarization.
+On the server side node.js with express was used. Since the GUI was developed as a
+Single-Page-Application, there’s not much code required for delivering the page con-
+tents. It delivers the static fles, like .js and .css, and renders the EJS11 HTML templates
+for the client.
+The client side needed much more implementation efort because most of the logic is
+implemented within the browser, the server only handles page delivery and database
+connections. The frst step on the client side was to set up a simple backbone.js basis
+whichcanbereusedforallthediferentclasses. Backbone.jsisaModel-View-Controller
+framework. The Models are JavaScript objects which contain the data displayed by
+Views. IfanyattributechangeswithinthisModel,backbone.jsautomaticallytakescare
+of updating the view and re-renders it.
+ThebaseclassfortheapplicationisthePageAppclasswhichcontainscodetomanage
+(add,remove,resize,show,hide)pagesinthecurrentview. ProcessAppextendsthis
+class with additional functions for database initialization.
+5 Graphical User Interface
+The PageView class extends the Backbone.View and uses the PageModel class to
+store and retrieve data for creating the page. Each page can contain one or multiple
+cards. SuchacardisrepresentedbytheCardViewclassusingCardModeltostore
+dataonhowthecardshouldbevisualized. ACardcontainsoneormoresections. There
+are diferent section types available, which derive from the SectionView class. For
+each listed section view, there’s a corresponding model class which is used for storing
+the data shown within the view:
+TextView simple block of multiline text.
+MediaView displays an image or video.
+InfoView is a combination of text an media view. It shows an image on the left side
+and a description text on the right.
+ListView a list of clickable items. An item can show an image including text, or text
+CategoryView List of clickable items which can be fltered by category
+AftertheProcessAppinitializedthedatabaseconnectionandretrievedtherequired
+data (like list of processes and tasks) it creates the frst page containing the list of pro-
+cesses. To create a page the developer simply has to create an instance of the Page-
+Model class. This instance then contains a list of CardModel instances for each
+card. Each CardModel again contains a list of all the sections (derived classes of
+SectionModel) within this card. Creating and initializing the corresponding view
+instancesisimplementedwithineachviewclass. Thisstructureallowseasycreationof
+newpagesbyjustenteringthemetadata,withoutbotheringwiththespecifcvisualiza-
+tion and rendering code.
+Alltheviewsuseaneventbasedcommunication: iftheuserclicksonalistitem,anevent
+is fred by the ListView to the model used for creation of this list. The programmer
+can subscribe to such an event and then react on it by e.g. opening the corresponding
+subpage. Figure5.3showsthefnalversionofthegraphicaluserinterfaceforprogram-
+ming the robot.
+For some of the parameters required by a task, a specifc input modality had to be im-
+plemented. There’sforexamplea3Dvisualizationofobjectmodelsusingthree.jswhere
+the user can select points or edges on the object or defne constraints between two ob-
+jects.
+5 Graphical User Interface
+Figure5.3:ThefnalversionoftheGUI.Itcurrentlyshowstwopages:ontheleftisthe"ComauGear-
+boxAssembly" task with one subtask. The detail page for this subtask is opened on the right hand
+side. It shows the parameters required for this task, Pre- and Postconditions and Subtasks of this
+task.
+5.4 Integration
+The goal of developing the GUI was to integrate it into the already existing system,
+developed during the SMErobotics project at fortiss. There are diferent components,
+like a semantic storage, a knowledge database, 3D tracking components and robot
+simulation. All these components use ROS12 as an interface and communication
+channel. Therefore the GUI should also integrate ROS so it can communicate with
+these components and exchange or query data.
+Since JavaScript doesn’t provide native ROS support, the rosbridge node 13 was used. It
+provides a simple JSON API for non-ROS applications to communicate with other ROS
+nodes. In combination with roslibjs 14, a JavaScript library for connecting to the JSON
+API, it’s possible to subscribe to any ROS Topic, publish data or connect to a service
+5 Graphical User Interface
+usinganeventbasednotifcationsystem. Assoonasnewdataispublishedtoatopic,a
+JavaScript callback function is called with this specifc data.
+The GUI uses roslibjs for storing all the data into the database, to fetch data from the
+semantic storage, and to integrate the diferent input modalities through it. When the
+user selects the Point by hand input modality, a call to a ROS service is performed to
+activate the Kinect or LeapMotion sensor. The corresponding software component
+thenpublishescontinuously,whichobjecttheuserselected. TheGUIsubscribestothis
+topic and then displays this information to give feedback to the user.
+Browser Web-Server
+roslibjs rosbridge ROS node
+JSON Websocket TCP/IP Socket JSON
+ROS master
+Figure5.4:DatafowbetweentheBrowserandtheWeb-Server. TheBrowserrequeststhewebpage
+tionsfromthislibrary. Whenafunctioniscalled,roslibjsgeneratesaJSONdatapackageandsends
+it through a Websocket to the webserver, where rosbridge opened a TCP/IP socket and listens for
+connections. RosbridgealsocreatesastandardROSnodetocommunicatewithothernodesandthe
+ROS master. Published data on subscribed topics is automatically transformed by rosbridge into a
+JSONpackage,senttotheclientandthereaneventiscalledhavingthedataaspayload.
+6 User Study
+The user study should evaluate the usability of multimodal input for task based indus-
+trialrobotprogramming,andevaluatetheintuitivenessofthediferentinputmodalities
+used in our system setup. It mainly focuses on which input modality the user prefers
+for diferent tasks. It uses the graphical user interface presented in previous chapter as
+the main interaction method with the system.
+[Bevan, 1995] defnes usability as "quality of use" which has three main aspects: ef-
+fectiveness, efciency and satisfaction of users carrying out specifed tasks in specifed
+environments. According to [Frøkjæ r, Hertzum, and Hornbæ k, 2000] these three as-
+pects are defned as:
+Efectiveness is the accuracy and completeness with which users achieve certain
+goals. Indicators of efectiveness include quality of solution and error rates.
+Eficiency is the relation between the accuracy and completeness with which users
+achieve certain goals and the resources expended in achieving them. Indicators
+of efciency include task completion time and learning time.
+Satisfaction is the users’ comfort with, and positive attitudes towards the use of the
+system. Users’satisfactioncanbemeasuredbyattituderatingscalessuchasSUMI
+[Kirakowski and Corbett, 1993].
+[Frøkjæretal.,2000]showsthatit’simportanttoaccountforallthreeaspectsbecause
+a subset is often insufcient as an indicator of overall usability. Since this user study
+doesn’t aim to evaluate the usability of the system but only the diferent input modal-
+ities and the users opinion on these modalities, the user study mainly focusses on the
+satisfaction aspect and intuitiveness using the input modalities.
+Intuitiveness is defned as "the subconscious application of prior knowledge that leads
+to efective interaction" [Naumann, 2009]. This defnition of intuitive use is captured
+in the user study by diferent subscales like Perceived Cognitive Load and evaluation of
+preferred input modalities.
+6 User Study
+6.1 Hypothesis
+Beforedesigningorconductingauserstudyyoushouldhaveahypothesisorstatement
+toconfrmorcontradictbytheresultsofthestudy. Thismasterthesisevaluatesdiferent
+inputmodalitiesforvarioustasksusedintask-basedindustrialrobotprogramming. For
+most of the tasks four input modalities are available: gesture input (point by hand),
+speech input, pen input (using a 3D device) and a graphical user interface for touch
+input.
+The goal of the user study is to fnd out which input modality is preferred by the user
+for which type of parameter. The user study is using the Wizard of Oz approach for
+implementation-independentevaluation. Thismeansthattheuserthinksthesystemis
+recognizing his input (gestures, speech) but instead a human interprets the inputs and
+forwards them to the system, invisible and unknowingly to the user (see [Dahlbäck et
+al., 1993]).
+Eachparticipanthastotryoutallfourinputmodalitiesforthesametasksandafterwards
+order them based on his preferred use. My hypothesis is that most of the users prefer
+pointingbyhand,followedbypeninput,touchinputandatlastspeechinput,sincefor
+example pointing with the fnger to select an object is the most intuitive way, whereas
+speech input is intuitive, but most of the users won’t feel comfortable or don’t know
+how to describe the object to the system.
+6.2 User Study Design
+Each participant had to complete four diferent phases, which are based on the SUXES
+evaluation method described in [Turunen and Hakulinen, 2009]. It divides the user
+study into four phases (see Figure 6.1):
+Phase 1 Introducestheparticipanttotheuserstudybyexplainingwhattheuserstudy
+is about and gathers some Background Information from the user.
+Phase 2 Inthisphasetheusergetsashortintroductiontothesystembypresentingto
+himthemainfeatures. Afterwardshehastoflloutanexpectationquestionnaire.
+Phase 3 The user has to conduct experiments with the system and evaluate his expe-
+rience afterwards.
+Phase 4 Inthelastphasetheparticipanthastoflloutanopinionquestionnaireabout
+diferent aspects of the system.
+6 User Study
+Introduction to Background
+the Evaluation Questionnaire
+Introduction to Expectation
+the Application Questionnaire
+User Experience
+Experiment Questionnaire
+Questionnaire
+Figure6.1:TheuserstudyisdividedintofourphasesbasedontheSUXESevaluationmethod. See
+also: [TurunenandHakulinen,2009]
+6.2.1 Phase 1: Introduction to the Evaluation & Background
+Qestionnaire
+The frst phase of the user study gives a short introduction to the whole user study,
+how long itwilltake and whatthe main goalor hypothesisis. The participant also has
+to sign an information consent where he agrees, that the collected data will be used
+for evaluation and that there’s a video camera recording the practical parts during the
+study.
+The second part of phase 1 asks the user about some personal information like age,
+gender, and important for the later evaluation, the expertise in using computers and
+knowledge in the feld of robotics in general (see Appendix A.1.1).
+6.2.2 Phase 2: Introduction to the Application & Expectation
+Qestionnaire
+AfterfllingouttheBackgroundQuestionnaire,theparticipantwillgetanintroduction
+to the system set-up. This should explain all the diferent sensors, their location and
+briefyhow theyprocessanddetectthediferentinputmodalities. Sincetheuserstudy
+uses the Wizard ofOz approach the user should think that he is really interacting with
+the system, therefore it’s important to have diferent sensors built into the system, but
+6 User Study
+it doesn’t matter if they are working or not.
+Figure6.2:Thisimageshowstherobotcellorworkplacewherethehumancoworkerprogramsthe
+robot. In the center is a big screen showing a simulation of the robot. The new version of this cell
+already uses a real robot instead of the screen. At the right side the touchscreen is mounted, with
+whichtheusercanprogramnewtasks.
+Our robot cell has diferent components (see Figure 6.2): the table is used for putting
+the work-pieces somewhere visible to the user, there’s a projector on top of the table
+hiddenwithinthecagetoprojectobjectinformationontothetable,andatouchscreen
+ismountedasidetovisualizethecurrenttasktoprogramandtogivetheuserfeedback
+onalltheinputmodalities. There’salsoa(nonpluggedin)Kinect2devicemountedon
+6 User Study
+top of the table to pretend the gesture recognition is working. During the introduction
+it’s also explained that the microphone for speech recognition is built into the Kinect
+sensor. Two infrared cameras for tracking the pen input device are also mounted near
+the Kinect 2 sensor. These cameras are not used during the experiment since it uses a
+Wizard of Oz approach.
+The touch screen is showing the GUI presented in Chapter 5. To introduce the user to
+the system, there are three simple tasks which he has to go through. The frst task (see
+Figure 6.3) only needs one parameter of the type object model.
+Figure 6.3:The GUIused during the user study. Itvisualizes the task being programmed and the
+parameterswhicharerequiredforthisspecifctask. Ontheleftsidethere’salistofthreetasksused
+for introduction, where the user has to try out all the modalites. On the right side there’s a list of
+parameters for the selected task. In this case the task requires only one parameter which is of the
+type objectModel.
+Selectingtheparameter,anewwindowisopenedwheretheuserhastoselectaninput
+modality for how he wants to set the parameter (see Figure 6.4)
+The user has four input modalities to choose from:
+Touchscreen Thetouchscreenhasdiferentvisualizationtypes: forobjectselectionit
+shows a list with all the objects (see Figure 6.5(a)) where the user can select one.
+Point and edge selection can be done through a touch-friendly 3D visualization.
+Point by hand When selecting point by hand the user doesn’t need any additional
+deviceortooltosetaparameter. Hesimplypointswithhisforefngertoanobject
+an hovers there for about a second to select the object or to select a point on an
+object (see Figure 6.5(b)). This would require a working Kinect or Leap Motion
+sensorandthealgorithmtotrackanddetecthandgestures. SincetheExperiment
+for this thesis uses the Wizard of Oz approach, there’s someone standing behind
+the participant with a tablet in his hands to manually select the correct value for
+the parameter based on the participant’s input.
+6 User Study
+Figure 6.4: By selecting one of the four provided input modalities, the user can defne the value
+for the requested parameter. Possible input modalities to chose are Touchscreen, Point by hand,
+Speechand PointbyPen.
+Speech For speech input we explained to the participant that he doesn’t need any
+special vocabulary, instead he should speak to the robot like he would speed to
+a human worker. The only thing the user has to do, is to begin his sentence
+or command with "Robot: ...". These natural commands are possible since we
+use Wizard of Oz where a human supervisor interprets the spoken commands
+unknowingly to the participant.
+Point by Pen For pen input we used the system developed in [Gaschler et al., 2014].
+It’s a pen-shaped device with infrared tracking balls attached to determine the
+position and orientation in space (see Figure 6.5(c)). The user has to point to
+an object or specifc location and then press a button on the device to select it.
+This tracking system is already working but is not yet accurate enough to not
+infuence the results of the study too much. Therefore we used here the Wizard
+ofOzapproachtoprovidehardwareandsoftwareindependentdetectionquality.
+The remaining two tasks for the introduction are selecting a point on the object for
+point welding and the last task is to assemble a bearing with an axis by selecting the
+two objects and then setting the assembly pose as the third parameter for the task. To
+defne the assembly pose,there are two input modalitiesavailable to the user: a 3D ed-
+itor for touch input, and speech input to defne the assembly constraints (e.g. "Robot:
+Put bearing on axis concentric").
+Aftertryingallfourinputmodalitiesandfnishingthethreeintroductiontasks,theuser
+hastofllouttheExpectationQuestionnaire(seeAppendixA.1.2). Thefrstexpectation
+question asks the participant on how long he thinks it would take to program a simple
+pick and place task for industrial robots using systems currently employed in produc-
+tion. The next questions ask the user to order the input modalities according to which
+input modality he would prefer the most for the following parameter types: select an
+6 User Study
+(a) Touchinputmodalityforobjectmodel
+(b) Theuserpointstoanobjecttose- (c) Usingthe3Dtrackedpentheuser
+lectit canselectobjects
+Figure6.5:Diferentinputmodalitiesavailablefortheusertoselect
+object, set a location where to place the object, set assembly constraints, select a point
+on the object, select an edge on the object.
+6.2.3 Phase 3: User Experiment & Experience Qestionnaire
+After flling out the Expectation Questionnaire from Phase 2, the user has to program
+multiple tasks using all four input modalities sequentially. First the participant has to
+program all tasks with touch input only, then the same tasks with hand input, then
+speech and at last pen input. The four tasks are:
+6 User Study
+Pick & Place Select an object an place it on the center of the table. Required param-
+eters: object to pick, location to place
+Assemble two objects Selectthebearingandputitontheaxis. Thebearingshould
+beplacedconcentricallyontotheaxis. Requiredparameters: objecttopick,object
+to place on, assembly constraints/pose
+Weld point Select the rake object and weld a specifc point (third from bottom left).
+Required parameters: object to weld, point on object
+Weld seam Select the rake object and weld a specifc seam (third from bottom). Re-
+quired parameters: object to weld, seam on object
+Programming these four tasks using all input modalities sequentially, takes in total
+about 15 minutes. After this practical part, the participant has to fll out the Experi-
+ence Questionnaire (see Appendix A.1.3). The frst question asks the user to order the
+inputmodalitiesbasedontheexperiencedcognitiveload. Thismeansthattheuserhas
+toindicateforwhichinputmodalityhehadtothinkthemost. Thenext5questionsare
+exactly the same as in the Expectation Questionnaire, to compare the expectation with
+the experience after he conducted the experiment.
+6.2.4 Phase 4: Opinion Qestionnaire
+The last phase of the experiment is an Opinion Questionnaire (see Appendix A.1.4)
+where the user has to express his opinion on the diferent input modalities and the
+whole system. This includes questions like "It’s intuitive to use touch input" or "It was
+difculttounderstandhowtousethediferentinputmodalities". Thegoalofthisques-
+tionnaire is, to understand how the user feels about the system and what he thinks on
+the input modalities.
+ThesecondpartoftheOpinionQuestionnaireaskedtheusertoimaginethathe’swork-
+ing in a factory and his job is to program industrial robots. Now he should express his
+opinion on using the system for exactly this job, by answering diferent questions like
+"Using the system would improve my job performance" or "Using the system would
+makeiteasiertodomyjob". Theevaluationofthesequestionsshouldgivefeedbackon
+theusageofmultimodaltask-basedindustrialrobotprogrammingforproductionusage
+and for Small and Medium-sized Enterprises.
+6 User Study
+6.2.5 Open discussion
+Theexperimentconcludeswithanopendiscussionwhereeachparticipantcangivead-
+ditional feedback on the questionnaires or the system, and can suggest improvements.
+This part also includes the reveal that the whole experiment is a Wizard of Oz experi-
+ment,andthatthecomponentsofthesystemweren’tactuallyworking,buttheinstruc-
+tor of the user study controlled and set the input parameters. This open discussion is
+a valuable part of each user study because you get worthy feedback and other ideas of
+which you didn’t think at frst.
+7 Evaluation
+Thischapterevaluatesthequestionnairesoftheconducteduserstudydescribedinpre-
+vious chapter. It shows that the hypotheses previously defned is confrmed and that
+most of the participants preferred hand input whereas speech input is the least pre-
+ferred one. The evaluation of the opinion questionnaire gives an impression on how
+the user felt during the user study and what he thinks about multimodal input tech-
+nologies.
+TheresultsofthisuserstudyarealsointegratedintotheontologydescribedinSection
+4.5 to extend the knowledge of the system. It’s able to select the most preferred input
+modality for each parameter based on the results of the user study and therefore pro-
+viding the best user experience possible.
+Theanswersofalltheparticipantsforallthequestionnairesarealsoavailablefordown-
+7.1 Participants
+The frst questionnaire asked the participant about background information like age,
+gender, expertise in using computers and knowledge in robotics. There were 31 partic-
+ipantsattheuserstudy,whereatthefrstparticipantwasusedasatesterforthewhole
+setup and therefore the data from this participant isn’t included in the data. Conse-
+quently the data includes answers from 30 participants. This number of participants
+should provide a confdence interval reasonably tight as stated in [Nielsen, 2006]. For
+each user it took about 30 minutes to complete the questionnaires, including the prac-
+tical part.
+Most of the participants were students of diferent technical and non technical felds
+and researchers in the feld of robotics and embedded systems. Therefore the data of
+this user study is based not especially on domain experts (i.e. employees in Small and
+Medium-sized Enterprises) but on a widespread basis of knowledge of diferent peo-
+ple.
+The average age over all participants is 27 years with a standard deviation of about
+5 years (max: 41, min: 20). Figure 7.1(a) shows that 23 participants (77%) were male
+7 Evaluation
+and 7 participants (23%) female. The questionnaires were available in two languages,
+German and English, to make it easier for the participants to answer the questions,
+and to make sure the questions are understood correctly. 23 users selected the German
+questionnaire and 7 users the one in English.
+WHAT'S YOUR GENDER? WHAT'S YOUR EXPERTISE IN USING
+COMPUTERS?
+Female; 7; 23% Basic; 2; 7%
+Advanced; 7;
+Expert; 21; 70%
+Male; 23; 77%
+(a) Genderdistributionofalltheparticipantsofthe (b) 2 participants indicated that they have a basic
+userstudy.23weremaleand7female. knowledgeonusingcomputers,7advanced,andthe
+majority were computer experts (either computer
+scientistsorprogrammers).
+Figure7.1:Backgroundinformationonthe30peoplewhoparticipatedintheuserstudy.
+To get a better understanding on the knowledge of each participant in robotics and in-
+dustrialrobotprogramming,thereweretwoquestionstoanswer(seealsoQuestionnaire
+A.1.1): Howmuchdoyouknowaboutrobotics? AnddidyoualreadyuseaTeachPadto
+program a robot?
+The answer distribution for both questions is shown in Figure 7.2. It can be seen that
+50%knowalotaboutrobotics(studiedrobotics,computerscienceorsimilar)andabout
+40%knowwhataTeachPadis(seeFigure1.3onPage7)oruseditalreadytoprograma
+robot.
+7.2 Expectation
+Afterfnishingthepracticalpartoftheuserstudy,eachparticipanthadtoanswersome
+questions, if using the input modalities and the system met his expectation or not (see
+AppendixA.1.4,question18). Figure7.3showstheaveragevalueandstandarddeviation
+for each answer. As it can be seen the system outperformed the user’s expectation for
+most of the components in terms of simplicity. Only touch input behaved as expected
+since it wasn’t diferent than using a smart-phone or any other touch device. Touch
+wasalsotheonlycomponentwhereWizardofOzwasn’tusedandthusrepresentedthe
+7 Evaluation
+HOW MUCH DO YOU KNOW ABOUT DID YOU ALREADY USE A TEACHPAD TO
+ROBOTICS? PROGRAM A ROBOT?
+programmed
+with it; 6; 20%
+Not that much;
+Don't know
+A lot; 15; 50% what it is; 18;
+Know what it 60%
+is; 6; 20%
+robo?cist; 2;
+(a) 13participantsansweredtothequestiononhow (b) 60% of the participants didn’t know what a
+muchtheyknowaboutroboticswith"Notthatmuch TeachPad is or how it works. 20% indicated that
+(heard or read about it)". 2 indicated that they are they know what it is and how it works, but never
+hobbyroboticistsand15(50%)saidthattheyknowa usedone. Another20%alreadyprogrammedanin-
+lotaboutrobots(studiedrobotics,computerscience dustrialrobotwithaTeachPad.
+orsimilar).
+Figure7.2:KnowledgeoftheparticipantsinthefeldofroboticsandusingaTeachPad.
+current state of the art. The interpretation of all the other components (speech, ges-
+ture,peninput)usedtheWizardofOzapproachwhereahumansetthevaluesforeach
+parameter based on the participants input, unknowingly to the participant. This may
+alsoexplain,whyformostoftheusers,handlingthoseinputmodalitieswaseasierthan
+expected since it’s not yet possible to implement speech recognition or gesture recog-
+nition which reaches the same detection accuracy as a human.
+Anotherinterpretationofthisgraphisthatmostoftheparticipantsknoworthinkthat
+programming an industrial robot is very complex and complicated, and by using this
+system they were surprised how easy it can be, if the robot or the intelligence behind
+the robot can infer information automatically and adapt to many diferent setups.
+Looking at the data separated by gender, there’s a signifcant diference for speech in-
+put: femaleparticipantsselectedanaveragevalueof1.7comparedtomaleparticipants
+who have an average of 2.3. This means that for female participants speech input was
+signifcantly easier than expected compared to male participants. This also somehow
+confrms the statement from [Wasinger and Krüger, 2006] that women feel less secure
+and confdent using speech in public environments.
+Question 6 ofthe expectation questionnaire (seeAppendix A.1.2)asked theparticipant
+to think about a simple pick and place task, where the robot has to pick up an object
+from a palette and place it on the table with a specifc orientation. Then the partic-
+ipant should estimate, how long it would take to program this task to a robot using
+current systems employed in production. The average over all 30 estimates is about 78
+minuteswithastandarddeviationofabout128minutes(maximumvalue: 600minutes,
+minimum: 1 minute). The high variation between the values may be caused by the in-
+accurately stated question, since it is not totally clear if the programmer is allowed to
+7 Evaluation
+EXPECTATIONS
+using the input modali?es for programming a robot was
+Touch input was
+Speech input was
+Gesture input was
+Input by pen was
+Overall, using this system to program a robot was
+Figure7.3:Thisdiagramshowstheanswersforeachlistedquestionifitmatchedtheuser’sexpec-
+tation. 1=aloteasierthanexpected,3=asexpected,5=muchmorecomplicatedthanIthought
+usepredefnedmacros(whichwouldspeeduptheteachingsignifcantly)orifhehasto
+start from scratch.
+Nonetheless an average of 78 minutes is quite a big estimate. Asking an expert who
+daily programs and teaches tasks to industrial robots stated that he would need about
+15 minutes (using predefned macros) to program such a task.
+7.3 Input modalities
+After a short introduction to the system and quickly trying out the diferent input
+modalities, the participant had to order the four input modalities touch input, speech,
+pen input and point by hand according to his preference. After this step, the user had
+to program four diferent tasks using all four input modalities sequentially, and then
+in the next questionnaire, order the input modalities again according to his previous
+experience. This is described in more detail in Section 6.2.
+Figure7.5showstheresultsoftheorderedinputmodalitieswhichwillbeanalyzedhere
+in more detail.
+The frst question was about the perceived cognitive load for each input modality. The
+participant had to order the four modalities according to where he had to think the
+mosttousethemodality. Figure7.5(a)showsthatspeechinput requiresthemostthink-
+ing whereas point by hand was selected by most of the users as the easiest one. The
+main reason for this result may be due to the fact that most of the participants didn’t
+really know how to talk to a machine or a computer. Even if the system was built to
+understandeverything(WizardofOzExperiment),theuserswereindoubtaboutwhich
+vocabulary they can use, despite they were told that they can talk to the machine like
+they are talking to a human. This is also related to the fndings by [Dahlbäck et al.,
+1993], who found out that dialogs between human and human difer signifcantly from
+human-machinedialogs. Healsodescribesdiferentfactorsthatinfuencehowwespeak
+7 Evaluation
+to a machine or human.
+Comparing the cognitive load between the seven female and 23 male participants,
+there’s a signifcant diference between touch input and input by hand: female par-
+ticipants have an average value of 3.2 for touch input and 2.7 for hand input, which
+results in in the following order of cognitive load: speech input, pen input, input by
+hand and the less cognitive load touch input. This means that for female participants
+using touch input was easier than input by hand. In contrary for the male participants
+input by hand has an average value of 3.4 and touch input 2.4 resulting in the order
+speech,touch,penandthenhandinput,thusinputbyhandrequiredlessthinkingthan
+touch input for most of the male users.
+Speechisaverydiverseandversatileinputmodalitywhereyoucandescribesomething
+inalotofdiferentways. Handinputontheotherhandhasmoreorlessonlyonepos-
+sibility to tell the robot which object to pick: by pointing to this specifc object. This
+canbeareasonwhymostoftheuserssaidthattheyhadtothinklesswhenusinghand
+input. Pen input and Touch input are more or less on a par in the middle range.
+For the next fve questions the user had to order four input modalities based on his
+experienceinthepreviouspracticalpartoftheexperiment. Avalueof1meansthatthe
+userpreferredthisinputmodalityandputitthereforeatthefrstplace. Figure7.5(b)to
+7.5(f) shows the answers for each parameter type which will be analyzed here in more
+detail.
+The Select an object parameter required the user to set an object model using one of
+the four available input modalities. By most of the users Point by hand was selected as
+themostorsecondpreferredinputmodality(Figure7.5(b)). Theotherthreemodalities
+are in average between 2.5 and 3 whereat Speech has the highest standard deviation of
+about1.2points. Lookingattherawdataofthestudy,Speechwasoftensettothefourth
+placebutalsoafewtimesatthefrstplaceresultinginthishighstandarddeviation. The
+main reason for thisresult may be,that forPoint by hand the user doesn’thas to think
+a lot how to use the input modality. Compared to touch input he has to search for the
+object within the list which slows down the interaction, for speech input the user has
+toknowthenameoftheobject,andpeninputrequiresanadditionalyetunknowntool
+to use and handle. For speech input there’s a noticeable diference between the expec-
+tation and experience questionnaire: before the practical part users thought that they
+don’t like speech input, but after using it, speech gained a quite better average value
+than before. This may be due to the fact that most people have a prior knowledge or
+theimpressionthatspeechinputdoesn’tworkgoodenoughyet,butafterfnishingthe
+experimenttheysawthatspeechrecognitionisbetterthantheythought(becauseitwas
+a Wizard of Oz experiment where a human interpreted the speech commands, which
+the user didn’t know).
+Looking at the Select an object parameter results separated by gender, there’s a signif-
+icant diference between male and female participants for the touch input and speech
+input(seeFigure7.4). Forfemaleparticipantstouchinputwasmuchmorepreferred(av-
+7 Evaluation
+eragevalueof2.1)comparedtothemaleparticipants(averageof2.7)infavorofspeech
+input which was put by most of the female participants on the last place.
+Separatingthedatabasedontheanswerfortheexpertiseinusingcomputers(seeFigure
+7.1(b)) into two groups, experts and non experts (includes basic and advanced), shows
+that experts gave Point by hand a higher rating (average 1.4) compared to non experts
+(average 1.9). The reason for this may be that experts already used touch and speech
+input a lot more times, and know the limitations of those input modalities. Therefore
+theypreferredpointbyhandoveralltheotherssinceitismuchmoreintuitiveandhas
+a high potential to be improved.
+EvaluatingthedataseparatelyforusersthatalreadyusedaTeachPadshowsalsoasig-
+nifcant diference for the Select an object parameter regarding the expected preferred
+inputmodality(answersbeforethepracticalpart)andthefnallypreferredinputmodal-
+ity. TheTeachPadparticipantsexpectedthattheywon’tlikespeechinput(averagevalue
+of3.4). Afterthe practicalpartthe averagepositionforspeechinputaspreferredinput
+modality moved from 3.4 to 2.4 which moved speech input from least preferred to the
+second most preferred input modality. This is most probably caused by the fact that
+those users thought that speech input is not really suited for programming a robot in
+any way but then after using it to set the object parameter, they got more convinced
+and, given that speech input recognizes the commands perfectly, it may be a helpful
+addition.
+Select an object (female) Select an object (male)
+Touch input Speech Pen input Point by hand Touch input Speech Pen input Point by hand
+(a) Female participants gave touch input a signif- (b) Comparedtofemaleusersspeechinputismore
+cantlyhigherrating. preferredbymaleusers.
+Figure7.4:Preferredinputmodalitiesfor Selectanobjectparameterseparatedbygender. 1isthe
+most and 4 the least preferred modality. The blue circle indicates the average over all participants
+inthisgroup,thegraybarshowsthestandarddeviationforeachmodality. Theorangecrossisthe
+averagefromtheexpectationquestionnairewheretheuserhadtoorderthemodalitiesaccordingto
+whichhewillmostlikelypreferthemost.
+For the Set location parameter (Figure 7.5(c)) the choice of the participants is quite dif-
+ferent. At the frst place is Touch input, followed closely by Point by hand. Pen input
+has approximately the same average value as in the previous parameter, speech input
+is even worse. During the open discussion at the end of the study some mentioned
+that for them an infuential factor for choosing a specifc order of the modalities was
+7 Evaluation
+the time you need to switch between touch and other input modalities. This may have
+playedabiggerroleforthelocationparametersincethevisualizationofthetableonthe
+touchscreenwassimplya2Drectanglewheretheuserhadtotouchaspecifclocation.
+Staying on the touchscreen is much faster than turning to the table and pointing to a
+specifc location. Speech is at the last place since it is more complicated to describe a
+positionaccuratelycomparedtosimplypointingatit. Peninput isapproximatelyinthe
+same range as for the previous parameter, one reason for that may be that the user has
+topickupthepenfrst,beforepointingtoalocation,whichisslowerthanjustpointing
+with a fnger.
+Todefneassemblyconstraintsonlytwoinputmodalitieswereavailable: Touchinputand
+Speech,sincedefningconstraintsusinggestureorpeninputisnotthatintuitiveornot
+evenpossible. ForTouchinputtheuserwaspresentedwithasimple3Deditorwherehe
+could move parts around and defne relations between parts like concentric, coplanar
+or a specifc distance. For example selecting two cylinders by touching them and then
+pressingtheconcentricbutton,defnedaconcentricconstraintbetweenthosetwoparts.
+25 of the 30 participants preferred Touch input over Speech input. Observing the user
+studyshowedthatmoreorlessallparticipantsstruggledtofndaneasydescriptionfor
+putting the bearing on the axis and aligning the cylinders concentrically.
+Selectapoint andSelectanedgearetwoparametersthatneededtobesetforthewelding
+task. The problem specifcation was to set the third point/edge from bottom left as the
+welding position. For touch input the user had a 3D visualization of the object where
+he had to touch the correct edge or vertex to select it. The results for point and edge
+arenearlyidentical(seeFigure7.5(e)and7.5(f)): pointingbyhandisthepreferredway
+for setting this parameter followed by pen input. The main reason why pen input is
+before touch and speech may be, that it is more intuitive to use a sharpened object to
+accuratelydefneapositionoredgein3D.Anadditionalcurtailoftouchinputinfavor
+ofpeninputwasthenotperfectlyworking3Dvisualization,becauseithadsomeminor
+bugsimpairinguserinputs. Usingspeechonly,todefneaspecifcpositionin3Donan
+objectisquitedifcultandthemajorityoftheparticipantswereunsurehowtodescribe
+it to the robot, one participant event refused to try it, because he said that it doesn’t
+make any sense to defne such a position using speech.
+Nearlyallparticipantswhichindicatedthattheyareexpertsinusingcomputers,didn’t
+reallylikespeechinputforsettingapointoranedge. 20outofthe21expertssetspeech
+input to the last place resulting in an average position of 3.9 among the experts.
+7 Evaluation
+7.4 Opinion
+The opinion questionnaire (see Appendix A.1.4) asked the user about intuitiveness
+of the modalities and general interaction with the system. It includes questions from
+the After-Scenario Questionnaire (ASQ) [Lewis, 1995] and the Software Usability
+Measurement Inventory (SUMI) [Kirakowski and Corbett, 1993].
+Thegoalofthisquestionnairewastogetabasicimpressionwhattheuserthinksabout
+the system and the diferent input modalities. Figure 7.6 shows the distribution of the
+answers from all 30 participants.
+The graph shows that on average users had fun using the diferent input modalities,
+and they were satisfed about the ease of completing the tasks and the required time it
+took to complete them.
+Two interesting questions within this questionnaire are "The system should not allow
+to select a modality. It should pre-select the most suited one for each task." and "I
+feel more secure if there are less modalities to choose". The frst question has an
+average value of 3.5 which means that in average the participants neither agree nor
+disagree. Looking at the raw data shows that 5 participants selected option 6 (strongly
+agree), only one participant selected option 1 (strongly disagree) and 9 selected option
+2 (disagree). Giving these options a bigger weight it means that approximately 10
+participants want to select the input modality on their own whereas only 6 say that
+only the most suited one should be available. A conclusion of this result may be to
+reduce the amount of available modalities to only two, so the user can still select the
+one he prefers but doesn’t has to decide himself for one out of four input modalities.
+When separating the data by the answer for expertise in using computers, the picture
+gets even more clear: experts somewhat agree (average of 4.0) that the system should
+preselect the most suited modality whereas non expert users would like to select the
+input modality on their own (average value 2.3, disagree to somewhat disagree). The
+sametrendcanbeseenifthedataisseparatedintotwogroups: participantswhoknow
+alotaboutroboticsandtheothergroupconsistingofhobbyroboticistsandparticipants
+who don’t know that much about robotics. Experts or daily users of the system likely
+tend to rush through the programming steps. If they need to select the modality for
+each step it slows them down, but if they know that for example selecting an object
+they have to use input by hand, it makes their interaction with the system much more
+efcient.
+Looking at the subquestions regarding the intuitiveness of diferent input modalities,
+it can be seen that speech input, and keyboard and mouse are seen as less intuitive by
+most of the users. Point by hand is the most intuitive input modality even before pen
+input and touch input.
+For the second part of the opinion questionnaire the participant had to imagine that
+he’s a factory worker and programming industrial robots is his daily job (see Figure
+7 Evaluation
+7.7). Summarizing all the questions and answers, the overall statement is that the par-
+ticipantswouldfndthepresentedwayofprogramminganindustrialrobotveryuseful
+for their job, and that it would increase their job performance. Looking at the raw data
+for each participant and each answer, all participants selected at least somewhat agree
+(4)ormore(forallquestionsexceptnumber4,9and11). Thismeansthatallparticipants
+think the system is an improvement for their job.
+Comparing the answers for "Learning to operate the system would be easy for me" be-
+tweenexpertsandnonexperts,showsthatexpertsfnditeasiertolearnhowtooperate
+thesystem(averagevalueof5.3,agreetostronglyagree)comparedtononexpertsusers
+(average of 4.9, agree).
+Itwouldbeinterestingtoasksomeworkerswhosejobreallyisprogrammingindustrial
+robots,andcheckiftheyarealsoconvincedaboutthesystem. Unfortunatelythiswasn’t
+possible for this thesis but such an experiment is already planned for next year as part
+of the SMErobotics 1 project.
+For participants who already used a TeachPad, or at least know what it is (see Figure
+7.2(b)),anadditionalquestionwasshown,whichaskedtheusertoestimate,howmuch
+time saving (in percentage) can be achieved by using the input modalities presented
+for this system, compared to using a TeachPad. The average value over all 12 answers
+is about 71% (standard deviation: 23%) which means that they think using multimodal
+input would speed up the whole teach in process by 71%.
+7.5 Video analysis & Open discussion
+During the practical part of the user study, a video camera recorded the participant’s
+interaction with the system to analyze it afterwards. After the study there was also an
+opendiscussionwitheachusertogetadditionalfeedbackasidefromthequestionnaires.
+This section summarizes observations made when watching the recorded videos and
+evaluates comments from the open discussion.
+A main observation which could be seen for almost all participants was that they had
+problems using speech input: the users didn’t know how to explain something to the
+robotincludingalltherequireddetails. SincetheexperimentusedtheWizardofOzap-
+proach,itdidn’treallymatterhowtheusersaidsomething,becauseahumansupervisor
+interpreted the commands and set the correct value for the system, whereas the users
+of course didn’t knew about that. Nonetheless they said that they don’t really know
+how to talk to the robot because they thought that it has a reduced set of vocabulary
+or doesn’t understand everything. This may be due to the fact that most of the partic-
+ipants already used speech input for a device (e.g the Smartphone) or at least heard or
+7 Evaluation
+readaboutitandthereforewerebiased. Aftertellingthemthattheycanuseanykindof
+vocabularytheyfeltabitmoresecure,butstillitwasn’tthateasyastalkingtoahuman
+counterpart. Oneparticipantsaidthatusingspeechinputisodd,butmaybeafterusing
+it for a longer period it may get easier and faster. Looking through the recording has
+shown that this is already the case after using speech only one time: during introduc-
+tiontheparticipanthadtodefneassemblyconstraintsusingspeech,wheremostofthe
+usersstruggledtogivethecorrespondingcommandbutthen,thesecondtimetheyhad
+to defne similar assembly constraints, the user was signifcantly faster.
+Whenusingspeechinput,italsomakesquiteadiferenceiftheuserisadomainexpert
+or not: for the assembly task, where the robot hat to put the bearing on the axis and
+alignitconcentrically,mostoftheusersgaveacommandsimilarto"Robot: Pickbearing
+and put it on axis concentrically". In contrary one participant was a mechanical engi-
+neer who gave a more precise description using special vocabulary from his domain of
+expertise: "Robot: Putbearingonshafttocollar"whichexactlydefnesthatthebearing
+must be pushed on the shaft until it touches the collar.
+Anotherinterestingobservationwasthatquiteafewparticipantsalwayslookedtothe
+microphonewhengivingspeechcommands. Duringtheintroductiontothesystem,the
+location of the microphone was shown (it was located within the Kinect sensor on top
+of the table). So instead of just looking at the touchscreen (which was mounted on the
+leftsideofthetable)andgivingspeechcommands,theyturnedtothetableandlooked
+upwardstotheKinectsensor. Whendesigningsuchasystemthedevelopershouldkeep
+this in mind and mount a microphone near the touchscreen or show some animation
+or feedback on the touchscreen to keep the user looking at the touchscreen and thus
+saving time.
+Oneparticipantsaidthathedidn’tlikehandinputthatmuchbecausethefeedbackwas
+missing. Thesystemthatwasusedduringthestudy,didn’tprovideanyvisualfeedback
+directlyonthetable,iftheobjectwasselectedproperly. Theuseralwayshadtolookat
+thetouchscreentocheckit. Thismayalsohaveslightlyinfuencedtheoverallresultof
+the experiment.
+Another participant also noted that if you are looking already at the touchscreen and
+youhavetodecide,whetheryouchoosetouchasinput,oranotherinputmodalitywhere
+you have to move away, it is more likely or consequent to select touch over the other
+modalities.
+7 Evaluation
+Cogni?ve load Select an object
+Touch input Speech Pen input Point by hand Touch input Speech Pen input Point by hand
+(a) Input modalities ordered by cognitive load (b) ForselectinganobjecttheuserspreferredPoint
+(wheredidtheuserhadtothinkthemost,required byhand. It’snoticeablethatspeechinputwasleast
+themostattention). 1meanshighcognitiveload,4 preferred in the expectation questionnaire com-
+lesscognitiveload. paredtotheexperience.
+Set a loca?on where to place an object Set assembly constraints
+Touch input Speech Pen input Point by hand Touch input Speech
+(c) Touchinputisthepreferredmodalityforsetting (d) 25ofthe30participantsfoundTouchinputeas-
+a specifc location on the table closely followed by ier than Speech input because it’s quite difcult to
+gestureinput. describeassemblyconstraintsusingspeech.
+Select a point on the object Select an edge on the object
+Touch input Speech Pen input Point by hand Touch input Speech Pen input Point by hand
+(e) Selectingapointontheobjectbypointingwitha (f) The answers for selecting an edge are nearly
+fngerwaspreferredbymostoftheusers.Peninput identicaltoselectingapointontheleftside.
+isrightafterPointbyhand.
+Figure 7.5: Graphs showing the results for each question where the user had to order the input
+modalities for the diferent tasks or cognitive load according his experience in previous practical
+part. Forthecognitiveload,1meanshighload,4lesscognitiveload. Foralltheothergraphs1isthe
+mostand4theleastpreferredmodality.Thebluecircleindicatestheaverageoverall30participants,
+thegraybarshowsthestandarddeviationforeachmodality. Theorangecrossistheaveragefrom
+theexpectationquestionnairewheretheuserhadtoorderthemodalitiesaccordingtowhichhewill
+mostlikelypreferthemost.
+7 Evaluation
+It's fun to program a robot using mul?modality (different types of input)
+The system should not allow to select a modality. It should pre-select the…
+Using the System is natural
+Speech input is accurate enough for loud industrial environments.
+I feel more secure if there are less modali?es to choose
+It's intui?ve to use speech input
+It's intui?ve to use pen input
+It's intui?ve to use touch input
+It's intui?ve to use gesture input (point by hand)
+It's intui?ve to use keyboard & mouse
+It was difficult to understand how to use the different modali?es
+Overall, I am sa?sfied with the ease of comple?ng the tasks in the scenarios
+Overall, I am sa?sfied with the amount of ?me it took to complete the tasks
+1 2 3 4 5 6
+Figure7.6:Distributionoftheanswersforquestionsabouttheintuitivenessoftheinputmodalities
+andopinionaboutthewholesystem. 1=stronglydisagree, 2=disagree, 3=somewhatdisagree, 4
+=somewhatagree,5=agree,6=stronglyagree. Thebluedotmarksthearithmeticmeanofall30
+participants,thegraylineindicatesthestandarddeviation.
+FACTORY WORKER PROGRAMMING AN INDUSTRIAL ROBOT
+Using the system in my job would enable me to accomplish tasks more quickly
+Using the system would improve my job performance
+Using the system in my job would increase my produc?ty
+Using the system would slow me down and decrease the efficiency of my job
+Using the system would make it easier to do my job
+I would find the system useful in my job
+Learning to operate the system would be easy for me
+My interac?on with the system would be clear and understandable
+Using the system would make my job more complicated
+It would be easy for me to become skillful at using the system
+I would find the system difficult to use
+1 2 3 4 5 6
+Figure 7.7: To answer the questions above, the participants had to imagine that they are factory
+workers and programming industrial robots is their daily job. 1 = strongly disagree, 2 = disagree,
+3=somewhatdisagree, 4=somewhatagree,5=agree,6=stronglyagree. Thebluedotmarksthe
+arithmeticmeanofall30participants,thegraylineindicatesthestandarddeviation.
+8 Conclusions
+This master thesis focused on the implementation and evaluation of multimodal input
+and output channels for task-based industrial robot programming.
+Afterlistingandevaluatingdiferenthumaninputandoutputchannels,computerinput
+and output modalities were explained in more detail, including historical background
+and possible application areas.
+Thepresentedtask-basedprogrammingisbasedonthehierarchicalconceptofprocess,
+taskandskill. Skillsareprimitivefunctionsprovidedbythehardwareoractionsrequir-
+ing additional atomic steps or sensor functions. Tasks is an abstract work description
+that maps to one or multiple skills. A task can have diferent skill mappings provid-
+ing the same functionality, thus there may exist multiple skill implementations for the
+sametaskthatuseforexamplediferentsensorsoralgorithms. Aprocessisanabstract
+description ofa robotprogram consisting ofone ormultiple tasks. Diferenttask types
+in four application domains (assembly, welding, woodworking, metal processing and
+bonding)were analyzed anddescribed in more detail: Which skillsare requiredforthe
+task? What are the parameters the user needs to set? Which input modalities can be
+used? What are the uncertainties or problems which may arise when executing the
+task?
+Based on this task analysis, an ontology was constructed which semantically describes
+therelationbetweenthetasksandcorrespondingskills,whichparametersarerequired,
+ofwhichdatatypetheyareandwhichinputmodalitiescanbeusedtosetthoseparame-
+ters. Italsoincludesrepresentationsofhardwareandsoftwaresystemcomponentslike
+sensors or specifc algorithms. This ontology can be used for cognitive robot cells, for
+example to automatically infer, if specifc input modalities are available based on the
+equipmentofthecellorwhichmodalityshouldbeusedforaspecifcparametertype.
+Forprogrammingthetasksandevaluationwithintheuserstudy,anintuitivegraphical
+user interface using modern web technologies was developed, which is optimized for
+touch input and integrates multiple input modalities.
+Thegoaloftheuserstudywastoevaluatewhichinputmodalitiesuserspreferforwhich
+type of parameter. The study was divided into four phases: background information,
+expectation, experience and opinion. These phases evaluate diferent aspects within
+multimodal interaction: what the user expects from the system, how he experienced it
+and what his opinion is.
+Afterfllingoutaquestionnairetheparticipantshadtoprogramtwoassemblyandtwo
+8 Conclusions
+welding tasks to the robot using all four input modalities: speech, gesture input, touch
+input and pen input sequentially. So each user had to use each modality for each task.
+The tasks required various types of parameters, which the user had to set: object mod-
+els, location on the table, assembly constraints and vertices or edges on an object.
+Evaluatingtheresultsof30participantsclearlyshowsthatmostoftheuserspreferges-
+tureinputovertouchinput,peninputandspeechinput. Forselectingavertexoredge,
+peninputwasslightlymorepreferredcomparedtootherparametertypes. Thisissimi-
+lartotheresultsfrom[Renetal.,2000]whereusersmainlypreferredpeninputforCAD
+applications. Additionally the study confrms the results from [Wasinger and Krüger,
+2006], who stated that women feel less secure and comfortable than men when using
+speech input.
+The study also reveals that speech input on its own is not very suitable for usage in
+task-based robot programming. Due to the high diversity when using speech, there
+aremultiplepossibilitiestodefnetheidenticalcommand,usingdiferentwordsorsen-
+tences. During a Wizard-of-Oz experiment that’s no problem, but implementing such
+a speech recognition system is quite complex, if it is even possible. For example posi-
+tion indications (left, right, front, back) are not defned accurately: is it defned from
+theuser’spointofvieworfromtherobot. Minimizingthesedrawbacksrequiresspecial
+training for the user to sensitize him regarding these problems, which isn’t the goal of
+intuitive and easy use of an interface.
+[Naumann,2009]statethatpriorknowledgeorfamiliaritywithaspecifcinputmodal-
+ity infuences the rating or preferred choice of modality. Looking at the results of the
+userstudyforthismasterthesis,thisstatementcouldn’tbeconfrmed: nonethelessmost
+usersarequitefamiliarwithtouchinterfaces,inputbypengainedasimilarhighoreven
+betterratingthantouchinput,eventhoughmostoftheusersdidn’tyetusethiskindof
+input modality.
+Another conclusion drawn from this user study is to reduce the amount of available
+input modalities for a specifc parameter: experts stated that the intuitiveness of the
+GUI would increase if the system preselects the most suitable input modality whereas
+non-expertuserstendtotryoutandplaywiththesystem,usingdiferentinputmodal-
+ities.
+The outcome of this thesis clearly motivates further research in multimodal interac-
+tionforrobotprogrammingasitprovidestheuserwithgreaternaturalness,expressive
+powerandfexibility. Theparticipantsstatethatusingmultimodalitymakesrobotpro-
+gramming more intuitive, easier and faster.
+8 Conclusions
+8.1 Future Improvements
+The evaluation of the current system showed that there is still space for improvement.
+Forthisthesis,fusionofinputmodalitieswasn’tusedandimplementedduetotimecon-
+straints,butusingmultiplemodalitiesatthesametimewillmostprobablyincreasethe
+intuitivity of the whole system and make the programming of industrial robots easier.
+Forfutureuserstudiesthisshouldbeconsideredandshouldalsoincludesomequestions
+about modality fusion, for example if the user would have preferred to use gesture in
+combination with speech or speech only.
+Withinthestudytheuseralwayshadtoselecttheinputmodalityonthetouchscreento
+use it. As some of participants encouraged, a huge improvement for the system would
+betoautomaticallyselectthemostsuitedmodalitybasedonthecurrentparameterand
+knowledgeofthesystemabouttheworldstate. Theontologycreatedwithinthisthesis
+is a good starting point for this improvement. Additionally the system should detect a
+switch between input modalities on the fy, without explicitly selecting one, or telling
+it to the system.
+During the Wizard-of-Oz study the system didn’t provide much user feedback: e.g.
+when using gesture input to select an object there was no visual feedback on the ta-
+ble,butonlyonthetouchscreen. Futureimprovementsshouldfocusonhowadditional
+feedback can be provided to the user. A projector could be used to display selected el-
+ements on the table. It’s also important to show to the user, if the robot is currently
+executing or processing data, or if it is waiting for user input. A simple three-colored
+light could be used for this purpose.
+For a more expressive user study, additionally the mental/cognitive workload should
+bemeasuredtodefnewhichinputmodalitiesaresuitableforlong-termusagetoavoid
+early exhaustion. [Hirshfeld and Solovey, 2009] describes a novelexperiment protocol
+and a set of analysis algorithms that can help UI evaluators or designers of adaptive
+systems to gain information about the workload experienced by users in the various
+cognitive resources in their brains, while they work with computer systems.
+Cognitiverobotcellsshouldalsohavesituationalawareness: thechoiceforapreferred
+input modality varies for diferent personalities and situations in which the user fnds
+himselfinto. Thereforeit’simportanttounderstandtheuseritself. Iftheuserisengaged
+in a task that occupies his hands, he may prefer to use speech input or other input
+modalities, which don’t require moving his hands. Another example is described in [J
+Coutaz et al., 1995]: suppose that the user wishes to book a fight from somewhere in
+Europe to Las Vegas. He may not know what the nearest international airport is, so
+he would prefer to indicate his destination by pointing on a map instead of selecting it
+fromalist. Incontrary,ifthesameuserwantstobookafighttoadestinationwherehe
+already knows the international airport code, he would most likely prefer to just write
+it into a text feld instead of selecting the place on a map which is much slower.
+A Qestionnaires
+This chapter lists all the questions as they were asked during the user study. The par-
+ticipantcouldchoosebetweenEnglishorGermanquestionswhereasthequestionshad
+still the same meaning.
+Theuserstudytookabout30minutesperparticipantandwasdividedintothefollowing
+parts:
+1. Questions: BackgroundInformation(2Minutes). Theuserhadtoflloutpersonal
+information like age, gender, expertise in using computers and knowledge about
+robotics.
+2. Pratical: Introduction to the system (5 Minutes). The setup of the sensors and
+touch screen was explained and the user could try out all the available input
+modalities to get a feeling on how to use them.
+3. Questions: Expectations (3 Minutes). This part of the questionnaire focused on
+theexpectationsoftheuserregardingthepreviouslypresentedsystem. Thepar-
+ticipant had to order the input modalities according to which input modality he
+wouldpreferthemost. Thepossibleanswersforsortingwererandomlymixedto
+not infuence the user by the given order.
+4. Practical: Hands-On part (15 Minutes). During this step the participant had to
+teachtherobotfourdiferenttasks: Pick&Place,Assembly,Pointwelding,Seam
+welding. Foreachtasktheuserhadtouseallfourinputmodalities(touch,gesture,
+speech, pen input).
+5. Questions: Experience&Opinion(5Minutes). Thelastpartofthequestionnaire
+askedtheuseraboutwhichinputmodalityhepreferred(samequestionsasinthe
+Expectationssection,wheretheuserhadtoorderthem)andwhathisopinionon
+the diferent input modalities is.
+A Questionnaires
+A.1 English Qestionnaire
+A.1.1 Background Information
+1. How old are you?
+Age: years old.
+2. What’s your gender?
+male female
+? ?
+3. What’s your expertise in using computers? I know how to ...
+Beginner: ... switch it on and open the browser
+?
+Basic: ... use most of the programms installed on my PC and handle fles
+?
+Advanced: ... add new hardware and install new software
+?
+Expert: ... program new software and how the computer hardware works
+?
+4. How much do you know about robotics?
+Not that much: I read/heard about robots but don’t know that much about
+?
+Hobby roboticist: I build/program small robots in my freetime
+?
+A lot: I studied robotics, computer science or similar engineering course
+?
+5. Did you already use a TeachPad to program a robot?
+No, I don’t even know what a TeachPad is.
+?
+I know what a TeachPad is, but never programmed a robot with it.
+?
+Yes, I already programmed a robot with a TeachPad
+?
+A.1.2 Expectations
+6. Thinkaboutasimplepickandplacetask,wheretherobothastopickupan
+object from a palette and place it on the table with a specifc orientation.
+What’syourestimateinminutesonhowlongitwouldtaketoteacharobot
+these steps (using current systems used in production)?
+A Questionnaires
+For each of the following parameters order the input modalities in descending order
+according to which input modality you would prefer the most. (Most preferred on top,
+least preferred on bottom)
+7. Parameter: Select an object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+8. Parameter: Set a location where to place an object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+9. Parameter: Set assembly constraints between two objects
+? Pen Input
+?
+?
+10. Parameter: Select a point on the object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+11. Parameter: Select an edge on the object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+A Questionnaires
+?
+A.1.3 Experience
+12. Ordertheinputmodalitiesbasedonyourexperiencedcognitiveload(which
+modalityrequiredthemostconcentration,wheredidyouhavetothinkthe
+most). Top = high cognitive load, bottom = less cognitive load
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+Now order the input modalities again. This time use your experience from previous
+tasks and order them according to which you preferred the most. (Most preferred on
+top, least preferred on bottom)
+13. Parameter: Select an object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+14. Parameter: Set a location where to place an object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+15. Parameter: Set assembly constraints between two objects
+? Pen Input
+?
+?
+A Questionnaires
+16. Parameter: Select a point on the object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+17. Parameter: Select an edge on the object
+? Touch Input
+?
+? Pen Input
+?
+? Point by hand
+?
+?
+A.1.4 Opinion
+18. What are your expectations on the following statements?
+aloteasier asexpected muchmorecompli-
+thanexpected catedthanIthought
+usingtheinputmodalitiesfor
+? ? ? ? ?
+programming a robot was
+Touch input was
+? ? ? ? ?
+Speech input was
+? ? ? ? ?
+Gesture input was
+? ? ? ? ?
+Input by pen was
+? ? ? ? ?
+Overall, using this system to
+? ? ? ? ?
+program a robot was
+19. Howmuchdoyouthinkisthetimesaving(inpercentage)ofusingtheinput
+modalitiescomparedtousingaTeachPad? (Onlyshownifuserknowswhat
+a TeachPad, see Question 5)
+A value of 25% means that using these input modalities requires 75 seconds, when
+using the TeachPad required 100 seconds.
+% time saving.
+20. What do you think about the following statements?
+A Questionnaires
+strongly disagree somewhat somewhat agree strongly
+disagree disagree agree agree
+It’s fun to program a robot
+? ? ? ? ? ?
+using multimodality (difer-
+ent types of input)
+The system should not al-
+? ? ? ? ? ?
+low to select a modality. It
+should pre-select the most
+suited one for each task.
+Using the System is natural
+? ? ? ? ? ?
+Speech input is accurate
+? ? ? ? ? ?
+enough for loud industrial
+environments.
+Ifeelmoresecureifthereare
+? ? ? ? ? ?
+less modalities to choose
+It’sintuitivetousespeechin-
+? ? ? ? ? ?
+It’s intuitive to use pen input
+? ? ? ? ? ?
+It’s intuitive to use touch in-
+? ? ? ? ? ?
+It’s intuitive to use gesture
+? ? ? ? ? ?
+input (point by hand)
+It’s intuitive to use keyboard
+? ? ? ? ? ?
+It was difcult to under-
+? ? ? ? ? ?
+standhowtousethediferent
+modalities
+Overall, I am satisfed with
+? ? ? ? ? ?
+the ease of completing the
+tasks in the scenarios
+Overall, I am satisfed with
+? ? ? ? ? ?
+the amount of time it took to
+complete the tasks
+21. Now imagine you are a factory worker and programming industrial robots
+is your daily job. Answer the following questions:
+A Questionnaires
+strongly disagree somewhat somewhat agree strongly
+disagree disagree agree agree
+Using the system in my job
+? ? ? ? ? ?
+would enable me to accom-
+plish tasks more quickly
+Using the system would im-
+? ? ? ? ? ?
+prove my job performance
+Using the system in my job
+? ? ? ? ? ?
+would increase my produc-
+Usingthesystemwouldslow
+? ? ? ? ? ?
+medownanddecreasetheef-
+fciency of my job
+Using the system would
+? ? ? ? ? ?
+make it easier to do my job
+I would fnd the system use-
+? ? ? ? ? ?
+ful in my job
+Learning to operate the sys-
+? ? ? ? ? ?
+tem would be easy for me
+My interaction with the sys-
+? ? ? ? ? ?
+tem would be clear and un-
+derstandable
+Using the system would
+? ? ? ? ? ?
+make my job more compli-
+Itwouldbeeasyformetobe-
+? ? ? ? ? ?
+comeskillfulatusingthesys-
+I would fnd the system dif-
+? ? ? ? ? ?
+cult to use
+A.2 German Qestionnaire
+A.2.1 Hintergrund Informationen
+1. Wie alt bist du?
+Alter: Jahre alt.
+2. Was ist dein Geschlecht?
+A Questionnaires
+männlich weiblich
+? ?
+3. Wie gut kennst du dich mit Computern aus? Ich wei wie man
+Anfänger: ... den PC einschaltet und den Browser öfnet
+?
+Grundkenntnisse: ... Programme auf meinem PC bedient und mit Dateien um-
+?
+Fortgeschritten: ... neue Hardware hinzufügt und neue Software installiert
+?
+Experte:...programmeentwickeltundwiedieComputer-Hardwarefunktioniert
+?
+4. Wie viel weißt du über Robotik?
+Nichtsoviel:IchhabeüberRobotergelesen/gehörtkennmichabernichtsogut
+?
+Hobby Robotiker: Ich entwickle/programmiere kleine Roboter in meiner Frei-
+?
+Ich kenn mich gut aus: ich studiere Robotik, Informatik oder ähnliche Inge-
+?
+nieurswissenschaf
+5. Hast du schon mal ein TeachPad zur Programmierung eines Roboters ver-
+wendet?
+Nein, ich weiß nicht mal, was ein TeachPad ist.
+?
+Ich weiß was ein TeachPad ist, aber habe noch nie einen Roboter damit pro-
+?
+grammiert.
+Ja, ich habe bereits einen Roboter mit einem TeachPad programmiert.
+?
+A.2.2 Erwartungen
+6. Stelle dir eine einfache Pick & Place Aufgabe vor, wo der Roboter ein Teil
+von einer Palette greifen und dieses auf den Tisch ablegen soll.
+Wie lange schätzt du die Zeit, die man benötigt, um diese Aufgabe einem
+Roboter beizubringen (bei bisher verwendeter Systeme in der Industrie)?
+Für jeden folgenden Parameter ordne die Eingabemodalitäten in absteigender Reihen-
+folge danach, welche du am meisten bevorzugst. (Oben: am meisten bevorzugt, unten:
+wenigesten bevorzugt)
+7. Parameter: Objekt auswählen
+A Questionnaires
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+8. Parameter: Position zum Ablegen des Objekts auf dem Tisch
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+9. Parameter: Setzen der Positionen für das Zusammensetzen zweier Objekte
+? Stift Eingabe
+?
+?
+10. Parameter: Punkt auf dem Objekt auswählen
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+11. Parameter: Kante auf dem Objekt auswählen
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+A Questionnaires
+A.2.3 Erfahrung
+12. OrdnedieEingabemodalitätenbasierendaufdieerfahrenekognitiveBelas-
+tung (bei welcher Modalität musstest du am meisten Nachdenken, wo war
+am meisten Konzentration nötig).Oben = hohe kognitive Belastung,unten
+= geringe kognitive Belastung
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+Jetzt ordne die folgenden Modalitäten nochmal. Diesmal verwende die Erfahrung aus
+dem praktischen Teil und ordne die Modalitäten basieren auf welche du am meisten
+bevorzugt hast. (Oben: am meisten bevorzugt, unten: am wenigsten bevorzugt)
+13. Parameter: Wähle ein Objekt
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+14. Parameter: Position zum Ablegen des Objekts auf dem Tisch
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+15. Parameter:SetztenderPositionenfürdasZusammensetzenzweierObjekte
+? Stift Eingabe
+?
+?
+16. Parameter: Punkt auf dem Objekt auswählen
+A Questionnaires
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+17. Parameter: Kante auf dem Objekt auswählen
+? Touch Eingabe
+?
+? Stift Eingabe
+?
+? Zeigen mit der Hand
+?
+?
+A.2.4 Meinung
+18. Was ist deine Meinung bezüglich folgender Aussagen?
+vieleinfacher wieerwartet deutlichkompli-
+alserwartet zierteralsichdachte
+verwenden der Eingabemo-
+? ? ? ? ?
+dalitäten zur Programmie-
+rung des Roboters war
+Touch Eingabe war
+? ? ? ? ?
+Spracheingabe war
+? ? ? ? ?
+Gesten Eingabe war
+? ? ? ? ?
+Stift Eingabe war
+? ? ? ? ?
+Insgesamt war die Verwen-
+? ? ? ? ?
+dung des Systems zum Pro-
+grammieren des Roboters
+19. Wie hoch schätzt du die Zeiteinsparung (in Prozent) bei Verwendung der
+vorherigenEingabemodalitätenimVergleichzurVerwendungeinesTeach-
+Pads? (Nur angezeigt, wenn der Benutzer weiß, was ein TeachPad ist, siehe
+Ein Wert von 25% bedeutet, dass die Eingabemodalitäten 75 sekunden benötigen,
+wenn die Programmierung mit dem TeachPad 100 Sekunden dauerte.
+% Zeitersparnis.
+20. Was denkst du zu den folgenden Aussagen?
+A Questionnaires
+stimmeüber- stimmenicht stimmeeher stimmeeher stimmezu stimmevoll-
+hauptnichtzu zu nichtzu zu kommenzu
+Programmieren des Roboters
+? ? ? ? ? ?
+mit multimodaler Eingabe
+macht Spaß
+Das System sollte keine Aus-
+? ? ? ? ? ?
+wahl an Modalitäten bieten,
+sondern nur die am Besten
+geeignete anbieten
+DieVerwendungdesSystems
+? ? ? ? ? ?
+ist natürlich
+Spracheingabe ist genau ge-
+? ? ? ? ? ?
+nug in lauter industrieller
+Ichfühlemichsicherer,wenn
+? ? ? ? ? ?
+weniger Eingabemodalitäten
+zur Auswahl stehen
+Spracheingabe ist intuitiv
+? ? ? ? ? ?
+Stift-Eingabe ist intuitiv
+? ? ? ? ? ?
+Touch-Eingabe ist intuitiv
+? ? ? ? ? ?
+Gesten Eingabe (Zeigen mit
+? ? ? ? ? ?
+der Hand) ist intuitiv
+Tastatur & Maus ist intuitiv
+? ? ? ? ? ?
+Es war schwer, die verschie-
+? ? ? ? ? ?
+denenModalitätenzuverste-
+Insgesamt bin ich mit der
+? ? ? ? ? ?
+Leichtigkeit der Ausführung
+derAufgabenindenSzenari-
+en zufrieden
+Insgesamtbinichmitderbe-
+? ? ? ? ? ?
+nötigten Zeit zur durchfüh-
+rung der Aufgaben zufrieden
+21. JetztstelldirvorduarbeitestineinerFabrikunddeinetäglicheAufgabeist
+es, Industrieroboter zu programmieren. Beantworte folgende Fragen:
+A Questionnaires
+stimmeüber- stimmenicht stimmeeher stimmeeher stimmezu stimmevoll-
+hauptnichtzu zu nichtzu zu kommenzu
+Verwenden des Systems in
+? ? ? ? ? ?
+meiner Arbeit würde mir er-
+möglichen,Aufgabenschnel-
+ler zu erledigen
+DieVerwendungdesSystems
+? ? ? ? ? ?
+würde meine Arbeitsleistung
+DieVerwendungdesSystems
+? ? ? ? ? ?
+würde meine Produktivität
+DieVerwendungdesSystems
+? ? ? ? ? ?
+würde meine Arbeit verlang-
+samen und die Efzienz ver-
+DieVerwendungdesSystems
+? ? ? ? ? ?
+würde meinen Job einfacher
+Ich würde das System nütz-
+? ? ? ? ? ?
+lich fnden
+Lernen das System zu ver-
+? ? ? ? ? ?
+wenden wäre einfach für
+Die Interaktion mit dem Sys-
+? ? ? ? ? ?
+tem wäre klar und verständ-
+DasSystemwürdemeineAr-
+? ? ? ? ? ?
+beit komplizierter machen
+Eswäreeinfachfürmich,ein
+? ? ? ? ? ?
+Experte in dem System zu
+IchfändedasSystemkompli-
+? ? ? ? ? ?
+ziert zu bedienen

@@ -1,0 +1,1595 @@
+Tipping points in macroeconomic Agent-Based models
+Stanislao Gualdi,1 Marco Tarzia,2 Francesco Zamponi,3 and Jean-Philippe Bouchaud4
+1 Universit´e Pierre et Marie Curie - Paris 6, Laboratoire de Physique Th´eorique de la Mati`ere Condens´ee,
+4, Place Jussieu, Tour 12, 75252 Paris Cedex 05, France and IRAMIS,
+CEA-Saclay, 91191 Gif sur Yvette Cedex, France ∗
+2 Universit´e Pierre et Marie Curie - Paris 6, Laboratoire de Physique Th´eorique de la Mati`ere Condens´ee,
+4, Place Jussieu, Tour 12, 75252 Paris Cedex 05, France
+3Laboratoire de Physique Th´eorique, E´cole Normale Sup´erieure,
+UMR 8549 CNRS, 24 Rue Lhomond, 75231 Paris Cedex 05, France
+4CFM, 23 rue de l’Universit´e, 75007 Paris, France,
+and Ecole Polytechnique, 91120 Palaiseau, France.
+The aim of this work is to explore the possible types of phenomena that simple macroeconomic
+Agent-Based models (ABM) can reproduce. We propose a methodology, inspired by statistical
+physics, that characterizes a model through its “phase diagram” in the space of parameters. Our
+first motivation is to understand the large macro-economic fluctuations observed in the “Mark I”
+ABM devised by D. Delli Gatti and collaborators. In this regard, our major finding is the generic
+existenceofaphase transitionbetweena“goodeconomy”whereunemploymentislow, anda“bad
+economy” where unemployment is high. We then introduce a simpler framework that allows us to
+showthatthistransitionisrobustagainstmanymodificationsofthemodel,andisgenericallyinduced
+by an asymmetry between the rate of hiring and the rate of firing of the firms. The unemployment
+level remains small until a tipping point, beyond which the economy suddenly collapses. If the
+parametersaresuchthatthesystemisclosetothistransition,anysmallfluctuationisamplifiedas
+the system jumps between the two equilibria. We have explored several natural extensions of the
+model. One is to introduce a bankruptcy threshold, limiting the firms maximum level of debt-to-
+salesratio. Thisleadstoarichphasediagramwith,inparticular,aregionwhereacute endogenous
+crises occur, during which the unemployment rate shoots up before the economy can recover. We
+alsointroducesimplewagepolicies. Thisleadstoinflation(inthe“good”phase)ordeflation(inthe
+“bad” phase), but leaves the overall phase diagram of the model essentially unchanged. We have
+also explored the effect of simple monetary policies that attempt to contain rising unemployment
+and defang crises. We end the paper with general comments on the usefulness of ABMs to model
+macroeconomic phenomena, in particular in view of the time needed to reach a steady state that
+raises the issue of ergodicity in these models.
+It is human nature to think wisely and to act absurdly – Anatole France
+∗Electronicaddress: stanislao.gualdi@gmail.com
+]NG.nif-q[
+4v9135.7031:viXra
+I. Introduction 3
+A. From micro-rules to macro-behaviour 3
+B. A methodological manifesto 3
+C. Outline, results and limitations of the paper 4
+II. A phase transition in “Mark I” 5
+A. Description of the model in a nutshell 5
+B. State variables 6
+C. Update rules for prices and production 6
+D. Debt and loans 6
+E. Spending budget and bankruptcy 7
+F. Numerical results: a phase transition 7
+III. Hybrid ABM’s: the minimal “Mark 0” model 8
+A. Set-up of the model 9
+B. Numerical results & Phase diagram 12
+C. Qualitative interpretation. Position of the phase boundaries 14
+1. The EC phase 15
+2. The role of β 16
+3. The role of f 16
+D. Intermediate conclusion 16
+IV. Extension of Mark 0: Wage Update 17
+A. Results: variable wages and the appearance of inflation 18
+B. Other extensions and policy experiments 19
+V. Analytical description 19
+A. Stability of the high employment phase 21
+B. Oscillations in the high employment phase 23
+C. The “representative firm” approximation 24
+VI. Summary, Conclusion 24
+Acknowledgements 26
+A. Pseudo-code for Mark I+ 27
+1. Notations 27
+2. Classes 27
+B. Pseudo-code of Mark 0 35
+C. Perturbative solution of the schematic model 37
+1. Stationary distribution at first order in γ 37
+2. Perturbative analysis of the oscillations 38
+a. Stationary state 39
+b. Oscillation around the stationary state – a simple approximation 39
+c. Oscillation around the stationary state – perturbative computation 39
+References 40
+I. INTRODUCTION
+A. From micro-rules to macro-behaviour
+Inferring the behaviour of large assemblies from the behaviour of its elementary constituents is arguably one of
+the most important problems in a host of different disciplines: physics, material sciences, biology, computer sciences,
+sociology and, of course, economics and finance. It is also a notoriously hard problem. Statistical physics has
+developed in the last 150 years essentially to understand this micro-macro link. Clearly, when interactions are absent
+or small enough, the system as a whole merely reflects the properties of individual entities. This is the canvas of
+traditionalmacro-economicapproaches. Economicagentsareassumedtobeidentical,non-interacting,rationalagents,
+an idealization known as the “Representative Agent” (RA). In this framework, micro and macro trivially coincide.
+However, we know (in particular from physics) that discreteness, heterogeneities and/or interactions can lead to
+totallyunexpectedphenomena. Thinkforexampleofsuper-conductivityorsuper-fluidity1: beforetheirexperimental
+discovery, it was simply beyond human imagination that individual electrons or atoms could “conspire” to create a
+collective state that can flow without friction. Micro and macro behaviour not only do not coincide in general, but
+genuinely surprising behaviour can emerge through aggregation. From the point of view of economic theory, this is
+interesting, because financial and economic history is strewn with bubbles, crashes, crises and upheavals of all sorts.
+These are very hard to fathom within a Representative Agent framework [2], within which crises would require large
+aggregate shocks, when in fact small local shocks can trigger large systemic effects when heterogeneities, interactions
+and network effects are taken into account [3–6]. The need to include these effects has spurred a large activity in
+“Agent-Based models” (ABMs) [7–9]. These models need numerical simulations, but are extremely versatile because
+any possible behavioural rules, interactions, heterogeneities can be taken into account.
+Infact,thesemodelsaresoversatilethattheysufferfromthe“wildernessofhighdimensionalspaces”(paraphrasing
+Sims [10]). The number of parameters and explicit or implicit choices of behavioural rules is so large (∼10 or more,
+even in the simplest models, see below) that the results of the model may appear unreliable and arbitrary, and the
+calibration of the parameters is an hopeless (or highly unstable) task. Mainstream RA “Dynamic Stochastic General
+Equilibrium” models (DSGE), on the other hand, are simple enough to lead to closed form analytical results, with
+simple narratives and well-trodden calibration avenues [11]. In spite of their unrealistic character, these models
+appear to perform satisfactorily in ‘normal’ times, when fluctuations are small. However, they become deeply flawed
+in times of economic instability [12], suggesting different assumptions are needed to understand what is observed in
+reality. Butevenafterthe2008crisis,thesetraditionalmodelsarestillfavouredbymosteconomists,bothinacademia
+and in institutional and professional circles. ABMs are seen at best as a promising research direction and at worst as
+an unwarranted “black box” (see [13] for an enlightening discussion on the debate between traditional DSGE models
+and ABMs, and [14–17] for further insights).
+B. A methodological manifesto
+Atthisstage,itseemstousthatsomeclarificationsareindeedneeded,concerningboththeobjectivesandmethod-
+ology of Agent-Based models. ABMs do indeed suffer from the wilderness of high dimensional spaces, and some
+guidance is necessary to put these models on a firm footing. In this respect, statistical physics offers a key concept:
+the phase diagram in parameter space [18]. A classic example, shown in Fig. 1, is the phase diagram of usual sub-
+stances as a function of two parameters, here temperature and pressure. The generic picture is that the number
+of distinct phases is usually small (e.g. three in the example of Fig. 1: solid, liquid, gas). Well within each phase,
+the properties are qualitatively similar and small changes of parameters have a small effect. Macroscopic (aggregate)
+propertiesdonotfluctuateanymoreforverylargesystemsandarerobustagainstchangesofmicroscopicdetails. This
+is the “nice” scenario, where the dynamics of the system can be described in terms of a small number of macroscopic
+(aggregate) variables, with some effective parameters that encode the microscopic details. But other scenarios are of
+course possible; for example, if one sits close to the boundary between two phases, fluctuations can remain large even
+for large systems and small changes of parameters can radically change the macroscopic behaviour of the system.
+There may be mechanisms naturally driving the system close to criticality (like in Self Organized Criticality [19]), or,
+alternatively, situations in which whole phases are critical, like for “spin-glasses” [20].
+In any case, the very first step in exploring the properties of an Agent-Based model should be, we believe, to
+identify the different possible phases in parameter space and the location of the phase boundaries. In order to do
+1 Seee.g. Ref.[1]foranhistoryofthediscoveryofsuper-fluidityandalistofreferences.
+this, numerical simulations turn out to be very helpful [21, 22]: aggregate behaviour usually quickly sets in, even for
+small sizes. Some parameters usually turn out to be crucial, while others are found to play little role. This is useful
+toestablishaqualitativephenomenologyofthemodel–whatkindofbehaviourcanthemodelreproduce,whichbasic
+mechanisms are important, which effects are potentially missing? This first, qualitative step allows one to unveil
+the “skeleton” of the ABM. Simplified models that retain most of the phenomenology can then be constructed and
+perhapssolvedanalytically,enhancingtheunderstandingoftheimportantmechanisms,andprovidingsomenarrative
+to make sense of the observed effects. In our opinion, calibration of an ABM using real data can only start to make
+sense after this initial qualitative investigation is in full command – which is in itself not trivial when the number
+of parameters is large. The phase diagram of the model allows one to restrict the region of parameters that lead to
+“reasonable” outcomes (see for example the discussion in [23, 24]).
+C. Outline, results and limitations of the paper
+Theaimofthispaperistoputtheseideasintopracticeinthecontextofawell-studiedmacroeconomicAgent-Based
+model (called “Mark I” below), devised by Delli Gatti and collaborators [25, 26]. This model is at the core of the
+European project “CRISIS”, which partly justifies our attempt to shed some theoretical light on this framework.2 In
+the first part of the paper, we briefly recall the main ingredients of the model and show that as one increases the
+baseline interest rate, there is a phase transition between a “good” state of the economy, where unemployment is
+low and a “bad” state of the economy where production and demand collapse. In the second part of the paper, we
+study the phase diagram of a highly simplified version of Mark I, dubbed ‘Mark 0’ that aims at capturing the main
+drivers of this phase transition. The model is a “hybrid” macro/ABM model where firms are treated individually
+but households are only described in aggregate. Mark 0 does not include any exogeneous shock; crises can only be of
+endogeneous origin. We show that the most important parameter in this regard is the asymmetry between the firms’
+propensity to hire (when business is good) or to fire (when business is bad). In Mark I, this asymmetry is induced by
+the reaction of firms to the level of interest rates, but other plausible mechanisms would lead to the same effect. The
+simplestversionofthemodelisamenabletoananalytictreatmentandexhibitsa“tippingpoint”(i.e. adiscontinuous
+transition) between high employment and high unemployment. When a bankruptcy condition is introduced (in the
+form of a maximum level of debt-to-sales ratio), the model reveals an extremely rich phenomenology: the “good”
+phaseoftheeconomyisfurthersplitintothreedistinctphases: oneoffullemployment,asecondonewithasubstantial
+levelofresidualunemployment, andathird, highlyinterestingregion, whereendogeneouscrisesappear. Wefindthat
+both the amount of credit available to firms (which in our model sets the bankrupcty threshold), and the way default
+costsareabsorbedbythesystem, arethemostimportantaspectsinshapingthequalitativebehavioroftheeconomy.
+Finally, we allow wages to adapt (whereas they are kept fixed in Mark I) and allow inflation or deflation to set in.
+Still, the overall shape of the phase diagram is not modified. We investigate further enhancements of the models, in
+particular simple policy experiments. Open questions and future directions, in particular concerning macroeconomic
+ABMs in general, are discussed in our final section.
+Before embarking to the core of our results, we want to clearly state what our ambition and objectives are, and
+what they are not. We do claim that the methodology proposed here is interesting and general, and could help
+improvingtherelevanceofmacroeconomicABMs. Wedobelievethatlargeaggregatevolatilityandcrises(inparticular
+those appearing in Mark I) can be understood through the lens of instabilities and phase transitions, as exemplified
+by our highly stylized Mark 0 model. We are also convinced that simple “skeleton” ABMs (for which most of
+the phenomenology can be fully dissected) must be developed and compared with traditional DSGE models before
+embarking into full-fledged models of the economy. On the other hand, we do not claim that our basic Mark 0
+framework is necessarily the best starting point. Mark 0 was primarily set up as a simplification of Mark I. Still,
+we find that Mark 0 leads to a surprisingly rich and to some extent realistic set of possible behaviours, including
+business cycles and crises, inflation, policy experiments, etc. However, we do not wish to claim that Mark 0 is able to
+reproduce all the known empirical stylized facts and could well be in contradiction with some of them3. In view of
+the simplicity of the model, this has to be expected. But we believe that Mark 0 can serve as a useful building block
+in the quest of a more comprehensive ABM, as more and more effects are progressively incorporated, in a controlled
+2 seewww.crisis-economics.eu
+3 Theideaofbuildingmathematicalmodelsofrealitythatreproducesomephenomena,butmightevenbeincontradictionwithothers,is
+attheheartofthedevelopmentofphysics. Mostprobably,itsusewasintroducedintheHellenisticperiod[27]. Astrikingexample[27]
+is Archimedes’ On Floating Bodies. In the first of the two books, in fact, Archimedes provides a mathematical proof of the sphericity
+ofEarth(assumedtobeliquidandatrest). However,inthesecondbook,heassumesthesurfaceofEarthtobeflatforthepurposeof
+describingotherphenomena,forwhichthesphericityofEarthisirrelevant.
+FIG. 1: A typical “phase diagram”, here the solid-liquid-gas phases in the temperature-pressure plane. Far from phase
+transitions,withinagivenphase,thebehaviourofthesystemisqualitativelysimilarforallvaluesoftheparameters. Closeto
+phase boundaries, on the other hand, small changes of parameters can lead to dramatic macroscopic changes.
+manner, to the model. Even if Mark 0 turns out to be little more than a methodological exercice, we hope that the
+ABM community (and perhaps beyond) will find it inspiring.
+To conclude this (long) introduction, let us insist that all the claims made in this paper only refer to the studied
+models,butdonotnecessarilyapplytoeconomicreality. Iffact,ourcentralpointisthatamodelhastobeunderstood
+inside-out before even trying to match any empirical fact.
+II. A PHASE TRANSITION IN “MARK I”
+A. Description of the model in a nutshell
+The Mark I family of agent-based models was proposed by Delli Gatti and collaborators as a family of simple
+stylized macroeconomic models [25, 26]. Note that several other macroeconomic Agent-Based models have been put
+forth in the recent years, see [28–33]. Mark I is particularly interesting because large fluctuations in unemployment
+and output seem to persist in the stationary state (a feature in fact shared by many ABMs cited above).
+The Mark I economy [25] is made up of a set of firms, households, firms owners and a bank. Firms produce a
+certain quantity of a single (and not storable) good, proportional to the number of their employees, that is sold at a
+time-dependent and firm-dependent prices. Firms pay identical time-independent wages. When the cash owned by a
+firm is not enough to pay the wages, it asks banks for a loan. The bank provides loans to the firms at an interest rate
+that depends on the financial fragility of the firm. Households provide workforce in exchange of a salary and want
+to spend a fixed fraction of their savings (or wealth). The owners of the firms do not work but receive dividends if
+the firms make profits. Firms are adaptive, in the sense that they continuously update their production (i.e. they
+hire/fire workers) and their prices, in an attempt to match their production with the demand of goods issued by the
+households. They also choose how much extra loan they want to take on, as a function of the offered interest rate.
+This last feature, combined with the price and production update rules, will turn out to be crucial in the dynamics
+of the model.
+TheabovedescriptiondefinesthebasicstructureoftheMarkIfamily, butitisofcoursetotallyinsufficienttocode
+the model, since many additional choices have to be made, leading to several different possible implementations of
+the model. Here we will use as a baseline model one of the simplest implementation of Mark I, whose description can
+be found in [34]; the total number of parameters in this version is 10 (but some parameters are actually implicitly
+fixed from the beginning). We have recoded this basic version and also a slightly different version that we call “Mark
+I+”, whichdiffersonminordetails(somethatwewillspecifybelow)butalsoononemajoraspect: ourversionofthe
+model strictly conserves the amount of money in circulation, i.e. the money in the bank + total firm assets + total
+households wealth (here savings), in order to avoid – at this stage – any effect due to uncontrolled money creation.
+A detailed pseudo-code of Mark I+ is provided in Appendix A.
+B. State variables
+Inshort(seeAppendixAforacompletedescription),thedynamicevolutionofthemodelisdefinedbythefollowing
+statevariables. Thestateofeachfirmi=1···N isspecifiedbyitspricep (t),thesalaryitoffersW (t),itsproduction
+Y (t), its target production YT(t), its demand D (t), its liquidity L (t), its total debt DT(t). Moreover, each firm
+is owned by a household and has a list of employees that is dynamically updated. The state of each household
+a=1···N is specified by its wealth (in the form of savings) S (t) and by the firm for which it works (if any).
+C. Update rules for prices and production
+Amongallthemicro-rulesthatanyAgent-Basedmodelhastopostulate,someseemtobemorecrucialthanothers.
+An important item in Mark I is the behavioural rule for firms adaptation to their economic environment. Instead
+of the standard, infinite horizon, profit optimizing firm framework (that is both unrealistic and intractable), Mark I
+postulates a heuristic rule for production Y (t) and price p (t) update, which reads as follows:
+i i i i i y i
+i i i i i p i
+i i i i i y i
+i i i i i p i
+where D (t) is the total demand for the goods produced by firm i at time t, and
+p (t)D (t)
+istheaveragepriceofsoldgoodsattimet,ξ (t)aU[0,1]randomvariable,independentacrossfirmsandacrosstimes,
+and γ ,γ two parameters in [0,1]. The quantity YT(t) is the target production at time t, not necessarily the realized
+one, asdescribedbelow. Theseheuristicrulescanbeinterpretedasaplausibletˆatonnementprocessofthefirms, that
+attempt to guess their correct production level and price based on the information on the last time step. In spirit,
+each unit time step might correspond to a quarter, so the order of magnitude of the γ parameters should be a few
+percent. Note that in the version of Mark I that we consider, wages are fixed to a constant value W (t) ≡ 1, for all
+times and all firms.
+Asweshallseelater, theadaptiveprice/productionadjustmentsdescribedinEq. (1)leadstotwostableattractors
+(full employment and full unemployment). Which of the two is be reached by the dynamics depends mainly on the
+levelofasymmetrybetweenanupwardanddownwardproductionadjustments. InEq. (1),theproductionadjustment
+dependsonasingleparameterγ andinthiscasethesystemevolvestowardsafullemploymentstateintheabsenceof
+anyotherconstraint. However,asitwillbecomeclearinthefollowingsection,financialconstraintsonloansmaylead
+to an effective “weakening” of the upward adjustment, possibly driving the dynamics towards the full unemployment
+state. Aslongassuchasymmetriesbetweenupwardanddownwardproductionadjustmentsexist(togetherwithsome
+noise in the price dynamics), the scenario described above and in the following sections is very general and in fact do
+not depend on details of the update process.
+D. Debt and loans
+The model further assumes linear productivity, hence the target production corresponds to a target workforce
+YT(t)/α, whereαisaconstantcoefficientthatcanalwaysbesettounity(gainsinproductivityarenotconsideredat
+this stage). The financial need of the firm is max[0,YT(t)W (t)−L (t)], where L (t) is the cash available. The total
+current debt of the firm is DT(t). The financial fragility of the firm (cid:96) (t) is defined in Mark I as the ratio of debt over
+cash. The offered rate by the banks for the loan is given by:
+whereρ isthebaseline(centralbank)interestrate,Gisanincreasingfunction(takentobeG((cid:96))=1+tanh((cid:96))inthe
+reference Mark I and G((cid:96))=1+ln(1+(cid:96)) in Mark I+), and ξ(cid:48) another noise term drawn from a uniform distribution
+U[0,1]. Dependingontherateoffered, firmsdecidetotakethefullloantheyneedoronlyafractionF(ρ)ofit, where
+F ≤1 is a decreasing function of ρ, called “credit contraction”. For example, in the reference Mark I, F(ρ≤5%)=1
+and F(ρ > 5%) = 0.8. We have played with the choice of the two functions F,G and the phase transition reported
+below is in fact robust whenever these functions are reasonable. In Mark I+, we chose a continuous function, such as
+to avoid built in discontinuities:4
+if x>10%.
+The important feature here is that when F < 1, the firm does not have enough money to hire the target workforce
+YT(t) and is therefore obliged to hire less, or even to start firing in order to match its financial constraints. This
+financial constraint therefore induces an asymmetry in the hiring/firing process: when firms are indebted, hiring will
+be slowed down by the cost of further loans. As we will see later, this asymmetry is responsible for an abrupt change
+in the steady state of the economy.
+E. Spending budget and bankruptcy
+Firms pay salaries to workers and households determine their budget as a fraction c (constant in time and across
+households) of their total wealth (including the latest salary). Each household then selects M firms at random and
+sorts them according to their price; it then buys all it can buy from each firm sequentially, from the lower price to
+the highest price5. The budget left-over is added to the savings. Each firm sells a quantity D (t) ≤ Y (t), compute
+its profits (that includes interests paid on debt), and updates its cash and debt accordingly. Moreover, each firm
+pays back to the bank a fraction τ of its total debt DT(t). It also pays dividends to the firm owners if profits are
+positive. Firms with negative liquidity L (t)<0 go bankrupt. In Mark I+, the cost of the bankruptcy (i.e. −L (t))
+is spread over healthy firms and on households. Once a firm is bankrupt it is re-initialized in the next time step with
+theowner’smoney, toafirmwithapriceandproductionequaltotheircorrespondingaveragevaluesatthatmoment
+in time, and zero debt (see Appendix A for more precise statements).
+F. Numerical results: a phase transition
+When exploring the phase space of Mark I, it soon becomes clear that the baseline interest rate ρ plays a major
+role. In order not to mix different effects, we remove altogether the noise term ξ in Eq. (3) that affects the actual
+rate offered to the firms. We find that as long as ρ is smaller than a certain threshold ρ , firms are on average below
+the credit contraction threshold and always manage to have enough loans to pay wages. In this case the economy is
+stableandafterfew(∼100)timestepsreachesastationarystatewheretheunemploymentrateislow. Ifontheother
+hand the baseline interest rate ρ exceeds a critical value ρ , firms cannot afford to take as much loans as they would
+need to hire (or keep) the desired amount of workers. Surprisingly, this induces a sudden, catastrophic breakdown of
+the economy. Production collapses to very small values and unemployment sky-rockets. This transition between two
+states of the economy takes place in both the reference Mark I and in the modified Mark I+; as we shall show in the
+next section, this transition is actually generic and occurs in simplified models as well. Note in particular that ρ is
+different from the value at which F(x) starts decreasing.
+The data we show in Fig. 2 corresponds to Mark I+ with parameters γ = γ = 0.1 and M = 3 (see Appendix A
+for the general parameter setting of the model). While the qualitative behaviour of the model is robust, the details of
+the transition may change with other parameter settings. For example, smaller values of γ ,γ lead to lower critical
+thresholdsρ (aswellassmallervaluesofM)andtolongerequilibrationtimes(T scalesapproximatelyas1/γ for
+ρ <ρ ). Increasing the size of the economy only affects the magnitude of the fluctuations within one phase leaving
+theessentialfeaturesofthetransitionunchanged. Interestingly,althoughitisnotclearfromFig.2,themodelexhibits
+oscillatorypatternsoftheemploymentrate. Thepresenceoftheseoscillationscanbeseeninthefrequencydomainof
+theemploymentratetimeseries(notshownhere), whichisessentiallycharacterizedbyawhitenoisepowerspectrum
+4 Notehoweverthatthearbitrarythresholds(5%and10%)inEq. (4)areoflittleimportanceandonlyaffectthepreciselocationofthe
+phasetransition.
+5 Inthissense,thegoodmarketisnotefficientsincethehouseholddemandisnotnecessarilysatisfiedwhenM issmall. Thejobmarket
+instead, though not efficient due to the presence of unvoluntarely unemployment, is characterized by perfect information since all the
+workerscancontactallthefirmsuntilalltheopenpositionsarefilled.
+T 0.8 0.89
+10 1 u 5000 5250 5500
+0.8 0.4 0.01
+0.6 u u - - N N F F = = 1 1 0 0 0 00
+R - NF = 1000
+5000 5250 5500
+1 1.5 2.0 2.5 3.0 3.5 4.0 0 2000 4000 6000 8000 10000
+FIG. 2: Left: Average unemployment rate u as a function of the interest rate ρ for two system sizes (with N = 10N in
+both cases). The average is over 100000 time steps discarding the first 50000 time steps. The phase transition at ρ =2.1%
+is of first order with u jumping discontinuously from small values to 1 (intermediate values obtained for ρ ∈[2.1%,3.1%] are
+only due to a much longer equilibration time near the critical point). Note that in the bottom graph we show averages for
+T = 50000 regardless of ρ while an estimate of the time needed to reach the steady state as a function of ρ is plotted in
+logarithmic scale in the top graph. In the bottom graph we also show the average value of the asymmetry measure R (see
+main text) for N =1000. As one can see R is decreasing with the interest rate up to a point where the asymmetry is strong
+enough to drive the economy into the high unemployment phase. Right: Two trajectories of the unemployment rate with
+N =1000 at ρ =1.9% and ρ =2.5%.
+with a well defined peak at intermediate frequencies. All these effects will become clearer within the reduced model
+described in the next section.
+Anticipating the results of the next section, we have characterized, as a function of ρ , the asymmetry ratio R that
+characterizes how firms react to the need to hire or to fire. More precisely, we compute the ratio between the target
+number of job creations (resp. destructions) – as a reaction to excess demand (or supply) in the previous time step
+– to the realized number of hires (fires) after financial constraints are met. At each time step we can then extract
+the average target-to-realized ratios for firms in excess supply and demand respectively. The ratio R (averaged over
+time) between these two numbers is a proxy of the asymmetry with which firms react to the need to hire or fire. It is
+clear that increasing ρ hobbles the capacity of firms to hire when they need to, and therefore decreases the ratio R,
+as seen in Fig. 2, which suggests that the employment collapse is related to this ratio. The results of the next section
+will fully confirm this scenario.
+To sum up, our most salient finding is that Mark I (or Mark I+) has essentially two stationary states, with a first
+order (discontinuous) transition line separating the two. If the parameters are such that the system lies close to this
+critical line, then any small modulation of these parameters – such as the noise term that appears in Eq. (3) – will
+be amplified by the proximity of the transition, and lead to interesting boom/bust oscillations, of the kind originally
+observed in Mark I [34], and perhaps of economic relevance. The question, of course, is how generic this scenario is.
+We will now show, by studying much simplified versions of Mark I, that this transition is generic, and can indeed be
+inducedbytheasymmetrybetweenhiringandfiring. Wewillthenprogressivelyenrichourwatered-downmodel(call
+“Mark 0” below) and see how the qualitative picture that we propose is affected by additional features.
+III. HYBRID ABM’S: THE MINIMAL “MARK 0” MODEL
+Moving away from the RA framework, Agent-Based Modeling bites the bullet and attempts to represent in details
+alltheindividualcomponentsoftheeconomy(as,forexample,in[28,29]). Thismighthoweverbecounter-productive,
+at least in the research stage we are still in: keeping too many details is not only computer-time consuming, it may
+also hobble the understanding of the effects that ABMs attempt to capture. It may well be that some sectors of
+the economy can be adequately represented in terms of aggregate variables, while discreteness, heterogeneities and
+interactions are crucial in other sectors. In our attempt to simplify Mark I, we posit that the whole household sector
+canberepresentedbyaggregatevariables: totalwealth(againentirelyintheformofsavings)S(t),totalincomewage
+W(t) and total consumption budget C (t) (which, as we will emphasize below, is in general larger than the actual
+consumption C(t)). We also remove the banking sector and treat the loans in the simplest possible way – see below.
+While the interest rate is zero in the simplest version, the incentive to hire/fire provided by the interest rate, that
+was at play in Mark I, will be encoded in a phenomenological way in the update rule for production. The firms,
+on the other hand, are kept as individual entities (but the above simplifications will allow us to simulate very large
+economies, with N =100000 firms or more).
+A. Set-up of the model
+The minimal version of the Mark 0 model is defined as follows. The salient features are:
+• There are N firms in total and µN households, µ > 1.6 Each firm i = 1···N pays a salary W (t) and
+produces output Y (t) by means of a one-to-one technology that uses only labor as an input. Productivity is
+chosen to be constant in time and fixed to α = 1. We therefore neglect any productivity shocks in our model;
+interestingly, crises (when they occur) will be of endogeneous origin. With α = 1, Y (t) is simply equal to the
+number of employees of firm i. Hence, the employment rate ε(t) and unemployment rate u(t) are:
+1 (cid:88)
+• Households are described by their total accumulated savings S(t) (which at this stage are always non-negative)
+and by their total wage income (cid:80) W (t)Y (t). At each time step, they set a total consumption budget7
+which is distributed among firms using an intensity of choice model [36]. The demand of goods for firm i is
+therefore:
+where β is the price sensitivity parameter determining an exponential dependence of households demand in the
+price offered by the firm; β =0 corresponds to complete price insensitivity and β →∞ means that households
+select only the firm with the lowest price.8 The normalization is such that C (t)= (cid:80) p (t)D (t), as it should
+be.
+• Firms are described by their price p (t), their salary W (t), and their production Y (t).
+– For simplicity, we fix the salary W (t)≡1 – an extension that includes wage dynamics is discussed below.
+– For the price, we keep the Mark I price update rule (1), with the average production-weighted price:
+p (t)Y (t)
+p(t)= i i i . (8)
+Note that this price update rule only makes sense if firms anticipate that households are price sensitive,
+i.e. if β > 0, which we will assume in the following. Still, the dynamics of the model as defined remains
+perfectlywell-behavedwhenβ =0,evenifinthislimit,therationalbehaviouroffirmswouldbetoincrease
+their price indefinitely and produce very little.
+6 Actually, households are treated as a unique aggregate variable, therefore µ is not a relevant parameter: one can see that its value is
+irrelevant and one can always set µ=1 for simplicity. Yet it is useful to think that the aggregate variables represents in an effective
+wayacertainnumberofindividualhouseholds,hencewekeeptheparameterµexplicitinthefollowing.
+7 Ofcourse,onecouldchoosedifferentc’sforthefractionofsavingsandthefractionofwagesdevotedtospending,oranyothernon-linear
+spendingschedule.
+8 In this sense, as long as β >0 firms compete on prices. An averaged scatter plot of firms profits versus the price offered (not shown
+here)indeeddisplaysawell-shapedconcaveprofitfunction.
+– For production, we assume that firms are more careful with the way they deal with their workforce than
+posited in Mark I. Independently of their price level, firms try to adjust their production to the observed
+demand. Whenfirmswanttohire,theyopenpositionsonthejobmarket;weassumethatthetotalnumber
+of unemployed workers, which is µN u(t), is distributed among firms according to an intensity of choice
+of model which depends on both the wage offered by the firm9 and on the same parameter β as it is for
+Eq. (7); therefore the maximum number of available workers to each firm is:
+W (t)Y (t)
+w(t)= i i i . (10)
+In summary, we have
+ i i + i i i
+i i i i i p i
+ i i − i i
+i i i i i p i
+whereη ∈[0,1]arewhatwedenoteasthehiring/firingpropensityofthefirms. Notethatthisruleensuresthat
+there is no overshoot in production; furthermore the max in the second rule is not necessary mathematically
+when η ≤ 1, but we kept it for clarity. Each row of Eq. (11) specifies an adjustment mechanism for output
+and the individual price. According to this mechanism, there is an increase in output if excess demand is
+positive, and a decrease in output if excess demand is negative, i.e. if there is excess supply. The propensities
+to hire/fire η can be seen as the sensitivity of the output change to excess demand/supply. These sensitivities
+are generally less than unity (i.e. the firm is not adjusting output one to one with excess demand/supply),
+because there are hiring (firing) costs of different kinds (real costs, time-to-hire, administrative constraints,
+inertia,etc.). Firingcostsgenerate“labourhoarding”,whilehiringcostspreventstheeconomytoadaptquickly
+to excess demand. Hiring and firing costs may not be identical. Therefore the sensitivity to excess demand (or
+hiring propensity η ) may be different from the sensitivity to excess supply (or firing propensity η ). Note
+that because of the min{D (t)−Y (t),µu(t)} term in Eq. (11), the total production of the model is bounded
+by Y (t) = µN ε(t) ≤ µN , as it should be because ε(t) = 1 corresponds to full employment and in that
+(cid:80)i i F F
+case Y (t) = µN . However, in the following we will sometimes (when stated) remove this bound for a
+better mathematical tractability. This amounts to replace min{D (t)−Y (t),µu(t)}→D (t)−Y (t) in Eq. (11)
+(it corresponds to choosing µ = ∞). Removing the bound corresponds to a situation where labor resources
+can freely exceed the working population, such that the high employment phase translates into an exponential
+explosion of the economy output, which is of course unrealistic.
+• Accounting of firms and households. Each firm i=1···N pays a total wage bill W (t)Y (t) and has total sales
+p (t)min{Y (t),D (t)}. Moreover,iftheprofitofthefirmP (t)=p (t)min{Y (t),D (t)}−W (t)Y (t)ispositive,
+i i i i i i i i i
+the firm pays a dividend δ×P (t) to the households.10
+Note that if D > Y , the demand for goods of firm i cannot be immediately satisfied, and we assume that in
+thiscasehouseholdsinvoluntarilysaveanddelaytheirconsumptionuntilthenextround(butstillusingEq. (6)
+with the correctly updated savings). The actual consumption C(t) (limited by production) is therefore given
+by:
+i i i B i i
+9 Sinceatthisstagewagesareequalamongfirmsthedistributionisuniform. Belowweallowfirmstoupdatetheirwage. Ahigherwage
+willthentranslateintheavailabilityofalargershareofunemployedworkersinthehiringprocess.
+10 Wehavealsoconsideredthecasewherefirmsdistributeafractionδ oftheprofitsplusthereserves. Seebelow.
+Insummary,theaccountingequationsfortotalaccumulatedsavingsS(t)andfirms’netdepositsE (t)–possibly
+negative – are the following (here θ(x≥0)=1 and θ(x<0)=0 is the Heaviside step function):
+i i i i i i
+i i i i i (13)
+(cid:88) (cid:88)
+where I(t) is the total income of the households (wages plus dividends) and C(t) is the money actually spent
+by households, which is in general less than their consumption budget C (t). This corresponds to unvoluntarly
+households savings whenever production is below demand.
+(cid:80) (cid:80)
+NotethattotalmoneyS(t)+ E (t)isclearlyconservedsince∆S(t)=−∆[ E (t)]forcash-flowconsistency
+in a closed economy.
+• Bank accounting. As mentioned above, we allow the firms’ net deposits to become negative, which we interpret
+as the firm being in need of an immediate extra line of credit. Depending on the financial fragility of the firm
+(definedbelow),thebankmayormaynotagreetorestructurethedebtandprovidethisextracredit. Ifitdoes,
+our accounting procedure can be rephrased in the following way. In case of negative net deposits E (t)<0 the
+bank provides the firm with the extra liquidity needed to pay the wages. The equity of the firm is therefore
+equal to its deposits when positive, and is close to zero, but still equal to what it needs, when the net deposits
+is negative. However, when the firm becomes too indebted, the bank will not provide the liquidity needed to
+pay the wages, leading to negative equity and bankruptcy. From an accounting perspective the matrix balance
+sheet of our model can be summarized as follows. We assume the bank’s equity to be constant in time (let it be
+0 for simplicity). The bank holds at the beginning of the simulation a quantity M of currency (issued by the
+central bank, not modeled here) and therefore has assets equal to M throughout the simulation.
+Households have deposits S > 0 while firms have either deposits (if E > 0) or liabilities (if E < 0). Defining
+E+ = (cid:80) max(E ,0) and E− =− (cid:80) min(E ,0), the balance sheet of the banking system is therefore:
+which means that the total amount of deposits X at any time is equal to initial deposits plus deposits created
+by the banking system when issuing loans. In this setting reserves M at the bank are kept unchanged when
+loans are issued (as outlined for example in [35]) and deposits increase (decrease) only when loans are issued
+(repaid). Correspondingly, the fundamental time-invariant macroeconomic accounting identity
+is obeyed and amounts to our money conserving equation.
+• Financial fragility and bankruptcy resolution. We measure the indebtement level of a firm through the ratio of
+(negative) net deposits over payroll (equal, to a good approximation, to total sales):
+whichweinterpretasameasureoffinancialfragility. (Implicitly,thisassumesthatthe“realassets”ofthefirms
+– not modeled here – are proportional to total payroll). If Φ (t)<Θ, i.e. when the level of debt is not too high
+comparedtothesizeofthecompany,thefirmisallowedtocontinueitsactivity. IfontheotherhandΦ (t)≥Θ,
+the firm defaults.
+When firms exceeds the bankrupcty threshold the default resolution we choose is the following. We first define
+the set H of financially “healthy” firms that are potential buyers for the defaulted firm i. The condition for
+this is that E (t)>max(−E (t),ΘY (t)W (t)), meaning that the firm j has a strongly positive net deposits and
+can take on the debt of i without going under water.
+– With probability 1−f, f ∈ [0,1] being a new parameter, a firm j is chosen at random in H ; j transfers
+to i the needed money to pay the debts, hence E → E +E (remember that E is negative) and E → 0
+after the transaction. Furthermore, we set p = p and W = W , and the firm i keeps its employees and
+its current level of production.
+– With probability f, or whenever H = ∅, the firm i is not bailed out, goes bankrupt and its production
+is set to zero. In this case its debt E (t) < 0 is transferred to the households’ accumulated savings,
+S(t)→S(t)+E (t) in order to keep total money fixed11.
+Hence,whenf islarge,mostofthebankruptciesloadweighsonthehouseholds,reducingtheirsavings,whereas
+whenf issmall,bankruptciestendtofragilisethefirmsector. (TheMarkI+modeldiscussedabovecorresponds
+tof =1/2.) Itisimportanttostressthatchangingthedetailsofthebankruptcyruleswhilemaintainingproper
+money conservation does not modify the main qualitative message of our paper. The important point here is
+that the default costs are transferred to households and firms (to ensure money conservation) and have some
+repercussion on demand (through households accumulated savings) or on firms fragility (through firms net
+deposits). This can create default avalanches and crises.
+• Firm revival. A defaulted firm has a finite probability ϕ per unit time to get revived; when it does so its
+price is fixed to p (t) = p(t), its workforce is the available workforce, Y (t) = µu(t), and its net deposits is the
+amount needed to pay the wage bill, E (t)=W (t)Y (t). This liquidity is provided by the households, therefore
+S(t)→S(t)−W (t)Y (t) when the firm is revived, again to ensure total money conservation. Note that during
+this bankrupt/revival phase, the households’ savings S(t) might become negative: if this happens, then we set
+S(t) = 0 and the debt of households is spread over the firms with positive liquidity12, proportionally to their
+current value of E , again in order to ensure total money conservation and S(t)≥0.
+The above description contains all the details of the definition of the model, however for full clarification a pseudo-
+code of this minimal Mark 0 model is provided in Appendix B (together with the extensions discussed in Sec. IV).
+The total number of relevant parameter of Mark 0 is equal to 9: c,β,γ ,η ,δ,Θ,ϕ,f plus the number of firms N .
+However, most of these parameters end up playing very little role in determining the qualitative, long-time aggregate
+behaviour of the model. Only two quantities play an important role, and turn out to be:
+1. theratioR=η /η betweenη andη ,whichismeanttocaptureanyasymmetryinthehiring/firingprocess.
+As noted above (see Fig. 2), a rising interest rate endogeneously leads to such a hiring/firing asymmetry in
+Mark I and Mark I+. But other sources of asymmetry can also be envisaged: for example, overreaction of the
+firms to bad news and under-reaction to good news, leading to an over-prudent hiring schedule. Capital inertia
+can also cause a delay in hiring, whereas firing can be immediate.
+2. the default threshold Θ, which controls the ratio between total debt and total circulating currency. In our
+minimal setting with no banks, it plays the role of a money multiplier. Monetary policy within Mark 0 boils
+down to setting of the maximum acceptable debt to payroll ratio Θ.
+The other parameters change the phase diagram of the model quantitatively but not qualitatively. In order of
+importance, the most notable ones are f (the redistribution of debt over households or firms upon bankruptcies) and
+β (the sensitivity to price) – see below.
+B. Numerical results & Phase diagram
+When running numerical simulations of Mark 0, we find (Fig. 3) that after a transient that can be surprisingly
+long13, the unemployment rate settles around a well defined average value, with some fluctuations (except in some
+cases where endogenous crises appear, see below).
+We find the same qualitative phase diagram for all parameters β,γ ,ϕ,δ,f. For a given set of parameters, there
+is a critical value R of R = η /η separating a full unemployment phase for R < R from a phase where some of
+the labour force is employed for R>R . Here R ≤1 is a value that depends on all other parameters. In Sec. V we
+11 One can interpret this by imagining the presence of a bank that collects the deposits of households and lend money to firms, at zero
+interestrate. Ifafirmgoesbankrupt,thebankloosesitsloan,whichmeansthatitsdeposits(thehouseholds’savings)arereduced.
+12 Again,thiscanbeinterpretedbyimaginingthatthefirmswithpositiveliquiditydeposittheircashinthebank. Whenthebankneeds
+to provide a loan to a revived firm, or loses money due to a bankrupt, it prefers to take this money from households’ deposits, but if
+thesearenotavailable,thenittakesthemoneyfromfirms’deposits.
+13 Thinkofonetimestepasaquarter,whichseemsreasonableforthefrequencyofpriceandworkforceupdates. Theequilibrationtimeis
+then20yearsorso,orevenmuchlongerasfortheconvergencetothe‘bad’stateinMarkI,seeFig.2. Albeitstudyingaverydifferent
+ABM,similarlylongtimescalescanbeobservedintheplotsshownin[33]. Seealsothediscussionintheconclusiononthispoint
+N = 104, γ = 0.01
+full employment
+N = 104, γ = 0.1
+0.4 N = 103, γ = 0.01 0.8
+N = 103, γ = 0.1
+0.3 0.6 full employment
+η + u full unemployment
+0.1 full unemployment 0.2
+0 0.1 0.2 0.3 0.4 0.5 0 1000 2000 3000 4000 5000
+FIG. 3: (Left) Phase diagram of the basic Mark 0 model with β = 2 and Θ = ∞. There are two distinct phases separated
+by a critical line which depends on the parameters γ and β. The dashed lines correspond to the analytical result in Eq. (29)
+which agrees well with numerical simulations for small values of η ,η where the perturbative method of Section III-C and
+AppendixC1isjustified. Forsimplicityweshowhereonlyresultswithβ =2butEq.(29)isingoodagreementwithnumerical
+resultsuptoβ ∼4. (Right)Twotypicaltrajectoriesofu(t)inthetwophases(R=5/3inthefullemploymentlineandR=3/5
+in the full unemployment line). The other parameters are: N =10000, γ =0.1, Θ=∞, ϕ=0.1, β =2, c=0.5. δ =0.02
+and ϕ=1.
+explain how the phase transition at R and other features of the model can be understood by means of approximate
+analytical calculations.
+The transition is particularly abrupt in the limit Θ → ∞ (no indebtment limit), in which the unemployment rate
+jumps all the way from 0 to 1 at R , see Fig. 3. The figure shows that indeed only the ratio R = η /η is relevant,
+theactualvaluesofη onlychangethetimescaleoverwhichtheproductionfluctuates. Moreover,thephasediagram
+is almost independent of N , which confirms that we are effectively in a limit where the number of firms can be
+considered to be very large14.
+Interestingly, for finite values of Θ, the phase diagram is more complex and shown in Fig. 4. Besides the full
+unemployment phase (region 1, which always prevails when R<R , we find three other different regions for R>R ,
+that actually survive many extensions of Mark 0 that we have considered (see section IV):
+• AtverylargeΘ(region4,“FE”),thefullemploymentphasepersists,althoughasmallvalueoftheunemployment
+appears in a narrow region around R ≈ R . The width of this region of small unemployment vanishes as Θ
+increases.
+• At very low Θ (region 2, “RU”), one finds persistent “Residual Unemployment” in a large region of R > R .
+TheunemploymentratedecreasescontinuouslywithR andΘbutreachesvaluesaslargeas0.5closetoR=R
+(see Fig. 4, Bottom Left).
+• A very interesting endogenous crises phase appears for intermediate values of Θ (region 3, “EC”), where the
+unemploymentrateismostofthetimeveryclosetozero,butendogenouscrisesoccur,whichmanifestthemselves
+assharpspikesoftheunemploymentthatcanreachquitelargevalues. Thesespikesappearalmostperiodically,
+and their frequency and amplitude depend on some of the other parameters of the model, in particular f and
+β, see Fig. 4, Bottom Right.
+The phase diagram in the plane R−Θ is presented in Fig. 4, together with typical time series of the unemployment
+rate, for each of the four phases.
+We also show in Fig. 5 a trajectory of u(t) in the good phase of the economy (FE, region 4) and zoom in on
+the small fluctuations of u(t) around its average value. These fluctuations reveal a clear periodic pattern in the low
+unemployment phase; recall that we had already observed these oscillations within Mark I+. Oscillating patterns
+14 Actually, in the specific case Θ=∞, even NF =1 provides a similar phase diagram, although the critical Rc slightly depends on NF
+whenthisnumberissmall
+4 - FE 1 - FU
+8 0.8 2 - RU
+decreasing f 3 - EC
+increasing β 4 - FE
+Θ 1 - FU 3 - EC u
+increasing employment
+0 1 2 3 4 0 10 20 30 40
+R time / 1000
+1 f = 1.0 -- β = 0
+Θ = 0.5 f = 1.0 -- β = 1
+0.8 Θ Θ = = 1 1 . . 0 5 0.4 f = 0.9 -- β = 0
+0.3 f = 0.5 -- β = 0
+0 1 2 3 4 0 10 20 30 40
+R time / 1000
+FIG. 4: (Top Left) Phase diagram of the basic Mark 0 model in the R−Θ plane, here with N = 5000, c = 0.5, γ = 0.05,
+δ =0.02, ϕ=0.1. Here we keep the ’extreme’ cases β =0 and f =1 since the dependence of phase boundaries on β and on
+f (here reported schematically) is shown in detail in Fig. IIIC3. The other parameters are irrelevant. There are four distinct
+phases separated by critical lines. (Top Right) Typical time series of u(t) for each of the phases. (Bottom Left) Stationary
+value of the unemployment rate as a function of R for different values of Θ in phase 2. (Bottom Right) Typical trajectories of
+u(t) in the Endogenous Crisis phase (region 3) for different values of f and β, the other parameters are kept fixed. Note that
+increasing β or decreasing f lead to small crisis amplitudes.
+(perhapsrelatedtotheso-calledbusinesscycle)oftenappearinsimplifiedfirstorderdifferentialmodelsofthemacro-
+economy;oneofthebestknownexamplesisprovidedbytheGoodwinmodel[37,38],whichisakintoapredator-prey
+model where these oscillations are well known. But these oscillations do also show up in other ABMs, see [31, 33].
+Note that these fluctuations/oscillations around equilibrium do not regress when the number of firms get larger. We
+have simulated the model with N = 10000 firms and N = 1000000 firms with nearly identical amplitude and
+frequencies for these fluctuations. We will offer some insight on the origin of these oscillations in Sec. V. Note that
+we do not expect such oscillations to remain so regular in the real economy, in particular because exogeneous shocks
+are absent from our model and because we assume that all firms are characterised by the very same adaptation time
+scale γ .
+C. Qualitative interpretation. Position of the phase boundaries
+An important quantity that characterizes the behavior of the model in the “good” phase of the economy (i.e. for
+R>R ) is the global leverage (debt-to-equity) ratio k:
+2000 2050 2100
+0 1000 2000 3000 4000 5000 2000 2025 2050 2075 2100
+FIG. 5: Left: Typical time evolution of the unemployment u, starting from an initial condition u = 0.5, for the basic Mark
+0 model in the Full Employment phase (region 4). The trajectory leading to a “good” state of the economy is obtained for
+η =0.5 and η =0.3. Note the clear endogenous “business cycles” that appear in that case. These runs are performed with
+N =10000 firms, c=0.5, β =2, γ =0.1, ϕ=0.1, Θ=5, δ=0.02.
+Right: Oscillations for the average price and the average accumulated savings per household (each shifted by their average
+values for clarity) for the same run as in the Left figure. When prices are low, savings increase, while when prices are high,
+savings decrease. See Sec. V for a more detailed description.
+where, due to money conservation, k ≤1. The good state of the economy is characterized by a large average value of
+k reflecting the natural tendency of the economy towards indebtment, the level of which being controlled in Mark 0
+by the parameter Θ (the average value of k increases with Θ).15 Interestingly, in regions 2-RU and 4-FE k(t) reaches
+a stationary state, whereas in region 3-EC its dynamics is characterized by an intermittent behavior corresponding
+to the appearance of endogenous crises during which indebtment is released through bankruptcies.
+1. The EC phase
+This phenomenology can be qualitatively explained by the dynamics of the distribution of firms fragilities Φ . For
+R > R , firms overemploy and make on average negative profits, which means that the Φ ’s are on average drifting
+towards the bankruptcy threshold Θ.
+• When Θ is small enough (i.e. in region 2-RU) the drift is continuously compensated by the reinitialization of
+bankrupted firms and the fragility distribution reaches a stationary state.
+• For intermediate values of Θ, however, (i.e. in region 3-EC) the number of bankruptcies per unit of time
+becomesintermittent. Firmsfragilitiesnowcollectivelydrifttowardsthebankruptcythreshold; assoonasfirms
+with higher fragilities reach Θ, bankruptcies start to occur. Since for f large enough, bankruptcies are mostly
+financed by households, demand starts falling which has the effect of increasing further the negative drift. This
+feedback mechanism gives rise to an avalanche of bankruptcies after which most of the firms are reinitialized
+with positive liquidities. This mechanism has the effect of synchronizing the fragilities of the firms, therefore
+leading to cyclical waves of bankruptcies, corresponding to the unemployment spikes showed in Fig. 4. The
+distribution of firms fragilities does not reach a stationary state in this case.
+• When Θ(cid:29)1 (i.e. region 4-FE), households are wealthy enough to absorb the bankruptcy cost without pushing
+the demand of goods below the maximum level of production reached by the economy.16 Hence, the economy
+settles down to a full employment phase with a constant (small) rate of bankruptcies.
+15 Inafurtherversionofthemodel,acentralbankwillbeinchargeofcontrollingk throughapropermonetarypolicy.
+16 TheamountofmoneycirculatingintheeconomyincreaseswithΘandforR>Rc itislargelychannelledtohouseholdssavingssince
+firmshaveonaveragenegativeliquidities.
+Theaboveinterpretationissupportedbyasimpleone-dimensionalrandomwalkmodelforthefirmsassets,withadrift
+that slef-consistently depends on the number of firms that fail. This highly simplified model accurately reproduces
+the above phenomenology, and is amenable to a full analytical solution, which will be published separately.
+TheexistenceoftheECphaseisagenuinelysurprisingoutcomeofthemodel, whichwasnotputbyhandfromthe
+outset (see our discussion in the first lines of the Introduction section above). Crises occur there not as a result of
+sweeping parameters through a phase transition (as is the case, we argued, of Mark I with a time dependent interest
+rate) but purely as a result of the own dynamics of the system.
+2. The role of β
+The dependence of the phase boundaries on the different parameters is in general quite intuitive. The dependence
+ofaggregatevariablesonβ,forexample,isinteresting: everythingelsebeingkeptequal,wefindthatincreasingβ (i.e.
+increasing the price selectivity of buyers), increases the level of unemployment (see inset of Fig. 6) and the amplitude
+ofthefluctuationsaroundtheaveragevalue(asimilareffectwasnotedin[29]). Increasingγ increasesthedispersion
+of prices around the average value and is thus similar to increasing β.
+Increasing β has also, within the present setting of Mark 0, some counter-intuitive effects: it increases both the
+average price compared to wages and the profits of firms, hence stabilizing the FE phase and shifting its boundary
+withECtolowervaluesofΘandR (seeFig.6fortheamplitudeofregion3-ECasafunctionofβ. Thiseffectcanbe
+understood by considering the demand-production gap G =D −Y as a function of the price difference δp =p −p¯.
+For a fixed value of G the rules for price and production updates are independent of β; however, the response of
+the demand to a price change is stronger for higher values of β: for small values of δp one finds approximately
+G ≈ −C(β)δp , where C(β) > 0 is increasing with β. As a consequence, the absolute value of the gap, |G | for a
+given value of |δp | is on average increasing with β. Therefore, the total amount of unsold goods max[Y −D ,0]
+and households accumulated savings S also increase with β: households involuntarily save more when they are more
+selective on prices. An increased amount of savings is in turn responsible for the average price increase while the
+households’ higher wealth expands the FE region by shifting its boundary to lower values of Θ. Note, however, the
+effectofβ ontheaveragepriceisnumericallyverysmallanddependssensitivelyonthepreciseconsumptionrule. For
+example, if we insist that households fully spend their consumption budget C (t) by looking for available products
+at a higher price (as in Mark I), then the above effect disappears (see Section V).
+3. The role of f
+A potentially more relevant discussion concerns the effect of the bankruptcies on the financial health of the firm
+sector. Decreasing f (i.e. the financial load taken up by households when bankruptcies occur) also stabilize, as
+expected, the full employment phase. Such a stabilization can also be achieved by distributing a fraction δ+ of the
+profit plus the total positive liquidity of the firms (instead of a fraction δ of the profits only), which has the obvious
+effect of supporting the demand. In fact, we find that as soon as f ≤ 0.81 or δ+ ≥ 0.25, the Endogenous Crisis
+phase disappears and is replaced by a continuous cross-over between the Residual Unemployment phase and the Full
+Employment phase (see Fig. 6).
+D. Intermediate conclusion
+The main message of the present section is that in spite of many simplifications, and across a broad range of
+parameters, the phase transition observed in Mark I as a function of the baseline interest rate is present in Mark 0
+as well. We find that these macroeconomic ABMs generically display two very different phases – high demand/low
+unemployment vs. low demand/high unemployment, with a boundary between the two that is essentially controlled
+by the asymmetry between the hiring and firing propensity of the firms (compare Figs. 2 & 3).
+Moreover, in the Mark 0 model there is an additional splitting of the low unemployment phase in several regions
+characterized by a different dynamical behaviour of the unemployment rate, depending on the level of debt firms can
+accumulatebeforebeingforcedintobankruptcy. Wefindinparticularanintermediatedebtregionwhereendogenous
+crisesappear,characterizedbyacuteunemploymentspikes. ThisEndogenousCrisisphasedisappearswhenhouseholds
+are spared from the financial load of bankruptcies and/or when capital does not accumulate within firms, but is
+transferred to households through dividends. Clearly, these different phases will coexist if the model parameters
+themselves evolve with time, which one should expect in a more realistic version of the model.
+10 region RU → EC 0.5 β = 0 10 0.4 region RU → EC
+region EC → FE 0.4 β = 4 0.3 f f = = 1 0 . . 0 9 region EC → FE
+8 u 0.3 β = 8 8 u0.2 f = 0.8
+6 0 6 0 1 2 Θ 3 4 5
+Θ 0 1 2 3 4 5 Θ
+0 2 4 6 8 10 0.8 0.85 0.9 0.95 1
+FIG. 6: Phase boundary location Θ as a function of the price sensitivity β (left) and of the debt share parameter f (right).
+Circles correspond to the location of the boundary between regions 2-RU and 3-EC while squares correspond to the boundary
+between regions 3-EC and 4-FE. In the inset of both figures we plot the average unemployment rate as a function of Θ for
+differentvaluesofβ andf. Forf ≤0.81region4-ECdisappearsandtheaveragevalueoftheunemploymentcontinuouslygoes
+to 0 without the appearance of endogenous crises. Increasing β shrinks the amplitude of region 3-EC which however remains
+finite for β (cid:29) 1. As a criterion for being in region 3-EC we require that the amplitude of the crises max(u)−min(u) stays
+above 5%. Parameters are: N =5000, R=3 (η =0.1), δ=0.02, ϕ=0.1, γ =0.05.
+We now turn to the first extension of Mark 0 allowing for a wage dynamics that lead to long term inflation or
+deflation, absent in the above version of the model. Finally, several other extensions of the model will be briefly
+discussed and presented in a separate publication.
+IV. EXTENSION OF MARK 0: WAGE UPDATE
+Asemphasizedabove,theMarkI+andMark0modelsinvestigateduptonowbothrevealagenericphasetransition
+betweena“good”anda“bad”stateoftheeconomy. However,manyfeaturesareclearlymissingtomakethesemodels
+convincing – setting up a full-blown, realistic macroeconomic Agent-Based Model is of course a long and thorny
+endeavour which is precisely what we want to avoid at this stage, focusing instead on simple mechanisms. Still, it
+is interesting to progressively enrich these simplified models not only to test for robustness of our phase diagram but
+also to investigate new effects that are of economic significance. We consider here wage dynamics, which is obviously
+an important ingredient in reality. Wage dynamics leads to some relevant effects, in particular the appearance of
+inflation. WagedynamicsisindeedanitemmissingfromboththebasicMark0andMarkImodelsconsideredabove,
+which assume fixed wages across time and across firms. Clearly, the ability to modulate the wages is complementary
+to deciding whether to hire or to fire, and should play a central role in the trajectory of the economy as well as in
+determining inflation rates.
+Introducing wages in Mark 0 again involves a number of arbitrary assumptions and choices. Here, we follow (in
+spirit)thechoicesmadeinMarkIforpriceandproductionupdate,andproposethatateachtimestepfirmiupdates
+its wage as:
+i i w i P (t) >0
+i i w i P (t) <0
+where u = 1−ε is the unemployment rate and γ a certain parameter; P (t) = min(D (t),Y (t))p (t)−W (t)Y (t)
+w i i i i i i
+is the profit of the firm at time t and ξ(cid:48)(t) an independent U[0,1] random variable. If WT(t+1) is such that the
+profit of firm i at time t with this amount of wages would have been negative, W (t+1) is chosen to be exactly at
+the equilibrium point where P =0, hence W (t+1)=min(D (t),Y (t))p (t)/Y (t); otherwise W (t+1)=WT(t+1).
+i i i i i i i i
+The above rules are intuitive: if a firm makes a profit and it has a large demand for its good, it will increase the
+pay of its workers. The pay rise is expected to be larger if unemployment is low (i.e. if ε is large) because pressure
+8 0.8 3 - EC 0
+6 1 - FU inflation 0.6 -0.2
+Θ deflation u 0 5 10
+decreasing γ
+2 3 - EC alternating inflation / deflation 0.2
+2 - RU null inflation
+0 increasing employment 0
+0 1 2 3 4 0 5 10 15
+R time / 1000
+FIG.7: (Left)PhasediagramintheR−ΘplaneoftheextendedMark0modelwithwageupdatewithγ =γ . Theparameters
+of the basic model are the same as in Fig. 4: N = 5000, c = 0.5, γ = 0.05, δ = 0.02, ϕ = 0.1, f = 1, β = 0. As for the
+basicmodel,therearefourdistinctphasesseparatedbycriticallines. WageupdatebringsininflationintheFullEmployment
+phase,anddeflationinthefullunemploymentphase. Endogenouscrisesarecharacterizedbyalternatingcyclesofinflationand
+deflation. Interestingly, we find that the location of phase boundaries is in this case almost untouched by changes in both β
+and f; the other parameters are irrelevant. Note that the wage update strongly stabilizes the full employment phase. (Right)
+Atypicaltrajectoryofu(t)foreachofthephases. Intheinset,thepricedynamicsisshown,displayinginflationanddeflation.
+on salaries is high. Conversely, if the firm makes a loss and has a low demand for its good, it will reduce the wages.
+This reduction is larger when unemployment is high because pressure on salaries is low. In all other cases, wages are
+not updated.
+When a firm is revived from bankruptcy (with probability ϕ per unit time), its wage level is set to the production
+weighted average wage of all firms in activity.
+The parameters γ allow us to simulate different price/wage update timescales. In the following we set γ =0.05
+and γ =zγ with z ∈[0,1]. The case z =0 clearly corresponds to removing completely the wage update rule, such
+that the basic version of Mark 0 is recovered. The extended version of Mark 0 that we consider below is therefore
+characterized by single additional parameter γ =zγ , describing the frequency of wage updates.
+A. Results: variable wages and the appearance of inflation
+In our money conserving toy economies17, a stationary inflation rate different from zero is possible as long as the
+ratio p(t)/W(t) fluctuates around a steady value. In absence of wage update, we have a fixed W ≡1 and inflation is
+therefore impossible. The main effect induced by wage dynamics is therefore the possibility of inflation.
+Using the wage update rules defined below, we found that the average inflation rate depends on parameters such
+as the households propensity to consume c and the price/wage adjustment parameters γ . Most interestingly, we
+observe a strong dependence of the inflation rate upon the bankruptcy threshold Θ, with large Θ’s triggering high
+inflation and low Θ’s corresponding to zero inflation. For intermediate Θ’s, periods of inflation and deflation may
+alternate and the model displays interesting instabilities.
+Wenowanalyzetheinfluenceofwageadjustmentsonthephasetransitionsdiscussedintheprevioussections. The
+phase diagram for z =1 (γ =γ ) is reported in Fig. 7. The phenomenology that we find is again very similar to the
+simple Mark 0 without wage update, except for inflation. The most interesting effect is the appearance of inflation
+in the “good” phases of the economy, and deflation in the “bad” phases, as shown in Fig. 7. When Θ (cid:29) 1, we find
+againafirstordercriticalboundaryatR=R thatseparatesahighunemploymentphase(withdeflation)fromalow
+unemployment phase (with inflation). For R>R we see again two additional phases: “EC”, with endogenous crises
+and, correspondingly, alternating periods of inflation and deflation but stable prices on the long run, and “RU”, for
+small Θ, where there is no inflation but a substantial residual unemployment rate (see Fig. 7).
+17 Recallthatthephysicalmoneyisconservedinthemodel,butvirtualmoneycreationisstillpossiblethroughfirms’indebtement.
+The appearance of endogenous crises is consistent with what discussed in section IIIB and is related to situations
+in which the debt-to-savings ratio k(t) grows faster than prices. From this point of view, increasing γ allows firms
+to better adapt wages (and thus prices) and to absorb the indebtment through inflation; region EC indeed shrinks
+when increasing γ . Note that relating the parameters γ to the flexibility of the labor and goods markets is not
+straightforward. In this sense, it would be instead useful to study the effects of asymmetric upward/downward wage
+andpriceflexibilities(forexample bydefiningdifferent γ± )inorderto understand whetherimprovingtheflexibility
+of the labor and goods markets destabilizes the economy [40–42]. If, however, one considers the ratio z = γ /γ as
+an indicator of wages flexibility (relative to prices flexibility), our results suggests that higher labor flexibility has a
+stabilizing effect.
+We also observe that the oscillatory pattern found for the basic model persists as long as γ (cid:28)γ , i.e. when wage
+updates are much less frequent that price updates. The power spectrum of the model for R > R and Θ (cid:29) 1 is
+still characterized by the appearance of a peak (roughly corresponding to a period of 7 time steps). Interestingly,
+we find that upon increasing the ratio z, the peak in the frequency spectrum disappears but not in a monotonous
+fashion;intermediatevaluesofz giverisetoevenmorepronouncedoscillationsthanforz =0,beforetheseoscillations
+disappear for z >z ≈0.25.
+In conclusion, the comparison between Figs. 7 and 4 demonstrates the robustness of our phase diagram against
+changes; introducing wages is a rather drastic modification since it allows inflation to set in, but still does not affect
+the phase transition at R , nor the overall topology of the phase diagram, which confirms its relevance. Interestingly,
+inflation is present in the good phases of the economy and deflation in the bad phases. Our analytical understanding
+of these effects is however still poor; we feel it would be important to bolster the above numerical results by solving
+simpler “toy models” as we do for the basic Mark 0 (see section V and Appendix C1).
+B. Other extensions and policy experiments
+One of the final goal of our study is to have a prototype framework where one is able to run meaningful policy
+experiments. In order to do that the model described so far is lacking a number of important ingredients, namely
+a central bank exogenously setting interest rates level and the amount of money in circulation. This is the project
+on which we are currently pursuing, with encouraging results [43]. Still, even within the simplistic framework of
+Mark 0, one can envisage an interesting prototype policy experiment which consists in allowing the “central bank”
+to temporarily increase the bankruptcy threshold Θ in times of high unemployment. Fig. 8 shows an example of
+this: the economy is, in its normal functioning mode, in the EC (region 3) of the phase diagram, with R = 2 and
+(say) Θ=2. This leads in general to a rather low unemployment rate u but, as repeatedly emphasized above, this is
+interrupted by acute endogenous crises. The central bank then decides that whenever u exceeds 10%, its monetary
+policy becomes accommodating, and amounts to raising Θ from its normal value 2 to – say – Θ = 10. As shown
+in Fig. 8, this allows the bank to partially contain the unemployment bursts. However, quite interestingly, it also
+increases the crisis frequency, as if it did not allow the economy to fully release the accumulated stress. We expect
+that this phenomenology will survive in a more realistic framework.
+We have also explored other potentially interesting extensions of Mark 0, for example adding trust or confidence,
+that may appear and disappear on time scales much shorter than the evolution time scale of any “true” economic
+factor, and can lead to market instabilities and crises (see e.g. [5, 39, 44]). There are again many ways to model the
+potentially destabilizing feedback of confidence. One of the most important channel is the loss of confidence induced
+by raising unemployment, that increases the saving propensity of households and reduces the demand. The simplest
+way to encode this in Mark 0 is to let the “c” parameter, that determines the fraction of wages and accumulated
+savings that is devoted to consumption, be an increasing function of the employment rate ε=1−u. We indeed find
+thattheconfidencefeedbackloopcanagaininducepurelyendogenousswingsofeconomicactivity. Similarly,astrong
+dependence of c on the recent inflation can induce instabilities [43].
+V. ANALYTICAL DESCRIPTION
+We attempt here to describe analytically some aspects of the dynamics of Mark 0 in its simplest version, namely
+withoutbankruptcies(Θ=∞forwhichϕandf becomeirrelevant),withβ ≥0,fixedwagesW =1,andnodividends
+(δ =0). For simplicity, we also fix µ=1 and c=1/2. The only relevant parameters are therefore β, γ and η . The
+without policy
+with policy
+policy threshold
+1000 1250 1500 1750 2000
+FIG. 8: Here we show an example of a “toy” policy experiment in the Mark 0 model without wage update (i.e γ = 0). We
+first run a simulation (the “without policy” line) with a constant value Θ=2 lying in the 3-EC region of Fig. 3. We then run
+the same simulation with a prototype central bank which increases Θ to 10 as long as u exceeds the threshold of 10%. Note
+that unemployment is partially contained, but the crisis frequency concomitantly increases. The other parameters values are:
+N =10000, R=2, γ =0.05, ϕ=0.1, δ=0.02, f =1.
+equations of motion of this very minimal model are:
+ i i + i i
+i i i i i p i
+ i i − i i
+i i i i i p i
+i i i i i i
+Here M is the total money in circulation, whose precise value is irrelevant for this discussion, and s=S/N are the
+savings per agent. Overlines denote an average over firms, which is flat for Y
+Y (t) and E
+F i i F i i
+while it is weighted by production for p, see Eq. (8). Note that the basic variables here are {p ,Y ,E }, all the other
+quantities are deduced from these ones.
+In the high employment phase, the model admits a stationary state with Y ∼1. To show this, let us focus on the
+case where γ is very small, but not exactly zero, otherwise of course the price dynamics is frozen. The stationary
+state is attained after a transient of duration ∼1/γ , and in the stationary state fluctuations between firms are very
+small in such a way that p ∼ p and Y ∼ Y. A stationary state of Eq. (19) has Y (t+1) = Y (t) and therefore
+Y = D , hence Y = D = Y. Furthermore, from E (t+1) = E (t) we deduce that p = p = 1. Finally, we have
+i i i i i i i
+D = Y = (s+Y)/2, which gives s = Y and E = M −Y. One obtains therefore a continuum of stationary states,
+because the production Y or equivalently the employment are not determined by requiring stationarity. However, we
+willshowinthefollowingthattheseequilibriabecomeunstableassoonasfluctuationsaretakenintoaccount(γ >0).
+We will see that fluctuations can induce either an exponentially fast decrease of Y towards zero (corresponding to
+the full unemployment phase), or an exponentially fast grow of Y, which is therefore only cutoff by the requirement
+Y ≤ µ = 1, corresponding to full employment. It is therefore natural to choose the stationary state with Y = 1 as
+a reference, and study the effect of fluctuations around this state. We therefore consider the stationary state with
+Y =D =p =1, and E =M −1 in such a way that s=Y =1.
+For analytical purposes, we will focus below on the limit in which η ,γ → 0, in such a way that we can expand
+around the high employment stationary state and obtain results for the phase transition point. Numerically, the fact
+that γ and/or η are small does not change the qualitative behavior of the model.
+In order to consider small fluctuations around the high employment stationary state, we define the following
+variables:
+Note that in the following, overlines over ζ,α,λ always denote flat averages over firms. Using p (t) = 1+γ λ (t)+
+(γ λ (t))2/2 for γ →0, one finds that, to order γ2:
+e−βpi(t) 1 (cid:20) (cid:21)
+Z(t) p i 2 p i i
+Since we will find later that λ(t) is itself of order γ , we will drop the part of the last term in the above expression,
+which is O(γ3), i.e.
+e−βpi(t) 1
+Z(t) p i 2 p i
+A. Stability of the high employment phase
+To study the stability of the high employment phase, we make two further simplifications.
+1. We neglect the fluctuations of the savings and fix α ≡0. This is justified if the employment rate varies slowly
+overthetimescaleτ =−1/ln(1−c)thatcharacterizesthedynamicsofthesavings. But,asweshallshowbelow,
+the dynamics of employment becomes very slow in the vicinity of the phase transition, hence this assumption
+seems justified.
+2. In order to proceed analytically, we also consider the limit η ,η → 0 with η = Rη and R of order one.
+In fact, we will even assume below that η (cid:28) γ . Then, it is not difficult to see that ζ is a random variable
+of order η and is therefore also very small. We define ζ = η z . We believe that these approximations are
+actually quite accurate, as is confirmed by the comparison of the theoretical transition line with numerical data
+(see Fig. 3).
+With these further simplifications (i.e. setting α =0 and assuming that γ , η are small and z =O(1)), we have,
+together with Eq. (20):
+i p i i 2 p i p + p
+p 2 p p + p
+If, as announced above we further assume that η (cid:28)γ , it is justified to keep the terms of order γ2 while neglecting
+the terms of order γ η and γ3.
+We also note that if |λ | is bounded by a quantity of order 1 (which we will find below), then the condition
+i i 2 p i i i
+If λ (t)< λ(t) ⇒ i i i i 2 p i
+i i i 2 p i
+If λ (t)> λ(t) ⇒ i i R i i 2 p i
+i i i 2 p i
+where βˆ = 1+β +β2. Therefore, in this limit, the evolution of λ decouples from that of ζ (or z). Note that from
+1+β p 1+β p min max
+From the simplified evolution equation Eq. 24 we now obtain the evolution of the probability distribution P (λ)
+and for z(t), which are by definition:
+t+1 t 2 t 2
+R t 2 p t 2 p
+Since the dynamics of λ is decoupled from the one of z, we can assume that P (λ) reaches a stationary state. In
+Appendix C1 we show that, at first order in γ , we have for the stationary distribution
+(cid:18) (cid:19)
+Hence,usingtheconditionP (λ)≥0wefindthat|λ|≤1+O(γ ),consistentlywiththeassumptionswemadeabove.
+From this result, we also find that λ=−γ (1+β)/4.
+Note that the average price here decreases as β increases, confirming the discussion in Section IIIC2. Indeed, we
+have neglected the fluctuations of S in the above calculation, while, as explained in Section IIIC2, it is the increase
+of involuntary savings (and thus of S) with β that leads to the average price increase. As a further confirmation, one
+can easily simulate Eqs. (24) with α (cid:54)=0, and find dλ/dβ >0 in this case.
+Let us now discuss the dynamics of z(t). If at some time t we have z(t) = 0, then it is clear from Eq. (26) that
+z(t) will grow with time, and it will continue to do so unless the last term in the equation becomes sufficiently large.
+Recalling that |λ| ≤ 1+O(γ ), it is clear that even if z(t) becomes very large, the last term in Eq. (26) can be at
+most given by (cid:82)0 dλP (λ) (cid:0) −λ−β(λ−λ)+ 1γ λ2(cid:1) . Therefore, if
+1 (cid:90) λmax (cid:18) 1 (cid:19) (cid:90) −γpβ/4 (cid:18) 1 (cid:19)
+R st 2 p st 2 p
+then z(t) will continue to grow with time, and Y(t) = 1−γ η z(t) will become very small and the economy will
+collapse. Conversely, if the condition in Eq. (28) is not satisfied, then Eq. (26) admits a stationary solution with
+0<z <∞. Using Eq. (27), the critical boundary line finally reads:18
+(cid:16) (cid:17)
+λmin st 2 p
+where we used the condition γ < 4/(β +2) which is always verified for 0 < β < +∞ and γ → 0. As one can see
+in Fig. 3 this results is in good agreement with numerical result for β = 2. We therefore find, interestingly, that
+increasing β decreases the value of R , i.e. stabilizes the high employment phase, as indeed discussed above, see Fig.
+4 and the discussion around it.
+In other words, the ζ perform a biased random walk, in presence of a noise whose average is given by the last
+two terms in Eq. (26) (of course, when ζ is too small the minimum in the last term is important, because it is
+there to prevent ζ from becoming negative). The system will evolve towards full employment, with ζ = O(η ) and
+Y =1−O(γ η ),whenevertheaveragenoiseisnegative,andtofullcollapse,withζ →∞andY =0,otherwise. The
+critical line is given by the equality condition, such that the average noise vanishes. Therefore, right at the critical
+point, the unemployment rate makes an unbiased random walk in time, meaning that its temporal fluctuations are
+large and slow. This justifies the “adiabatic” approximation19 made above, that lead us to neglect the dynamics of
+the savings.
+18 Itwouldbeinterestingtocomputethefirstnontrivialcorrectionsinη tothetransitionline. Weleavethisforalaterstudy.
+19 This refers, in physics, to a situation where a system is driven by an infinitely slow process. One can then consider the system to be
+alwaysclosetoequilibriumduringtheprocess.
+B. Oscillations in the high employment phase
+Asdiscussedabove,intheFEphasemacroeconomicvariablesdisplayanoscillatorydynamics,seeFig.5. Intuitively,
+themechanismbehindtheseoscillationsisthefollowing. Whenpricesarelow, demandishigherthanproductionand
+firms increase the prices. But at the same time, households cannot consume what they demand, so they involuntarily
+save: savings increase when prices are low. These savings keep the demand high for a few rounds even while prices
+are increasing, therefore prices keep increasing above their equilibrium value. When prices are too high, households
+need to use their savings to consume, and therefore savings start to fall. Increase of prices and decrease of savings
+determine a contraction of the demand. At some point demand falls below production and prices start to decrease
+again, with savings decreasing at the same time. When prices are low enough, demand becomes again higher then
+production and the cycle is restarted. An example is shown in Fig. 5.
+Based on this argument, it is clear that to study these oscillations, we need to take into account the dynamics of
+the savings so we cannot assume α = 0 as in the previous section. However, here it is enough to consider the first
+order terms in γ . In terms of the basic variables in Eq. (20), the other variables that appear in Eq. (19) are easily
+written as follows:
+where for ζ,α,λ, overlines denote flat averages over firms, and
+(cid:18) (cid:19)
+Inserting this in Eq. (19), we arrive to the following equations that hold at the lowest order in γ :
+1 1  i i + 2 2 i i
+i 2 2 i i i i i
+1 1  i i − 2 2 i i
+i 2 2 i i i i i
+From an analytical point of view, the above model is still to complex to make progress. We make therefore a further
+simplification, by assuming that
+where C is a certain numerical constant. In terms of the original Mark 0 variables, this approximation is equivalent
+to, roughly speaking,
+i.e. fluctuations of the prices are proportional to supply-demand gaps. Although numerical simulations only show
+a weak correlation, the approximation (33) allows us to obtain a more tractable model that retains the basic phe-
+nomenology of the oscillatory cycles and reads:
+This very minimal model, when simulated numerically, indeed gives persistent oscillations, independent on N, when
+C >C∗ ≈0.45, and can also be partially investigated analytically, see Appendix C1.
+C. The “representative firm” approximation
+To conclude this section, we observe that there is a further simplification that allows one to retain some of the
+phenomenology of Mark 0. It consists in describing the firm sector by a unique “representative firm”, N = 1, with
+production Y(t), price p(t) and demand Y(t)/p(t). The dynamics of the production and price are given by the same
+rule as above, but now the dynamics of the price completely decouples:
+Ofcourse,thissimplemodelmissesseveralimportanteffects: mostnotablythoseassociatedtoΘ,hencethetransition
+between the Full Employment, Endogenous Crises, and Residual Unemployment phases in Fig. 4. In particular,
+endogenous crises are never present in this case, because of the absence of a bankrupt/revival mechanism, and also
+the oscillatory pattern in the Full Employment phase disappears, because in this model savings are not considered.
+Still, this model is able to capture the transition between the Full Unemployment and Full Employment regions as
+a function of R (see Fig. 4), as confirmed by the analytical solution, which is in fact identical to the one of the
+model with N > 1 when β = 0 and η is small. And since the model is so simple, one can hope that some of the
+extensions discussed in the previous section can be at least partly understood analytically within this “representative
+firm” framework (we will give a few explicit. This would be an important step to put the rich phenomenology that
+we observe on a firmer basis.
+VI. SUMMARY, CONCLUSION
+The aim of our work (which is part of the CRISIS project and still ongoing) was to explore the possible types of
+phenomena that simple macroeconomic Agent-Based Models can reproduce, and to map out the corresponding phase
+diagram of these models, as Figs. 7 and 4 exemplify. The precise motivation for our study was to understand in
+detail the nature of the macro-economic fluctuations observed in the “Mark I” model devised by D. Delli Gatti and
+collaborators [25, 26]. One of our central findings is the generic existence, in Mark I (and variations around that
+model) of a first order, discontinuous phase transition between a “good economy” where unemployment is low, and
+a “bad economy” where unemployment is high. By studying a simpler hybrid model (Mark 0), where the household
+sector is described by aggregate variables and not at the level of agents20, we have argued that this transition is
+induced by an asymmetry between the rate of hiring and the rate of firing of the firms. This asymmetry can have
+many causes at the micro-level, for example different hiring and firing costs. In Mark I, for example, it reflects the
+reluctance of firms to take loans when the interest rate is too high. As the interest rate increases, the unemployment
+level remains small until a tipping point beyond which the economy suddenly collapses. If the parameters are such
+thatthesystemisclosetothistransition,anysmallfluctuations(forexampleinthelevelofinterestrates)isamplified
+as the system jumps between the two equilibria. It is actually possible that the central bank policy (absent in our
+current model), when attempting to stabilize the economy, in fact bring the system close to this transition. Indeed,
+toolowaninterestrateleadstooverheatingandinflation, andtoohighaninterestrateleadstolargeunemployment.
+The task of the central bank is therefore to control the system in the vicinity of an instability and could therefore be
+a natural realization of the enticing ‘self-organized criticality’ scenario recently proposed in [46] (see also [19]).
+Mark0issimpleenoughtobepartlyamenabletoanalytictreatments, thatallowustocomputeapproximatelythe
+location of the transition line as a function of the hiring/firing propensity of firms, and characterize the oscillations
+and the crises that are observed. Mark 0 can furthermore be extended in several natural directions. One is to allow
+this hiring/firing propensity to depend on the financial fragility of firms – hiring more when firms are financially
+healthy and firing more when they are close to bankruptcy. We find that in this case, the above transition survives
+but becomes second order. As the transition is approached, unemployment fluctuations become larger and larger,
+and the corresponding correlation time becomes infinite, leading to very low frequency fluctuations. There again, we
+are able to give some analytical arguments to locate the transition line [43]. Other stabilizing mechanisms, such as
+20 Forarecentstudyexploringtheideaofhybridmodels,see[45].
+the bankruptcy of indebted firms and their replacement by healthy firms (financed by the accumulated savings of
+households), lead to a similar phenomenology.
+TheroleofthebankruptcythresholdΘ,whichistheonly“proto-monetary”effectinMark0,turnsouttobecrucial
+in the model, and leads to the phase diagram shown in Fig. 4. We generically find not one but three “good” phases
+of the economy: one is where full employment prevails (FE), the second one is where some residual unemployment is
+present (RU), and the third, intermediate one is prone to acute endogenous crises (EC), during which the unemploy-
+ment rate shoots up before the economy recovers. Note again that there are no exogeneous productivity shocks in
+Mark 0; interestingly, crises (when they occur) are of endogeneous origin and not as a result of sweeping parameters
+through a phase transition (as is the case, we argued, of Mark I with a time dependent interest rate) but purely as a
+result of the own dynamics of the system. The existence of endogenous crises driven by feedback loops in such simple
+settings is quite interesting from a general standpoint (see also [29, 31]), and reinforces the idea that many economic
+and financial crises may not require large exogenous shocks (see [5, 6, 26, 47, 50–54] for related discussions). We
+have shown that the endogenous crises can be defanged (in the model) if the household sector does not carry the full
+burden of firms bankruptcies and/or when the profits of firms is efficiently re-injected in the economy (see e.g. Fig.
+6).
+Wehavethenallowedfirmstovarythewagesoftheiremployeesaccordingtosomeplausiblerulesofthumb(wages
+inMarkIandMark0arefixed); thisleadstoinflationordeflationbutleavestheabovepictureessentiallyunchanged
+(see Fig. 7). Several other extensions are of obvious interest, and we plan to study them in the near future in the
+same stylized way as above. The most obvious ones is to understand how a central bank that prints money and sets
+exogenously the interest rate can control the unemployment rate and the inflation rate in the vicinity of an unstable
+point,aswementionedjustabove[43]. Otherinterestingtopicsare: modelingresearchandinnovation,allowingfirms
+to produce different types of goods, and introducing a financial sector and a housing market [55].
+Beyond the generic phase diagram discussed in the whole paper, we found another notable, robust feature: the low
+unemployment phase of all the ABMs we considered are characterized by endogenous oscillations that do not vanish
+as the system size becomes large, with a period corresponding, in real time, to ∼5−10 years [31]. It is tempting to
+interpret these oscillations as real and corresponding to the “business cycle”, as they arise from a very plausible loop
+between prices, demand and savings. These oscillations actually also appear in highly simplified models, where both
+the household and the firm sectors are represented by aggregate variables [37, 56], as well as in network models [6].
+Building upon this last remark, a very important question, it seems to us, is how much can be understood of the
+phenomenologyofABMsusing“mean-field”approaches[58,59],i.e. dynamicalequationsforaggregatevariablesofthe
+type considered, for example, in [37, 38]? A preliminary analysis reveals that the dynamical equations corresponding
+to Mark 0 or Mark I already lead to an amazingly complex phase-diagram [56]. Are these mean-field descriptions
+quantitatively accurate? When do we really need agents and when is an aggregate description sufficient? The answer
+to this question is quite important, since it would allow one to devise faithful “hybrid” ABMs, where whole sectors
+of the economy would be effectively described in terms of these aggregate variables, only keeping agents where they
+are most needed.
+AnothernaggingquestionconcernsthecalibrationofmacroeconomicABMs. Itseemstousthatbeforeattempting
+anykindofquantitativecalibration,exploringandmakingacatalogueofthedifferentpossiblequalitative“phases”of
+the model is mandatory. Is the model qualitatively plausible or is the dynamics clearly unrealistic? In what “phase”
+is the true economy likely to be? On this point, one of the surprise of the present study is the appearance of very
+long time scales. For example, even in the case of perfectly stable economy with wage update rule (18) and all γ
+parameters equal to 10% (a rather large value), the equilibrium state of the economy (starting from an arbitrary
+initial condition) is only reached after ≈200 time steps. If one thinks that the elementary time scale in these models
+is of the order of three months, this means that the physical equilibration time of the economy is 20-50 years, or even
+much longer, see e.g. Figs. 4 & 7. But there is no reason to believe that on these long periods all the micro-rules
+and their associated parameters are stable in time. Therefore, studying the stationary state of macroeconomic ABMs
+might be completely irrelevant to understand the real economy. The economy could be in a perpetual transient state
+(aka “non ergodic”), unless one is able to endogenise the time evolution of all the relevant parameters governing its
+evolution (see the conclusion of [13] for a related discussion).
+Ifthisisthecase,isthereanyuseinstudyingABMsatall? WestronglybelievethatABMswouldstillbegenuinely
+helpful. ABMs allow us to experiment and scan the universe of possible outcomes – not missing important scenarios
+is already very good macroeconomics. Human imagination turns out to be very limited, and that is the reason we
+like models and equations, that help us guessing what can happen, especially in the presence of collective effects that
+are often very counterintuitive. In this respect, ABMs provide extremely valuable tools for generating scenarios, that
+can be used to test the effect of policy decisions (see e.g. the pleas by Buchanan [21], and Farmer & Foley [22]). In
+order to become more quantitative, we think that ABMs will have to be calibrated at the micro-level, using detailed
+behavioural experiments and field studies to fine tune all the micro-rules needed to build the economy from bottom
+up (see [55, 57] for work in this direction.) Calibrating on historical data the emergent macro-dynamics of ABMs
+will most probably fail, because of the dimensionality curse and of the Lucas critique (i.e. the feedback between the
+trajectory of the economy and policy decisions that dynamically change the parameters of the model).
+Acknowledgements
+This work was partially financed by the CRISIS project. We want to thank all the members of CRISIS for most
+useful discussions, in particular during the CRISIS meetings. The input and comments of P. Aliferis, T. Assenza,
+J. Batista, E. Beinhocker, M. Buchanan, D. Challet, D. Delli Gatti, D. Farmer, J. Grazzini, C. Hommes, F. Lillo,
+G. Tedeschi, S. Battiston, A. Kirman, A. Mandel, M. Marsili and A. Roventini are warmly acknowledged. We
+are especially grateful to F. Altarelli and G. Cencetti for a careful critical reading of the manuscript and for their
+suggestions. The comments and criticisms of the referees were also useful to improve the manuscript. Finally, J.P.B.
+wants to thank J.C. Trichet for his warm support for this type of research when he was president of the ECB.
+Appendix A: Pseudo-code for Mark I+
+We describe here the pseudo-code of our version of Mark I, which we call Mark I+. To keep the length reasonable,
+afewirrelevantdetailswillbeomitted,buttheinformationgivenhereisenoughtoreproducetheresultspresentedin
+thepaper. Inparticular,wedescribehereonlythepartofthecodethatisneededtogeneratethedynamicalevolution
+of the model, and we omit the part that is needed to generate the data output. The source code is available on the
+site of the CRISIS project (www.crisis-economics.eu).
+1. Notations
+Wedescribethealgorithminanobject-orientedfashion, wherethedifferentagentsaredescribedasrepresentatives
+of a few classes. We use an object oriented syntax. This syntax should be very intuitive and easy to follow. However,
+it is useful to clarify a few notational conventions:
+• The declaration of a variable a (for example of integer type int) will be written in C syntax as int a.
+• If a is an object of some class, then a.f(x) means that we are calling the method (function) f(x) of object a
+with argument x.
+• For simplicity, in the for loops we will use the C syntax where, for example, for(t←1;t≤T;t←t+1) means
+that t is set to one before the loop starts, t is increased by 1 at the end of each iteration, and the loop continues
+if the condition t≤T is true.
+• Instead of arrays we will use vectors of objects, and we will follow the notation of C++21. For example,
+vector<int> will denote an ordered set (array) of integers. Moreover:
+– A vector of size N will be declared as vector<int> A(N), and by default the declaration vector<int>
+A means that the set A is initiated as empty.
+– |A| will denote the size of the set A
+– The notation A[i] will denote the i-th element of the set (with i=0,··· ,|A|−1).
+– The notation A ← a will denote the operation of adding the element a to the set A, therefore increasing
+its size by one (this correspond to the “push back” operation in C++).
+– The notation a ← A will denote the extraction of a random element from A, which is set equal to a.
+Note that the element is not removed from A so the size of A remains constant. The notation A(cid:48) ← A
+denotes extraction at random of M different elements from the set A, that constitute the set A(cid:48).
+– The notation A (cid:54)→ a will denote the removal of element a from set A, therefore reducing the size of A by
+one.
+– To denote an ordered iteration over an ordered set A, we will use a loop for(a∈A).
+– We define a function average(a.f(), a ∈ A) that returns the average of the |A| numbers a[i].f(), i =
+• For logical operators, we use the C++ convention22 which should be quite transparent.
+2. Classes
+The classes are:
+• Household
+The role of the bank is very limited at this level and this class is mainly included for the purpose of future extension.
+Onehouseholdhasaspecialroleasitisthe“owner”ofthefirms,whichwillpaydividendstothisonehousehold. The
+main loop is described in Algorithm 1 below. The implementation of the firm class is in Algorithm 3, the household
+class in Algorithm 6 and the bank class in Algorithm 7.
+Algorithm 1 Main loop of Mark I+
+Require: N Number of firms; N Number of households; ρ baseline interest rate; T total evolution time;
+(cid:46) Initialisation
+vector<household> H(N )
+household O (cid:46) The owner of all firms
+vector<firm> F(N )
+p←1 (cid:46) Average price
+for f ∈F do
+f.set owner(O)
+(cid:46) Main loop
+for (t←1;t≤T;t←t+1) do
+vector<firm> E,D
+for f ∈F do (cid:46) Firm decide new strategy on prices and production
+f.set new strategy(p)
+f.get loans(B)
+f.compute interests()
+f.define labor demand()
+if f.n vacancies() > 0 then D←f (cid:46) Firms in D demand workforce
+else if f.n vacancies() < 0 then E ←f (cid:46) Firms in E have an excess of workforce
+for f ∈E do (cid:46) Job market and production
+while f.n vacancies() < 0 do f.fire random worker() (cid:46) Firms with excess workforce fire random workers
+vector<household> U
+for h∈H do
+if !h.working() then U ←h (cid:46) U is the set of unemployed households
+while |U|>0 && |D|>0 do (cid:46) Random match of unemployed households and demanding firms
+U (cid:54)→h
+if f.n vacancies()==0 then D(cid:54)→f
+Algorithm 2 Main loop of Mark I+ (continued)
+for f ∈F do (cid:46) Firms produce and pay workers
+f.produce()
+f.pay workers()
+if f.age()<100 then f.markup rule() (cid:46) Young firms apply a markup rule to avoid bankrupt
+(cid:46) Goods market
+H ←random permutation(H)
+for h∈H do h.consume(F) (cid:46) Consume in random order
+(cid:46) Accounting and bankrupts
+bad debts ←0
+vector<firm> L
+for f ∈F do
+f.accounting(B)
+if f.liquidity() < 0 then (cid:46) Firms with negative liquidity go bankrupt
+bad debts ← bad debts + f.liquidity() (cid:46) Note: bad debts is negative!
+L←f (cid:46) L is the sent of bankrupt firms
+else L←f (cid:46) L is the set of healthy firms
+if |L|==0 then break (cid:46) If all firms are bankrupt, exit the program
+p ← average(f[i].price(), f ∈L)
+Y ← average(f[i].target production(), f ∈L)
+Y ← average (f[i].production(), f ∈L)
+for f ∈L do f.reinit(p ,Y ,Y) (cid:46) Bankrupt firms are reinitialized with the average parameters of healthy firms
+total liquidity ←
+(cid:80)NF
+(cid:80)NH
+for f ∈F do f.get money(bad debts * f[i].equity() / total liquidity)
+for h∈H do h.get money(bad debts * h[i].wealth() / total liquidity)
+end for (cid:46) Bad debt is spread over firms and households proportionally to their wealth
+(cid:46) Update average price
+Algorithm 3 The class firm
+Parameters : W =1, α=1, γ =0.1, γ =0.1, µ=0, δ=0.2, τ =0.05
+Dynamic variables : vector<household> E; household O;p,Y,YT,D,L,v,DT,t
+Dynamic variables (auxiliary): L ,ρ,I
+(cid:46) Initialization methods
+function init
+E ←empty (cid:46) The set E is the list of employees and is initialized as empty
+p←1 (cid:46) Price
+Y ←1 (cid:46) Production
+YT ←1 (cid:46) Target production
+D←1 (cid:46) Demand
+L←50 (cid:46) Liquidity
+v←0 (cid:46) Number of vacancies
+DT ←0 (cid:46) Total debt
+t←0 (cid:46) Internal clock
+end function
+function set owner(household O(cid:101))
+O←O(cid:101)
+end function
+function reinit(p
+,Y(cid:101)T,Y(cid:101))
+Y ←Y(cid:101)
+YT ←Y(cid:101)T
+L←min{O.wealth(), Y/α} (cid:46) The owner injects money to restart the bankrupt firm
+O.get money(-L)
+for h∈E do
+end function
+(cid:46) Output methods
+function price
+end function
+function production
+end function
+function stock
+return Y −D
+end function
+function sales
+end function
+function target production
+end function
+function equity
+return L−DT
+end function
+function liquidity
+end function
+function n vacancies
+end function
+Algorithm 4 The class firm (continued)
+function age
+end function
+(cid:46) Accounting methods
+function get money(m)
+end function
+function get loans(bank B(cid:101))
+L ←WL −L (cid:46) Financial need
+if L >0 then
+(cid:96)←(DT +L )/(L+0.001) (cid:46) This is the leverage
+←B(cid:101).compute offer rate((cid:96)) (cid:46) New offered interest rate
+Dc ←L F(ρ ) (cid:46) The function F(ρ) can be whatever decreasing function of ρ, see Eq. (4)
+if Dc >0 then
+ρ←ρ (cid:46) If new credit is contracted, the interest rate is updated
+DT ←DT +Dc (cid:46) Total debt is increased by current debt Dc
+B(cid:101).get money(-Dc)
+end function
+function compute interests
+I ←ρDT (cid:46) Interests to be paid in this round
+end function
+function pay workers
+for h∈E do
+h.get money(W)
+end function
+function markup rule
+if Y >0 then
+p←max{p,p }
+end function
+function accounting(bank B(cid:101))
+L←L−I−τDT (cid:46) Firm pays interests and repays a fraction τ of its debt
+B(cid:101).get money(I+τDT)
+P ←pD−W|E|−I (cid:46) Profit
+if P >0 then
+O.get money(δP) (cid:46) Firm pays dividends to the owner
+end function
+function sell(q)
+end function
+Algorithm 5 The class firm (continued)
+(cid:46) Production and job market methods
+function set new strategy(p)
+if Y =D && p≥p then YT ←Y(1+γ random) (cid:46) This is Eq. (1) in the main text
+(cid:101) y
+else if Y =D && p<p then p←p(1+γ random)
+(cid:101) p
+else if Y >D && p≥p then p←p(1−γ random)
+(cid:101) p
+else if Y >D && p<p then YT ←Y(1−γ random)
+(cid:101) y
+end function
+function define labor demand
+L ←min{L ,floor(L/W)}
+L ←max{L ,0}
+end function
+function produce
+D=0 (cid:46) The demand is reset to zero at each production cycle
+end function
+function hire(household h)
+h.get job(W)
+end function
+function fire(household h)
+h.lose job()
+E (cid:54)→h
+end function
+function fire random worker
+if |E|>0 then
+end function
+Algorithm 6 The class household
+Parameters : M =3, c=0.8
+Dynamic variables : S, W
+(cid:46) Initialization methods
+function init
+S ←0 (cid:46) Savings
+W ←0 (cid:46) Salary
+end function
+(cid:46) Accounting methods
+function get money(m)
+end function
+(cid:46) Output methods
+function wealth
+end function
+function working
+if W >0 then return True
+elsereturn False
+end function
+(cid:46) Job and goods market methods
+function get job(W(cid:102))
+W ←W(cid:102)
+end function
+function lose job
+end function
+function consume( vector<firm> F(cid:101) )
+budget ←cS
+if budget >0 then
+F(cid:101) (cid:46) Extract M random firms from F(cid:101) and put them in the set F
+F ← sort(f ∈F , f.price()) (cid:46) Order the set F according to firms’ prices
+for (i←0;i<|F | && spent<budget;i←i+1) do
+s←f[i].stock() (cid:46) s is the stock available from this firm
+if s>0 then
+q← (budget - spent)/f[i].price() (cid:46) Maximum possible consumption from this firm
+if s>q then
+spent ← budget (cid:46) The household has finished the budget, the loop ends
+spent ← spent +sf[i].price()
+S ←S−spent
+end function
+Algorithm 7 The class bank
+Dynamic variables : E, ρ
+function init
+E ←0 (cid:46) Bank liquidity
+ρ ←0 (cid:46) Baseline interest rate
+end function
+function set ρ(ρ)
+b (cid:101)
+end function
+function compute offer rate((cid:96)(cid:101))
+G((cid:96)(cid:101)) (cid:46) We chose G((cid:96))=1+log(1+(cid:96))
+end function
+function get money(m)
+end function
+Appendix B: Pseudo-code of Mark 0
+We present here the pseudo-code for the Mark 0 model discussed in Sec. IIIA and in Sec. IV. The source code is
+available on the site of the CRISIS project (www.crisis-economics.eu).
+Algorithm 8 The basic Mark 0
+Require: N Number of firms; µ,c,β,γ ,η0,η0,δ,Θ,ϕ,f; T total evolution time;
+(cid:46) Initialization
+for (i←0;i<N ;i←i+1) do
+W[i]←1 (cid:46) Salaries are always fixed to one
+Y[i]←µ[1+0.2(random−0.5)]/2 (cid:46) Initial employment is 0.5
+(cid:46) Main loop
+for (t←1;t≤T;t←t+1) do
+u←1− 1 (cid:80) Y[i]
+(cid:46) Firms update prices, productions and wages
+for (i←0;i<N ;i←i+1) do
+if a[i]==1 then
+if Y[i]<D[i] then (cid:46) Wage update
+if P[i]>0 then
+end if (cid:46) This is Eq. (11) in the main text
+else if Y[i]>D[i] then
+if P[i]<0 then
+u←1− 1 (cid:80) Y[i] (cid:46) Update u and p
+p← (cid:80) (cid:80)ip
+Algorithm 9 The basic Mark0 (continued)
+(cid:46) Households decide the demand
+for (i←0;i<N ;i←i+1) do
+D[i]← Ca[i]exp(−βp[i]/p) (cid:46) Inactive firms have no demand
+(cid:46) Accounting
+for (i←0;i<N ;i←i+1) do
+if a[i]==1 then
+if P[i]>0 && E[i]>0 then (cid:46) Pay dividends
+S ←S+δP[i]
+if E[i]>ΘW[i]Y[i] then (cid:46) Set of healthy firms
+(cid:46) Defaults
+deficit =0
+for (i←0;i<N ;i←i+1) do
+if random <1−f && E[j]>−E[i] then (cid:46) Bailed out
+else (cid:46) Bankrupted
+deficit ← deficit −E[i]
+(cid:46) Revivals
+for (i←0;i<N ;i←i+1) do
+if a[i]==0 && random <ϕ then (cid:46) Reactivate firm
+deficit ← deficit +E[i]
+if a[i]==1 && E[i]>0 then (cid:46) Firms total savings
+(cid:46) Debt
+if deficit >S then (cid:46) Households cannot be indebted
+deficit ← deficit −S
+for (i←0;i<N ;i←i+1) do
+S ←S− deficit
+Appendix C: Perturbative solution of the schematic model
+1. Stationary distribution at first order in γ
+From Eq. (25), the stationary distribution P (λ) satisfies
+(cid:90) 1 (cid:90) ∞ (cid:16) γ (cid:17) (cid:90) 1 (cid:90) 0 (cid:16) γ (cid:17)
+st st 2 st 2
+We recall that the dynamics of λ (t) is
+i i i i 2 p i (C2)
+i i i i 2 p i
+withξ (t)arandomvariablein[0,1]. Fromtheseequationsitisclearthatpositiveandnegativeλ arepushedtowards
+the origin, and after some transient time one necessarily has
+We first set γ =0 and therefore restrict λ∈[−1,1] in Eq. (C1). We obtain
+st st st 0 st
+where we call L the linear operator that appears on the right hand side. When one computes the action of L on
+the functions g (λ)=sign(λ)λn and h (λ)=λn, one finds, for λ>0:
+with Ck the binomial coefficients and Dk = (cid:80)n Ck, and
+Let us focus on small values of n, useful in the following:
+n=0 → L g =0 , L h =2(h −g ) ,
+0 0 0 0 0 1
+n=1 → L g =1−g , L h =−g +h , (C7)
+0 1 1 0 1 2 1
+n=2 → L g =h −g , L h = (h −g )+h −g .
+0 2 1 2 0 2 3 0 3 2 1
+In particular, one has:
+0 0 1 0 1 1 0 1
+This shows that P (λ)=h (λ)−g (λ)=1−|λ| (called the “tent”) is an eigenvector of L with eigenvalue 1, i.e. this
+is the stationary state for γ =0.
+This basic solution allows us to obtain perturbatevely the stationary solution for small γ . Recalling that the
+support of P (λ) is given by Eq. (C3), Eq. (C1) can be written as
+(cid:90) a+ 1 (cid:90) b+ 1
+st st 2 p st 2 p γp st
+with:
+(cid:110) γ (cid:111) (cid:110) γ (cid:111)
+(cid:110) γ (cid:111) (cid:110) γ (cid:111)
+these integration bounds coming from the combination of the support in Eq. (C3) and the integration bounds on λ(cid:48)
+in Eq. (C1). Writing P =P +γ P where P is the tent solution, and L =L +γ L , we obtain at first order in
+st 0 p 1 0 γp 0 p 1
+γ an equation of the form:
+The source term S can be most easily computed by computing L P and expanding the result at first order in γ .
+We find S = λ/2−sign(λ)λ2 = 1h −g . This is nice because one can look for a solution involving only n = 1 and
+n=2 that closes the equation:
+Using: L g =h −g =L h , one finds:
+0 2 1 2 0 1
+0 1 1 2 1 2 1 2 2 1 2
+so the result for the coefficients is
+The final solution for the stationary state to first order in γ is:
+Note that P is still normalized, as it should and goes to zero (to first order in γ ) at the boundary of the support
+interval given in Eq. (C3).
+2. Perturbative analysis of the oscillations
+In order to understand oscillations, we start from Eqs. (35) and in the following we assume that 0 < C < 1. We
+The master equation for the distribution of λ reads:
+(cid:90) Λ(t) (cid:90) 1 (cid:90) Ω(t) (cid:90) ∞ (cid:90) 1
+(cid:90) Λ(t) (cid:90) 1 (cid:90) ∞ (cid:90) 1
+while the evolution equation for α is
+(cid:90) ∞ 1
+a. Stationary state
+Numerically, we observe that Λ(t)∼Ω(t) and their variations are much smaller than the width of the distributions
+of λ and α. In the limit where
+α(t)−Cλ(t)
+(cid:90) Λ(t) (cid:90) 1 (cid:90) ∞ (cid:90) 1
+whose stationary solution is P(λ) = P [λ − λ ] where P (x) = (1 − |x|)θ(1 − |x|) is the tent function, with λ
+undetermined at this stage. Plugging this result in Eq. (C18), we have
+The fixed point is therefore λ ∗ = 1−C and from the condition (C19) we get α∗ =(2−C)λ ∗ =(2−C)(1−C)/6.
+b. Oscillation around the stationary state – a simple approximation
+In order to study the small oscillations we can make a very simple approximation, namely that at each time t we
+have P (λ) = P [λ−λ¯(t)]. If we inject this approximation in Eq. (C18) we get, provided λ¯(t)−λ¯∗ is not too large,
+(cid:90) ∞
+Next, injecting this approximation in Eq. (C17) we get
+(cid:90) ∞
+Ω(t)−λ¯(t)
+(cid:20) (cid:21)
+We therefore get a closed system of two equations for λ¯(t) and α¯(t). For small C, this system of equations converges
+quickly to the fixed point. However, for C sufficiently close to 1 (C ∼ 0.94) it has a limit cycle of period 2, followed
+by an exponential divergence.
+c. Oscillation around the stationary state – perturbative computation
+Another strategy to characterize the oscillations is to look again for a perturbed solution around the stationary
+now P (λ) = P (λ− 1−C)+δP (λ− 1−C). The shifted variable λ− 1−C will be denoted x. The aim is to write an
+t 0 6 t 6 6
+evolution for δP after one time step. The L operator is the same as before, as well as the set of functions g and
+h . We also introduce ∆(x) as a δ-function slightly spread out, but of unit area (its precise width is irrelevant if it is
+small enough).
+To lowest order, one has:
+L ∆≈ h . (C24)
+We will also need, as found above:
+L h =2(h −g ), L g =0, L g =h −g . (C25)
+0 0 0 1 0 0 0 1 0 1
+We now introduce d=|δλ −δλ | and s=δλ +δλ . Assuming d,s(cid:28)1, one finds, to first order:
+δP =L δP − d h + s g +d ∆ (C26)
+t+1 0 t 2 t 0 2 t 0 t
+Note that the integral [δP] = dxδP(x) is zero and conserved in time, as it should be (one has [h ] = 2, [g ] = 0
+The idea now is to expand δP in terms of the h,g functions. It turns out that only three of them are needed, plus
+the ∆ contribution. Indeed, assume:
+t t 0 t 0 t 1 2 0
+Then, using the dynamical equation and the algebra above, one finds:
+0 t t 0 1 0 t 1 2 0
+Hence, the evolution is closed on itself, with the following evolution rules:
+A =− d , B = s , C =−2A . (C29)
+t+1 2 t t+1 2 t t+1 t
+t t 2 t−1 t−1 1t−1 2t−1 t−1
+Now, by definition λ = 1−C + (cid:82)1 dxxδP , but since h and g are even, the only contribution comes from the g
+t 6 −1 t 0 1 0
+component. Therefore:
+(cid:90) 1
+This leads to a first evolution equation:
+1t+1 2 t 2 1t 2t
+The second equation comes from the evolution of the α ’s. From:
+1−C (cid:90) 0
+we finally find:
+2t+1 4 2t 4 t−1 24 t−2 4(1−C) 1t 2t
+The coupled set of iterations for δλ and δλ , Eqs. (C31) and (C33), lead to damped oscillations for C < C∗∗
+and sustained oscillations for C >C∗∗, with C∗∗ ≈0.91. The numerical value of C∗∗ however does not coincide with
+that of C∗ ≈ 0.45, obtained from the direct simulation of Eqs. (35). This might be due to neglecting higher order
+corrections, which appear to be numerically large: the oscillations generated by Eqs. (35) are of amplitude ∼ 0.1 at
+theonset, suggestingasub-criticalbifurcation. ForsmallC, ontheotherhand, theoscillationamplitudeissmalland
+the above equations appear to be quantitatively correct, validating the above calculations.
+[1] see e.g. S. Balibar, The Discovery of Superfluidity, Journal of Low Temperature Physics 146:441-470 (2007).
+[2] A. Kirman, Whom or What Does the Representative Individual Represent?, Journal of Economic Perspectives, 6: 117-136
+(1992).
+[3] W. Brock, S. Durlauf, Discrete choice with social interactions, Rev. Econ. Stud. 68, 235 (2001)
+[4] see e.g.: P. Ball. Why Society is a Complex Matter. Springer, Berlin (2012) for an introductory review.
+[5] forarecentreview,see: J.-P.Bouchaud,CrisesandCollectiveSocio-EconomicPhenomena: SimpleModelsandChallenges,
+J. Stat. Phys. 151: 567-606 (2013), and refs. therein.
+[6] J. Bonart, J.-P. Bouchaud, A. Landier, D. Thesmar, Instabilities in large economies: aggregate volatility without idiosyn-
+cratic shocks, arXiv 1406.5022
+[7] foraconciseoverviewofABMforcollectivephenomena,see: R.Goldstone,M.Janssen,ComputationalModelsofCollective
+Behavior, Trends in Cognitive Science 9: 424-30 (2005).
+[8] forearlypapersonABMforeconomics,seee.g.: R.L.Axtell,Whyagents? Onthevariedmotivationsforagentcomputing
+in the social sciences,in: Sallach,C.M.MacalandD.(Eds.),ProceedingsoftheWorkshoponAgentSimulation,2000;L.
+Tesfatsion, Agent-Based Computational Economics: Growing Economies From Botton Up, Artificial Life, 8: 55-82 (2002).
+More recent attempts can be found in: Q. Ashraf, B. Gershman and P. Howitt, Banks, market organization, and macroe-
+conomic performance: an agent-based computational analysis.No.w17102.NationalBureauofEconomicResearch(2011);
+M. Raberto, A. Teglio and S. Cincotti, ’Debt, deleveraging and business cycles: an agent-based perspective’ Economics:
+The Open-Access, Open-Assessment E-Journal 6.2012-27 (2012): 1-49; G. Dosi et al., ’Income distribution, credit and
+fiscal policies in an agent-based Keynesian model’ Journal of Economic Dynamics and Control 37.8 (2013): 1598-1625.
+[9] forsomereviewpapersonABMforeconomicsandfinance,seee.g.: A.Leijonhufvud,Agent-Based MacroinTesfatsion,L.
+and Judd, K. (eds.), Handbook of Computational Economics, 1625-1636 (2006); C. H. Hommes, Heterogeneous Agent
+Models in Economics and Finance, Handbooks in Economics Series 23, 1109-1186 North-Holland: Elsevier (2006); B.
+LeBaron and L. Tesfatsion, Modeling macroeconomies as open-ended systems of interacting agents, American Economic
+Review: Papers and Proceedings, 98: 246-250 (2008); H. Dawid and M. Neugart, Agent-based Models for Economic
+Policy Design Eastern Economic Journal, 37: 44-50 (2011). M. Cristelli, L. Pietronero, A. Zaccaria: Critical overview of
+agent-based models for economics. arXiv:1101.1847.
+[10] C. Sims, Macroeconomics and Reality, Econometrica, 48: 1-48 (1980)
+[11] see e.g. J. Gali, Monetary Policy, Inflation and the Business Cycle, Princeton University Press (2008).
+[12] W. Buiter, The unfortunate uselessness of most “state of the art” academic monetary economics,
+[13] G. Fagiolo and A. Roventini, ’Macroeconomic policy in dsge and agent-based models’ Revue de l’OFCE 5 (2012): 67-116.
+[14] G. Fagiolo, A. Moneta and P. Windrum, A critical guide to empirical validation of agent-based models in economics:
+methodologies, procedures, and open problems. Computational Economics 30.3 (2007): 195-226.
+[15] A. Pyka and G. Fagiolo, Agent-based modelling: a methodology for neo-Schumpeterian economics. Elgar companion to
+neo-schumpeterian economics 467 (2007).
+[16] A. Kirman, The Economic Crisis is a Crisis for Economic Theory, CESifo Economic Studies, 56: 498-535 (2010)
+[17] R. J. Caballero, Macroeconomics after the Crisis: Time to Deal with the Pretense-of-Knowledge Syndrome, Journal of
+Economic Perspectives, 24: 85-102 (2010)
+[18] for a general, insightful introduction, see: N. Goldenfeld, Lectures on Phase Transitions and the Renormalization Group.
+AddisonWesley, Reading (1992)
+[19] P. Bak, How Nature Works: The Science of Self-Organized Criticality, Copernicus, Springer, New York, 1996.
+[20] on this point, see the interesting discussion in: I. Kondor, I. Csabai, G. Papp, E. Mones, G. Czimbalmos, M. Cs. Sandor,
+Strong random correlations in networks of heterogeneous agents, arXiv:1210.2224
+[21] M. Buchanan, This Economy does not compute, New York Times, October 1, 2008.
+[22] D. Farmer, D. Foley, The economy needs agent-based modelling, Nature 460, 685-686 (2009)
+[23] I. Giardina, J.-P. Bouchaud, Bubbles, Crashes and Intermittency in Agent Based Market Models, The European Physics
+Journal B 31: 421-37 (2003).
+[24] R. Lyea, J. Peng, L. Tana, S. A. Cheonga Understanding agent-based models of financial markets: a bottom-up approach
+based on order parameters and phase diagrams, arXiv:1202.0606;
+[25] The Mark I family of models was elaborated in a series of papers and books, in particular: E. Gaffeo, D. Delli Gatti,
+S. Desiderio, and M. Gallegati, Adaptive Microfoundations for Emergent Macroeconomics, Eastern Economic Journal, 34:
+441-463 (2008); D. Delli Gatti, E. Gaffeo, M. Gallegati, G. Giulioni, and A. Palestrini, Emergent Macroeconomics: An
+Agent-Based Approach to Business Fluctuations, Springer: Berlin, 2008.
+[26] D. Delli Gatti, S. Desiderio, E. Gaffeo, P. Cirillo, M. Gallegati, Macroeconomics from the Bottom-up, Springer: Berlin
+(2011).
+[27] L.Russo, The forgotten revolution: How Science Was Born in 300 BC and Why It Had to Be Reborn, Springer, Berlin
+(2004); Italian-speaking readers might also consult the wonderful first chapter of L.Russo, Flussi e Riflussi: indagine
+sull’origine di una teoria scientifica, Feltrinelli (2003), unfortunately out of print but available in many public libraries.
+[28] C. Deissenberg, S. van der Hoog, H. Dawid, Eurace: A massively parallel agent-based model of the european economy,
+Applied Mathematics and Computation, 204: 541-552 (2008);
+[29] H. Dawid, S. Gemkow, P. Harting, S. van der Hoog, M. Neugarty; The Eurace@Unibi Model: An Agent-Based Macroeco-
+nomic Model for Economic Policy Analysis, Working paper, Bielefeld University. 2011.
+[30] G. Dosi, G. Fagiolo, A. Roventini, An evolutionary model of endogenous business cycles. Computational Economics, 27:
+3-24 (2005)
+[31] G. Dosi, G. Fagiolo, and A. Roventini, Schumpeter meeting Keynes: A policyfriendly model of endogenous growth and
+business cycles, Journal of Economic Dynamics and Control, 34, 1748-1767 (2010); and [13].
+[32] A. Mandel, S. Furst, W. Lass, F. Meissner, C. Jaeger; Lagom generiC: an agent-based model of growing economies, ECF
+Working Paper 1 /2009.
+[33] C. Metzig, M. Gordon, Heterogeneous Enterprises in a Macroeconomic Agent-Based Model, arXiv:1211.5575.
+[34] The precise version of Mark I that we used as a reference is the one presented by J. Grazzini and D. Delli Gatti at the
+Crisis Workshop in Milan, November 2012. Its transcription is given by the pseudo-code in Appendix A.
+[35] Bank of England, Quarterly Bulletin, Q1 Vol. 54 No. 1 (2014).
+[36] see e.g. S. P. Anderson, A. De Palma, J. F. Thisse, Discrete Choice Theory of Product Differentiation. MIT Press, New
+York (1992), and [5] for a recent discussion and further references.
+[37] R. M. Goodwin, A Growth Cycle, in Feinstein, C.H. (ed) Socialism, Capitalism and Economic Growth, Cambridge Uni-
+versity Press (1967)
+[38] P. Flaschel, The Macrodynamics of Capitalism, Springer, Berlin 2010.
+[39] F.Caccioli,P.VivoandM.Marsili,ErodingMarketStabilitybyProliferationofFinancialInstruments,EuropeanPhysical
+Journal B, 71: 467-479 (2009).
+[40] G. B. Eggertsson and P. Krugman, Debt, Deleveraging, and the Liquidity Trap: A Fisher-Minsky-Koo Approach, The
+Quarterly Journal of Economics 127, 1469-1513 (2012).
+[41] B.C.GreenwaldandJ.E.Stiglitz,Financialmarketimperfectionsandbusinesscycles.TheQuarterlyJournalofEconomics
+108, 77-114 (1993).
+[42] M. Napoletano et al., Wage Formation, Investment Behavior and Growth Regimes: An Agent-Based Analysis Revue de
+l’OFCE 5, 235-261 (2012).
+[43] S. Gualdi, M. Tarzia, F. Zamponi, J.-P. Bouchaud, Policy experiments in simple macro-economic ABM, in preparation
+(CRISIS project).
+[44] K. Anand, P. Gai, M. Marsili, The rise and fall of trust networks, Progress in Artificial Economics. Lect. Notes Econ.
+Math. Syst. 645: 77 (2010)
+[45] T.Assenza,D.DelliGatti,EPluribusUnum: MacroeconomicModellingforMulti-agentEconomies,UCSCWorkingpaper
+(2013).
+[46] F. Patzelt and K. Pawelzik, Criticality of Adaptive Control Dynamics, Phys. Rev. Lett. 107: 238103 (2011)
+[47] H. Minsky, Stabilizing an Unstable Economy, McGraw-Hill, New York (2008)
+[48] M. W. L. Elsby et. al, The ins and outs of cyclical unemployment, American Economic Journal: Macroeconomics 1.1
+(2009): 84-110.
+[49] R. Shimer, Reassessing the ins and outs of unemployment, Review of Economic Dynamics 15.2 (2012): 127-148.
+[50] D. Challet, M. Marsili and Y. C. Zhang, Minority Games, Oxford University Press, 2005.
+[51] D.Sornette,Endogenousversusexogenousoriginsofcrises.In: Albeverio,S.,Jentsch,V.,Kantz,H.(eds.)ExtremeEvents
+in Nature and Society. Springer, Heidelberg (2005)
+[52] K. Anand, A. Kirman, M. Marsili, Epidemics of rules, rational negligence and market crashes Eur. J. Financ. (2011)
+[53] J. Lorenz, S. Battiston, F. Schweitzer, Systemic risk in a unifying framework for cascading processes on networks Eur.
+Phys. J. B 71, 441 (2009)
+[54] J.-P. Bouchaud The endogenous dynamics of markets: price impact, feedback loops and instabilities In: Berd, A. (ed.)
+Lessons from the 2008 Crisis. Risk Books, Incisive Media, London (2011)
+[55] see e.g. J. Geanakoplos, R. Axtell, D. J. Farmer, P. Howitt, B. Conlee, J. Goldstein, M. Hendrey, N. M. Palmer, C.-Y.
+Yang, Getting at Systemic Risk via an Agent-Based Model of the Housing Market, Cowles Foundation Discussion Papers
+1852, Cowles Foundation for Research in Economics, Yale University, 2012.
+[56] S. Gualdi, M. Tarzia, F. Zamponi, J.-P. Bouchaud, On simple aggregate descriptions of ABMs (and the real economy),
+unpublished report.
+[57] see e.g. C. Hommes, Behavioral Rationality and Heterogeneous Expectations in Complex Economic Systems, Cambridge
+University Press (2013) for a review on behavioral experiments.
+[58] C.DiGuilmi,M.GallegatiandS.Landini,Economicdynamicswithfinancialfragilityandmean-fieldinteraction: Amodel
+Physica A: Statistical Mechanics and its Applications 387.15 (2008): 3852-3861.
+[59] M. Aoki and H. Yoshikawa, Reconstructing macroeconomics: a perspective from statistical physics and combinatorial
+stochastic processes Cambridge University Press, 2011.

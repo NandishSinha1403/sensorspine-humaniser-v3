@@ -1,0 +1,603 @@
+1v2202120/sc:viXra
+Algorithms for Rapidly Dispersing Robot
+Swarms in Unknown Environments
+Tien-Ruey Hsiang1, Esther M. Arkin1, Michael A. Bender1,
+Sa´ndor P. Fekete2, and Joseph S. B. Mitchell1
+Stony Brook University,StonyBrook, NY 11794, USA
+2 TU Braunschweig, 38106 Braunschweig, Germany
+Abstract. Wedevelopandanalyzealgorithmsfordispersingaswarmofprimitive
+robots in an unknown environment, R. The primary objective is to minimize the
+makespan,thatis,thetimetofill theentireregion.Anenvironmentiscomposedof
+pixels thatform aconnectedsubset oftheintegergrid.Thereisat most onerobot
+per pixeland robots move horizontally or vertically at unit speed. Robots enterR
+by means of k ≥ 1 door pixels Robots are primitive finite automata, only having
+local communication, local sensors, and a constant-sized memory.
+We first give algorithms for the single-door case (i.e., k = 1), analyzing the
+algorithms both theoretically and experimentally We prove that our algorithms
+haveoptimal makespan 2A−1, where A is thearea of R.
+We next give an algorithm for the multi-door case (k ≥ 1), based on a wall-
+following version of the leader-follower strategy. We prove that our strategy is
+O(log(k+1))-competitive, and that this bound is tight for our strategy and other
+related strategies.
+1 Introduction
+The objectiveofswarmroboticsis toprogramahuge numberofsimple,tiny
+robots to perform complex tasks collectively. A typical application scenario
+for a robot swarm may involve two phases: first, the robot swarm fills an
+environment as quickly as possible while keeping the swarm “connected”
+(a term made more precise later). Once the robots are distributed in the
+environment, the robots perform world-embedded computational tasks, such
+as computing distances and short paths between points in the environment,
+finding chokepoints, mapping the environment, and searching for intruders.
+This paper develops efficient algorithms for filling an environment with
+a swarm of robots, thus focusing on the first phase described above. Be-
+cause targetapplications requirethousands to millions ofrobotsand current
+demonstration scenarios have at most hundreds of robots, it is crucial to
+develop algorithms that have explicitly stated performance guarantees, thus
+ensuring scalability.
+There has already been work on dispersion algorithms, but most disper-
+sion algorithms rely on greedy strategies such as go-for-free space, where
+robots move to fill unoccupied space, or artificial physics strategies, where
+neighboringrobotsexert“forces”oneachother:repulsionforcesiftherobots
+2 Hsiang et al.
+arecloserthanthetargetseparation,andattractionforcesiftheneighboring
+robots aretoo far away.Although suchrobotbehaviorsoften leadto reason-
+abledispersion,therearecasesinwhichtheswarmentersinfiniteloops,never
+fillingthedomain.Eveninartificialphysicsstrategies,whichseemtodisperse
+robots most efficiently, there are no guarantees on filling time. Furthermore,
+the swarm behavior under artificial-physics rules results in dispersions that
+aremorereminiscentofmoleculardynamicssimulations(withlargeamounts
+of “bouncing” and “jitter”) than of the ideal coordinated behavior of coop-
+erating teams of robots.
+The dispersion algorithms in this paper represent a departure from pre-
+viously studied dispersion strategies. First of all, we test our algorithms in
+arbitrary polygonal environments, rather than restricting ourselves to rect-
+angles or the infinite plane. It is important to study the dispersion algo-
+rithms in complicated polygonal domains because the target domains may
+be bottleneck-filled indoor environments or systems of pipes or ductwork.
+Ouralgorithmsarebasedonfollow-the-leaderlocalrules,wheretherobots
+formchainsofleadersandfollowersemanatingfromacentralsourceofrobots.
+(the “doors”). The emergent behavior of our main algorithm is a left-hand-
+on-the-wall strategy, where the entire robot swarm hugs the left wall of the
+domainasthefillingproceeds.Weprovidematchinglowerandupperbounds
+on the amount of time to fill as a function of the total size of the source.
+The difficulty in dispersing efficiently is in sustaining a large flow of robots
+coming in through the doors; the “chains” of robots coming in through the
+doors have a tendency to “cut each other off”; see Figure 1(left). Thus, we
+devise a set of local rules for splitting and splicing the robot chains. Our
+experience with our robot simulator shows that unless the local rules are
+precisely implemented, the flow of robots out of the source diminishes and
+perhaps even grinds to a halt prematurely.
+Fig.1.Left:Oneturncancutoffmostoftheflowlinesleadingoutofthedoorpixels
+(shaded grey): The left three columns of robots are trapped. Right: A polygonal
+domainenclosesadiscretesetofpossiblerobotlocations(pixels);specialdoorpixels
+are shown in grey.
+Rapidly Dispersing Robot Swarms 3
+1.1 Our Results
+We develop and analyze algorithms for dispersing robot swarms in an un-
+known environment R. The primary objective is to minimize the makespan,
+that is, the time to fill the entire region. An environment is composed of
+squares or pixels that form a connected subset of the integer grid; such an
+environment is also called a maze. There is at most one robot per pixel and
+robots move horizontally or vertically at unit speed. There is a source of
+robots entering the environment through k ≥ 1 doors. Robots are primi-
+tive finite automata, only having local communication, local sensors, and a
+constant-sized memory. The challenge is in proving that purely local strate-
+gies distributed over a swarm of agents can result in a predictable and prov-
+able behavior for the collective.
+This paper presents the following results:
+• We give filling algorithms for the single-doorcase (i.e., k =1), analyzing
+the algorithms both theoretically and experimentally in terms of natural
+performance metrics, such as makespan and total traveled distance by
+all robots. Our algorithms are based on leader-follower strategies that
+are adapted from depth-first and breadth-first search to apply to robot
+swarms. We prove that our algorithms have optimal makespan 2A−1,
+where A is the area (number of pixels) of R.
+• We give a filling algorithm for the multi-door case (k ≥ 1), also based
+on a leader-follower strategy. The emergent behavior of the swarm is a
+filling strategy, called laminar flow, that generalizes the “left-hand-on-
+wall” strategy to multiple streams of robots coming in through multiple
+doors. An important contribution of the algorithm is the formulation of
+splitting and splicing strategies that maintain a large flow of robots out
+of the doors. We prove that the laminar flow algorithm is O(log(k+1))-
+competitive, that is, the ratio of the makespan of our algorithm to the
+optimal makespan is O(log(k+1)).
+• We giveamatching lowerboundofΩ(log(k+1))onthe competitiveness
+of the natural class of “simple-minded” strategies that use only strictly
+local information.
+• WereportonexperimentswithaJavasimulatorthatwebuiltforswarms
+ingridenvironments.Allofthealgorithmsinthispaperareimplemented
+in this simulator.
+While our results here are given purely in terms of robots moving syn-
+chronously on discrete grids, the results apply also to dispersing swarms of
+robots within an arbitrary connected planar domain, in the ideal setting in
+which the robots have perfect motion control and synchrony. More impor-
+tantly, our results may form the foundation for theoretical work on more
+realistic models of swarmrobotics in the continuum, with asynchronousmo-
+tion, sensor errors,slippage, and hardware failures.
+4 Hsiang et al.
+1.2 Prior and Related Work
+There has been considerable study recently of distributed control and coor-
+dinationofa setofautonomousrobots.Gage[14,15] hasproposedthe devel-
+opment of command and control tools for arbitrarily large swarms of micro-
+robotsandhasproposedcoverageparadigmsinthecontextofrobotdispersal
+in an environment. Payton et al [20,21] propose the notion of “pheromone
+robotics” for world-embeddedcomputation. Wagner et al. [9,27,28,29] devel-
+opedmulti-robotalgorithms,directlyinspiredbyantbehaviors,forsearching
+and covering. Principe et al [13,22] and Suzuki et al [12,25,26] have studied
+algorithmic aspects of pattern formationin distributed autonomous robotics
+undervariousmodelsofrobotswithminimalcapabilities.Therelatedflocking
+problem, which requires that a set of robots follow a leader while maintain-
+ing a formation, has been studied in several recent papers; see, e.g., [3,6,16].
+Balch [2] has developed “Teambots”, a Java-based general-purpose multi-
+robot simulator.
+There is a vast literature on algorithms for one or several robots to ex-
+plore unknown environments. The environments can be modeled as graphs
+(directed or undirected), mazes, or geometric domains, and the robots can
+have a range of computing powers; see, e.g., [1,7,8,10,11]. Mitchell [19] in-
+cludes a survey of many results on exploring and navigating in geometric
+environments.
+Dispersion algorithms have been recently studied both in the context of
+multi-robotcoverageandsensornetworkdeployment;see[4,5,17,30].Methods
+includepotentialfields[17,23],“artificalphysics”[24],attraction-repulsion[18],
+andalgorithmsbasedonmoleculardynamics[5].Whilethesestudieshaveex-
+aminedempiricallythemeritsofheuristics,theyhavenotaddressedformally
+the algorithmic efficiency of the dispersion problem.
+2 Preliminaries
+For an arbitrary connected region R in the plane, we let R denote the set
+of pixels that lie entirely within R. A pixel is an axis-aligned unit square,
+{(x,y) : i ≤ x ≤ i+1,j ≤ y ≤ j +1}, whose lower left corner is given by
+the integergridpoint(i,j).Twopixelsareneighbors ifthey shareacommon
+edge; thus, pixel (i,j) has four neighbors, (i − 1,j), (i + 1,j), (i,j − 1),
+and (i,j +1). We refer to R as the environment, and we assume that it is
+connected. A subset, D ⊂ R, of the pixels are doors, which serve as sources
+of incoming robots. See Figure 1(right).
+A robot r is said to occupy a pixel p = (i,j) when it is located in that
+pixel. We assume that at most one robot can occupy any one pixel at any
+giventimet.Weletp(r,t)denotethepixeloccupiedbyrobotr attimet.We
+let prev(r,t)=p(r,t−1) denote the pixel previously occupied by robot r.
+Rapidly Dispersing Robot Swarms 5
+Timeisdiscretizedintostepst=0,1,2,3,....Thepositionsoftherobots
+at time t are given by the set S(t), where D ⊆S(t)⊆R. At time 0, there is
+one robot in each door: S(0)=D.
+Eachpixelisinoneofthreestatesattime t:(1)the pixelis anobstacle if
+itdoesnotlie inR;(2)the pixelisoccupied ifitisinRandarobotoccupies
+it; or (3) the pixel is unoccupied if it is in R and no robotoccupies it attime
+t. An unoccupied pixel at time t is classified as either previously occupied, if
+it was occupied by some robot at some time prior to t, or frontier, if it has
+never been occupied.
+Robotshavesensors thatdetectinformationaboutthelocalenvironment.
+In particular, if a robot occupies pixel (i,j) at time t, then we assume that
+it can detect the state of each pixel within a distance r of (i,j), where r
+is the (fixed) sensor radius. Robots have no global sensor (e.g., a GPS) and
+no knowledge of the coordinates of the pixels they occupy.
+We assume that each robot has a small finite memory that allows it to
+remember the sensor readings of the last T ≥ 1 time steps; i.e., a robot
+knowsthesensorreadingsithastakenattime t−T,t−T+1,...,t−1,t.In
+particular,eachrobotknowswhichnearbypixelshavebeenoccupiedrecently
+byotherrobots.ThealgorithmsinthispaperhaveanO(1)-bitmemory;thus,
+the robots have the computational power of finite automata.
+Weassumethatrobotshavealimitedabilitytocommunicatewithnearby
+robots. In particular, at any given time step a robot is able to exchange a
+constant-size message with any robot that lies within a prescribed commu-
+nication radius, r , of the robot. The communication graph, G(t), of the
+swarm S(t) at time t is defined to be the undirected graph whose nodes are
+the robots S(t) and whose edges link pairs of robots that communicate. The
+swarmis said to be connected at time t if each connected component of G(t)
+contains at least one door pixel.
+Robotsmovediscretelyonthe gridofpixels.Ifattime t arobotoccupies
+pixel (i,j) of R, and a neighboring pixel (say, (i+1,j)) of R is unoccupied
+at time t, then the robot may take a step to the right, so that at time t+1
+it occupies pixel (i+1,j). Naturally, no two robots can move into the same
+pixel, since no pixel can be occupied by more than one robot. Thus, if two
+robots are occupying pixels that neighbor an empty pixel p of R, then the
+robots must negotiate which one of them will have the right of way to enter
+p. A simple way to handle this negotiation is to establish a priority among
+the four directions, e.g., north, south, east, west. The robot occupying the
+pixel with the highest priority with respect to p has first rights for moving
+to p.
+The above rules on occupying and vacating pixels force a constant delay
+inthemotion.Supposethatrobotroccupiespixel(i,j)attimetandvacates
+(i,j)attimet+1.Nootherrobotr′ canoccupypixel(i,j)duringtime t+1;
+the earliestpossibletime thatthe pixelcanbe occupiedist+2.Inprincipal,
+wecouldvarytheselocalrules.Forexample,wecouldallowrobotr′ toenter
+6 Hsiang et al.
+pixel (i,j) at timestep t+1, if it enters in one direction while the current
+robot r leaves in the opposite direction. However, these rules would require
+a much higher degree of coordination among the robots, and the movement
+decisions of robots would have to be less local. Specifically, whether a given
+robot can enter one pixel may depend on whether a different robot far away
+leaves another pixel. Alternatively, we could build a longer delay into the
+movement rules, but the resulting filling algorithms would be essentially the
+same. Note that the delay has an immediate impact on the necessary sensor
+range: If we require a delay of two time steps, robots need at least a sensor
+rangeoftwo,inordertobeabletokeeptrackofpredecessorsandsuccessors.
+A similar issue arises in the way new robots enter through the door. For
+simplicity,weassumethatadoorpixelisalwaysoccupiedbyarobot;assoon
+as the robot occupying a door pixel moves to an adjacent pixel, a new robot
+materializes at the door. One can consider there to be an infinite supply of
+robots onthe “otherside” ofa door pixel,so that a new robotsteps into the
+doorwheneverthe robotthat wasthere previouslymovesto anotherpixelof
+R. When a robot first appears at the door, we assume that the robot points
+north.
+We say that the robots have filled the region R at time t if S(t)= R; in
+this case, the robots are well dispersed. A strategy is a set of rules by which
+robotsmove,basingtheir movementdecisions solelyonthe constantamount
+of information they sense and remember. The makespan of a strategy is the
+minimum time, t∗, until the robots have filled the region R.
+3 Dispersion Strategies for a Single Door
+We begin with the caseof a single door pixel s, which we callthe source. We
+describe strategies based on the notion of “leaders” and “followers”.
+Arobotrattimetatpositionp(r,t)isclassifiedasmoving (meaningthat
+it is “active”) or stopped (meaning that it no longer moves). If r is moving,
+it is classified as either a leader or a follower.
+In our leader-follower strategies, each robot r at time t has a successor
+robot, succ(r,t), that is following r and a predecessor robot, pred(r,t), that
+is leading r. If robot r is at the door at time t (p(r,t) = s), then we define
+succ(r,t) to be NIL; if r is a leader, then we define pred(r,t) to be NIL.
+Attimet=0thereisarobotatthedoors,whichisdesignatedasmoving
+and as a leader.
+3.1 Depth-First Leader-Follower
+The depth-first leader-follower strategy (DFLF) is inspired by depth-first
+search in a graph. Specifically, at any given time t ∈ {0,1,2,3,...}, there is
+exactly one leader, r, which is on pixel p(r,t) and r is looking for a frontier
+pixel (one that has never been occupied by a robot). (Thus, necessarily the
+Rapidly Dispersing Robot Swarms 7
+pixelfromwhichthe robotcame,prev(r,t), isnotfrontierattimet.)Ifthere
+are two or more frontier pixels neighboring p(r,t), the leader selects any one
+of them as its next destination.
+If the leader has no frontier pixel next to it, it stops (its state changes
+to “stopped”), and it tells its successor, succ(r), to assume the leadership
+(succ(r)’sstatechangesto“leader”)attheconclusionofthistimestep.(The
+predecessor completes its move before taking over the leadership.) If the
+leader has no predecessor (i.e., it is a robot at the door), then the algorithm
+halts. (In this section, successors and (non-Nil) predecessors are invariant
+over time, and thus t is removed from the argument.)
+Any robot r that is a follower (i.e., not the leader) simply follows its
+predecessor: at time t it steps next to prev(pred(r),t), the pixel previously
+occupiedbythepredecessorofr.Notethatoncearobotstops,itnevermoves
+again. Furthermore, at any point in time there is exactly one leader.
+When dealing with finite automata, we have to use particular care when
+implementing the leader-follower strategy. As each robot has only a finite
+number of states, it cannot keep track of the identities of other robots, nor
+carry its own “ID label”. Instead, we use spatial information to pursue the
+immediate predecessor. Each robot r has a “heading”, indicating the direc-
+tion in which it is moving. The predecessor pred(r) is the nearest robot in
+thatdirection.Similarly,eachrobotkeepstrackofits“tailing”,thedirection
+from which it came. Thus, the successor is the nearest visible robot in that
+direction. Whenever a robot is about to change its heading, it signals this
+turn to its immediate successor. Heading and tailing are updated accord-
+ing to delay and sensor-range. This is reflected in the following lemma and
+corollary,which are proved by introduction on time.
+Lemma 1. If r is not the leader at time t, then prev(pred(r),t) is an un-
+occupied pixel neighboring p(r,t). Furthermore, the maximum (L ) distance
+between r and pred(r) is 2.
+Corollary 1. If a pixel is not occupied in two consecutive time steps t and
+t+1,then it was never occupied before timet. (i.e., there are no “large gaps”
+of time in the occupation of a pixel.)
+AfurtherconsequenceoftheabovelemmaandcorollaryisthattheDFLF
+strategy can be implemented with a sensor radius of r = 2 and a memory
+of T = 1 (i.e., each robot recalls its previous sensor reading). Now it is not
+hard to derive the following result:
+Theorem 1. The DFLF algorithm halts when all pixels are occupied by
+robots.ThemakespanoftheDFLFalgorithmis2A−1,whereAisthenumber
+of pixels of the environment R.
+Proof. At each time step there is exactly one leader and that leader will
+do one of two things: (1) move to a frontier pixel, or (2) change its status
+8 Hsiang et al.
+to stopped and transfer leadership to its predecessor. (If the leader has no
+predecessor, that is, it is at the door, the algorithm halts.) Since each non-
+doorpixelcanbechangedfromfrontiertonon-frontieratmostonce,andeach
+pixel can have a robot“park” itself on top of it at most once, the number of
+steps before the algorithm halts is at most 2A−1. The algorithm does not
+stop earlier since there is always a leader and the leader must do one of the
+two actions ((1) or (2)) above. (cid:3)
+Note that the factor 2 is a result of using a delay of 2. It is easy to see
+that this is best possible.
+The total distance traveled by all robots in a filling using DFLF is at
+most A2, since eachrobot steps at most A. We note that there are examples
+in which any dispersion strategy will require Ω(A2) total travel. One trivial
+example is a 1×A rectangle,with the door pixel at one end. A trivial lower
+bound on the total travel for any given instance is the sum of the distances
+from each pixel of R to the door.
+DFLF may use substantially more total travel than an optimal (mini-
+mum makespan) strategy that minimizes total travel; consider, for example,
+a square with side lengths A1/2, for which DFLF requires total travel of A2
+while an optimal strategy achieves total travel O(A3/2).
+3.2 Breadth-First Leader-Follower
+Wenowdescribeanalternativedispersionalgorithm,thebreadth-firstleader-
+follower(BFLF)strategy.BFLFoftenhasadvantagesovertheDFLFstrategy
+intermsofothermetricsofperformance(totaltraveloftherobots,maximum
+travelofanyone robot,totalrelativedistance,etc), while still being optimal
+in terms of makespan (2A−1).
+The BFLF strategy is substantially more complex than the DFLF, as it
+is not trivial to implement breadth-first search with local decision rules on
+(finite-automata)robots;indeed,ourstrategydoesnotperformbreadth-first
+search, but it “approximates” breadth-first search sufficiently well to have
+some similar properties.
+As before, a robot can be in a “moving” state or a “stopped” state;
+however,wenowintroduceathirdstate,thewaiting state,whichisaninterim
+state when a robot pauses temporarily and waits to be able to move. Once
+a robot is in a stopped state, it never moves again. In the BFLF strategy
+we canhave multiple leaders,while in DFLF we haveonly one.As described
+for DFLF, we use a limited amount of spatial information to keep track
+of successors and predecessors. Other local rules are more complex and are
+described in the following.
+Initially, there is one leader robot — the robot at the door, s. When a
+robot r materializes at the door,it chooses to follow the previous robot that
+left the door.A leader alwaysattempts to go to a neighboringfrontier pixel,
+but makes sure it does not stray too far from its follower. If there are no
+Rapidly Dispersing Robot Swarms 9
+neighboring frontier pixels, the leader waits for the immediate follower to
+catch up. As soon as the immediate follower catches up, the leader becomes
+stopped and passes on the leadership role to the immediate follower. If the
+leaderratpixeluhasachoiceamongneighboringfrontierpixels,itpicksany
+one of them to be its heading. If other frontier pixels adjacent to u remain
+unclaimedbyotherrobotsfollowingdifferentbranchesofdispersion,thenthe
+followerr′ ofrwillchooseoneofthesepixelsasitsheadingwhenitarrivesat
+u;ifthereremainsafrontierpixeladjacenttou,thenr′’sfollowerr′′ chooses
+this pixel as its heading when it arrives at u. Here, r′ and r′′ are relabeled
+“leaders” and pixel u is marked as a branching point.
+A robot r is only allowed to move at time t, if it satisfies the Movement
+Criterion (MC): Arobotcurrentlyoccupiesprev(r,t) (its “parent”position)
+orarobotiscurrentlyheading for prev(r,t).IftheMC issatisfied,the robot
+r moves to its heading; otherwise, it remains at its current position, p(r,t)
+butisstillheading for itstargetpixel.Aswewillseebelow,arobotrisnever
+blockedbyitsimmediatepredecessorexcept forthetimestepatwhichr first
+appearsatthedoororatimewhenitsimmediatepredecessorisaleaderwith
+nowhere to go, meaning that the leadership will be passed to r.
+The BFLFstrategytriesto createas manypaths aspossible atalltimes.
+The visited pixels form a tree that guides the directions that robots move;
+thus, pixels have parents and grandparents. At branches in the tree (pixels
+with ≥ 2 children), robots alternate the direction that they travel. Specifi-
+cally, when a robot r leaves a pixel at time t, it tells its immediate follower
+r′ =succ(r,t) what r′’s immediate destination should be. Branchingenables
+robots arriving at the same pixel at different times to go in different direc-
+tions, thereby balancing the flow.
+Lemma 2. If not all pixels are occupied, then some robot can move.
+The following structural lemma shows that the BFLF algorithm is non-
+blocking, i.e., a robot r is never “delayed” by its predecessors, only by its
+followers; i.e., only the MC holds a robot back, not temporary blockages
+downstream. Correctness follows by induction on the height of the tree.
+Lemma 3. If a robot is at pixel v and a robot is at pixel u, the non-root
+parent of v, then the robot at v is stopped.
+Corollary 2. A robot moves from the root every other time step, until all
+pixelsareoccupied.I.e.,ifarobotdidnotpopupattherootattimet,thenone
+must pop up at time t+1, unless all pixels (including the root) are occupied.
+Lemma 4. The robots maintain a communication distance of 3, meaning
+that the algorithm works for r ≥3. The maximum L -distance from a robot
+toa follower is 3.Furthermore,at least one of thefollowing pixels is occupied
+when a robot is at pixel u: (1) the parent of u, (2) the grandparent of u, or
+(3) the uncle of u.
+10 Hsiang et al.
+Putting all the claims together and using similar reasoning as for Theo-
+rem 1, we get the same kind of bound on the makespan:
+Theorem 2. TheBFLFalgorithmhaltswhenallpixelsareoccupiedbyrobots.
+The makespan of the BFLF algorithm is 2A−1, where A is the number of
+pixels of the environment R.
+3.3 Experimental Comparison
+While the DFLF and BFLF strategies both have optimal makespan, they
+differ with respect to other performance metrics. We have implemented in
+Javaasimulatorfortestingourdispersionstrategies,whilemeasuringvarious
+performance measures, including: (1) the depth of the tree of all paths from
+the source (i.e., the length of the longest path of a robot); (2) the average
+distance traveled by a robot during the dispersion; and (3) the average of
+the ratios, ρ =l /d , of the (L ) distance l from the door to robot i’s final
+location to the total distance d traveled by robot i during the dispersion.
+We have compared the DFLF and BFLF strategies for the case of a sin-
+gle door, in a variety of different environments. Our results show that the
+average depth of the tree grows substantially more rapidly, as a function of
+the number of pixels, for DFLF than it does for BFLF; e.g., for an n-by-n
+square grid, BFLF tree depth grows linearly in n while DFLF depth grows
+closetoquadraticallyinn.Similarly,theaveragedistancetraveledbyarobot
+using DFLF growsmore rapidly than using BFLF. The averageof the ratios
+ρ =l /d decreaseswithincreasingproblemsizeforDFLF,whileitincreases
+for BFLF. Details of the experimental results are deferred to the full paper.
+4 Dispersion with Multiple Doors
+We now consider the case in which there are k ≥ 1 door pixels. In order to
+achieve rapid filling, the objective is to maintain a flow of robots out of as
+manydoorsaspossible.Thedifficultyisthatonerobotchainoutofonedoor
+pixelmayunnecessarilyblocktheflowofrobotsoutofotherdoorpixels.(See
+the introduction and Figure 1(left) for examples.)
+4.1 Laminar Flow Leader-Follower (LFLF) Algorithm
+ThissectiondescribestheLaminar Flow Leader-Follower (LFLF) algorithm.
+TheLFLFalgorithmmaintainsrapidflowsbycarefuluseofcuttingandsplic-
+ing.Theemergentbehaviorofthe swarmisaleft-hand-on-wallstrategy.The
+behaviorofthe algorithmiscomplexbecausebottlenecksinthe environment
+may force the flow to divide into smaller flows that fill different regions and
+may merge and split.
+In the LFLF algorithm there are k multiple door pixels, s ,s ,···,s .
+Note that LFLF matches DFLF algorithm if k = 1. As in the k = 1 case,
+Rapidly Dispersing Robot Swarms 11
+our dispersion strategies are based on leaders and followers. A robot r at
+time t at position p(r,t) is classified as active or inactive (stopped). If r is
+active, it is either a leader or a follower. However, unlike for k = 1, robots
+revert between leaders and followers. (In contrast, for k =1 a robot changes
+roles from follower to leader but only relinquishes the leader role by stop-
+ping and becoming inactive.) Furthermore, in DFLF once a robot stops, it
+becomes inactive. In contrast, in LFLF a robot may temporarily stop while
+still remaining active.
+In LFLF (as in DFLF), robots have successors and predecessors, but in
+LFLF a robot’s immediate successor or predecessor may change over time.
+Thus, each robot r at time t has a predecessorrobot denoted robot-pred(r,t)
+anda successorrobotdenotedrobot-succ(r,t). If robotr is ata door pixelat
+time t (p(r,t) = s , for i ∈ [1,k]), then robot-succ(r) = NIL; if r is a leader
+at time t, then robot-pred(r)=NIL.
+Here we further refine the roles of the pixels. A pixel can be: (1) an
+obstacle, (2) a frontier pixel (a pixel that has never been occupied), (3) an
+inactive pixel,thatis,an(occupied)pixelthathostsaninactiverobot,(4)an
+active pixel, (which may be occupied or not). If a pixel is unoccupied but
+previously occupied, then it is always active; if a pixel is occupied, then it is
+active if and only if the robot it hosts is active.
+Notethatdoorpixelsmaybeactiveorinactive,asdescribedlater.Active
+pixels play the role of transporting robots throughout the domain whereas
+inactivepixels areessentiallyobstacles.Analogoustothe definitionofprede-
+cessor and successor robots, each active pixel has predecessor and successor
+pixels.Inparticular,pixel u attime stept hassuccessorpixel pixel-succ(u,t)
+and predecessor pixel pixel-pred(u,t). For door pixels s at any time t ≥ 0
+pixel-succ(u,t)=NIL.
+A leader pixel u at time t has pixel-pred(u,t) = NIL. As we will see, if a
+leader pixel contains a robot, then the robot is a leader, however the leader
+robot may not be on a leader pixel and the leader pixel may not contain
+robots. We call a chain of predecessor pixels starting from the door pixel s
+and ending at a leader pixel, a flow line.
+Wenowdefineformallytheleftside andrightside oftheflow.Todoso,we
+first present some intermediate definitions. Consider a pixel v at time t, and
+let u = pixel-succ(v,t) and w = pixel-pred(v,t). Let the incoming direction
+for v at time t be the vector vu and let the outgoing direction for v at time
+t be the vector vw.
+Consider the (vertical or horizontal) neighboring pixels, when we start
+from the incoming direction vu and rotate clockwise until reaching the out-
+going direction vw. Those neighboring pixels at intermediate (vertical or
+horizontal) orientations are defined to be on the left-hand side of v time t.
+Thus, the left-hand side may contain 0,1, or 2 pixels. Any neighboring pixel
+that is not on the left-hand side, is on the right-hand side; this includes the
+pixels at the incoming and outgoing directions.
+12 Hsiang et al.
+Notethatleaderpixelsdonothaveoutgoingedges,invalidatingthisdefini-
+tion.Foraleaderpixel,wedefineallneighboringpixels(exceptthe successor
+pixel) to be on the left-hand side.
+The left side of a flow line is the union of the left sides of the non-leader
+pixels in the flow line.
+The essentialidea the LFLF algorithmis to treat the left side of the flow
+linecompletelydifferentlyfromtherightsideoftheflowline.Specifically,we
+splice into the left-hand side but we cannot splice into the right.
+4.2 Splicing and the LFLF Algorithm
+Suppose that attime t a leader robotr reachesa pixel u=p(r ,t). If u has
+an(unoccupied)predecessorpixelpixel-pred(u,t),thenrobotr movestothis
+pixel. (Since r is a leader robot, it will never have an occupied predecessor
+Otherwise, pixel u = p(r ,t) is a leader pixel. If u = p(r ,t) has no
+neighboring frontier pixels, then robot r tries to pass on the leadership.
+Robot r first looks for a neighboring active pixel v. If no such v exists,
+then r becomes inactive and passes the leadership to its successor robot
+robot-succ(r ,t). When r becomes inactive, pixel u also becomes inactive
+and its successor pixel becomes the new leader pixel.
+If robot r looks for a neighboring active pixel v, and such a v exists,
+then r checkswhether u=p(r ,t) is a left-hand neighborof v. If this is not
+the case for any possible v, then again r becomes inactive and passes the
+leadershiptoitssuccessorrobotrobot-succ(r ,t).Asbefore,whenr becomes
+inactive, pixel u also becomes inactive and its successor pixel becomes the
+new leader pixel.
+If there exists such a v, robot r chooses the first such v sweeping clock-
+wise, startingfromthe incomingdirection.We redefine the predecessorpixel
+pixel-pred(u,t+1) := v and thus successor pixel pixel-succ(v,t+1) := u.
+Thus, the previous successor pixel of v becomes a new leader pixel. (Note
+that this new leader pixel may or may not have a robot on it.) Now r iden-
+tifies its new leader; it follows predecessor pixels starting at v until it finds
+a robot r and sets robot-pred(r ,t+1) = r and robot-succ(r ,t+1) = r .
+Robot r then passes the leadership to r =robot-succ(r ,t).
+Rapidly Dispersing Robot Swarms 13
+Fig.2. The LFLF algorithm: There are six door pixels in the lower left corner.
+Splicing enables the flow to turna corner.
+4.3 Correctness of LFLF
+WenowshowthatLFLFalwaysfillsanenvironment.DuringLFLF,weclaim
+thatthefollowinginvariantismaintained:The left side of a flowline consists
+of visited pixels and obstacles. This follows from the fact that, whenever a
+robotenters a pixel, it turns as far left as it can (left-hand-on-the-wall).The
+invariantimplies the following lemma,which we use to show that the visited
+regions propagate out from obstacle pixels:
+Lemma 5. The union of boundary points separates the visited region from
+obstacles and the right side of flows. In other words, the unvisited region only
+touches a flow from its right.
+Another useful property of flow lines is the following:
+Lemma 6. Flows do not self-intersect.
+Lemma 7. Leadership passing does not change the total number of leader
+robots. Thus, the number of leader robots at any time step t is equal to the
+number of active doors.
+Theorem 3. The robots always fill environment R.
+Proof. When a robot becomes inactive, it is a leader and its surrounding
+pixels must allnot be frontier,for otherwise r would advance to sucha pixel
+and still be active. Therefore, if an active pixel u is next to a frontier pixel
+v, any robot advancing into u will not become inactive and some flow lines
+can advance into the empty region so it will be filled. (cid:3)
+In the next sections we analyze the makespan for this filling strategy.
+4.4 Competitive Analysis for Online Strategies
+ForanystrategyS, letn (t)be the number ofrobotsthatenter throughthe
+doors during timestep t; we define n (0)=k.
+Note that the inherent delay of 2 in robot movement means that n (t)
+is a highly erratic function, so that in one timestep k robots might enter
+the doors, implying that in the next timestep no robots enter the doors.
+14 Hsiang et al.
+In LFLF additional delays are caused by splicings, and therefore we cannot
+even say that a robot enters an active door pixel every other timestep. To
+understandwhy,considerFigure2.Whenoneflowlinesplicesintoadifferent
+flow line, a robot may get delayed by one additional time step in order to
+obtaintherequiredseparationbetweenrobots.Ifmanysplicingarehappening
+nexttoeachother,thiscancauseanaccumulateddelayofuptoktimeunits,
+which causes a “wave” of packed robots that propagates back towards the
+doorpixels.Thus,adoorpixelmighttemporarilyholdoffejecting robotsfor
+many units without the door pixel becoming inactive. Whenever an active
+door pixel does not eject a robot we say there is a door-pixel delay.
+Fortunately, the following lemma bounds the number of splicings (and
+also the total number of door-pixel delays).
+Lemma 8. A pixel can only be used to initiate O(1) splicings.
+Theorem 4. The LFLF strategy is O(log(k+1))-competitive.
+Proof. Considerthetimes{t }⌈log(k+1)⌉,wheret isthelatesttimestepduring
+whichatleastk/2idoorpixelsareactive.Wecalltimest ,t ,t ,...,t
+significant events. Consider the time interval from t to t , when at least
+k/2i+1 door pixels are active. Thus, the total number of robots leaving the
+doorplusdoor-pixeldelaysduringthis intervalisatleast(k/2i+1)(t −t ).
+Now consider an optimal strategy S∗, and consider the cut χ associated
+with the significant event t of LFLF. Cut χ is the boundary between the
+occupied and frontier pixels and has size at most k/2i. A lower bound on
+the makespan of any strategy is the area “behind” χ (i.e., the side of χ not
+containing the doors) divided by the length of χ plus the amount of time
+required to send the flow from the door to reach χ. Thus, the makespan,
+opt, of S∗ satisfies
+k/2i i+1 i
+Summing over all significant events we obtain that the total filling time of
+LFLF is O(opt·log(k+1)). (cid:3)
+If we disregard the issue of delays caused by pixels having to be fully
+vacatedbeforebeingre-entered,wegetawholeclasscalledsensiblestrategies,
+defined by the following two conditions:
+(1) n (t) is non-increasing in t; and
+(2) If n (t) > n (t + 1), then at time t the number of occupied pixels
+bordering on a frontier pixel is n (t+1).
+The above proof also implies the following; quite clearly, this result still
+holds if we extend the notion of sensible strategies to allow for some delays,
+as long as these only add a constant factor to the filling times.
+Theorem 5. Any sensible strategy is O(log(k +1))-competitive.
+Rapidly Dispersing Robot Swarms 15
+2k robots enter
+k+1 corridors ("doors")
+of width k
+k/2 + 1 corridors of width k/2
+k/2 k/2 k co /4 rr + i 1 dors,
+k2 width k/4 M M
+Fig.3. Left: An environment that is hard for both depth-first and breadth-
+first filling strategies. This example shows that LFLF and related strategies are
+Ω(log(k+1)) competitive. Right:Ascenario in which anysimple-minded strategy
+is Ω(log(k+1)) competitive.
+4.5 Competitive Analysis of Simple-Minded Strategies
+Under certain natural assumptions that limit the power of strategies, it is
+possibletogivematchinglowerboundsonthe competitiveness.Togivesome
+intuition, consider first the class of examples shown in Figure 3(left), which
+shows that the laminar flow algorithm may take as much as Ω(log(k+1))
+times opt.
+Theorem 6. The LFLF algorithm is Ω(log(k+1))-competitive.
+This lower bound can be generalized to a much larger class of strategies.
+We say that strategy S is simple-minded if the following condition holds:
+There is a constant C, such that we can only tell the number A′ of pixels in
+a region R′ ⊆R when a set R′′ ⊆R has been visited that has all pixels in R′
+within L distance C.
+Considering simple-minded strategies is quite natural in the context of
+robot swarms: If we assume we only “know” a regionR′ after each pixel has
+been seenby one ofthe robots,then the constantC correspondsprecisely to
+the sensor range. The example of Figure 3(left) can be generalized as shown
+schematically in Figure 3(right), which forms the basis for the proof of the
+following theorem:
+Theorem 7. Any simple-minded strategy is Ω(log(k+1))-competitive.
+A particular subclass of simple-minded strategies is one that arises quite
+naturally in exploration problems: We say that a strategy is conservative
+if any pixel that has been “discovered”, i.e., come within sensor range of a
+robot,muststaywithinsensorrangeofsomerobot.Foraconstant-sizesensor
+16 Hsiang et al.
+range,itiseasytoprovethefollowingstatement,whichhasbeenclaimedfor
+a long time in a different context:
+Proposition 1. All conservative strategies are simple-minded.
+As the LFLF strategy is conservative by design, we conclude that the
+lower bound of Theorem 7 applies to LFLF.
+Acknowledgements We thank N. Jovanovicand M. Sztainberg for contri-
+butionstothisresearch.ThisreseearchwaspartiallysupportedbyHRLLabs
+(a DARPA subcontract), Honda Fundamental Research Labs, NASA Ames
+Research (NAG2-1325), NSF (CCR-0098172, EIA-0112849, CCR-0208670),
+U.S.-Israel Binational Science Foundation, and Sandia National Labs.

@@ -1,0 +1,491 @@
+]MQ.oib-q[
+1v8201140/oib-q:viXra
+Predicting Genetic Regulatory Response Using Classification
+Manuel Middendorfa, Anshul Kundajeb,
+Chris Wigginsc,d, Yoav Freundb,d,e,
+Christina Leslieb,d,e
+aDepartment of Physics, bDepartment of Computer Science,
+cDepartment of Applied Mathematics,
+dCenter for Computational Biology and Bioinformatics,
+eCenter for Computational Learning Systems,
+Columbia University, NY 10027, USA
+Motivation: Studyinggeneregulatory mechanismsinsimplemodelorganismsthroughanalysis of
+high-throughput genomic data has emerged as a central problem in computational biology. Most
+approaches in the literature have focused either on finding a few strong regulatory patterns or on
+learningdescriptivemodelsfromtrainingdata. However,theseapproachesarenotyetadequatefor
+making accurate predictions about which genes will be up- or down-regulated in new or held-out
+experiments. By introducing a predictive methodology for this problem, we can use powerful tools
+from machine learning and assess thestatistical significance of our predictions.
+Results: We present a novel classification-based method for learning to predict gene regulatory
+response. Our approach is motivated by the hypothesis that in simple organisms such as Saccha-
+romycescerevisiae,wecanlearnadecisionruleforpredictingwhetherageneisup-ordown-regulated
+in aparticular experiment based on (1) thepresenceof bindingsite subsequences(“motifs”) in the
+gene’s regulatory region and (2) the expression levels of regulators such as transcription factors
+in the experiment (“parents”). Thus our learning task integrates two qualitatively different data
+sources: genome-widecDNAmicroarraydataacrossmultipleperturbationandmutantexperiments
+along with motif profile datafrom regulatory sequences. Weconvert theregression task of predict-
+ingreal-valuedgeneexpressionmeasurementstoaclassification taskofpredicting+1and-1labels,
+corresponding to up- and down-regulation beyond the levels of biological and measurement noise
+in microarray measurements. The learning algorithm employed is boosting with a margin-based
+generalization ofdecision trees,alternatingdecision trees. Thislarge-margin classifierissufficiently
+flexible to allow complex logical functions, yet sufficiently simple to give insight into the combina-
+torial mechanisms of gene regulation. We observe encouraging prediction accuracy on experiments
+basedontheGaschS.cerevisiaedataset,andweshowthatwecanaccuratelypredictup-anddown-
+regulationonheld-outexperiments. Wealsoshowhowtoextractsignificantregulators,motifs, and
+motif-regulator pairs from the learned models for various stress responses. Our method thus pro-
+videspredictivehypotheses,suggestsbiological experiments,andprovidesinterpretableinsightinto
+thestructureof genetic regulatory networks.
+Availability: The MLJava packageis available by request from theauthors.
+Contact: cleslie@cs.columbia.edu
+I. INTRODUCTION approaches, which try to discover structure in the
+dataset as formalized by probabilistic models (often
+graphicalmodelsorBayesiannetworks)[5,9,10,14,15];
+Understanding underlying mechanisms of gene and linear network models, which hope to learn explicit
+transcriptional regulation through analysis of high- parameterized models for pieces of the regulatory
+throughputgenomic data – for example, gene expression network by fitting to data [2, 17]. These approaches
+data from microarray experiments and regulatory are all useful exploratory tools in the sense that they
+sequence data – has become one of the central problems allow the user to generate biological hypotheses about
+in computational biology, particularly for simpler model transcriptional regulation that can then be tested in
+organisms such as S. cerevisiae. Efforts to identify the lab. In general, however, these approaches are not
+regulatory elements in non-coding DNA [1, 6], models yet adequate for making accurate predictions about
+for investigating co-occurrence of regulatory motifs and which genes will be up- or down-regulated in new
+combinatorial effects of regulatory molecules [11], and or held-out experiments. Therefore, it is difficult to
+attempts to organize genes that appear to be subject to compare performance of different approaches or decide,
+common regulatory control into “regulatory modules” based on cross-validation experiments, which approach
+[7, 14] all define pieces of this complex problem. Most is likely to generate plausible hypotheses.
+recent studies of transcriptional regulation can be
+placed broadly in one of three categories: statistical Thegoalofourmethodistolearnapredictionfunction
+approaches, whichaimtoidentify statisticallysignificant fortheregulatoryresponseofgenesunderdifferentexper-
+regulatory patterns in a dataset [1, 7, 11]; probabilistic imentalconditions. Theinputstoourlearningalgorithm
+are the gene-specific regulatory sequences – represented target (“child”) genes, as well as a model that can cap-
+bythesetofbindingsitepatternstheycontain(“motifs”) ture combinatorial relationships among regulators; how-
+– andthe experiment-specific expressionlevelsofregula- ever,ourmargin-basedtreesareverydifferentfromprob-
+tors (“parents”). The output is a prediction of the ex- abilistic trees. Unlike in Segal et al. [14], we learn from
+pression state of the regulated gene. Rather than trying both expressionand sequence data, so that the influence
+topredictareal-valuedexpressionlevel,weformulatethe ofaregulatorismediatedthroughpresenceofregulatory
+taskasabinaryclassificationproblem,thatis,wepredict element. We note that in separatework,Segal et al. [15]
+onlywhetherthe geneis up-ordown-regulated. Thisre- presentaprobabilisticmodelforcombiningpromoterse-
+ductionallowsustoexploitmodernandeffectiveclassifi- quence data and a large amount of expression data to
+cationalgorithms. The learningalgorithmthatwe use is learn transcriptional modules on a genome-wide level in
+boosting with a margin-based generalization of decision S.cerevisiae,buttheydonotdemonstratehowtousethis
+treescalledalternatingdecisiontrees(ADTs). Boosting, learned model for predictions of regulatory response.
+like support vector machines, is a large-margin classifi-
+cationalgorithmthatperformswellforhigh-dimensional
+problems. We evaluate the performance of our method II. LEARNING ALGORITHM
+bymeasuringpredictionaccuracyonheld-outmicroarray
+experiments, and we achieve very good classification re- A. Adaboost
+sults in this setting. Moreover,we show thatthe learned
+predictiontreescontaininformationthatisbothstatisti-
+Adaboost is a general discriminative learning algo-
+cally significant and biologically meaningful. These sig-
+rithm invented by Freund and Schapire [12]. The ba-
+nificantfeatures,whichareassociatedwithaccurategen-
+sic idea of Adaboost is to repeatedly apply a simple
+eralization rather than simply correlations in the train-
+learning algorithm, called the weak or base learner, to
+ing data, suggest regulators, motifs, and motif-regulator
+different weightings of the same training set. In its
+pairs that play an important role in gene transcriptional
+simplest form, Adaboost is intended for binary predic-
+regulation.
+tion problems where the training set consists of pairs
+Amongrecentstatisticalapproaches,themostsuccess- (x1,y1),(x2,y2),...,(x
+correspondsto the fea-
+fulrelatedapproachistheREDUCEalgorithmofBusse- tures of an example, and y ∈ {−1,+1} is the binary
+maker et al. [1] for regulatory element discovery. Given label to be predicted. A weighting of the training exam-
+gene expression measurements from a single microarray ples is an assignment of a non-negative real value w to
+experimentandtheregulatorysequenceS g foreachgene each example (x i ,y i ).
+g represented on the array, REDUCE proposes a linear
+Oniterationtoftheboostingprocess,theweaklearner
+model for the dependence of log gene expression ratio
+is applied to the training set with a set of weights
+E g on presence of regulatory subsequences (or “motifs”) w 1 t,...,w m t and produces a prediction rule h t that maps
+E = C + F N , where N is a count of oc-
+g µ∈Sg µ µg µg x to {0,1}. The requirement on the weak learner is for
+currences ofPregulatory subsequence µ in sequence S g , h t (x) to have a small but significant correlation with
+and the F µ are experiment-specific fit parameters. We the example labels y when measured using the current
+generalize beyond the conditions of a single experiment weighting of the examples. Aftertheruleh isgenerated,
+by considering pairs (motif g ,parent e ), where the parent theexampleweightsarechangedsothattheweakpredic-
+variable represents over- or under-expression of a regu- tions h (x) and the labels y are decorrelated. The weak
+lator(transcriptionfactor,signalingmolecule, orprotein learneristhencalledwiththenewweightsoverthetrain-
+kinase)intheexperimente,ratherthanusingmotifinfor- ing examples and the process repeats. Finally, all of the
+mation alone. Note, however, that we use classification weak prediction rules are combined into a single strong
+rather than regressionas in REDUCE. rule using a weighted majority vote. One can prove that
+Similar restriction of potential parents has been used iftherulesgeneratedintheiterationsareallslightlycor-
+withsuccessintheprobabilisticmodelliterature,includ- related with the label, then the strong rule will have a
+ing in the regression-based work of Segal et al. [14] for very high correlation with the label – in other words, it
+partitioning target genes into regulatory modules for S. will predict the label very accurately.
+cerevisiae. Here,eachmoduleisaprobabilisticregression Thewholeprocesscanbeseenasavariationalmethod
+tree,whereinternalnodesofthetreecorrespondtostates in which an approximation F(x) is repeatedly changed
+of regulators and eachleaf node prescribes a normal dis- by adding to it small corrections given by the weak pre-
+tribution describing the expression of all the module’s diction functions. In Figure 1, we describe Adaboost in
+genes given the regulator conditions. The authors pro- these terms. We shall refer to F(x) as the prediction
+vide some statistical validation on new experiments by scoreinthe restofthe paper. The strongpredictionrule
+establishing that selected module distributions do have learned by Adaboost is sign(F(x)).
+non-random correlation with true expression; however, Asurprisingphenomenonassociatedwith Adaboostis
+they do not focus on making accurate predictions of dif- that the test error of the strong rule (percentage of mis-
+ferentialexpressionaswedohere. Inourwork,weretain takesmadeonnewexamples)oftencontinuestodecrease
+the distinction between regulator (“parent”) genes and even after the training error (fraction of mistakes made
+F0(x)≡0 We follow all of the dotted arrows that emanate from
+for t=1...T predictionnodes, but we follow only one of the solid-line
+wi t =exp(−yiFt−1(xi)) arrowsemanating froma splitter node, correspondingto
+the answer (yes or no) to the condition stated in rectan-
+Get ht from weak learner
+gle. We sum the values in all the prediction nodes that
+αt =ln (cid:18) P i: i h :h t t (x (x i i )= )= 1 1 ,y ,y i i = = − 1 1 w i i t(cid:19) we reach. This sum represents the prediction score F(x)
+P above, and its sign is the prediction.
+For example, suppose we had an individual for
+which hdl=bad, b.press=0, pain=y, oldpeak=2,
+FIG. 1: The Adaboost algorithm. weight=300,sex=m. Inthiscase,thepredictionnodes
+thatwereachinthetreeare0.062,−0.626,0.425,−0.444,
+−0.536,0.138,andsumminggivesascoreof−0.981,i.e.,
+onthetrainingset)reacheszero. Thisbehaviorhasbeen averyconfidentdiagnosisthattheindividualhasaheart
+relatedtotheconceptofa“margin”,whichissimplythe problem.
+value yF(x) [13]. While yF(x)>0correspondsto a cor- The ADT in the figure was generated by Adaboost
+rectprediction,yF(x)>a>0correspondstoaconfident from training data. In terms of Adaboost, each predic-
+correctprediction,andtheconfidenceincreasesmonoton- tionnoderepresentsaweakpredictionrule,andatevery
+icallywitha. Ourexperimentsinthispaperdemonstrate boosting iteration, a new splitter node together with its
+thecorrelationbetweenlargemarginsandcorrectpredic- twopredictionnodesisintroduced. Thesplitternodecan
+tions on the test set (see Results section). beattachedtoanypreviouspredictionnode,notonlyleaf
+nodes. Each prediction node is associated with a weight
+αthatcontributestothe predictionscoreofeveryexam-
+B. Alternating Decision Trees ple reaching it. The weak hypothesis h(x) is 1 for every
+example reaching the prediction node and 0 for all oth-
+ers. The numberinfrontofthe conditionsinthe splitter
+nodesofFigure2indicatestheiterationnumberonwhich
+the node was added. In general,loweriteration numbers
+indicatethatthedecisionruleismoreimportant. Weuse
+this heuristictoanalyzethe ADTs andidentify the most
+important factors in gene regulatory response.
+C. ADTs for Predicting Regulatory Response
+For the problem of predicting differential gene expres-
+sion,we startwith a candidate setof motifs µ represent-
+ing known or putative regulatory element sequence pat-
+FIG. 2: An example ADT. terns and a candidate set of regulators or parents π. For
+each (gene,experiment) example in our gene expression
+dataset, we have two sources of feature information rel-
+Adaboost is often used with a decision tree learning ative to the candidate motifs and candidate parent sets:
+algorithms as the base learning algorithm. We use Ad- a vector N of motif counts of occurrences of patterns
+aboost both to learn the decision rules constituting the µ in the regulatory sequence of gene g, and the vector
+tree and to combine these rules through a weighted ma- π ∈{−1,0,1}of expressionstates for parent genes π in
+jority vote. The form of the generated decision rules is the experimente. The data representationis depicted in
+called an alternating decision tree (ADT) [3]. Figure 3.
+We explain the structure of ADTs using the example Splitter nodes inour ADTs depend ondecisions based
+given in Figure 2, reproduced from Freund & Mason [3]. on (motif,parent) pairs. However,instead of splitting on
+Theproblemdomainisheartdiseasediagnosticsandthe real-valued thresholds of parent expression and integer-
+goalistopredictwhetheranindividualishealthyorsick valued motif count thresholds, we consider only whether
+based on 13 different indicators. The tree consists of al- a motif µ is present or not, and only whether a parent
+ternatinglevelsofovals(prediction nodes)andrectangles π is over-expressed(or under-expressed) in the example.
+(splitter nodes). The numbers within the ovals define Thus, splitter nodes make boolean decisions based on
+contributions to the prediction score. In this example, conditions such as “motif µ is present and regulator π
+positive contributions are evidence of a healthy heart, is over-expressed (or under-expressed)”. Paths in the
+negative contributions are evidence of a heart problem. learned ADT correspond to conjunctions (AND opera-
+To evaluate the prediction for a particular individual we tions) of these boolean (motif,parent) conditions. Full
+startatthe topoval(0.062)andfollowthe arrowsdown. details on selection of the candidate motifs and regula-
+Due to computational limitations on the number of
+(motif,parent)featureswecoulduseintraining,weselect
+smaller subsets of regulators based on the following se-
+lection criteria. We use 13 high-variance regulators that
+had a standard deviation (in expression over all experi-
+ments) above a cutoff of 1.2. The second subset consists
+ofthe9globalregulatorsthatarepresentintheLeeetal.
+[8] studies but absent in the candidate list of Segalet al.
+[14]. We also include 50 regulators that are found to be
+top ranking regulators for the clusters identified in Se-
+gal et al. The union of these three lists gives 53 unique
+regulators.
+Target set and label assignment: Wediscretizeex-
+pression values of all genes into three levels representing
+down-regulation (-1), no change (0) and up-regulation
+(+1) using cutoffs based on the empirical noise distribu-
+tion around the baseline (0) calculated from the three
+replicate unstimulated (time=0) heat-shock experiments
+FIG. 3: Representation of data for regulatory response
+[4]. We observe that 95% of the samples in this dis-
+prediction. Every (target gene,experiment) is assigned a label
+of +1 (up-regulated, in red) or -1 (down-regulated, in green) and tribution had expression values between +1.3 and -1.3.
+representedbythegene’svectorofmotifcounts(onlybinaryvalues Thus we use these cutoffs to decide what we define as
+shown here) and the experiment’s vector of regulator expression significantly up-regulated (+1) and down-regulated (-1)
+states.
+beyond the levels of biologicaland experimental noise in
+the microarraymeasurements.
+Note that although we train only on those
+tors and discretization into up and down states is given
+(gene,experiment) pairs which discretize to up- or
+in the Methods section.
+down-regulated states, we test (make predictions) on
+every example in a held-out experiment by thresholding
+on predicted margins. That is, we predict baseline if
+III. METHODS
+a prediction has margin below threshold (see Results
+section).
+Dataset: We use the Gasch et al. [4] environmental
+We reduce our target gene list to a set of 1411 genes
+stress response dataset, consisting of cDNA microarray
+which include 469 highly variant genes (standard devia-
+experiments measuring genomic expression in S. cere-
+tion > 1.2 in expression over all experiments) and 1250
+visiae in response to diverse environmental transitions.
+genesthat arepartofthe 17clusters identifiedby Gasch
+There are a total of 6110 genes and 173 experiments in
+et al. [4] using hierarchical clustering (eliminating over-
+the dataset, with all measurements given as log expres-
+2 laps).
+sionvalues(fold-changewithrespecttounstimulatedref-
+Software: We use the MLJavasoftwaredevelopedby
+erence expression). We do not perform a zero mean and
+Freund and Schapire, which implements the ADT learn-
+unit variance normalization over experiments, since we
+ing algorithm. We use the text-feature in MLJava to
+mustretainthemeaningofthetruezero(nofoldchange).
+take advantage ofthe sparse motif matrix and use mem-
+Motif set: We obtain the 500 bp 5’ promoter se-
+ory more efficiently.
+quencesofallS.cerevisiae genesfromtheSaccharomyces
+Genome Database (SGD). For each of these sequences,
+we search for transcription factor (TF) binding sites us-
+IV. RESULTS
+ing the PATCH software licensed by TRANSFAC [16].
+The PATCH tool uses a library of known and putative
+TF binding sites, some of which are represented by po- A. Cross-Validation Experiments
+sition specific scoring matrices and some by consensus
+patterns, from the TRANSFAC Professional database. We first perform cross-validation experiments to eval-
+A total of 354 binding sites are used after pruning to uate classificationperformance on held-out experiments.
+remove redundant and rare sites. We divide the set of 173 microarrayexperiments into 10
+Parent set: We compile different sets of candidate folds, grouping replicate experiments together to avoid
+regulators to study the performance and dependence of bias, and perform 10-fold cross-validation experiments
+ourmethodonthesetofregulators. Werestrictourselves using boosting with ADTs on all 1411 target genes.
+toasupersetof475regulators(consistingoftranscription We trainthe ADTs for 400boosting iterations,during
+factors, signaling molecules and protein kinases), 466 of mostofwhichtest-lossdecreasescontinuously. Weobtain
+which are used in Segal et al. [14] and 9 generic (global) an accuracy of 88.5% on up- and down-regulated exam-
+regulators obtained from Lee et al. [8]. ples averaged over 10 folds (test loss of 11.5%), showing
+that predicting regulatory response is indeed possible in PredictedBins
+our framework. Down Baseline Up
+Down 16.5% 8.9% 1.5%
+To assess the difficulty of the classification task, we
+TrueBins Baseline 9.3% 32.4% 6.3%
+also compare to a baseline method, k-nearest neighbor
+Up 2.8% 9.9% 12.0%
+classification (kNN), where each test example is classi-
+fied by a vote of its k nearest neighbors in the train-
+ing set. For a distance function, we use a weighted sum TABLE I: Confusion Matrix: Truth and predictions for all
+o m f E | u |2 cl + id w ean ||p dist − an p ces ||2 d , (( w g h 1, e e re 1) m ,(g2 r , e e p 2 r ) e ) s 2 en = ts w t m he ||m ve g c 1 to − r g b e a n se e l s in i e n l t e h v e els h . eld E -o x u a t m e p x le p s er a im re en b t i s n , n i e n d clu by din a g ssi t g h n o i s n e g e a xp t r h es r s e e s d ho a ld t
+ene g and p
+represents the parent
+a=±0.5toexpressionandpredictionscores.
+expressionvectorinexperimente. Wetryvariousweight
+ratios 10−3 < (w /w ) < 103 and values of k < 20,
+B. Extracting features for biological interpretation
+and we use both binary and integer representations of
+the motif data. We obtain minimum test-loss of 34.4%
+at k=17 for binary motif counts and 31.3% at k=19 for We describe below several approaches for extracting
+integer motif counts, both for weight-ratios of 1, giving important features from the learned ADT models, and
+much poorer performance than boosting with ADTs. wesuggestwaystorelatethese featuresto the biologyof
+gene regulation.
+Since ADTs output a real-valued prediction score
+Extracting significant features: Features at nodes
+F(x)= T α h (x),whoseabsolutevaluemeasuresthe
+t=1 t t intheADTconsistofmotif-parentpairs. Werankmotifs,
+confidenPce of the classification,we canpredict a baseline
+parents and motif-parent pairs by three different meth-
+label by thresholding on this score, that is, we predict
+ods: by the boosting iteration in which the feature first
+examples to be up- or down-regulated if F(x) > a or
+occurs (iteration score), by the total number of occur-
+F(x)<−arespectively,andto be baseline if |F(x)|<a,
+rences of the feature in the final tree (abundance score),
+where a > 0. Figure 4 shows expression values versus
+and by the absolute prediction score associated to the
+feature (prediction score). Ranking scores are averaged
+overallten folds(see supplementarywebsite fordetailed
+results). Note that presence of a strong feature does not
+necessarily imply a direct binding relationship between
+parent and motif. Such a pair could represent an indi-
+rect regulatory relationship (for example, a kinase and
+the binding site of the transcription factor that it phos-
+phorylates) or some other kind of predictive correlation,
+for example, co-occurrence of the true binding site with
+the motif corresponding to the feature.
+The top ranking motif based on iteration score was
+the STRE element of MSN2/MSN4, which is known to
+be a regulatory element for a significant number of gen-
+eral stress response target genes [4]. The other high
+scoring motifs include HSF1 (heat-shock), RAP1 (heat-
+shockandosmolarity),TBP(TATAbindingsite),ADR1
+(glycerol metabolism and osmolarity), MIG1 (glucose
+FIG. 4: Scatter plot of true expression values versus pre- metabolismandcarbonsourcebasedstress),REB1(Pol-
+diction scores F(x) . The scatter plot shows a high correlation I transcription termination activity), GAL4 (galactose
+between prediction scores (x-axis) and true log expression values
+metabolism), YAP1 (peroxide stress) and GCN4 (amino
+(y-axis)forgenes onheld-outexperiments.
+acid biosynthesis and starvation response) binding sites,
+all of which are known to be active in various kinds of
+prediction scores for all examples (up, down, and base- stress responses.
+line) from the held-out experiments using 10-fold cross- Of the 53 candidate regulators, 37 appear in the
+validation. The plot shows a significant correlation be- ADTs ofthe ten folds. The top-rankingregulator,based
+tween expression and prediction, reminiscent of the ac- on both iteration score and abundance score, is USV1
+tual regression task. (The correlation coefficient is .74 (YPL230W);thisregulatorwasfoundbySegaletal.[14]
+for +1 and -1 examples in the test set and .59 for all as the top-ranking regulator in 11 of their 50 regulatory
+examples. While this correlation would not be consid- modules. Other top ranking regulators (see Table IVB)
+eredhighfora regressionproblem,itis significantinour include PPT1, TPK1 (SRA3), XBP1 and GCN20. It is
+current setting.) Assigning thresholds to expression and interesting to note that while the presence and absence
+predictionvaluesbinningtheexamplesintoup,downand ofbindingsitesofsomeveryimportantstressfactorslike
+baseline we obtain the confusion matrix in Table I. MSN2andHSF1(heatshockfactor)areidentifiedassig-
+nificantfeatures(highmotifiterationscore)intheADTs, 10folds heat-shock heat-shock H2O2
+their mRNA expression levels do not seem to be very w/oUSV1
+predictive. HSF1 does not appear as a parent in any USV1 USV1 SRA3 USV1
+of the ADTs, and MSN2 gets low abundance and itera- XBP1 XBP1 XBP1 XBP1
+tionscoresasaparent,despite its importanceasastress SRA3 SRA3 PPT1 SRA3
+response regulator. Similar results are observed in the PPT1 PPT1 DAL80 YAP1
+modules of Segal et al. [14], where HSF1 is not found GIS1 GIS1 GAC1 PPT1
+in any of the regulation programs and MSN2 is found YGL099W SLT2 GIS1 FAR1
+in 3 of the 50 regulation programs but with low signif- GAC1 GIP2 SLT2 YGL099W
+icance. If we examine the expression profiles of HSF1, GCN20 GAC1 WTM1 SLT2
+MSN2, USV1 and PPT1, we find that the mRNA levels MTH1 DAL80 SRD1 GAC1
+of MSN2 and HSF1 have quite small fluctuations (rarely HAP4 SRD1 GAT1 MTH1
+greater than 2 fold change) and fall mostly within the YGL096W GAT1 GIP2 GIS1
+baseline state, while the expression levels of USV1 or
+PPT1showmuchlargervariationovermanyexperiments
+(see Figure 5). It is knownthat MSN2 is regulatedpost- TABLE II: Top scoring regulators: Topscoringregulatorsfor
+the 10 fold cross-validation experiment and three special setups.
+translationallybyTPK1,whichisidentifiedasanimpor-
+For additional results on extracted features, refer to the supple-
+tantparentintheADTsandisfoundassociatedwiththe
+mentarywebsite.
+MSN2 binding site as a motif-parent pair. Thus in this
+case, where the activity of a regulator is itself regulated
+post-transcriptionally, we see a clear advantage of using
+motif data along with mRNA expression data. C. Biological Validation Experiments
+We designed 5 different training and test sets of se-
+lected microarray experiments based on observations of
+similarityanddifferencesbetweenstressesbyGaschetal.
+[4], andweusedtheseexperimentsto studythe response
+to specific types of stress in our framework. We present
+results for 3 of these studies below (see supplementary
+website for the other 2 experiments). By comparative
+analysis of the trees learnedfrom these sets, we find and
+validate regulatorsthat are associatedto regulationpro-
+grams activated by different stresses.
+Heat-shock and osmolarity stress response: In
+the first study, we trained on heat-shock, osmolarity,
+heat-shock knockouts, over-expression, amino-acid star-
+vation experiments, and we tested on stationary phase,
+simultaneous heat-shock and hypo-osmolarity experi-
+ments.
+FIG. 5: Comparison of expression profiles (173 experi-
+We observe a low test loss of 9.3%, supporting the
+ments) of USV1, MSN2, HSF1 and PPT1. The mRNA
+expression levels of USV1 and PPT1 are informative, with about hypothesis that pathwaysinvolvedin heat-shock and os-
+50%and35%ofexperiments(respectively)showingover2foldex- molarity stress appear to be independent and the joint
+pressionchangeoverwildtype. TheespressionlevelsforMSN2and response to both stresses can be predicted easily [4]. We
+HSF1 fall mostly in the baseline state, with only about 6% and
+also confirm that the regulatory response for stationary
+5%ofexperiments(respectively)showingatleast2foldexpression
+change. While MSN2 and HSF1 are not identified as high scor- phase (test set) is very similar to that of heat-shock
+ing parents in the learned trees, their binding sites occur as high (training set) [4]. The high scoring parents are USV1,
+scoringmotifs. XBP1, TPK1, PPT1, GIS1, GAC1 and SLT2. The con-
+nection of osmolarity response to the HOG and other
+MAPkinasepathwaysiswellknown,anditisinteresting
+tonotethatmostoftheseregulatorsareinfactsignaling
+molecules. Also, the osmolarity response is strongly re-
+“In silico” knock-outs: By removing a candidate lated to glycerol metabolism and transport and hence
+from the regulator list and retraining the ADT, we can closely associated with gluconeogenesis and glucose
+evaluate whether test loss significantly decreases with metabolismpathways. WefindthebindingsitesofCAT8
+omission of the parent and identify other weaker regu- (gluconeogensis), GAL4 (galactose metabolism), MIG1
+lators that are also correlatedwith the labels. We inves- (glucose metabolism), GCN4 (regulator of HOG path-
+tigate in silico knock-outs in the biologically-motivated wayandaminoacidmetabolism), HSF1(heat-shockfac-
+experiments described below. tor), CHA4 (amino acid catabolism), MET31 (methion-
+ine biosynthesis), RAP1 and MSN2/MSN4 to have high nibus and the SaccharomycesGenome Database (SGD).
+iteration scores; these regulators are all related to the At the same time, we hope to increase the number of
+stress conditions in the training set. parents to include the complete putative list of about
+USV1 “in silico” knockout: Using the same train 500 regulators, in order to identify the possible roles of
+and test microarrays as in the heat-shock/osmolarity additionalregulatoryproteins. Sinceweareusing(motif,
+setup, we perform a second study by removing one of parent) feature pairs, increasing the number of parents
+the strongregulators,USV1, from the parentset andre- increasesthe feature space and memory requirementsby
+trainingtheADT.Wegetaminorbutsignificantincrease amultiplicative factor. Two promisingdirections forim-
+in test error from 9.3% to 11%. Regarding structural provement are (i) using data structures more appropri-
+changes in the ADT, we observe that the overall hierar- ate for our pairwise interaction features and (ii) using
+chy of the features does not change significantly: TPK1, weighted sampling to reduce the size of the memory re-
+XBP1, PPT1 and GIS1 remain the highest scoring par- quired for the training data.
+ents. We also find that 305 target genes change predic- Another potential advance would be a more careful
+tion labels. GO annotation enrichment analysis of these treatment of the raw data. In these preliminary exper-
+target genes reveal the terms cell wall organization and iments, we used a simple noise model based on wild-
+biogenesis,heat-shock protein activity, galactose,acetyl- type replicates, and we were able to learn to predict
+CoA and chitin metabolism and tRNA processing and large up- or down-regulation response using thresholds
+cell-growth. These matchmanyofthe terms enrichedby based on this model. However, while log expression ra-
+analyzing GO annotations of genes that changed signif- tio data (perturbation/wild type) gives a natural input
+icantly in a microarray experiment by Segal et al. [14] variable for our analysis, better signal to noise is likely
+with stationary phase induced in a USV1 knockout. to be achievedby taking into accountthe excitation lev-
+Pleiotropic response to diamide: For the third els separately. In particular, using an intensity-sensitive
+study, we trained on heat-shock, heat-shock knockouts, noise model could allow us to establish more meaningful
+over-expression,H2O2wild-typeandmutant,menadione, thresholds for more of the genes. A more complicated
+DTT experiments, and we tested on diamide experi- issue is the fact that we do not use baseline expression
+ments. examples for training, and therefore we restrict to the
+Gasch et al. [4] consider the diamide response to be a subsetofgenesthatshowvariationacrossstressresponse
+composite of responses to the experiments in the train- experiments for our training and test sets. Ideally, how-
+ing set. We observe a moderate test loss of 16%, sug- ever, we would like to predict regulatory response for all
+gesting that this pleiotropic response is more complex genes(including non-respondinggenes),whichwilllikely
+than the simpler additive responses to heat-shock and mean changing the formulation of the learning task so
+osmolarity. We observe the emergence of an important that we include baseline examples in training.
+motif-parent feature: YAP1 is directly associated with Afurtherrefinementwouldbetotreatparentandchild
+its ARE-binding site (Y$TRX2) as a high scoring regu- excitation levels as continuous rather than binary quan-
+lator that is absent in the ADTs of both previous stud- tities. Similarly, the number of motifs in the regulatory
+ies. This finding is consistent with known biology, since region, rather than merely their presence/absence, and
+YAP1 plays a specific role in peroxide and superoxide thespatialrelationshipbetweenthemcouldbetakeninto
+response (present in the training set) [4]. We also find account. While these extensions could potentially yield
+the PDR3 (menadione-drug response) binding site to be much more realistic models, they require substantial al-
+a high scoring motif. gorithmic changes and should be done carefully so as to
+avoid overfitting.
+Whileweshowedhowtoextractsignificantmotifs,reg-
+V. DISCUSSION
+ulators, and motif-regulator pairs from the ADTs, fur-
+ther work is needed to obtain more detailed information
+While encouraged by the performance of our method, from these predictive models. It is plausible that the
+webelievefurtherworkislikelytoyieldmuchmorecom- trees contain information about combinatorial relation-
+prehensive and accurate models of the regulatory net- shipsbetweenregulatorsorbetweenregulatoryelements,
+works of yeast and other simple organisms. but it is not clear how to disambiguate independent ef-
+One main direction for improvementis to increase the fects from combinatorial ones. One possible approach
+computational efficiency of our software so that we can could be to rank collections of two or more features oc-
+scale up both the size of the training set and the feature curring in paths in the ADTs and check whether motifs
+space. Since the Gasch dataset that we used here only in over-represented paths tend to co-occur in regulatory
+contains experiments for environmental stress response, regions, giving evidence of combinatorial relationships.
+many other regulatory pathways are likely not activated Another approach is to examine more carefully the con-
+and therefore cannot be modeled by analysis of this tributions ofdifferentfeatures to the predictionscorefor
+datasetalone. Weplantopursuemoreextensivecompu- various target genes. While our learning method does
+tationalexperimentsonotherdiverseyeastdatasets,such not yield a descriptive network model that can be easily
+asthoseavailablethroughNCBI’sGene ExpressionOm- visualized,webelievethatthepredictivemodelapproach
+enables new possibilities for analysis and understanding GM36277. CL and CW are supported by NIH grant
+of gene regulation. LM07276-02, and CL is supported by an Award in In-
+formatics from the PhRMA Foundation.
+VI. ACKNOWLEDGEMENT
+AKissupportedbyNSFEEC-00-88001. CWandMM
+are partially supported by NSF ECS-0332479 and NIH
+[1] H. J. Bussemaker, et al. (2001). ‘Regulatory element pp. 215–224.
+detection using correlation with expression’. Nature Ge- [10] D.Pe’er,etal.(2002). ‘AFastandRobustMethodtoIn-
+netics 27:167–171. ferandCharacterizeandActiveRegulatorSetforMolec-
+[2] P.D’Haeseleer,etal.(1999). ‘LinearmodelingofmRNA ular Pathways’. Proc. of the Tenth International Conf.
+expression levels during CNS development and injury’. onIntelligentSystemsforMolecularBiologypp.258–267.
+Pac. Symp. Biocomp. pp.41–52. [11] Y. Pilpel, et al. (2001). ‘Identifyingregulatory networks
+[3] Y.Freund&L.Mason (1999). ‘The alternatingdecision by combinatorial analysis of promoter elements’. Nature
+tree learning algorithm’. Proc. of the Sixteenth Interna- Genetics 2:153–159.
+tional Conf. on Machine Learning pp. 124–133. [12] R. E. Schapire (2002). ‘The boosting approach to ma-
+[4] A.P.Gasch,etal.(2000). ‘Genomicexpressionprograms chine learning: An overview’. In MSRI Workshop on
+in the response of yeast cells to environmental changes’. Nonlinear Estimation and Classification.
+Mol. Biol. Cell 11:4241–4257. [13] R. E. Schapire, et al. (1998). ‘Boosting the margin: A
+[5] A.J. Hartemink,et al. (2001). ‘Using Graphical Models newexplanationfortheeffectivenessofvotingmethods’.
+and Genomic Expression Data to Statistically validate The Annals of Statistics 26(5):1651–1686.
+Models of Genetic Regulatory Networks’. Pac. Symp. [14] E. Segal, et al. (2003a). ‘Module Networks: Identifying
+Biocomp. pp.422–33. Regulatory Modules and their Condition Specific Reg-
+[6] J. D. Hughes, et al. (2000). ‘Computational identifica- ulators from Gene Expression Data’. Nature Genetics
+tion of cis-regulatory elements associated with groupsof 34(2):166–176.
+functionally related genes in Saccharomyces cerevisiae’. [15] E.Segal,etal.(2003b).‘Genome-wideDiscoveryofTran-
+J. Mol. Biol. 296(5):1205–14. scriptional Modules from DNA Sequence and Gene Ex-
+[7] J.Ihmels,etal.(2002). ‘Revealingmodularorganization pression’. Bioinformatics 19:273–282.
+in the yeast transcriptional network’. Nature Genetics [16] E.Wingender,etal.(2000). ‘TRANSFAC:anintegrated
+31:370–377. system for gene expression regulation’. Nucleic Acids
+[8] T.I.Lee,etal.(2002). ‘TranscriptionalRegulatoryNet- Research 28:316–319.
+works in Saccharomyces cerevisiae’. Science 298:799– [17] M. Yeung, et al. (2002). ‘Reverse engineering gene net-
+804. works using singular valuedecomposition and robust re-
+[9] D. Pe’er, et al. (2001). ‘Inferring subnetworks from per- gression’. Proc. Natl. Acad. Sci. USA 99:6163–8.
+turbed expression profiles’. Proc. of the Ninth Interna-
+tionalConf.onIntelligentSystemsforMolecularBiology

@@ -1,0 +1,1072 @@
+2v4402130/sc:viXra
+Clustering by Compression
+Rudi Cilibrasi∗ Paul Vitanyi†
+CWI CWIand UniversityofAmsterdam
+Wepresentanewmethodforclusteringbasedoncompression.Themethoddoesn’tusesubject-specificfeatures
+orbackgroundknowledge, andworksasfollows: First,wedetermineauniversalsimilaritydistance,thenormal-
+izedcompression distance or NCD, computed from thelengths of compressed data files(singly and inpairwise
+concatenation).Second,weapplyahierarchicalclusteringmethod.TheNCDisuniversalinthatitisnotrestricted
+toaspecificapplicationarea,andworksacrossapplicationareaboundaries. Atheoreticalprecursor, thenormal-
+izedinformationdistance, co-developed byoneof theauthors, isprovably optimalinthesensethatitminorizes
+everycomputablenormalizedmetricthatsatisfiesacertaindensityrequirement. However,theoptimalitycomesat
+thepriceofusingthenon-computablenotionofKolmogorovcomplexity. Weproposeprecisenotionsofsimilar-
+itymetric, normal compressor, andshow thattheNCDbasedonanormal compressor isasimilaritymetricthat
+approximatesoptimality. Toextractahierarchyofclustersfromthedistancematrix,wedetermineadendrogram
+(binarytree)byanewquartetmethodandafastheuristictoimplementit.Themethodisimplementedandavailable
+aspublicsoftware,andisrobustunderchoiceofdifferentcompressors. Tosubstantiateourclaimsofuniversality
+androbustness,wereportevidenceofsuccessfulapplicationinareasasdiverseasgenomics,virology,languages,
+literature,music,handwrittendigits,astronomy, andcombinationsofobjectsfromcompletelydifferentdomains,
+using statistical, dictionary, and block sorting compressors. In genomics we presented new evidence for major
+questionsinMammalianevolution,basedonwhole-mitochondrialgenomicanalysis: theEutherianordersandthe
+MarsupiontahypothesisagainsttheTheriahypothesis.
+1 Introduction
+Alldataarecreatedequalbutsomedataaremorealikethanothers. Weproposeamethodexpressingthisalikeness,
+usinganewsimilaritymetricbasedoncompression.Thismetricdoesn’tuseanyfeaturesorbackgroundknowledge,
+and can withoutchangesbe appliedto differentareasand acrossarea boundaries. Itis robustin the sense that its
+success appears independent from the type of compressor used. The clustering we use is hierarchical clustering
+in dendrogramsbased on a new fast heuristic for the quartet method. The method is available as an open-source
+software tool. Below we explainthe method, the theoryunderpinningit, and presentevidencefor its universality
+androbustnessbyexperimentsandresultsinaplethoraofdifferentareasusingdifferenttypesofcompressors.
+Feature-BasedSimilarities: Wearepresentedwithunknowndataandthequestionistodeterminethesimilari-
+tiesamongthemandgrouplikewithliketogether.Commonly,thedataareofacertaintype:musicfiles,transaction
+recordsofATM machines,creditcardapplications,genomicdata. Inthesedata therearehiddenrelationsthatwe
+wouldliketogetoutintheopen. Forexample,fromgenomicdataonecanextractletter-orblockfrequencies(the
+blocksareoverthefour-letteralphabet);frommusicfilesonecanextractvariousspecificnumericalfeatures,related
+topitch,rhythm,harmonyetc. OnecanextractsuchfeaturesusingforinstanceFouriertransforms[41]orwavelet
+transforms[16]. Thefeaturevectorscorrespondingtothevariousfilesarethenclassifiedorclusteredusingexisting
+classification software, based on various standard statistical pattern recognition classifiers [41], Bayesian classi-
+fiers[13], hiddenMarkovmodels[11], ensemblesofnearest-neighborclassifiers[16] orneuralnetworks[13, 37].
+Forexample,in musiconefeaturewouldbe tolookforrhythmin the senseof beatsperminute. One canmakea
+histogramwhereeachhistogrambincorrespondstoaparticulartempoinbeats-per-minuteandtheassociatedpeak
+showshowfrequentandstrongthatparticularperiodicitywasovertheentirepiece.In[41]weseeagradualchange
+froma few highpeaksto manylow andspread-outonesgoingfromhip-hip,rock,jazz, to classical. One canuse
+∗SupportedinpartbyNWO.Address:CWI,Kruislaan413,1098SJAmsterdam,TheNetherlands.Email:Rudi.Cilibrasi@cwi.nl.
+†SupportedinpartbytheEUprojectRESQ,IST–2001–37559,theNoEQUIPROCONE+IST–1999–29064,theESFQiTProgrammme,and
+theEUFourthFrameworkBRANeuroCOLTIIWorkingGroupEP27150.Address:CWI,Kruislaan413,1098SJAmsterdam,TheNetherlands.
+Email:Paul.Vitanyi@cwi.nl.
+thissimilaritytypetotrytoclusterpiecesinthesecategories.However,suchamethodrequiresspecificanddetailed
+knowledgeoftheproblemarea,sinceoneneedstoknowwhatfeaturestolookfor.
+Non-FeatureSimilarities: Ouraimistocapture,inasinglesimilaritymetric,everyeffectivemetric: effective
+versionsofHammingdistance,Euclideandistance,editdistances,alignmentdistance,Lempel-Zivdistance[9],and
+soon. Thismetricshouldbesogeneralthatitworksineverydomain: music,text,literature,programs,genomes,
+executables,naturallanguagedetermination,equallyandsimultaneously. Itwouldbeabletosimultaneouslydetect
+allsimilaritiesbetweenpiecesthatothereffectivemetricscandetect.
+Compression-based Similarity: Such a “universal”metric was co-developedby us in [27, 28, 29], as a nor-
+malizedversionofthe“informationmetric”of[30,4]. Roughlyspeaking,twoobjectsaredeemedcloseifwecan
+significantly“compress”onegiventheinformationintheother,theideabeingthatif twopiecesaremoresimilar,
+then we can more succinctly describe one given the other. The mathematics used is based on Kolmogorovcom-
+plexitytheory[30]. In[29]wedefinedanewclassofmetrics,takingvaluesin[0,1]andappropriateformeasuring
+effectivesimilarityrelationsbetweensequences,sayonetypeofsimilaritypermetric,andviceversa. Itwasshown
+thatanappropriately“normalized”informationdistanceminorizeseverymetricintheclass. Itdiscoversalleffective
+similaritiesinthesensethatiftwoobjectsarecloseaccordingtosomeeffectivesimilarity,thentheyarealsoclose
+accordingto the normalized informationdistance. Put differently, the normalizedinformationdistance represents
+similarityaccordingtothedominatingsharedfeaturebetweenthetwoobjectsbeingcompared. Thenormalizedin-
+formationdistancetooisametricandtakesvaluesin[0,1];henceitmaybecalled“the”similaritymetric. Toapply
+this ideal precise mathematical theory in real life, we have to replace the use of the noncomputableKolmogorov
+complexity by an approximation using a standard real-world compressor. Earlier approaches resulted in the first
+completely automatic construction of the phylogenytree based on whole mitochondrialgenomes, [27, 28, 29], a
+completelyautomaticconstructionofalanguagetreeforover50Euro-Asianlanguages[29],detectsplagiarismin
+studentprogrammingassignments[38],givesphylogenyofchainletters[5],andclustersmusic[8]. Moreover,the
+method turns out to be robust under change of the underlying compressor-types: statistical (PPMZ), Lempel-Ziv
+baseddictionary(gzip),blockbased(bzip2),orspecialpurpose(Gencompress).
+RelatedWork: Inviewofthesimplicityandnaturalnessofourproposal,itisperhapssurprisingthatcompres-
+sionbasedclusteringandclassificationapproachesdidnotarisebefore.Butrecentlytherehavebeenseveralpartially
+independentproposalsin thatdirection: [1, 2] forbuildinglanguagetrees—whileciting [30, 4]—is byessentially
+moreadhocargumentsaboutempiricalShannonentropyandKullback-Leiblerdistance. Thisapproachisusedto
+cluster music MIDI files by Kohonenmaps in [31]. Another recentoffshootbased on our work is [21] hierarchi-
+calclusteringbasedonmutualinformation. Inarelated,butconsiderablysimplerfeature-basedapproach,onecan
+comparethe word frequenciesin textfiles to assess similarity. In [40] the word frequenciesof wordscommonto
+a pair of text files are used as entries in two vectors, and the similarity of the two files is based on the distance
+betweenthosevectors.TheauthorsattributeauthorshiptoShakespeareplays,theFederalistPapers,andtheChinese
+classic“TheDreamoftheRedChamber.” Theapproachtosimilaritydistancesbasedonblockoccurrencestatistics
+isstandardingenomics,andinanexperimentbelowitgivesinferiorphylogenytreescomparedtoourcompression
+method(andwrongonesaccordingtocurrentbiologicalwisdom).Thepossiblynewfeatureinthecitedworkisthat
+itusesstatisticsofonlythewordsthatthefilesbeingcomparedhaveincommon.Arelated,opposite,approachwas
+takenin[20],whereliterarytextsareclusteredbyauthorgenderorfactversusfiction,essentiallybyfirstidentifying
+distinguishingfeatures,likegenderdependentwordusage,andthenclassifyingaccordingtothosefeatures.
+Outline: Here we proposea first comprehensivetheoryof real-worldcompressor-basednormalizedcompres-
+sion distance, a novelhierarchicalclusteringheuristic, togetherwith manynew applications. First, we definenew
+mathematicalnotionsof“similaritymetric,”“normalcompressor,”and“normalizedcompressiondistance.”Wethen
+provethenormalizedcompressiondistancebasedonanormalcompressortobeasimilaritymetric.Thenormalized
+compressiondistanceisshowntobequasi-universalinthesensethatitminorizeseverycomputablesimilaritymetric
+uptoanadditiveerrortermthatdependsonthequalityofthecompressor’sapproximationofthetrueKolmogorov
+complexities of the files concerned, and that under certain conditions vanishes with increasing file length. This
+meansthattheNCD capturesthedominantsimilarityoverallpossiblefeaturesofthe objectscompared,upto the
+statedprecision.Next,wepresentamethodofhierarchicalclusteringbasedonanovelfastrandomizedhill-climbing
+heuristicofanewquartettreeoptimizationcriterion.Givenamatrixofthepairwisesimilaritydistancesbetweenthe
+objects,wescorehowwelltheresultingtreerepresentstheinformationinthedistancematrixonascaleof0to1.
+Then,asproofofprinciple,weruntheprogramonthreedatasets,whereweknowwhatthefinalanswershouldbe:
+(i)reconstructatreefromadistancematrixobtainedfromarandomlygeneratedtree;(ii)reconstructatreefromfiles
+containingartificialsimilarities;and(iii)reconstructatreefromnaturalfilesofvastlydifferenttypes.Tosubstantiate
+ourclaimofuniversality,weapplythemethodtodifferentareas,notusinganyfeatureanalysisatall. Wefirstgive
+anexampleinwhole-genomephylogenyusingthewholemitochondrialDNAofthespeciesconcerned.Wecompare
+thehierarchicalclusteringofourmethodwithamorestandardmethodoftwo-dimensionalclustering(toshowthat
+ourdendrogrammethodofdepictingtheclustersismoreinformative).Wegiveawhole-genomephylogenyoffungi
+andcomparethistoresultsusingalignmentofselectedproteins(alignmentbeingoftentoocostlytoperformonthe
+whole-mitochondialgenome,butthedisadvantageofproteinselectionbeingthatdifferentselectionsusuallyresult
+in differentphylogenies—sowhich is right?). We identifythe virii that are closest to the sequencedSARS virus;
+wegiveanexampleofclusteringoflanguagefamilies;RussianauthorsintheoriginalRussian, thesamepiecesin
+English translation(clusteringpartially followsthe translators); clusteringof music in MIDI format; clustering of
+handwrittendigitsusedforopticalcharacterrecognition;andclusteringofradioobservationsofamysteriousastro-
+nomicalobject,amicroquasarofextremelycomplexvariability.Inallthesecasesthemethodperformsverywellin
+thefollowingsense: Themethodyieldsthephylogenyof24speciespreciselyaccordingtobiologicalwisdom. The
+probabilitythatitrandomlywouldhitthisoneoutcome,oranythingreasonablyclose,isverysmall. Inclustering36
+musicpiecestakenequallymanyfrompop,jazz,classic,sothat12-12-12isthegroupingweunderstandiscorrect,
+wecanidentifyconvexclusterssothatonlysixerrorsaremade. (Thatis,ifthreeitemsgetdislodgedthensixitems
+getmisplaced.)Theprobabilitythatthishappensbychanceisextremelysmall. Thereasonwhywethinkthemethod
+doessomethingremarkableisconciselyputbyLaplace[26]:
+“If we seek a cause wherever we perceive symmetry, it is not that we regard the symmetrical event
+as less possible than the others, but, since this event ought to be the effect of a regular cause or that
+of chance, the first of these suppositionsis more probable than the second. On a table we see letters
+arrangedinthisorderC o n s t a n t i n o p l e,andwejudgethatthisarrangementisnotthe
+resultofchance,notbecauseitislesspossiblethanothers,forifthiswordwerenotemployedin any
+languagewewouldnotsuspectitcamefromanyparticularcause,butthiswordbeinginuseamongus,
+itisincomparablymoreprobablethatsomepersonhasthusarrangedtheaforesaidlettersthanthatthis
+arrangementisduetochance.”
+MaterialsandMethods: Thedatasamplesweusedwereobtainedfromstandarddatabasesaccessibleonthe
+world-wideweb,generatedbyourselves,orobtainedfromresearchgroupsinthefieldofinvestigation. Wesupply
+the details with each experiment. The method of processing the data was the same in all experiments. First, we
+preprocessedthedatasamplestobringtheminappropriateformat:thegenomicmaterialoverthefour-letteralphabet
+{A,T,G,C}isrecodedinafour-letteralphabet;themusicMIDIfilesarestrippedofidentifyinginformationsuchas
+composerandnameofthemusicpiece.Then,inallcasesthedatasampleswerecompletelyautomaticallyprocessed
+by our CompLearn Toolkit, rather than as is usual in phylogeny, by using an ecclectic set of software tools per
+experiment. Oblivioustotheproblemareaconcerned,simplyusingthedistancesaccordingtotheNCDbelow,the
+methoddescribedinthispaperfullyautomaticallyclassifiestheobjectsconcerned. Themethodhasbeenreleased
+suiteofsimpleutilitiesthatonecanusetoapplycompressiontechniquestotheprocessofdiscoveringandlearning
+patternsincompletelydifferentdomains.Infact,thismethodissogeneralthatitrequiresnobackgroundknowledge
+about any particular subject area. There are no domain-specific parameters to set, and only a handful of general
+settings.
+TheComplearnToolkitusingNCDandnot,say,alignment,cancopewithfullgenomesandotherlargedatafiles
+andthuscomesupwithasingledistancematrix. Theclusteringheuristicgeneratesatreewithacertainconfidence,
+calledstandardizedbenefitscoreorS(T)valueinthesequel. Generatingtreesfromthesamedistancematrixmany
+timesresultedinthesametreeoralmostthesametree,foralldistancematricesweused,eventhoughtheheuristic
+israndomized. ThedifferencesthataroseareapparentlyduetoearlyorlateterminationwithdifferentS(T)values.
+Thisis a greatdifferencewith previousphylogenymethods, where becauseof computationallimitationsone uses
+only parts of the genome, or certain proteins that are viewed as significant [19]. These are run through a tree
+reconstructionmethodlikeneighborjoining[36],maximumlikelihood,maximumevolution,maximumparsimony
+as in [19], or quartet hypercleaning[6], many times. The percentage-wise agreementon certain branchesarising
+are called “bootstrap values.” Trees are depicted with the best bootstrap values on the branches that are viewed
+as supportingthe theory tested. Differentchoicesof proteinsresult in differentbest trees. One way to avoid this
+ambiguityistousethefullgenome,[34,29],leadingtowhole-genomephylogeny. Withourmethodwedowhole-
+genomephylogeny,andendupwithasingleoverallbesttree,notoptimizingselectedpartsofit.
+Thequalityofthe resultsdependson(a) the NCD distance matrix, and(b)howwell thehierarchicaltreerep-
+resents the information in the matrix. The quality of (b) is measured by the S(T) value, and is given with each
+experiment. In general, the S(T) value deteriorates for large sets. We believe this to be partially an artifact of a
+low-resolutionNCDmatrixduetolimitedcompressionpower,andlimitedfile size. Themainreason,however,is
+the fact that with increasing size of a natural data set the projection of the information in the NCD matrix into a
+binarytreegetsincreasinglydistorted.AnotheraspectlimitingthequalityoftheNCDmatrixismoresubtle. Recall
+that the method knows nothing aboutany of the areas we apply it to. It determines the dominantfeature as seen
+through the NCD filter. The dominant feature of alikeness between two files may not correspond to our a priori
+conceptionbutmayhaveanunexpectedcause. Theresultsofourexperimentssuggestthatthisisnotoftenthecase:
+Inthenaturaldatasetswherewehavepreconceptionsoftheoutcome,forexamplethatworksbythesameauthors
+shouldclustertogether,ormusicpiecesbythesamecomposers,musicalgenres,orgenomes,theoutcomesconform
+largelytoourexpectations.Forexample,inthemusicgenreexperimentthemethodwouldfaildramaticallyifgenres
+wereevenlymixed,ormixedwithlittlebias. However,tothecontrary,theseparationinclustersisalmostperfect.
+The few misplacementsthat are discernable are either errors(the methodwas notpowerfulenoughto discern the
+dominantfeature), or the dominantfeature betweena pair of music piecesis notthe genrebut someother aspect.
+The surprising news is that we can generally confirm expectations with few misplacements, indeed, that the data
+don’tcontainunknownroguefeaturesthatdominateto cause spurious(inour preconceivedidea) clustering. This
+givesevidencethatwherethepreconceptionisindoubt,likewithphylogenyhypotheses,theclusteringcangivetrue
+supportofonehypothesisagainstanotherone.
+Figures: We use two styles to display the hierarchical clusters. In the case of genomics of Eutherian orders
+and fungi, language trees, it is convenientto follow the dendrogramsthat are customary in that area (suggesting
+temporal evolution) for easy comparisonwith the literature. Although there is no temporal relation intended, the
+dendrogramrepresentationlookedalsoappropriatefortheRussian writers, andtranslationsofRussian writers. In
+the otherexperiments(eventhe genomicSARS experiment)it is more informativeto display an unrootedternary
+tree (or binary tree if we think about incoming and outgoing edges) with explicit internal nodes. This facilitates
+identificationofclustersintermsofsubtreesrootedatinternalnodesorcontiguoussetsofsubtreesrootedatbranches
+ofinternalnodes.
+2 Similarity Metric
+Inmathematics,differentdistancesariseinallsortsofcontexts,andoneusuallyrequiresthesetobea“metric”.We
+giveapreciseformalmeaningtotheloosedistancenotionof“degreeofsimilarity”usedinthepatternrecognition
+literature.
+Metric: LetW beanonemptysetandR+ bethesetofnonnegativerealnumbers. AmetriconW isafunction
+D:W ×W →R+ satisfyingthemetric(in)equalities:
+• D(x,y)=0iffx=y,
+• D(x,y)=D(y,x)(symmetry),and
+• D(x,y)≤D(x,z)+D(z,y)(triangleinequality).
+ThevalueD(x,y) iscalledthe distancebetweenx,y∈W . A familiarexampleofa metricis theEuclideanmetric,
+theeverydaydistancee(a,b)betweentwoobjectsa,bexpressedin, say,meters. Clearly,thisdistancesatisfies the
+propertiese(a,a)=0,e(a,b)=e(b,a),ande(a,b)≤e(a,c)+e(c,b)(forinstance,a=Amsterdam,b=Brussels,
+andc=Chicago.) We areinterestedin“similaritymetrics”. Forexample,iftheobjectsareclassicalmusicpieces
+thenthefunctionD(a,b)=0ifaandbarebythesamecomposerandD(a,b)=1otherwise,isasimilaritymetric.
+Thismetric capturesonly onesimilarity aspect(feature)ofmusic pieces, presumablyan importantonebecause it
+subsumesaconglomerateofmoreelementaryfeatures.
+Density: In defining a class of acceptable metrics we want to exclude unrealistic metrics like f(x,y)= 1 for
+everypairx6=y. Wedothisbyrestrictingthenumberofobjectswithinagivendistanceofanobject. Asin[4]we
+dothisbyonlyconsideringeffectivedistances,asfollows. Fixasuitable,andfortheremainderofthepaper,fixed,
+programminglanguage.Thisisthereferenceprogramminglanguage.
+Definition2.1 LetW =S ∗,withS afinitenonemptyalphabetandS ∗thesetoffinitestringsoverthatalphabet.Note
+thatforus“files”incomputermemoryarefinitebinarystrings.AfunctionD:W ×W →R+isanacceptablemetric
+ifforeverypairofobjectsx,y∈W thedistanceD(x,y)isthelengthofabinaryprefixcode-wordthatisaprogram
+thatcomputesx fromy, andviceversa,inthereferenceprogramminglanguage,andthemetric(in)equalitieshold
+uptoO(logn)wherenisthemaximalbinarylengthofanelementofW involvedinthe(in)equalityconcerned.
+Example2.2 InrepresentingtheHammingdistancedbetweenxandystringsofequallengthndifferinginpositions
+i ,...,i , wecanuseasimpleprefix-freeencodingof(n,d,i ,...,i )inH(x,y)=2logn+4loglogn+2+dlogn
+bits. Weencodenanddprefix-freeinlogn+2loglogn+1bitseach,seee.g.[30],andthentheliteralindexesofthe
+actualflipped-bitpositions.Hence,H(x,y)isthelengthofaprefixcodeword(prefixprogram)tocomputexfromy
+andviceversa. Then,bytheKraftinequality,see[10],
+(cid:229) 2−H(x,y)≤1. (2.1)
+It is easy to verify that H is a metric in the sense that it satisfies the metric (in)equalitiesup to O(logn) additive
+precision.
+Normalization: Largeobjects(inthesenseoflongstrings)thatdifferbyatinypartareintuitivelycloserthan
+tinyobjectsthatdifferbythe same amount. Forexample,two wholemitochondrialgenomesof18,000basesthat
+differby9,000areverydifferent,whiletwowholenucleargenomesof3×109basesthatdifferbyonly9,000bases
+are very similar. Thus, absolute difference between two objects doesn’t govern similarity, but relative difference
+appearstodoso.
+Definition2.3 Acompressorisalossless encodermappingS ∗ into{0,1}∗ suchthattheresultingcodeis aprefix
+code.Forconvenienceofnotationweidentify“compressor”witha“codewordlengthfunction”C:S ∗→N,where
+N isthesetofnonnegativeintegers.Thecompressedversionofafilexisdenotedbyx∗anditslengthisC(x)=|x∗|.
+WeonlyconsidercompressorssuchthatC(x)≤|x|+O(log|x|.
+Sincethecompressorisalosslessencoder,ifx6=ythenx∗6=y∗. InthefollowingwefixacompressorC,atthisstage
+itdoesn’tmatterwhichone. Wecallthefixedcompressorthereferencecompressor.
+Definition2.4 A normalized metric or similarity metric, relative to a reference compressor C, is a function d :
+W ×W →[0,1]thatforeveryconstante∈[0,1]satisfiesthedensityconstraint
+andsatisfiesthemetric(in)equalitiesuptoadditiveprecisionO((logn)/n)wherenisthemaximalbinarylengthof
+anelementofW involvedinthe(in)equalityconcerned.
+Thisrequirementfollowsfroma“normalized”versionoftheKraftinequality:
+Lemma2.5 Letd:W ×W →[0,1]satisfy
+Then,dsatisfies(2.2).
+PROOF. For suppose the contrary: there is an e∈[0,1], such that (2.2) is false. Then, starting from (2.3) we
+obtainacontradiction:
+We callanormalizedmetrica “similarity”metric,becauseitgivesa relativesimilarityaccordingtothemetric
+distance(withdistance0whenobjectsaremaximallysimilaranddistance1whenthearemaximallydissimilar)and,
+conversely,foreverywell-definedcomputablenotionofsimilaritywecanexpressitasametricdistanceaccordingto
+ourdefinition.Intheliteratureadistancethatexpresseslackofsimilarity(likeours)isoftencalleda“dissimilarity”
+distanceora“disparity”distance.
+Remark2.6 Asfarastheauthorsknow,theideaofnormalizedmetricis,surprisingly,notwell-studied. Anexcep-
+tion is [39], whichinvestigatesnormalizedmetricsto accountfor relativedistancesratherthan absoluteones, and
+itdoessoformuchthesamereasonsasinthepresentwork. AnexamplethereisthenormalizedEuclideanmetric
+|x−y|/(|x|+|y|), where x,y∈Rn (R denotes the real numbers) and |·| is the Euclidean metric—the L norm.
+Anotherexampleisanormalizedsymmetric-set-differencemetric. Butthesenormalizedmetricsarenotnecessarily
+effectiveinthatthedistancebetweentwoobjectsgivesthelengthofaneffectivedescriptiontogofromeitherobject
+totheotherone. ♦
+Example2.7 Theprefix-codefortheHammingdistanceH(x,y)betweenx,y∈{0,1}ninExample2.2isaprogram
+tocomputefromxtoyandviceversa. ItismetricuptoO(logn)additiveprecision.Toturnitintoasimilaritymetric
+define h(x,y)=H(x,y)/C , whereC =max{C(x):|x|=n}. Trivially, 0≤h(x,y)≤1. The metric propertiesof
+H(x,y)thatheldupto additiveprecisionO(logn)are preservedunderdivisionbyC withthe precisionimproved
+to O((logn)/n). SinceC(x)/C ≤1 we have (cid:229) 2−h(x,y)C(x) ≤1. Then, (cid:229) 2−(1+h(x,y))C(x)≤
+(cid:229) 2−C(x) ≤1, where the last inequalityis the KraftinequalitysinceC(x) is a prefixcode word length. Hence
+h(x,y)satisfies(2.3)andtherefore(2.2)byLemma2.5. ♦
+3 Normalized Compression Distance
+In[4,29]theconditionsanddefinitionsonasimilaritymetricaretheparticularinstancewherethecompressorCis
+instantiatedastheultimatecompressorKsuchthatK(x)istheKolmogorovcomplexity[30]ofx. In[29],itisshown
+thatonecanrepresenttheentirewideclassofthesimilaritymetrics(theclassbasedontheultimatecompressorK)
+by a single representative: the “normalized information distance” is a metric, and it is universal in the sense that
+this single metric uncoversall similarities simultaneouslythat the variousmetrics in the class uncoverseparately.
+This shouldbe understoodin the sense that if two files (of whatevertype) are similar (thatis, close) accordingto
+the particularfeaturedescribedby a particularmetric, then theyare also similar (thatis, close)in the sense of the
+normalizedinformationmetric.Thisjustifiescallingthelatterthesimilaritymetric.However,thismetricisbasedon
+thenotionofKolmogorovcomplexity.TheKolmogorovcomplexityofafileisessentiallythelengthoftheultimate
+compressedversionofthefile. Unfortunately,theKolmogorovcomplexityofafileisnon-computableintheTuring
+sense. Inapplyingtheapproach,wehavetomakedowithanapproximationbasedonafarlesspowerfulreal-world
+referencecompressorC. Theresultingappliedapproximationofthe“normalizedinformationdistance”iscalledthe
+normalizedcompressiondistance(NCD)andisdefinedby
+NCD(x,y)= . (3.1)
+Here,C(xy)denotesthecompressedsizeoftheconcatenationofxandy,C(x)denotesthecompressedsizeofx,and
+C(y)denotesthecompressedsizeofy. TheNCDisanon-negativenumber0≤r≤1+e representinghowdifferent
+thetwofilesare. Smallernumbersrepresentmoresimilarfiles. Thee intheupperboundisduetoimperfectionsin
+ourcompressiontechniques,butformoststandardcompressionalgorithmsoneisunlikelytoseeane above0.1(in
+ourexperimentsgzipandbzip2achievedNCD’sabove1,butPPMZalwayshadNCDatmost1).
+Remark3.1 Technically,theKolmogorovcomplexityofxgivenyisthelengthoftheshortestbinaryprogramthaton
+inputyoutputsx;itisdenotedasK(x|y). Forprecisedefinitions,theoryandapplications,see[30].TheKolmogorov
+complexityof x is the length of the shortest binary programwith no inputthat outputsx; it is denotedas K(x)=
+K(x|e ) where e denotesthe emptyinput. The similarity metric in [29] is max{K(x|y),K(y|x)}/max{K(x),K(y)}.
+Approximationofthedenominatorbyagivencompressorisstraightforwardbymax{C(x),C(y)}. Thenumeratoris
+moretricky.Itcanbewrittenas
+within logarithmic additive precision by the additive property of Kolmogorovcomplexity [30]. The term K(x,y)
+representsthelengthoftheshortestprogramforthepair(x,y). Incompressionpracticeitiseasiertodealwiththe
+concatenationxy oryx. Again,withinlogarithmicprecisionK(x,y)=K(xy)=K(yx). Butwehavetodealwitha
+real-lifecompressorhere,forwhichC(xy)maybedifferentfromC(yx). Clearly,however,thesmallerofthetwowill
+betheclosestapproximationtoK(x,y). Therefore,followingasuggestionbyStevendeRooij,onecanapproximate
+(3.2)bestbymin{C(xy),C(yx)}−min{C(x),C(y)}. Here,andintheCompLearnToolkit,however,wesimplyuse
+C(xy)ratherthanmin{C(xy),C(yx)}. Thisisjustifiedbytheobservationthatblock-codingbasedcompressorsare
+symmetricalmostbydefinition,andexperimentswithvariousstream-basedcompressors(gzip,PPMZ) showonly
+smalldeviationsfromsymmetry. Inourdefinitionofa“normal”compressorbelowweputsymmetryasoneofthe
+basicproperties. ♦
+ThetheoryasdevelopedfortheKolmogorov-complexitybased“normalizedinformationdistance”in[29]doesnot
+hold directly for the (possibly poorly) approximating NCD. Below, we develop the theory of NCD based on the
+notionofa“normalcompressor,”andshowthattheNCDisa(quasi-)universalsimilaritymetricrelativetoanormal
+referencecompressorC. Thetheorydevelopedin[29]istheboundarycaseC=K, wherethe“quasi-universality”
+belowhasbecomefull“universality”.
+3.1 Normal Compressor
+ThepropertiesoftheNCD definedbelowdependonthedetailsofthecompressorused. However,undermildand
+naturalassumptionsonthecompressoronecanshowtheNCDisa(quasi-)universalsimilaritymetric.
+Definition3.2 AcompressorCisnormalifitsatisfies,uptoanadditiveO(logn)term,withnthemaximalbinary
+lengthofanelementofW involvedinthe(in)equalityconcerned,thefollowing:
+1. Idempotency:C(xx)=C(x).
+2. Monotonicity:C(xy)≥C(x).
+3. Symmetry:C(xy)=C(yx).
+4. Distributivity:C(xy)+C(z)≤C(xz)+C(yz).
+Idempotency: A reasonable compressor will see exact repetitions and obey idempotency up to the required
+precision.
+Monotonicity: A real compressor must have the monotonicityproperty, at least up to the required precision.
+Thepropertyisevidentforstream-basedcompressors,andonlyslightlylessevidentforblock-codingcompressors.
+Symmetry: Stream-basedcompressorsoftheLempel-Zivfamily,likegzipandpkzip,andthepredictivePPM
+family,likePPMZ,arepossiblynotpreciselysymmetric.Thisisrelatedtothestream-basedproperty:theinitialfilex
+mayhaveregularitiestowhichthecompressoradapts;aftercrossingthebordertoyitmustunlearnthoseregularities
+andadapttotheonesofx. Thisprocessmaycausesomeimprecisioninsymmetrythatvanishesasymptoticallywith
+the length of x,y. A compressor must be poor indeed (and will certainly not be used to any extent) if it doesn’t
+satisfy symmetryuptothe requiredprecision. Apartfromstream-based,theothermajorfamilyofcompressorsis
+block-codingbased,likebzip2.Theyessentiallyanalyzethefullinputblockbyconsideringallrotationsinobtaining
+thecompressedversion.Itistoagreatextentsymmetrical,andrealexperimentsshownodeparturefromsymmetry.
+Distributivity: The distributivitypropertyis notimmediatelyintuitive. In Kolmogorovcomplexitytheorythe
+strongerdistributivityproperty
+holds(withK=C). However,toprovethedesiredpropertiesofNCDbelow,onlytheweakerdistributivityproperty
+aboveisrequired,alsofortheboundarycasewereC=K. Inpractice,real-worldcompressorsappeartosatisfythis
+weakerdistributivitypropertyuptotherequiredprecision.
+Definition3.3 Define
+This numberC(y|x) of bits of informationin y, relative to x, can be viewed as the excess number of bits in (xy)∗
+comparedtox∗,andiscalledtheamountofconditionalcompressedinformation.
+Inthedefinitionofcompressorthedecompressionalgorithmisnotincluded(unlikethecaseofKolmorogovcom-
+plexity,wherethedecompressingalgorithmisgivenbydefinition),butitiseasytoconstructone: Giventhefilex∗
+inC(x)bits,wecanrunthecompressoronallcandidatestringsz—forexample,inlength-increasinglexicographical
+order,untilwefindthecompressedstringz =x. Sincethisstringdecompressestoxwehavefoundx=z . Given
+the file (xy)∗ inC(xy) bits we repeat this process using strings xz until we find (xz )∗ =(xy)∗. Since this string
+decompressestoxy, wehavefoundy=z . By theuniquedecompressionpropertywe findthatC(y|x)istheextra
+number of bits we require to describe y apart from describing x. It is intuitively acceptable that the conditional
+compressedinformationC(x|y)satisfiesthetriangleinequality
+Lemma3.4 Both(3.3)and(3.6)imply(3.4).
+PROOF. ((3.3)implies(3.4):) Bymonotonicity.
+((3.6)implies(3.4):) Rewritethetermsin(3.6)accordingto(3.5),cancelC(y)intheleft-andright-handsides,
+usesymmetry,andrearrange. ✷
+Lemma3.5 Anormalcompressorsatisfiesadditionallysubadditivity:C(xy)≤C(x)+C(y).
+PROOF. Considerthespecialcaseofdistributivitywithztheemptywordsothatxz=x,yz=y,andC(z)=0. ✷
+Subadditivity:Thesubadditivitypropertyisclearlyalsorequiredforeveryviablecompressor,sinceacompres-
+sormayuseinformationacquiredfromxtocompressy. Minorimprecisionmayarisefromtheunlearningeffectof
+crossingtheborderbetweenxandy,mentionedinrelationtosymmetry,butagainthismustvanishasymptotically
+withincreasinglengthofx,y.
+3.2 Properties ofthe NCD:
+ThereisanaturalinterpretationtoNCD(x,y): If,say,C(y)≥C(x)thenwecanrewrite
+C(xy)−C(x)
+NCD(x,y)= .
+That is, the distance NCD(x,y) between x and y is the improvementdue to compressing y using x as previously
+compressed “data base,” and compressing y from scratch, expressed as the ratio between the bit-wise length of
+the two compressed versions. Relative to the reference compressorwe can define the informationin x abouty as
+Thatis,theNCDbetweenxandyis1minustheratiooftheinformationxaboutyandtheinformationiny.
+Theorem3.6 Ifthecompressorisnormal,thentheNCDisasimilaritymetric.
+PROOF. (Metricity:) We first show that the NCD satisfies the three metric (in)equalities up to O((logn)/n)
+additiveprecision,wherenisthemaximalbinarylengthofanopjectinvolvedinthe(in)equalityconcerned.
+(i)ByidempotencywehaveNCD(x,x)=0. BymonotonicitywehaveNCD(x,y)≥0foreveryx,y.
+(ii)NCD(x,y)=NCD(y,x). TheNCDisunchangedbyinterchangingxandyin(3.1).
+(iii) The difficult property is the triangle inequality. Without loss of generality we assume C(x) ≤C(y) ≤
+C(z). Since the NCD is symmetrical, there are only three triangle inequalities that can be expressed by
+NCD(x,y),NCD(x,z),NCD(y,z). Weverifytheminturn:
+Proofof NCD(x,y)≤NCD(x,z)+NCD(z,y): By distributivity, the compressoritself satisfiesC(xy)+C(z)≤
+C(xz)+C(zy). SubtractingC(x)frombothsidesandrewriting,C(xy)−C(x)≤C(xz)−C(x)+C(zy)−C(z). Dividing
+byC(y)onbothsideswefind
+≤ .
+Theleft-handsideis≤1.
+Case a: Assume theright-handside is≤1. SettingC(z)=C(y)+D , andaddingD to boththe numeratorand
+denominatoroftheright-handside,itcanonlyincreaseanddrawcloserto1. Therefore,
+whichwaswhatwehadtoprove.
+Case b: Assume the right-hand side is >1. We proceed like in Case 2.1, and add D to both numerator and
+denominator. Although now the right-handside decreases, it must still be greater than 1, and thereforethe right-
+handsideremainsatleastaslargeastheleft-handside.
+ProofofNCD(x,z)≤NCD(x,y)+NCD(y,z): BydistributivitywehaveC(xz)+C(y)≤C(xy)+C(yz). Adding
+C(x)tobothsides,anddividingbothsidesbyC(z)weobtain
+≤ + .
+The right-hand side doesn’t decrease when we substitute C(y) for the denominatorC(z) of the first term, since
+C(y)≤C(z). Therefore,theinequalitystaysvalidunderthissubstitution,whichwaswhatwehadtoprove.
+ProofofNCD(y,z)≤NCD(y,x)+NCD(x,z): BydistributivitywehaveC(yz)+C(x)≤C(yx)+C(xz). Adding
+C(y)tobothsides,anddividingbothsidesbyC(z)weobtain
+≤ + .
+The right-hand side doesn’t decrease when we substitute C(y) for the denominatorC(z) of the first term, since
+C(y)≤C(z). Therefore,theinequalitystaysvalidunderthissubstitution,whichwaswhatwehadtoprove.
+(Range:) We nextverifytherangeoftheNCD:TheNCD(x,y)isalwaysinbetween0and1,uptoanadditive
+O((logn)/n)termwithnthemaximumbinarylengthofx,y.
+(Density:) ItremainstoshowthattheNCDsatisfies(2.2). SinceC(y)≤C(x), thesetconditionNCD(x,y)≤e
+canberewritten(usingsymmetry)asC(xy)−C(y)≤eC(x). UsingC(y)≤C(x)again,wealsohaveC(xy)−C(x)≤
+C(xy)−C(y). Together,
+Supposethatforsomeethereare≥2(1+e)C(x)+1 distinctxysatisfying(3.7). Sincethereareatmost(cid:229) (1+e)C(x) 2i=
+2(1+e)C(x)+1−1programstoencodetheconcatenationsxy,bythepigeonholeprinciple,twodistinctonessharethe
+samecodeword.Thiscontradictstheuniquedecompressionproperty. ✷
+Quasi-Universality: We now digressto the theorydevelopedin [29], which formedthe motivationfor devel-
+opingtheNCD.If,insteadoftheresultofsomerealcompressor,wesubstitutetheKolmogorovcomplexityforthe
+lengthsofthecompressedfilesintheNCDformula,theresultisasimilaritymetric. LetuscallittheKolmogorov
+metric. Itisuniversalinthefollowingsense: Everymetricexpressingsimilarityaccordingtosomefeature,thatcan
+becomputedfromtheobjectsconcerned,iscomprised(inthesenseofminorized)bytheuniversalmetric.Notethat
+everyfeatureofthedatagivesrisetoasimilarity,and,conversely,everysimilaritycanbethoughtofasexpressing
+somefeature: beingsimilarinthatsense. OuractualpracticeinusingtheNCDfallsshortofthisidealtheoryinat
+leastthreerespects:
+(i) The claimed universality of the Kolmogorov metric holds only for indefinitely long sequences x,y. Once
+we consider strings x,y of definite length n, the Kolmogorov metric is only universal with respect to “simple”
+computable normalized information distances, where “simple” means that they are computable by programs of
+length,say,logarithmicinn.Thisreflectsthefactthat,technicallyspeaking,theuniversalityisachievedbysumming
+theweightedcontributionofallsimilaritymetricsintheclassconsideredwithrespecttotheobjectsconsidered.Only
+similaritymetricsofwhichthecomplexityissmall(whichmeansthattheweightislarge)withrespecttothesizeof
+thedataconcernedkickin.
+(ii)TheKolmogorovcomplexityisnotcomputable,anditisinprincipleimpossibletocomputehowfaroffthe
+NCDisfromtheKolmogorovmetric. SowecannotingeneralknowhowwellwearedoingusingtheNCD.
+(iii)ToapproximatetheNCDweusestandardcompressionprogramslikegzip,PPMZ,andbzip2. Whilebetter
+compression of a string will always approximate the Kolmogorovcomplexity better, this may not be true for the
+NCD. Due to its arithmetic form, subtraction and division, it is theoretically possible that while all items in the
+formulagetbettercompressed,theimprovementisnotthesameforallitems,andtheNCDvaluemovesawayfrom
+theasymptoticvalue. Inourexperimentswehavenotobservedthisbehaviorinanoticablefashion. Formally,we
+canstatethefollowing:
+Theorem3.7 Letd beacomputablesimilaritymetric. Givenaconstanta≥0,letobjectsx,ybesuchthatC(xy)−
+PROOF. Fix d,C,x,y,k in the statementof the theorem. Withoutloss of generalitywe assume d(x,y)=e and
+C(x)=k. By(2.2),thereare<2(1+e)k+1many(u,v)pairs,suchthatC(u)≤C(v)=kandd(u,v)≤e. SincebothC
+anddarecomputablefunctions,wecancomputeandenumerateallthesepairs(u,v). Theinitiallyfixedpair(x,y)is
+anelementinthelistanditsindextakes≤(1+e)k+1bits. Itcanbedescribedbyatmost(1+e)k+O(1)bits—its
+indexinthelistandanO(1)termaccountingforthelengthsoftheprogramsinvolvedinreconstructing(x,y)given
+itsindexinthelist,includingalgorithmstocomputefunctionsdandC. SincetheKolmogorovcomplexitygivesthe
+lengthoftheshortesteffectivedescription,wehaveK(xy)≤(1+e)k+O(1).Then,
+SotheNCDisquasi-universalinthesensethatifforobjectsx,ythecompressioncomplexityC(xy)approximates
+theKolmogorovcomplexityK(xy)uptomuchcloserprecisionthanC(x),thentheNCD(x,y)minorizesthemetric
+d(x,y)uptoavanishingterm. Moreprecisely,theerrorterm(a+O(1))/C(x)→0forasequenceofpairsx,ywith
+Remark3.8 ClusteringaccordingtoNCDwillgroupsequencestogetherthataresimilaraccordingtofeaturesthat
+arenotexplicitlyknowntous. Analysisofwhatthecompressoractuallydoes,stillmaynottelluswhichfeaturesthat
+makesensetouscanbeexpressedbyconglomeratesoffeaturesanalyzedbythecompressor. Thiscanbeexploited
+totrackdownunknownfeaturesimplicitly: formingautomaticallyclustersofdataandseeinwhichcluster(ifany)
+anewcandidateisplaced.
+Anotheraspect thatcan be exploitedis exploratory: Giventhat the NCD is small fora pair x,y of specific se-
+quences, what doesthis really say aboutthe sense in which these two sequencesare similar? The above analysis
+suggeststhatclosesimilaritywillbeduetoadominatingfeature(thatperhapsexpressesaconglomerateofsubfea-
+tures).LookingintothesedeepercausesmaygivefeedbackabouttheappropriatenessoftherealizedNCDdistances
+and may help extract more intrinsic information about subject matter than the oblivious division into clusters by
+lookingforthecommonfeaturesinthedataclusters. ♦
+4 Clustering
+Givenasetofobjects,thepairwiseNCD’sformtheentriesofadistancematrix. Thisdistancematrixcontainsthe
+pairwiserelationsinrawform. Butinthisformatthatinformationisnoteasilyusable. Justasthedistancematrix
+is a reduced form of information representing the original data set, we now need to reduce the information even
+furtherinordertoachieveacognitivelyacceptableformatlikedataclusters. Toextractahierarchyofclustersfrom
+the distance matrix, we determine a dendrogram(binary tree) that agrees with the distance matrix according to a
+costmeasure.Thisallowsustoextractmoreinformationfromthedatathanjustflatclustering(determiningdisjoint
+clustersindimensionalrepresentation).
+Clustersaregroupsofobjectsthataresimilaraccordingtoourmetric.Therearevariouswaystocluster.Ouraim
+istoanalyzedatasetsforwhichthenumberofclustersisnotknownapriori,andthedataarenotlabeled.Asstatedin
+[15],conceptuallysimple,hierarchicalclusteringisamongthebestknownunsupervisedmethodsinthissetting,and
+themostnaturalwayistorepresenttherelationsintheformofadendrogram,whichiscustomarilyadirectedbinary
+treeorundirectedternarytree. Toconstructthetreefroma distancematrixwithentriesconsistingofthepairwise
+distancesbetweenobjects,weuseaquartetmethod.Thisisamatterofchoiceonly,othermethodsmayworkequally
+well. Thedistanceswecomputeinourexperimentsareoftenwithintherange0.85to1.2.Thatis,thedistinguishing
+featuresaresmall,andweneedasensitivemethodtoextractasmuchinformationcontainedinthedistancematrix
+asispossible. Forexample,ourexperimentsshowedthatreconstructinga minimumspanningtreeisnotsensitive
+enoughandgivespoorresults. Withincreasingnumberofdataitems,theprojectionoftheNCDmatrixinformation
+intothetreerepresentationformatgetsincreasinglydistorted. Asimilarsituationarisesinusingalignmentcostin
+genomiccomparisons. Experienceshowsthatinbothcasesthehierarchicalclusteringmethodsseem toworkbest
+forsmallsets ofdata, upto25items, andto deteriorateforlargersets, say 40itemsormore. Astandardsolution
+to hierarchicallycluster larger sets of data is to first cluster nonhierarchically,by say multidimensionalscaling of
+k-means,availableinstandardpackages,forinstanceMatlab,andthenapplyhierarchicalclusteringontheemerging
+clusters.
+Thequartetmethod: Weconsidereverygroupoffourelementsfromoursetofnelements;thereare n such
+(cid:0)4(cid:1)
+groups. Fromeachgroupu,v,w,xweconstructatreeofarity3,whichimpliesthatthetreeconsistsoftwosubtrees
+of two leaveseach. Let uscall such a tree a quartettopology. There are three possibilities denoted(i) uv|wx, (ii)
+uw|vx,and(iii)ux|vw,whereaverticalbardividesthetwopairsofleafnodesintotwodisjointsubtrees(Figure1).
+ForanygiventreeT andanygroupoffourleaflabelsu,v,w,x,wesayT isconsistent withuv|wxifandonlyif
+thepathfromutovdoesnotcrossthepathfromwtox.Notethatexactlyoneofthethreepossiblequartettopologies
+Figure1:Thethreepossiblequartettopologiesforthesetofleaflabelsu,v,w,x
+for any set of 4 labels must be consistent for any given tree. We may think of a large tree having many smaller
+Figure2:Anexampletreeconsistentwithquartettopologyuv|wx
+quartettopolgiesembeddedwithinitsstructure.Commonlythegoalinthequartetmethodistofind(orapproximate
+ascloselyaspossible)thetreethatembedsthemaximalnumberofconsistent(possiblyweighted)quartettopologies
+fromagivensetQofquartettopologies[18](Figure2).Thisiscalledthe(weighted)MaximumQuartetConsistency
+(MQC)problem.
+We proposea new optimizationproblem: the Minimum QuartetTree Cost (MQTC), as follows: The cost of a
+quartettopologyis definedas the sum of the distancesbetween each pair of neighbors; thatis,C =d(u,v)+
+d(w,x). The total cost C of a tree T with a set N of leaves (external nodes of degree 1) is defined as C =
+(cid:229) {C :T isconsistentwithuv|wx}—thesumofthecostsofallitsconsistentquartettopologies. First,
+{u,v,w,x}⊆N uv|wx
+wegeneratealistofallpossiblequartettopolgiesforallfour-tuplesoflabelsunderconsideration.Foreachgroupof
+threepossiblequartettopologiesforagivensetoffourlabelsu,v,w,x,calculateabest(minimal)costm(u,v,w,x)=
+min{C ,C ,C },andaworst(maximal)costM(u,v,w,x)=max{C ,C ,C }. Summingallbest
+uv|wx uw|vx ux|vw uv|wx uw|vx ux|vw
+quartettoplogiesyieldsthebest(minimal)costm=(cid:229) m(u,v,w,x). Conversely,summingallworstquartet
+{u,v,w,x}⊆N
+toplogiesyieldstheworst(maximal)costM=(cid:229) M(u,v,w,x). Forsomedistancematrices,theseminimal
+{u,v,w,x}⊆N
+andmaximalvaluescannotbeattainedbyactualtrees;however,thescoreC ofeverytreeT willliebetweenthese
+two values. In order to be able to compare tree scores in a more uniform way, we now rescale the score linearly
+such that the worstscore mapsto 0, and the best score maps to 1, and term this the normalized tree benefitscore
+S(T)=(M−C )/(M−m). OurgoalistofindafulltreewithamaximumvalueofS(T),whichistosay,thelowest
+totalcost.
+To express the notion of computational difficulty one uses the notion of “nondeterministic polynomial time
+(NP)”.IfaproblemconcerningnobjectsisNP-hardthismeansthatthebestknownalgorithmforthis(andawide
+classof significantproblems)requirescomputationtime exponentialinn. Thatis, itisinfeasiblein practice. The
+MQC decision problem is the following: Given n objects, let T be a tree of which the n leavesare labeled by the
+objects, and let Q be the set of quartet topologies embedded in T. Given a set of quartet topologies Q, and an
+integerk,theproblemistodecidewhetherthereisabinarytreeT suchthatQ Q >k. In[18]itisshownthatthe
+MQCdecisionproblemisNP-hard. ForeveryMQCdecisionproblemonecandefineanMQTCproblemthathas
+the same solution: give the quartettopologiesin Q cost 0 and the other onescost1. This way the MQC decision
+problem can be reduced to the MQTC decision problem, which shows also the latter to be NP-hard. Hence, it is
+infeasibleinpractice,butwecansometimessolveit,andalwaysapproximateit. (Thereductionalsoshowsthatthe
+quartetproblemsreviewedin[18], aresubsumedbyourproblem.) Adaptingcurrentmethodsin[6]toourMQTC
+optimizationproblem,resultsinfar toocomputationallyintensivecalculations; theyrunmanymonthsor yearson
+moderate-sizedproblemsof 30 objects. Therefore, we have designed a simple, feasible, heuristic method for our
+problem based on randomizationand hill-climbing. First, a random tree with 2n−2 nodes is created, consisting
+of n leaf nodes(with 1 connectingedge) labeled with the namesof the data items, and n−2non-leafor internal
+nodeslabeledwiththelowercaseletter“n”followedbyauniqueintegeridentifier. Eachinternalnodehasexactly
+threeconnectingedges. ForthistreeT,wecalculatethetotalcostofallembeddedquartettoplogies,andinvertand
+scalethisvaluetofindS(T). Atreeisconsistentwithprecisely 1 ofallquartettopologies,oneforeveryquartet. A
+randomtreemaybeconsistentwithabout 1 ofthebestquartettopologies—butbecauseofdependenciesthisfigure
+is notprecise. The initial randomthis tree is chosenas the currentlybestknowntree, andis usedas the basis for
+furthersearching.Wedefineasimplemutationonatreeasoneofthethreepossibletransformations:
+1. Aleafswap,whichconsistsofrandomlychoosingtwoleafnodesandswappingthem.
+2. Asubtreeswap,whichconsistsofrandomlychoosingtwointernalnodesandswappingthesubtreesrootedat
+thosenodes.
+3. Asubtreetransfer,wherebyarandomlychosensubtree(possiblyaleaf)isdetachedandreattachedinanother
+place,maintainingarityinvariants.
+Each of these simple mutations keeps the number of leaf nodes and internal nodes in the tree invariant; only the
+structureandplacementschange. Defineafullmutationasasequenceofatleastonebutpotentiallymanysimple
+mutations,pickedaccordingtothefollowingdistribution. Firstwepickthenumberk ofsimplemutationsthatwe
+willperformwithprobability2−k.Foreachsuchsimplemutation,wechooseoneofthethreetypeslistedabovewith
+equalprobability.Finally,foreachofthesesimplemutations,wepickleavesorinternalnodes,asnecessary.Notice
+thattreeswhichareclosetotheoriginaltree(intermsofnumberofsimplemutationstepsinbetween)areexamined
+often, while treesthatare far awayfromtheoriginaltree willeventuallybe examined,butnotveryfrequently. In
+orderto searchfora bettertree, we simplyapplya fullmutationon T to arriveatT′, andthen calculateS(T′). If
+S(T′)>S(T),thenkeepT′asthenewbesttree. Otherwise,tryanewdifferenttreeandrepeat.IfS(T′)everreaches
+1, then halt, outputtingthe best tree. Otherwise, rununtilitseems nobetter treesare beingfoundin a reasonable
+amountoftime,inwhichcasetheapproximationiscomplete.
+0.9 ’gnup.dat’
+0 0 10000 20000Tota l3 t0re0e0s0 exami n4e0d000 50000 60000 70000 80000
+Figure3:Progressofa60-itemdatasetexperimentovertime
+Note that if a tree is ever foundsuch that S(T)=1, then we can stop because we can be certain thatthis tree
+is optimal, as no tree could have a lower cost. In fact, this perfect tree result is achieved in our artificial tree
+reconstructionexperiment(Section 4.1) reliably in a few minutes. For real-world data, S(T) reaches a maximum
+somewhat less than 1, presumably reflecting distortion of the information in the distance matrix data by the best
+possible tree representation, as noted above, or indicating getting stuck in a local optimum or a search space too
+largeto find the globaloptimum. On manytypicalproblemsof up to 40 objectsthis tree-searchgivesa tree with
+S(T)≥0.9withinhalfanhour. Forlargenumbersofobjects,treescoringitselfcanbeslow(asthistakesordern4
+computationsteps), and the space of trees is also large, so the algorithmmayslow downsubstantially. For larger
+experiments,we use a C++/Rubyimplementationwith MPI (MessagePassing Interface,a commonstandardused
+onmassivelyparallelcomputers)onaclusterofworkstationsinparalleltofindtreesmorerapidly.Wecanconsider
+thegraphmappingtheachievedS(T)scoreasafunctionofthenumberoftreesexamined.Progressoccurstypically
+inasigmoidalfashiontowardsamaximalvalue≤1,Figure3.
+4.1 Three controlled experiments
+With the naturaldata sets we use, one mayhavethe preconception(orprejudice)that, say, music byBach should
+beclusteredtogether,musicbyChopinshouldbeclusteredtogether,andsoshouldmusicbyrockstars. However,
+the preprocessedmusic filesof a piecebyBach anda piece byChopin,or theBeatles, mayresembleoneanother
+morethantwodifferentpiecesbyBach—byaccidentorindeedbydesignandcopying. Thus,naturaldatasetsmay
+haveambiguous,conflicting,orcounterintuitiveoutcomes.Inotherwords,theexperimentsonnaturaldatasetshave
+thedrawbackofnothavinganobjectiveclear“correct”answerthatcanfunctionasabenchmarkforassessingour
+experimentaloutcomes,butonlyintuitiveortraditionalpreconceptions.Wediscussthreeexperimentsthatshowthat
+ourprogramindeeddoeswhatitissupposedtodo—atleastinartificialsituationswhereweknowinadvancewhat
+thecorrectansweris. Thesimilaritymachineconsistsoftwoparts: (i)extractinga distancematrixfromthedata,
+and(ii)constructingatreefromthedistancematrixusingournovelquartet-basedheuristic.
+n2 n3 n10 n13
+Figure4: Therandomlygeneratedtreethatouralgorithmreconstructed.S(T)=1.
+Testingthequartet-basedtreeconstruction:Wefirsttestwhetherthequartet-basedtreeconstructionheuristic
+is trustworthy: We generated a ternary tree T with 18 leaves, using the pseudo-randomnumber generator “rand”
+of the Ruby programminglanguage, and derived a metric from it by defining the distance between two nodes as
+follows:Giventhelengthofthepathfromatob,inanintegernumberofedges,asL(a,b),let
+exceptwhena=b, in whichcase d(a,b)=0. Itiseasy to verifythatthissimple formulaalwaysgivesa number
+between0and1,andismonotonicwithpathlength. Givenonlythe18×18matrixofthesenormalizeddistances,
+ourquartetmethodexactlyreconstructedtheoriginaltreeT representedinFigure4,withS(T)=1.
+Testing the similarity machine on artificial data: Given that the tree reconstruction method is accurate on
+cleanconsistentdata, wetriedwhetherthefullprocedureworksinanacceptablemannerwhenwe knowwhatthe
+ac c e n19
+Figure5:Classificationofartificialfileswithrepeated1-kilobytetags.Notallpossiblitiesareincluded;forexample,
+file“b”ismissing. S(T)=0.905.
+outcomeshouldbelike. We usedthe“rand”pseudo-randomnumbergeneratorfromtheCprogramminglanguage
+standardlibrary underLinux. We randomlygenerated11 separate 1-kilobyteblocksof data whereeach byte was
+equally probableand called these tags. Each tag was associated with a differentlowercase letter of the alphabet.
+Next,wegenerated22filesof80kilobyteeach,bystartingwithablockofpurelyrandombytesandapplyingone,
+two,three,orfourdifferenttagsonit. Applyingatagconsistsoftenrepetitionsofpickingarandomlocationinthe
+80-kilobytefile,andoverwritingthatlocationwiththegloballyconsistenttagthatisindicated. So,forinstance,to
+createthefile referredtointhe diagramby“a,” we startwith80kilobytesofrandomdata, thenpicktenplacesto
+copyoverthisrandomdatawiththearbitrary1-kilobytesequenceidentifiedastaga. Similarly,tocreatefile“ab,”
+westartwith80kilobytesofrandomdata,thenpicktenplacestoputcopiesoftaga,thenpicktenmoreplacesto
+putcopiesoftagb(perhapsoverwritingsomeoftheatags).Becauseweneverusemorethanfourdifferenttags,and
+thereforeneverplacemorethan40copiesoftags,wecanexpectthatatleasthalfofthedataineachfileisrandom
+anduncorrelatedwiththerestofthefiles. Therestofthefileiscorrelatedwithotherfilesthatalsocontaintagsin
+common;themoretagsincommon,themorerelatedthefilesare. ThecompressorusedtocomputetheNCDmatrix
+wasbzip2.TheresultingtreeisgiveninFigure5;itcanbeseenthattheclusteringhasoccuredexactlyaswewould
+expect.TheS(T)scoreis0.905.
+Testingthesimilaritymachineonnaturaldata:Wetestgrossclassificationoffilesbasedonmarkedlydifferent
+filetypes.Here,wechoseseveralfiles:(i)Fourmitochondrialgenesequences,fromablackbear,polarbear,fox,and
+ratobtainedfromtheGenBankDatabaseontheworld-wideweb;(ii)Fourexcerptsfromthenovel TheZeppelin’s
+Passenger by E. Phillips Oppenheim, obtained from the Project Gutenberg Edition on the World-Wide web; (iii)
+Four MIDI files without further processing; two from Jimi Hendrix and two movements from Debussy’s Suite
+Bergamasque,downloadedfromvariousrepositoriesontheworld-wideweb;(iv)TwoLinuxx86ELFexecutables
+(the cp and rm commands), copied directly from the RedHat 9.0 Linux distribution; and (v) Two compiled Java
+classfiles, generatedbyourselves. ThecompressorusedtocomputetheNCDmatrixwasbzip2. Asexpected,the
+programcorrectlyclassifieseachofthedifferenttypesoffilestogetherwithlikenearlike. Theresultisreportedin
+Figure6withS(T)equaltotheveryhighconfidencevalue0.984.Thisexperimentshowsthepoweranduniversality
+ofthemethod:nofeaturesofanyspecificdomainofapplicationareused.
+5 Experimental Validation
+WedevelopedtheCompLearnToolkit,Section1,andperformedexperimentsinvastlydifferentapplicationfieldsto
+test the qualityanduniversalityof the method. The successof the methodas reportedbelowdependsstronglyon
+the judicioususe of encodingof the objects compared. Here one should use commonsense on whata real world
+MusicHendrixB n10
+GenesPolarBearB
+MusicHendrixA
+GenesBlackBearA
+MusicBergB
+MusicBergA
+ELFExecutableB
+ELFExecutableA
+JavaClassB n6
+JavaClassA n11 TextD
+Figure6: Classification of differentfile types. Tree agreesexceptionallywellwith NCD distance matrix: S(T)=
+0.984.
+compressorcando. Therearesituationswhereourapproachfailsifappliedinastraightforwardway. Forexample:
+comparing text files by the same authors in different encodings(say, Unicode and 8-bit version) is bound to fail.
+For the ideal similarity metric based on Kolmogorovcomplexityas definedin [29] this doesnotmatter at all, but
+forpracticalcompressorsusedintheexperimentsitwillbefatal. Similarly,inthemusicexperimentsbelowweuse
+symbolicMIDImusicfileformatratherthanwaveformatmusicfiles. Thereasonisthatthestringsresultingfrom
+straightforwarddiscretizingthewaveformfilesmaybetoosensitivetohowwediscretize.
+5.1 Genomics andPhylogeny
+Inrecentyears, asthecompletegenomesofvariousspeciesbecomeavailable,ithasbecomepossibletodowhole
+genomephylogeny(thisovercomestheproblemthatuseingdifferenttargetedpartsofthegenome,orproteins,may
+givedifferenttrees[34]). Traditionalphylogeneticmethodsonindividualgenesdependedonmultiplealignmentof
+therelatedproteinsandonthemodelofevolutionofindividualaminoacids.Neitheroftheseispracticallyapplicable
+tothegenomelevel. Inabsenceofsuchmodels,amethodwhichcancomputethesharedinformationbetweentwo
+sequences is useful because biological sequences encode information, and the occurrence of evolutionary events
+(suchasinsertions,deletions,pointmutations,rearrangements,andinversions)separatingtwosequencessharinga
+common ancestor will result in the loss of their shared information. Our method (in the form of the CompLearn
+Toolkit)isafullyautomatedsoftwaretoolbasedonsuchadistancetocomparetwogenomes.
+MammalianEvolution: Inevolutionarybiologythetimingandoriginofthemajorextantplacentalclades(groups
+oforganismsthathaveevolvedfromacommonancestor)continuestofueldebateandresearch. Here, weprovide
+evidencebywholemitochondrialgenomephylogenyforcompetinghypothesesintwomainquestions:thegrouping
+oftheEutherianorders,andtheTherianhypothesisversustheMarsupiontahypothesis.
+EutherianOrders: Wedemonstrate(alreadyin[29])thatawholemitochondrialgenomephylogenyoftheEu-
+therians(placentalmammals)canbereconstructedautomaticallyfromunalignedcompletemitochondrialgenomes
+byuseofanearlyformofourcompressionmethod,usingstandardsoftwarepackages. Asmoregenomicmaterial
+FinbackWhale
+Cat Ferungulates
+HarborSeal Eutheria
+WhiteRhino
+Gorilla Primates
+Chimpanzee
+PygmyChimp
+SumatranOrangutan
+HouseMouse Eutheria - Rodents
+Opossum Metatheria
+Echidna Prototheria
+Figure7: TheevolutionarytreebuiltfromcompletemammalianmtDNA sequencesof24species, usingthe NCD
+matrix of Figure 9. We have redrawnthe tree from our output to agree better with the customary phylogenytree
+format.ThetreeagreesexceptionallywellwiththeNCDdistancematrix:S(T)=0.996.
+Figure 8: Multidimensionalclustering of same NCD matrix (Figure 9) as used for Figure 7. Kruskal’s stress-1 =
+0.389.
+hasbecomeavailable,thedebateinbiologyhasintensifiedconcerningwhichtwoofthethreemaingroupsofplacen-
+talmammalsaremorecloselyrelated:Primates,Ferungulates,andRodents.In[7],themaximumlikelihoodmethod
+ofphylogenytreereconstructiongaveevidenceforthe(Ferungulates,(Primates,Rodents))groupingforhalfofthe
+proteinsinthemitochondialgenomesinvestigated,and(Rodents,(Ferungulates,Primates))fortheotherhalvesof
+themtgenomes.Inthatexperimenttheyaligned12concatenatedmitochondrialproteins,takenfrom20species:rat
+(Rattusnorvegicus),housemouse(Musmusculus),greyseal(Halichoerusgrypus),harborseal(Phocavitulina),cat
+(Feliscatus),whiterhino(Ceratotheriumsimum),horse(Equuscaballus),finbackwhale(Balaenopteraphysalus),
+blue whale (Balaenoptera musculus), cow (Bos taurus), gibbon (Hylobates lar), gorilla (Gorilla gorilla), human
+(Homosapiens),chimpanzee(Pantroglodytes),pygmychimpanzee(Panpaniscus),orangutan(Pongopygmaeus),
+Sumatran orangutan(Pongo pygmaeusabelii), using opossum (Didelphisvirginiana), wallaroo (Macropus robus-
+tus),andtheplatypus(Ornithorhynchusanatinus)asoutgroup.In[28,29]weusedthewholemitochondrialgenome
+ofthesame20species,computingtheNCDdistances(oracloselyrelateddistancein[28]),usingtheGenCompress
+compressor,followedbytree reconstructionusingthe neighborjoiningprogramin the MOLPHY package[36]to
+confirmthecommonlybelievedmorphology-supportedhypothesis(Rodents,(Primates,Ferungulates)). Repeating
+theexperimentusingthehypercleaningmethod[6]ofphylogenytreereconstructiongavethesameresult. Here,we
+repeatedthisexperimentseveraltimesusingtheCompLearnToolkitusingournewquartetmethodforreconstructing
+trees, andcomputingthe NCD with variouscompressors(gzip, bzip2, PPMZ), againalways with the same result.
+TheseexperimentsarenotreportedsincetheyaresubsumedbythelargerexperimentofFigure7.
+Marsupionta and Theria: The extant monophyletic divisions of the class Mammalia are the Prototheria
+(monotremes:mammalsthatprocreateusingeggs),Metatheria(marsupials:mammalsthatprocreateusingpouches),
+andEutheria(placentalmammals: mammalsthatprocreateusingplacentas). Thesisterrelationshipsbetweenthese
+groups is viewed as the most fundamental question in mammalian evolution [19]. Phylogenetic comparison by
+either anatomyor mitochondrialgenomehas resulted in two conflicting hypotheses: the gene-isolation-supported
+Marsupiontahypothesis: ((Prototheria,Metatheria),Eutheria)versusthemorphology-supportedTheriahypothesis:
+(Prototheria,(Methateria,Eutheria)),thethirdpossiblityapparentlynotbeingheldseriouslybyanyone. Therehas
+beenalotofsupportforeitherhypothesis;recentsupportfortheTheriahypothesiswasgivenin[19]byanalyzinga
+largenucleargene(M6P/IG2R),viewedasimportantacrossthespeciesconcerned,andevenmorerecentsupportfor
+theMarsupiontahypothesiswasgivenin[17]byphylogeneticanalysisofanothersequencefromthenucleargene
+(18SrRNA)andbythewholemitochondrialgenome.
+Experimental Evidence: To test the Eutherian orders simultaneously with the Marsupionta- versus Theria
+hypothesis,we addedfouranimalsto the abovetwenty: Australian echidna(Tachyglossusaculeatus),brownbear
+(Ursusarctos), polarbear(Ursusmaritimus), usingthecommoncarp(Cyprinuscarpio)astheoutgroup. Interest-
+ingly,whiletherearemanyspeciesofEutheriaandMetatheria,thereareonlythreespeciesofnowlivingPrototheria
+known: platypus,andtwotypesofechidna(orspinyanteater). SooursampleofthePrototheriaislarge. Theaddi-
+tionofthenewspeciesmightberiskyinthattheadditionofnewrelationsisknowntodistortthepreviousphylogeny
+intraditionalcomputationalgenomicspractice. Withourmethod,usingthefullgenomeandobtainingasingletree
+withaveryhighconfidenceS(T)value,thatriskisnotasgreatasintraditionalmethodsobtainingambiguoustrees
+withbootstrap(statisticsupport)valuesontheedges.Themitochondrialgenomesofthetotalof24speciesweused
+were downloaded from the GenBank Database on the world-wide web. Each is around 17,000 bases. The NCD
+distancematrixwascomputedusingthecompressorPPMZ.Theresultingphylogeny,withanalmostmaximalS(T)
+scoreof0.996supportsanewthecurrentlyacceptedgrouping(Rodents,(Primates,Ferungulates))oftheEutherian
+orders,andadditionallytheMarsupiontahypothesis((Prototheria,Metatheria),Eutheria),seeFigure7. Overall,our
+whole-mitochondrialNCDanalysissupportsthefollowinghypothesis:
+((primates,ferungulates)(rodents,(Metatheria,Prototheria))),
+whichindicatesthatthe rodents, andthe branchleadingtothe MetatheriaandPrototheria,split offearlyfromthe
+branchthatledtotheprimatesandferungulates. Inspectionofthedistancematrixshowsthattheprimatesarevery
+closetogether,asaretherodents,theMetatheria,andthePrototheria. Thesearetightly-knitgroupswithrelatively
+close NCD’s. The ferungulatesare a much looser group with generally distant NCD’s. The intergroupdistances
+showthatthePrototheriaarefurthestawayfromtheothergroups,followedbytheMetatheriaandtherodents.Also
+thefine-structureofthetreeisconsistentwithbiologicalwisdom.
+BlueWhale Cat Echidna Gorilla Horse Opossum PolarBear SumOrang
+BrownBear Chimpanzee FinWhale GreySeal HouseMouse Orangutan PygmyChimp Wallaroo
+Carp Cow Gibbon HarborSeal Human Platypus Rat WhiteRhino
+BlueWhale0.0050.9060.9430.8970.9250.8830.9360.6160.9280.9310.9010.8980.8960.9260.9200.9360.9280.9290.9070.9300.9270.9290.9250.902
+BrownBear0.9060.0020.9430.8870.9350.9060.9440.9150.9390.9400.8750.8720.9100.9340.9300.9360.9380.9370.2690.9400.9350.9360.9230.915
+Carp0.9430.9430.0060.9460.9540.9470.9550.9520.9510.9570.9490.9500.9520.9560.9460.9560.9530.9540.9450.9600.9500.9530.9420.960
+Cat0.8970.8870.9460.0030.9260.8970.9420.9050.9280.9310.8700.8720.8850.9190.9220.9330.9320.9310.8850.9290.9200.9340.9190.897
+Chimpanzee0.9250.9350.9540.9260.0060.9260.9480.9260.8490.7310.9250.9220.9210.9430.6670.9430.8410.9460.9310.4410.9330.8350.9340.930
+Cow0.8830.9060.9470.8970.9260.0060.9360.8850.9310.9270.8900.8880.8930.9250.9200.9310.9300.9290.9050.9310.9210.9300.9230.899
+Echidna0.9360.9440.9550.9420.9480.9360.0050.9360.9470.9470.9400.9370.9420.9410.9390.9360.9470.8550.9350.9490.9410.9470.9290.948
+FinbackWhale0.6160.9150.9520.9050.9260.8850.9360.0050.9300.9310.9110.9080.9010.9330.9220.9360.9330.9340.9100.9320.9280.9320.9270.902
+Gibbon0.9280.9390.9510.9280.8490.9310.9470.9300.0050.8590.9320.9300.9270.9480.8440.9510.8720.9520.9360.8540.9390.8680.9330.929
+Gorilla0.9310.9400.9570.9310.7310.9270.9470.9310.8590.0060.9270.9290.9240.9440.7370.9440.8350.9430.9280.7320.9380.8360.9340.929
+GreySeal0.9010.8750.9490.8700.9250.8900.9400.9110.9320.9270.0030.3990.8880.9240.9220.9330.9310.9360.8630.9290.9220.9300.9200.898
+HarborSeal0.8980.8720.9500.8720.9220.8880.9370.9080.9300.9290.3990.0040.8880.9220.9220.9330.9320.9370.8600.9300.9220.9280.9190.900
+Horse0.8960.9100.9520.8850.9210.8930.9420.9010.9270.9240.8880.8880.0030.9280.9130.9370.9230.9360.9030.9230.9120.9240.9240.848
+HouseMouse0.9260.9340.9560.9190.9430.9250.9410.9330.9480.9440.9240.9220.9280.0060.9320.9230.9440.9300.9240.9420.8600.9450.9210.928
+Human0.9200.9300.9460.9220.6670.9200.9390.9220.8440.7370.9220.9220.9130.9320.0050.9490.8340.9490.9310.6810.9380.8260.9340.929
+Opossum0.9360.9360.9560.9330.9430.9310.9360.9360.9510.9440.9330.9330.9370.9230.9490.0060.9600.9380.9390.9540.9410.9600.8910.952
+Orangutan0.9280.9380.9530.9320.8410.9300.9470.9330.8720.8350.9310.9320.9230.9440.8340.9600.0060.9540.9330.8430.9430.5850.9450.934
+Platypus0.9290.9370.9540.9310.9460.9290.8550.9340.9520.9430.9360.9370.9360.9300.9490.9380.9540.0030.9320.9480.9370.9490.9200.948
+PolarBear0.9070.2690.9450.8850.9310.9050.9350.9100.9360.9280.8630.8600.9030.9240.9310.9390.9330.9320.0020.9420.9400.9360.9270.917
+PygmyChimp0.9300.9400.9600.9290.4410.9310.9490.9320.8540.7320.9290.9300.9230.9420.6810.9540.8430.9480.9420.0070.9350.8380.9310.929
+Rat0.9270.9350.9500.9200.9330.9210.9410.9280.9390.9380.9220.9220.9120.8600.9380.9410.9430.9370.9400.9350.0060.9390.9220.922
+SumOrangutan0.9290.9360.9530.9340.8350.9300.9470.9320.8680.8360.9300.9280.9240.9450.8260.9600.5850.9490.9360.8380.9390.0070.9420.937
+Wallaroo0.9250.9230.9420.9190.9340.9230.9290.9270.9330.9340.9200.9190.9240.9210.9340.8910.9450.9200.9270.9310.9220.9420.0050.935
+WhiteRhino0.9020.9150.9600.8970.9300.8990.9480.9020.9290.9290.8980.9000.8480.9280.9290.9520.9340.9480.9170.9290.9220.9370.9350.002
+Figure 9: Distance matrix of pairwise NCD. For display purpose, we have truncated the original entries from 15
+decimalsto3decimalsprecision.
+Hierarchical versus Flat Clustering: This is a good place to contrast the informativeness of hierarchical
+clusteringwith multidimensionalclusteringusingthe sameNCD matrix, exhibitedinFigure9. Theentriesgivea
+goodexampleoftypicalNCD values; we truncatedthenumberofdecimalsfrom15to3 significantdigitstosave
+space.Notethatthemajorityofdistancesbunchesintherange[0.9,1].Thisisduetotheregularitiesthecompressor
+can perceive. The diagonal elements give the self-distance, which, for PPMZ, is not actually 0, but is off from
+0 only in the third decimal. In Figure 8 we clustered the 24 animals using the NCD matrix by multidimenional
+scalingaspointsin2-dimensionalEuclideanspace. Inthismethod,theNCD matrixof24animalscanbeviewed
+as a set of distances between points in n-dimensionalEuclidean space (n≤24), which we want to project into a
+2-dimensionalEuclideanspace,tryingtodistortthedistancesbetweenthepairsaslittleaspossible. Thisisakinto
+theproblemofprojectingthesurfaceoftheearthglobeonatwo-dimensionalmapwithminimaldistancedistortion.
+Themainfeatureisthechoiceofthemeasureofdistortiontobeminimized,[15]. Lettheoriginalsetofdistancesbe
+d ,...,d andtheprojecteddistancesbed′,...,d′. InFigure8weusedthedistortionmeasureKruskall’sstress-1,
+[22], whichminimizes ((cid:229) (d −d′)2)/(cid:229) d2. Kruskall’sstress-1equal0 meansnodistortion,andtheworst
+q i≤k i i i≤k i
+value is at most 1 (unless you have a really bad projection). In the projection of the NCD matrix according to
+ourquartetmethodoneminimizesthemoresubtledistortionS(T)measure,where1 meansperfectrepresentation
+oftherelativerelationsbetweenevery4-tuple,and0meansminimalrepresentation. Therefore,weshouldcompare
+distortionKruskallstress-1with1−S(T). Figure7hasaverygood1−S(T)=0.04andFigure8hasapoorKruskal
+stress0.389. Assumingthatthecomparisonissignificantforsmallvalues(closetoperfectprojection),wefindthat
+the multidimensionalscalingofthisexperiment’sNCD matrixis formallyinferiortothatofthe quartettree. This
+conclusionformallyjustifiestheimpressionconveyedbythefiguresonvisualinspection.
+SARSVirus: InanotherexperimentweclusteredtheSARSvirusafteritssequencedgenomewasmadepublicly
+available, in relationto potentialsimilar virii. The 15 virusgenomeswere downloadedfromThe UniversalVirus
+Database of the InternationalCommittee on Taxonomy of Viruses, available on the world-wide web. The SARS
+virus was downloaded from Canada’s Michael Smith Genome Sciences Centre which had the first public SARS
+Coronovirusdraftwholegenomeassemblyavailablefordownload(SARSTOR2draftgenomeassembly120403).
+The NCD distance matrix was computedusing the compressorbzip2. The relations in Figure 10 are verysimilar
+tothedefinitivetreebasedonmedical-macrobio-genomicsanalysis,appearinglaterintheNewEnglandJournalof
+Medicine, [23]. We depictedthe figurein the ternarytree style, ratherthan the genomics-dendrogramstyle, since
+theformerismorepreciseforvisualinspectionofproximityrelations.
+AnalysisofMitochondrialGenomesofFungi: AsapilotforapplicationsoftheCompLearnToolkitinfungige-
+nomicsreasearch,thegroupofT.Boekhout,E.Kuramae,V.Robert,oftheFungalBiodiversityCenter,RoyalNether-
+landsAcademyofSciences,supplieduswiththemitochondrialgenomesofCandidaglabrata,Pichiacanadensis,
+Saccharomycescerevisiae,S.castellii,S.servazzii,Yarrowialipolytica(allyeasts),andtwofilamentousascomycetes
+HypocreajecorinaandVerticilliumlecanii. TheNCDdistancematrixwascomputedusingthecompressorPPMZ.
+TheresultingtreeisdepictedinFigure11. Theinterpretationofthefungiresearchersis“thetreeclearlyclustered
+the ascomycetousyeasts versusthe two filamentousAscomycetes, thussupportingthe currenthypothesison their
+SARSTOR2v120403
+HumanCorona1
+MurineHep11 RatSialCorona
+n10 AvianIB2
+MurineHep2 n7
+n2 AvianIB1
+MeaslesSch n12 n3
+MeaslesMora
+DuckAdeno1
+AvianAdeno1CELO
+HumanAdeno40 BovineAdeno3
+Figure 10: SARS virus among other virii. Legend: AvianAdeno1CELO.inp: Fowl adenovirus 1; AvianIB1.inp:
+Avian infectious bronchitis virus (strain Beaudette US); AvianIB2.inp: Avian infectious bronchitis virus
+(strain Beaudette CK); BovineAdeno3.inp: Bovine adenovirus 3; DuckAdeno1.inp: Duck adenovirus 1; Hu-
+manAdeno40.inp: Human adenovirustype 40; HumanCorona1.inp: Human coronavirus229E;MeaslesMora.inp:
+Measles virus strain Moraten; MeaslesSch.inp: Measles virus strain Schwarz; MurineHep11.inp: Murine hepati-
+tis virus strain ML-11; MurineHep2.inp: Murine hepatitis virus strain 2; PRD1.inp: Enterobacteriaphage PRD1;
+RatSialCorona.inp: Ratsialodacryoadenitiscoronavirus;SARS.inp: SARSTOR2v120403;SIRV1.inp: Sulfolobus
+virusSIRV-1;SIRV2.inp:SulfolobusvirusSIRV-2. S(T)=0.988.
+Verticilliumlecanii
+Hypocreajecorina
+Yarrowialipolytica
+Pichiacanadensis
+Saccharomycescerevisiae
+Saccharomycesservazzii
+Saccharomycescastellii
+Candidaglabrata
+Figure11:DendrogramofmitochondrialgenomesoffungiusingNCD.Thisrepresentsthedistancematrixprecisely
+withS(T)=0.999.
+Saccharomycesservazzii
+Pichiacanadensis
+Saccharomycescastellii
+Saccharomycescerevisiae
+Candidaglabrata
+Yarrowialipolytica
+Verticilliumlecanii
+Hypocreajecorina
+Figure 12: Dendrogramof mitochondrialgenomesof fungiusing block frequencies. This representsthe distance
+matrixpreciselywithS(T)=0.999.
+Kicongo Africa
+Somali Africa
+Chickasaw Americas
+Purhepecha
+German Europe
+Figure13:ClusteringofNative-American,Native-African,andNative-Europeanlanguages.S(T)=0.928.
+classification(forexample,see[24]). Interestingly,inarecenttreatmentoftheSaccharomycetaceae,S.servazii,S.
+castelliiandC.glabratawereallproposedtobelongtogeneradifferentfromSaccharomyces,andthisissupported
+bythetopologyofourtreeaswell([25]).”
+To compare the veracity of the NCD clustering with a more feature-based clustering, we also calculated the
+pairwisedistancesasfollows: Eachfileisconvertedtoa4096-dimensionalvectorbyconsideringthefrequencyof
+all(overlapping)6-bytecontiguousblocks. Thel2-distance(Euclideandistance)iscalculatedbetweeneachpairof
+files by taking the square root of the sum of the squares of the component-wise differences. These distances are
+arrangedintoadistancematrixandlinearlyscaledtofittherange[0,1.0]. Finally,werantheclusteringroutineon
+thisdistancematrix. TheresultsareinFigure12. Asseenbycomparingwith theNCD-basedFigure11thereare
+apparentmisplacementswhenusingtheEuclideandistanceinthisway. Thus,inthissimpleexperiment,theNCD
+performedbetter,thatis,agreedmorepreciselywithacceptedbiologicalknowledge.
+5.2 Language Trees
+Ourmethodimprovestheresultsof [1], usinga linguisticcorpusof“The UniversalDeclarationofHumanRights
+(UDoHR)”[33]in52languages.Previously,[1]usedanasymmetricmeasurebasedonrelativeentropy,andthefull
+matrixofthepair-wisedistancesbetweenall52languages,tobuildalanguageclassificationtree. Thisexperiment
+wasrepeated(resultingina somewhatbettertree)usingthecompressionmethodin[29]usingstandardbiological
+softwarepackagestoconstructthephylogeny.Wehaveredonethisexperiment,anddonenewexperiments,usingthe
+CompLearnToolkit. Here,wereportonanexperimenttoseparateradicallydifferentlanguagefamilies. Wedown-
+loadedthe languageversionsof the UDoHR text in English, Spanish, Dutch, German (Native-European),Pemba,
+Dendi, Ndbele, Kicongo, Somali, Rundi, Ditammari, Dagaare(Native African),Chikasaw, Perhupecha,Mazahua,
+Zapoteco(Native-American),and didn’tpreprocessthem exceptfor removinginitial identifyinginformation. We
+usedanLempel-Ziv-typecompressorgziptocompresstextsequencesofsizesnotexceedingthelengthofthesliding
+windowgzipuses(32kilobytes),andcomputetheNCDforeachpairoflanguagesequences.Subsequentlyweclus-
+teredtheresult. WeshowtheoutcomeofoneoftheexperimentsinFigure13. Notethatthreegroupsarecorrectly
+clustered,andthateventhesubclustersoftheEuropeanlanguagesarecorrect(EnglishisgroupedwiththeRomance
+languagesbecauseitcontainsupto40%admixtureofwordsfromLatinorigine).
+5.3 Literature
+Thetextsusedinthisexperimentweredown-loadedfromtheworld-widewebinoriginalCyrillic-letteredRussian
+andinLatin-letteredEnglishbyL.Avanasiev(MoldavianMScstudentattheUniversityofAmsterdam). Thecom-
+pressor used to compute the NCD matrix was bzip2. We clustered Russian literature in the original (Cyrillic) by
+Gogol, Dostojevski, Tolstoy, Bulgakov,Tsjechov,with three orfourdifferenttextsper author. Ourpurposewasto
+seewhethertheclusteringissensitiveenough,andtheauthorsdistinctiveenough,toresultinclusteringbyauthor.
+InFigure14weseeaperfectclustering.ConsideringtheEnglishtranslationsofthesametexts,inFigure15,wesee
+errorsintheclustering. Inspectionshowsthattheclusteringisnowpartiallybasedonthetranslator. Itappearsthat
+the translatorsuperimposeshis characteristicson the texts, partiallysuppressingthe characteristicsof the original
+authors.Inotherexperimentsweseparatedauthorsbygenderandbyperiod.
+DostoevskiiCrime
+DostoevskiiPoorfolk
+DostoevskiiGmbl
+DostoevskiiIdiot
+TurgenevRudin
+TurgenevGentlefolks
+TurgenevEve
+TurgenevOtcydeti
+TolstoyIunosti
+TolstoyAnnak
+TolstoyWar1
+GogolPortrDvaiv
+GogolMertvye
+GogolTaras
+TolstoyKasak
+BulgakovMaster
+BulgakovEggs
+BulgakovDghrt
+Figure14:ClusteringofRussianwriters.Legend:I.S.Turgenev,1818–1883[FatherandSons,Rudin,OntheEve,A
+HouseofGentlefolk];F.Dostoyevsky1821–1881[CrimeandPunishment,TheGambler,TheIdiot;PoorFolk];L.N.
+Tolstoy 1828–1910[Anna Karenina, The Cossacks, Youth, War and Piece]; N.V. Gogol 1809–1852[Dead Souls,
+TarasBulba, TheMysteriousPortrait, How theTwo IvansQuarrelled];M. Bulgakov1891–1940[TheMaster and
+Margarita,TheFatefullEggs,TheHeartofaDog].S(T)=0.949.
+BulgakovMm
+BulgakovEgg
+BulgakovDghrt
+TolstoyCosacs
+DostoyevskyCrime
+TurgenevOtcydeti
+TurgenevGentlefolk
+TurgenevEve
+TurgenevRudin
+TolstoyAnnak
+TolstoyWar1
+DostoyevskyIdiot
+GogolDsols
+TolstoyYouth
+DostoyevskyGambl
+DostoyevskyPoorfolk
+GogolPortrDvaiv
+GogolTaras
+Figure15: ClusteringofRussianwriterstranslatedinEnglish. Thetranslatorisgiveninbracketsafterthetitlesof
+the texts. Legend: I.S. Turgenev, 1818–1883[Father and Sons (R. Hare), Rudin (Garnett, C. Black), On the Eve
+(Garnett,C.Black),AHouseofGentlefolk(Garnett,C.Black)];F.Dostoyevsky1821–1881[CrimeandPunishment
+(Garnett, C. Black), The Gambler (C.J. Hogarth), The Idiot (E. Martin); Poor Folk (C.J. Hogarth)]; L.N. Tolstoy
+1828–1910[AnnaKarenina(Garnett,C.Black),TheCossacks(L.andM.Aylmer),Youth(C.J.Hogarth),Warand
+Piece (L.andM.Aylmer)]; N.V.Gogol1809–1852[DeadSouls(C.J. Hogarth),TarasBulba (≈G. Tolstoy,1860,
+B.C.Baskerville),TheMysteriousPortrait+HowtheTwoIvansQuarrelled(≈I.F.Hapgood];M.Bulgakov1891–
+1940[TheMasterandMargarita(R.Pevear,L.Volokhonsky),TheFatefullEggs(K.Gook-Horujy),TheHeartofa
+Dog(M.Glenny)].S(T)=0.953.
+DebusBerg3
+DebusBerg2
+MilesSolar
+ColtrImpres
+DebusBerg4
+MilesMilesto
+DebusBerg1 PoliceBreath
+ColtrBlueTr ClaptonCoca
+n0 HendrixJoe
+Miles7steps
+n33 n9 ColtrLazybird BachWT B K ac 2 h F W 1 TK2P2 RushYyz n7 n29 LedZStairw n32 ClaptonLayla
+GilleTunisia n14 n2 n1 n20
+n6 BeatlMich
+n13 BeatlEleanor
+ParkYardbird n21
+ChopPrel15 n23 PoliceMess
+HendrixVoodoo ColtrGiantSDtpireStMoney BachWTK2F2 MetalOne
+GershSumm n18 MonkRoundM
+BachWTK2P1 n25
+MilesSowhat
+ChopPrel22
+ChopPrel24
+Figure16:Outputforthe36piecesfrom3music-genres.Legend:12Jazz:JohnColtrane[BlueTrane,GiantSteps,
+Lazy Bird, Impressions]; Miles Davis [Milestones, Seven Steps to Heaven, Solar, So What]; George Gershwin
+[Summertime];DizzyGillespie[NightinTunisia];TheloniousMonk[RoundMidnight];CharlieParker[Yardbird
+Suite];12Rock&Pop:TheBeatles[EleanorRigby,Michelle];EricClapton[Cocaine,Layla];DireStraits[Money
+for Nothing]; Led Zeppelin [Stairway to Heaven]; Metallica [One]; Jimi Hendrix [Hey Joe, Voodoo Chile]; The
+Police[EveryBreathYouTake,MessageinaBottle]Rush[Yyz];12Classic: seeLegendFigure17. S(T)=0.858.
+Theamountofdigitizedmusicavailableontheinternethasgrowndramaticallyinrecentyears, bothinthepublic
+domain and on commercial sites. Napster and its clones are prime examples. Websites offering musical content
+in some formor other (MP3, MIDI, ... ) need a way to organizetheir wealth of material; they need to somehow
+classifytheirfilesaccordingtomusicalgenresandsubgenres,puttingsimilarpiecestogether. Thepurposeofsuch
+organization is to enable users to navigate to pieces of music they already know and like, but also to give them
+advice and recommendations(“If you like this, you mightalso like ... ”). Currently, such organizationis mostly
+done manually by humans, but some recent research has been looking into the possibilities of automating music
+classification.
+Initially,wedownloaded36separateMIDI(MusicalInstrumentDigitalInterface,aversatiledigitalmusicfor-
+matavailableon the world-wide-web)files selected froma rangeof classicalcomposers, as wellas somepopular
+music. Thefilesweredown-loadedfromseveraldifferentMIDIDatabasesontheworld-wideweb. Theidentifying
+information,composer,title, andsoon, wasstrippedfromthefiles (otherwisethismaygiveamarginaladvantage
+to identifycomposersto thecompressor). Eachofthese fileswas runthroughapreprocessortoextractjustMIDI
+Note-Onand Note-Offevents. These eventswere then convertedto a player-pianostyle representation,with time
+quantizedin0.05secondintervals. Allinstrumentindicators,MIDIcontrolsignals,andtempovariationswereig-
+nored. For each track in the MIDI file, we calculate two quantities: An average volume and a modal note. The
+averagevolumeiscalculatedbyaveragingthevolume(MIDInotevelocity)ofallnotesinthetrack.Themodalnote
+isdefinedtobethe notepitchthatsoundsmostofteninthattrack. Ifthisis notunique,thenthelowestsuchnote
+ischosen. Themodalnoteisusedasakey-invariantreferencepointfromwhichtorepresentallnotes. Itisdenoted
+by0, highernotesaredenotedbypositivenumbers,andlowernotesaredenotedbynegativenumbers. Avalueof
+1indicatesahalf-stepabovethemodalnote,andavalueof−2indicatesa whole-stepbelowthemodalnote. The
+DebusBerg4
+DebusBerg1
+n7 ChopPrel1 ChopPrel22
+DebusBerg2 n4 n6 ChopPrel24
+DebusBerg3
+n9 ChopPrel15
+n5 n0 BachWTK2P1
+BachWTK2F2
+BachWTK2F1 BachWTK2P2
+Figure17: Outputforthe12-pieceset. Legend: J.S.Bach[WohltemperierteKlavierII:PreludesandFugues1,2—
+BachWTK2{F,P}{1,2}];Chopin[Pre´ludesop.28: 1,15,22,24—ChopPrel{1,15,22,24}];Debussy[SuiteBerga-
+masque,4movements—DebusBerg{1,2,3,4}].S(T)=0.968.
+tracksaresortedaccordingtodecreasingaveragevolume,andthenoutputinsuccession. Foreachtrack,weiterate
+through each time sample in order, outputting a single signed 8-bit value for each currently sounding note. Two
+specialvaluesarereservedtorepresenttheendofatimestepandtheendofatrack. Thisfileisthenusedasinputto
+thecompressionstagefordistancematrixcalculationandsubsequenttreesearch. Tocheckwhetheranyimportant
+featureofthemusicwaslostduringpreprocessing,weplayeditbackfromthepreprocessedfilestoverifywhether
+itsoundedliketheoriginal. Totheauthorsthepiecessoundedalmostunchanged.Thecompressorusedtocompute
+theNCDmatrixofthegenrestree,Figure16,andthatof12-piecemusicset,Figure17isbzip2. Forthefullrange
+ofthemusicexperimentssee[8].
+Beforetestingwhetherourprogramcanseethedistinctionsbetweenvariousclassicalcomposers,wefirstshow
+thatitcandistinguishbetweenthreebroadermusicalgenres:classicalmusic,rock,andjazz.Thismaybeeasierthan
+makingdistinctions“within”classicalmusic.Allmusicalpiecesweusedarelistedinthetablesinthefullpaper(on
+the URL providedabove). For the genre-experimentwe used 12 classical pieces consistingof Bach, Chopin, and
+Debussy,12jazzpieces,and12rockpieces. Thetree(Figure16)thatourprogramcameupwithhasS(T)=0.858.
+Thediscriminationbetweenthe3genresisreasonablebutnotperfect. SinceS(T)=0.858,afairlylowvalue,the
+resultingtreedoesn’trepresenttheNCDdistancematrixverywell.Presumably,theinformationintheNCDdistance
+matrixcannotberepresentedbyadendrogramofhighS(T)score. Thisappearstobeacommonproblemwithlarge
+(>25orso)naturaldatasets. Anotherreasonmaybethattheprogramterminatedi,whiletrappedinalocaloptimum.
+Werepeatedtheexperimentmanytimeswithalmostthesameresults,sothatdoesn’tappeartobethecase. The11-
+itemsubtreerootedatn4contains10ofthe12jazzpieces,togetherwithapieceofBach’s“WohltemporierteKlavier
+(WTK)”.Theothertwojazzpieces,MilesDavis’“SoWhat,”andJohnColtrane’s“GiantSteps”areplacedelsewhere
+inthetree,perhapsaccordingtosomekinshipthatnowescapesus(butmaybeidentifiedbycloserstudyingofthe
+objectsconcerned). Ofthe12rockpieces,10areplacedinthe12-itemsubtreerootedatn29,togetherwithapiece
+ofBach’s“WTK,”andColtrane’s“GiantSteps,”whileHendrix’s“VoodooChile”andRush“Yyz”isfurtheraway.
+Ofthe12classicalpieces,10areinthe13-itemsubtreesrootedatthebranchn8,n13,n6,n7,togetherwithHendrix’s
+“VoodooChile,”Rush’s“Yyz,”andMilesDavis’“SoWhat.” Surprisingly,2ofthe4Bach“WTK”piecesareplaced
+elsewhere. Yetweperceivethe4Bachpiecestobeveryclose,bothstructurallyandmelodically(astheyallcome
+fromthemono-thematic“WohltemporierteKlavier”).Buttheprogramfindsareasonthatatthispointishiddenfrom
+us.Infact,runningthisexperimentwithdifferentcompressorsandterminationconditionsconsistentlydisplayedthis
+anomaly.Thesmallsetencompassesthe4movementsfromDebussy’s“SuiteBergamasque,”4movementsofbook
+2 of Bach’s “Wohltemperierte Klavier,” and 4 preludes from Chopin’s “Opus 28.” As one can see in Figure 17,
+ourprogramdoesaprettygoodjobatclusteringthesepieces. TheS(T)scoreisalsohigh: 0.968. The4Debussy
+movementsformonecluster,asdothe4Bachpieces. Theonlyimperfectioninthetree,judgedbywhatonewould
+intuitivelyexpect,isthatChopin’sPre´ludeno.15liesa bitclosertoBachthantotheother3Chopinpieces. This
+Figure18:ImagesofhandwrittendigitsusedforOCR.
+n24 foursab
+foursaf n17 n19
+n5 sixesaj
+sixesaa n14
+foursaa n15
+foursae n21 n1 fivesac sixesae n11 sixesab
+fivesad n6 n23 n13 n3 n7 n8 n27 sixesaf
+fivesaa n26 n4 foursaj
+n18 n20 sixesai
+fivesae n25
+fivesab sixesah n10
+fivesaf sixesac
+fivesaj n16
+Figure19:ClusteringoftheOCRimages.S(T)=0.901.
+Pre´ludeno 15, in fact, consistently formsan odd-one-outin our otherexperimentsaswell. Thisis an exampleof
+puredatamining,sincethereissomemusicaltruthtothis,asno.15isperceivedasbyfarthemosteccentricamong
+the24Pre´ludesofChopin’sopus28.
+5.5 Optical Character Recognition
+Canwealsoclustertwo-dimensionalimages?Becauseourmethodappearsfocussedonstringsthisisnotstraightfor-
+ward. Itturnsoutthatscanningapictureinrasterrow-majororderretainsenoughregularityinbothdimensionsfor
+thecompressortograsp. Asimpletaskalongtheselinesistoclusterhandwrittencharacters. Thehandwrittenchar-
+actersinFigure18weredownloadedfromtheNISTSpecialDataBase19(opticalcharacterrecognitiondatabase)
+ontheworld-wideweb. Eachfileinthedatadirectorycontains1digitimage,eitherafour,five,orsix. Eachpixelis
+asinglecharacter;’#’forablackpixel,’.’ forwhite. Newlinesareaddedattheendofeachline. Eachcharacteris
+128x128pixels. TheNCDmatrixwascomputedusingthecompressorPPMZ.TheFigure19showseachcharacter
+thatisused.Thereare10ofeachdigit“4,”“5,”“6,”makingatotalof30itemsinthisexperiment.Allbutoneofthe
+4’sareputinthesubtreerootedatn1,allbutoneofthe5’sareputinthesubtreerootedatn4,andall6’sareputinthe
+subtreerootedatn3. Theremaining4and5areinthebranchn23,n13joiningn6andn3. So28itemsoutof30are
+clusteredcorrectly,thatis,93%.Inthisexperimentweusedonly3digits. Usingthefullsetofdecimaldigitsresults
+inalowerclusteringaccuracy. However,wecanusetheNCDasaobliviousfeature-extractiontechniquetoconvert
+genericobjectsintofinite-dimensionalvectors.Wehaveusedthistechniquetotrainasupportvectormachine(SVM)
+based OCR system to classify handwrittendigits byextracting80 distinct, orderedNCD featuresfrom eachinput
+image. Inthisinitialstageofongoingresearch,byourobliviousmethodofcompression-basedclusteringtosupply
+a kernelforan SVM classifier, we achieveda handwrittensingle decimaldigitrecognitionaccuracyof 85%. The
+currentstate-of-the-artforthisproblem,afterhalfa centuryof interactivefeature-drivenclassificationresearch,in
+the upperninety% level[32, 14]. Allexperimentsare benchmarkedon thestandardNIST SpecialData Base 19
+(opticalcharacterrecognitiondatabase).
+5.6 Astronomy
+Asaproofofprincipleweclustereddatafromunknownobjects,forexampleobjectsthatarefaraway.In[3]obser-
+vationsofthemicroquasarGRS1915+105madewiththeRossiX-rayTimingEplorerwereanalyzed. Theinterest
+inthismicroquasarstemsfromthefactthatitwasthefirstGalacticobjecttoshowacertainbehavior(superluminal
+expansion in radio observations). Photonometric observation data from X-ray telescopes were divided into short
+timesegments(usuallyintheorderofoneminute),andthesesegmentshavebeenclassifiedintoabewilderingarray
+offifteendifferentmodesafterconsiderableeffort. Briefly,spectrumhardnessratios(roughly,“color”)andphoton
+countsequenceswereusedtoclassifyagivenintervalintocategoriesofvariabilitymodes. Fromthisanalysis,the
+extremelycomplexvariabilityofthissourcewasreducedtotransitionsbetweenthreebasicstates,which,interpreted
+in astronomicalterms, givesrise to an explanationof this peculiarsourcein standardblack-holetheory. The data
+weusedinthisexperimentmadeavailabletousbyM.KleinWolt(co-authoroftheabovepaper)andT.Maccarone,
+bothresearchersattheAstronomicalInstitute“AntonPannekoek”,UniversityofAmsterdam. Theobservationsare
+essentiallytimeseries,andouraimwasexperimentingwithourmethodasapilottomoreextensivejointresearch.
+Here the task was to see whether the clustering would agree with the classification above. The NCD matrix was
+computedusing the compressorPPMZ. The results are in Figure 20. We clustered 12 objects, consisting of three
+intervalsfromfourdifferentcategoriesdenotedasd ,g ,f ,q inTable1of[3]. InFigure20wedenotethecategories
+bythecorrespondingRomanlettersD,G,P,andT,respectively.Theresultingtreegroupsthesedifferentmodesto-
+getherinawaythatisconsistentwiththeclassificationbyexpertsfortheseobservations.Theobliviouscompression
+clusteringcorrespondspreciselywiththelaboriousfeature-drivenclassificationin[3].
+6 Conclusion
+TointerpretwhattheNCDisdoing,andtoexplainitsremarkableaccuracyandrobustnessacrossapplicationfields
+andcompressors,theintuitionisthattheNCDminorizesallsimilaritymetricsbasedonfeaturesthatarecapturedby
+thereferencecompressorinvolved. Suchfeaturesmustberelativelysimpleinthesensethattheyareexpressedby
+anaspectthatthecompressoranalyzes(forexamplefrequencies,matches,repeats). Certainsophisticatedfeatures
+may well be expressible as combinationsof such simple features, and are thereforethemselvessimple featuresin
+thissense. Theextensiveexperimentingaboveshowsthatevenelusivefeaturesarecaptured.
+Tac2 Dab1 Dab4 Gab2
+n11 n3 Gab4
+Tac3 n4 n6
+Figure20: 16observationintervalsofGRS1915+105fromfourclasses. Theinitialcapitalletterindicatestheclass
+correspondingtoGreeklowercaselettersin[3]. Theremaininglettersanddigitsidentifytheparticularobservation
+intervalintermsoffinerfeaturesandidentity. TheT-clusteristopleft,theP-clusterisbottomleft,theG-clusteris
+totheright,andtheD-clusterinthemiddle.ThistreealmostexactlyrepresentstheunderlyingNCDdistancematrix:
+S(T)=0.994.
+Apotentialapplicationofournon-feature(orrather,many-unknown-feature)approachisexploratory.Presented
+withdataforwhichthefeaturesareasyetunknown,certaindominantfeaturesgoverningsimilarityareautomatically
+discovered by the NCD. Examining the data underlying the clusters may yield this hitherto unknown dominant
+feature.
+Our experiments indicate that the NCD has application in two new areas of support vector machine (SVM)
+based learning. Firstly, we find that the inverted NCD (1-NCD) is useful as a kernel for generic objects in SVM
+learning. Secondly, we can use the normalNCD as a feature-extractiontechnique to convertgeneric objects into
+finite-dimensionalvectors,seethelastparagraphofSection5.5. Ineffectoursimilarityengineaimsattheidealof
+aperfectdataminingprocess,discoveringunknownfeaturesinwhichthedatacanbesimilar. Thisisthesubjectof
+currentjointresearchingenomicsoffungi,clinicalmoleculargenetics,andradio-astronomy.
+Acknowledgement
+WethankLoredanaAfanasiev,GraduateSchoolofLogic,UniversityofAmsterdam;TeunBoekhout,EikoKuramae,
+VincentRobert, FungalBiodiversity Center, Royal NetherlandsAcademy of Sciences; Marc Klein Wolt, Thomas
+Maccarone,AstronomicalInstitute“AntonPannekoek”,UniversityofAmsterdam; EvgenyVerbitskiy,PhilipsRe-
+search;StevendeRooij, RonalddeWolf, CWI;therefereesandtheeditors,forsuggestions,comments,helpwith
+experiments,anddata;JormaRissanenandBorisRyabkofordiscussions,Tzu-KuoHuangforpointingoutsomety-
+posandsimplifications,andTeemuRoosandHenriTirryforimplementingavisualizationoftheclusteringprocess.

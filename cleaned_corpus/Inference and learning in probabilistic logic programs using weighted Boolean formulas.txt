@@ -1,0 +1,1968 @@
+Under consideration for publication in Theory and Practice of Logic Programming 1
+Inference and Learning in Probabilistic Logic
+Programs using Weighted Boolean Formulas
+DAAN FIERENS, GUY VAN DEN BROECK, JORIS RENKENS,
+DIMITAR SHTERIONOV, BERND GUTMANN, INGO THON,
+GERDA JANSSENS, LUC DE RAEDT
+Department of Computer Science
+Celestijnenlaan 200A, 3001 Heverlee, Belgium
+(e-mail: FirstName.LastName@cs.kuleuven.be)
+submitted 26 June 2012; revised 04 January 2013; accepted 07 March 2013
+Probabilistic logic programs are logic programs in which some of the facts are annotated
+withprobabilities.Thispaperinvestigateshowclassicalinferenceandlearningtasksknown
+from the graphical model community can be tackled for probabilistic logic programs.
+Several such tasks such as computing the marginals given evidence and learning from
+(partial) interpretations have not really been addressed for probabilistic logic programs
+before.
+Thefirstcontributionofthispaperisasuiteofefficientalgorithmsforvariousinference
+tasks.Itisbasedonaconversionoftheprogramandthequeriesandevidencetoaweighted
+Boolean formula. This allows us to reduce the inference tasks to well-studied tasks such
+as weighted model counting, which can be solved using state-of-the-art methods known
+from the graphical model and knowledge compilation literature. The second contribution
+is an algorithm for parameter estimation in the learning from interpretations setting.
+The algorithm employs Expectation Maximization, and is built on top of the developed
+inference algorithms.
+The proposed approach is experimentally evaluated. The results show that the infer-
+encealgorithmsimproveuponthestate-of-the-artinprobabilisticlogicprogrammingand
+that it is indeed possible to learn the parameters of a probabilistic logic program from
+interpretations.
+KEYWORDS:Probabilisticlogicprogramming,Probabilisticinference,Parameterlearn-
+1 Introduction
+Thereisalotofinterestincombiningprobabilityandlogicfordealingwithcomplex
+relational domains. This interest has resulted in the fields of Probabilistic Logic
+Programming (PLP) (De Raedt et al. 2008) and Statistical Relational Learning
+(SRL) (Getoor and Taskar 2007). While the two fields essentially study the same
+problem, there are differences in emphasis. SRL techniques have focussed on the
+extension of probabilistic graphical models like Markov or Bayesian networks with
+1v0186.4031:viXra
+2 D. Fierens et al.
+logical and relational representations, as in for instance Markov logic (Poon and
+Domingos 2006). Conversely, PLP has extended logic programming languages (or
+Prolog) with probabilities. This has resulted in differences in representation and
+semanticsbetweenthetwoapproachesand,moreimportantly,alsoindifferencesin
+the inference tasks and learning settings that are supported. In graphical models
+and SRL, the most common inference tasks are that of computing the marginal
+probabilityofasetofrandomvariablesgivensomeevidence(wecallthistheMARG
+task) and finding the most likely joint state of the random variables given the
+evidence (the MPE task). The PLP community has mostly focussed on computing
+thesuccessprobabilityofquerieswithoutevidence.Furthermore,probabilisticlogic
+programs are usually learned from entailment (Sato and Kameya 2008; Gutmann
+et al. 2008a), while the standard learning setting in graphical models and SRL
+corresponds to learning from interpretations. This paper bridges the gap between
+thetwocommunities,byadaptingthetraditionalgraphicalmodelandSRLsettings
+towards the PLP perspective. We contribute general MARG and MPE inference
+techniques and a learning from interpretations algorithm for PLP. In this paper
+we use ProbLog (De Raedt et al. 2007) as the PLP language, but our approach
+is relevant to related languages like ICL (Poole 2008), PRISM (Sato and Kameya
+2008) and LPAD/CP-logic (Vennekens et al. 2009) as well.
+The first key contribution of this paper is a two-step approach for performing
+MARG and MPE inference in probabilistic logic programs. In the first step, the
+program is converted to an equivalent weighted Boolean (propositional) formula.
+Thisconversionisbasedonwell-knownconversionsfromtheknowledgerepresenta-
+tion and logic programming literature. The MARG task then reduces to weighted
+model counting (WMC) on the resulting weighted formula, and the MPE task to
+weightedMAX-SAT.Thesecondsteptheninvolvescallingastate-of-the-artsolver
+forWMCorMAX-SAT.Inthisway,weestablishnewlinksbetweenPLPinference
+and standard problems such as WMC and MAX-SAT. We also identify a novel
+connection between PLP and Markov Logic (Poon and Domingos 2006). From a
+probabilistic perspective, our approach is similar to the work of Darwiche (2009)
+and others (Sang et al. 2005; Park 2002), who perform Bayesian network inference
+byconversiontoweightedformulas.WedothesameforPLP,amuchmoreexpres-
+sive representation framework than traditional graphical models. PLP extends a
+programming language and allows us to concisely represent large sets of dependen-
+cies between random variables. From a logical perspective, our approach is related
+to Answer Set Programming (ASP), where models are often computed by trans-
+lating the ASP program to a Boolean formula and applying a SAT solver (Lin and
+Zhao 2002). Our approach is similar in spirit, but is different in that it employs a
+probabilistic context.
+The second key contribution of this paper is an algorithm for learning the pa-
+rameters of probabilistic logic programs from data. We use the learning from in-
+terpretations (LFI) setting, which is the standard setting in graphical models and
+SRL (although they use different terminology). This setting has also received a lot
+ofattentionininductivelogicprogramming(DeRaedt2008),buthasnotyetbeen
+used for probabilistic logic programs. Our algorithm, called LFI-ProbLog, is based
+Inference and Learning in PLP using Weighted Formulas 3
+on Expectation-Maximization (EM) and is built on top of the inference techniques
+presented in this paper.
+The present paper is based on and integrates our previous papers (Fierens et al.
+2011; Gutmann et al. 2011) in which inference and learning were studied and im-
+plemented separately. Historically, the learning from interpretations approach as
+detailed by Gutmann et al. (2011) and Gutmann et al. (2010) was developed first
+and used BDDs for inference and learning. The use of BDDs for learning in an
+EM-styleisrelatedtotheapproachofIshihataetal.(2008),whodevelopedanEM
+algorithmforpropositionalBDDsandsuggestedthattheirapproachcanbeusedto
+perform learning from entailment for PRISM programs. Fierens et al. (2011) later
+showed that an alternative approach to inference - that is more general, efficient
+and principled - can be realized using weighted model counting and compilation
+to d-DNNFs rather than BDDs as in the initial ProbLog implementation (Kim-
+mig et al. 2010). The present paper employs the approach by Fierens et al. also
+for learning from interpretations in an EM-style and thus integrates the two ear-
+lier approaches. The resulting techniques are integrated in a novel implementation,
+called ProbLog2. While the first ProbLog implementation (Kimmig et al. 2010)
+was tightly integrated in the YAP Prolog engine and employed BDDs, ProbLog2
+is much closer in spirit to some Answer Set Programming systems than to Prolog
+and it employs d-DNNFs and weighted model counting.
+This paper is organized as follows. We first review the necessary background
+(Section 2) and introduce PLP (Section 3). Next we state the inference tasks that
+we consider (Section 4). Then we introduce our two-step approach for inference
+(Section 5 and 6), and introduce the new learning algorithm (Section 7). Finally
+we briefly discuss the implementation of the new system (Section 8) and evaluate
+the entire approach by means of experiments on relational data (Section 9).
+2 Background
+We now review the basics of first-order logic (FOL) and logic programming (LP).
+Readers familiar with FOL and LP can safely skip this section.
+2.1 First-Order Logic (FOL)
+A term is a variable, a constant, or a functor applied to terms. An atom is of the
+form p(t ,...,t ) where p is a predicate of arity n and the t are terms. A formula
+isbuiltoutofatomsusinguniversalandexistentialquantifiersandtheusuallogical
+connectives ¬, ∨, ∧, → and ↔. A FOL theory is a set of formulas that implicitly
+form a conjunction. An expression is called ground if it does not contain variables.
+Aground(orpropositional)theoryissaidtobeinconjunctivenormalform(CNF)
+if it is a conjunction of disjunctions of literals. A literal is an atom or its negation.
+Each disjunction of literals is called a clause. A disjunction consisting of a single
+literal is called a unit clause. Each ground theory can be written in CNF form.
+The Herbrand base of a FOL theory is the set of all ground atoms constructed
+using the predicates, functors and constants in the theory. A Herbrand interpreta-
+4 D. Fierens et al.
+tion, also called a (possible) world, is an assignment of a truth value to all atoms
+intheHerbrandbase.Aworldorinterpretationiscalledamodel ofthetheoryifit
+satisfies all formulas in the theory (in other words, if all formulas evaluate to true
+in that world).
+2.2 Logic Programming (LP)
+Syntactically, a normal logic program, or briefly logic program (LP) is a set of
+rules. A rule (also called a normal clause) is a universally quantified expression of
+the form h :- b1, ... , bn, where h is an atom and b ,...,b are literals. The
+atom h is called the head of the rule and b ,...,b the body, representing the
+conjunction b ∧...∧b . A fact is a rule that has true as its body and is written
+more compactly as h.
+We use the well-founded semantics for LPs (Van Gelder et al. 1991). In the case
+of a negation-free LP (or definite program), the well-founded model is identical to
+thewell-knownLeastHerbrandModel(LHM).TheLHMisequaltotheleastofall
+models obtained when interpreting the LP as a FOL theory of implications. The
+least model is the model that is a subset of all other models (in the sense that it
+makes the fewest atoms true). Intuitively, the LHM is the set of all ground atoms
+that are entailed by the LP. For negation-free LPs, the LHM is guaranteed to exist
+and be unique. For LPs with negation, we use the well-founded model. We refer
+to Van Gelder et al. (1991) for details. The ProbLog semantics requires all consid-
+ered logic programs to have a two-valued well-founded model (see Section 3.2). For
+suchprograms,thewell-foundedmodelisidenticaltothestablemodel(VanGelder
+et al. 1991).
+Intuitively,thereasonwhyoneconsidersonlytheleastmodelofanLPisthatLP
+semanticsmakestheclosedworldassumption(CWA).UndertheCWA,everything
+that is not implied to be true is assumed to be false. This has implications on how
+to interpret rules. Given a ground LP and an atom a, the set of all rules with a
+in the head should be read as the definition of a: the atom a is defined to be true
+if and only if at least one of the rule bodies is true (the ‘only if’ is due to the
+CWA). This means that there is a crucial difference in semantics between LP and
+FOL since FOL does not make the CWA. For example, the FOL theory {a ← b}
+has 3 models {¬a,¬b}, {a,¬b} and {a,b}. The LP {a :- b} has only one model,
+namely the least Herbrand model {¬a,¬b} (intuitively, a and b are false because
+thereisnorulethatmakesb true,andhencethereisnoapplicablerulethatmakes
+a true either).
+Because of the syntactic restrictions of LP, it is tempting to believe that FOL
+is more ‘expressive’ than LP. This is wrong because of the difference in semantics:
+certain concepts that can be expressed in LP cannot be expressed in FOL (see
+Section 3.3 for details). This motivates our interest in LP and PLP.
+Inference and Learning in PLP using Weighted Formulas 5
+3 Probabilistic Logic Programming and ProbLog
+Mostprobabilisticlogicprogramminglanguages,includingPRISM(SatoandKameya
+2008), ICL (Poole 2008), ProbLog (De Raedt et al. 2007) and LPAD (Vennekens
+et al. 2009), are based on Sato’s distribution semantics (Sato 1995). In this paper
+we use ProbLog, but our approach can be used for the other languages as well.
+3.1 Syntax of ProbLog
+A ProbLog program consists of two parts: a set of ground probabilistic facts, and
+a logic program, i.e. a set of rules and (‘non-probabilistic’) facts. A ground prob-
+abilistic fact, written p::f, is a ground fact f annotated with a probability p. We
+allow syntactic sugar for compactly specifying an entire set of probabilistic facts
+withasinglestatement.Concretely,weallowwhatwecallintensional probabilistic
+facts, which are statements of the form p::f(X1,X2,...,Xn) :- body, with body
+a conjunction of calls to non-probabilistic facts.1 The idea is that such a statement
+defines the domains of the variables X1, X2, ... and Xn. When defining the
+semantics, as well as when performing inference or learning, an intensional prob-
+abilistic fact should be replaced by its corresponding set of ground probabilistic
+facts, as illustrated below. An atom that unifies with a ground probabilistic fact is
+called a probabilistic atom, while an atom that unifies with the head of some rule
+in the logic program is called a derived atom. The set of probabilistic atoms must
+be disjoint from the set of derived atoms. Also, the rules in the program should be
+range-restricted: all variables in the head of a rule should also appear in a positive
+literal in the body of the rule.
+Ourrunningexampleistheprogramthatmodelsthewell-known‘Alarm’Bayesian
+network.
+Example 1 (Running Example)
+0.1::burglary. person(mary).
+0.2::earthquake. person(john).
+0.7::hears_alarm(X) :- person(X).
+alarm :- burglary.
+alarm :- earthquake.
+calls(X) :- alarm, hears_alarm(X).
+This Problog program consists of probabilistic facts and a logic program. Pred-
+icates of probabilistic atoms are burglary/0, earthquake/0 and hears_alarm/1,
+predicates of derived atoms are person/1, alarm/0 and calls/1. Intuitively, the
+probabilistic facts 0.1::burglary and 0.2::earthquake state that there is a bur-
+glary with probability 0.1 and an earthquake with probability 0.2. The statement
+0.7::hears_alarm(X) :- person(X) is an intensional probabilistic fact and is
+syntactic sugar for the following set of ground probabilistic facts.
+1 The notion of intensional probabilistic facts does not appear in earlier ProbLog papers but is
+oftenusefulinpractice.
+6 D. Fierens et al.
+0.7::hears_alarm(mary).
+0.7::hears_alarm(john).
+Therulesintheprogramdefinewhenthealarmgoesoffandwhenapersoncalls,
+as a function of the probabilistic facts.
+3.2 Semantics of ProbLog
+A ProbLog program specifies a probability distribution over possible worlds. To
+define this distribution, it is easiest to consider the grounding of the program with
+respecttotheHerbrandbase.2Inthispaper,weassumethattheresultingHerbrand
+base is finite. For the distribution semantics in the infinite case, see Sato (1995).
+Each ground probabilistic fact p::f gives an atomic choice, i.e. we can choose
+to include f as a fact (with probability p) or discard it (with probability 1−p). A
+total choice is obtained by making an atomic choice for each ground probabilistic
+fact. Formally, a total choice is any subset of the set of all ground probabilistic
+atoms. Hence, if there are n ground probabilistic atoms then there are 2n total
+choices. Moreover, we have a probability distribution over these total choices: the
+probability of a total choice is defined to be the product of the probabilities of the
+atomicchoicesthatitiscomposedof(wecantaketheproductsinceatomicchoices
+are seen as independent events).
+Example 2 (Total Choices of the Alarm Example)
+ConsidertheAlarmprogramofExample1.The24 =16totalchoicescorresponding
+to the 4 ground probabilistic atoms are given in Table 1. The first row corresponds
+to the total choice in which all the probabilistic atoms are true. The probability of
+this total choice is 0.1 × 0.2 × 0.7 × 0.7 = 0.0098. The second row corresponds to
+thesametotalchoiceexceptthathears alarm(mary)isnowfalse.Theprobability
+is0.1×0.2×0.7×(1-0.7)=0.0042.Thesumofprobabilitiesofall16totalchoices
+is equal to one.
+Given a particular total choice C, we obtain a logic program C ∪R, where R
+denotestherulesintheProbLogprogram.Wedenotethewell-foundedmodelofthis
+logic program as WFM(C ∪R).3 We call a given world ω a model of the ProbLog
+program if there indeed exists a total choice C such that WFM(C ∪R) = ω. We
+useMOD(L)todenotethesetofallmodelsofaProbLogprogramL.TheProbLog
+semanticsisonlywell-definedforprogramsthataresound(RiguzziandSwift2013),
+i.e., programs for which each possible total choice C leads to a well-founded model
+that is two-valued or ‘total’ (Riguzzi and Swift 2013; Van Gelder et al. 1991).4
+ProgramsforwhichthisisnotthecasearenotconsideredvalidProbLogprograms.
+Everything is now in place to define the distribution over possible worlds: the
+2 Beforehand,apreprocessingstepalreadyreplacedtheintensionalprobabilisticfactswiththeir
+correspondinggroundset,asillustratedbefore.
+3 RecallfromSection2.2thatfornegation-freeprograms,theWFMistheleastHerbrandmodel.
+4 A sufficient condition for this is that the rules in the ProbLog program are locally stratified
+(VanGelderetal.1991).Inparticular,thistriviallyholdsforallnegation-freeprograms.
+Inference and Learning in PLP using Weighted Formulas 7
+Table 1. Total choices and their probabilities
+Total choice C P(C)
+1 { burglary, earthquake, hears alarm(john), hears alarm(mary) } 0.0098
+2 { burglary, earthquake, hears alarm(john) } 0.0042
+3 { burglary, earthquake, hears alarm(mary) } 0.0042
+4 { burglary, earthquake } 0.0018
+5 { burglary, hears alarm(john), hears alarm(mary) } 0.0392
+6 { burglary, hears alarm(john) } 0.0168
+7 { burglary, hears alarm(mary) } 0.0168
+8 { burglary } 0.0072
+9 { earthquake, hears alarm(john), hears alarm(mary) } 0.0882
+10 { earthquake, hears alarm(john) } 0.0378
+11 { earthquake, hears alarm(mary) } 0.0378
+12 { earthquake } 0.0162
+13 { hears alarm(john), hears alarm(mary) } 0.3528
+14 { hears alarm(john) } 0.1512
+15 { hears alarm(mary) } 0.1512
+16 { } 0.0648
+probability of a world that is a model of the ProbLog program is equal to the
+probability of its total choice; the probability of a world that is not a model is 0.
+Example 3 (Models and their probabilities)
+(ContinuingExample2)Thetotalchoice{burglary,earthquake,hears alarm(john)},
+which has probability 0.1 × 0.2 × 0.7 × (1-0.7) = 0.0042, yields the following logic
+program.
+burglary. person(mary).
+earthquake. person(john).
+hears_alarm(john).
+alarm :- earthquake.
+alarm :- burglary.
+calls(X) :- alarm, hears_alarm(X).
+The WFM of this program is the world {person(mary),person(john),burglary,
+earthquake,hears alarm(john),¬hears alarm(mary),alarm,calls(john),¬calls(mary)}.
+Hencethisworldisamodelanditsprobabilityis0.0042.Intotalthereare16mod-
+els,correspondingtoeachofthe16totalchoicesshowninTable1.Notethat,outof
+allpossibleinterpretationsofthevocabulary,therearemanythatarenotmodelsof
+theProbLogprogram.Anexampleisanyworldoftheform{burglary,¬alarm,...}:
+it is impossible that alarm is false while burglary is true. The probability of such
+worlds is zero.
+3.3 Related Languages
+ProbLogisstronglyrelatedtoseveralotherlanguages,inparticulartoProbabilistic
+Logic Programming (PLP) languages like PRISM (Sato and Kameya 2008), ICL
+8 D. Fierens et al.
+(Poole 2008) and LPAD (Vennekens et al. 2009), and other languages like Markov
+Logic(PoonandDomingos2006).Table2showsthemainfeaturesofeachlanguage
+and the major corresponding system.
+Table 2. Overview of features of several probabilistic logical languages and the
+corresponding systems (implementations). The first three features are properties
+of the language, the last two are properties of the system. We refer to the first
+ProbLog system as ProbLog1 and to the system described here as ProbLog2.
+Language ProbLog ProbLog PRISM ICL LPAD MLN
+System ProbLog1 ProbLog2 PRISM AILog2 PITA Alchemy
+Cyclic rules (cid:88) (cid:88) − − (cid:88) (cid:88)
+Overlapping (cid:88) (cid:88) − (cid:88) (cid:88) n/a
+rule bodies
+Inductive (cid:88) (cid:88) (cid:88) (cid:88) (cid:88) −
+definitions
+Evidence on
+− (cid:88) − (cid:88) − (cid:88)
+arbitrary atoms
+Multiple queries − (cid:88) − − − (cid:88)
+ComparedtomostotherPLPlanguages,ProbLogismoreexpressivewithrespect
+to the rules that are allowed in a program. This holds in particular for PRISM
+and ICL. Both PRISM and ICL require the rules to be acyclic (or contingently
+acyclic) (Sato and Kameya 2008; Poole 2008). In ProbLog we can have cyclic pro-
+gramswithrulessuchassmokes(X) :- smokes(Y), influences(Y,X).Thistype
+of cyclic rules are often needed for tasks such as collective classification or social
+network analysis (see Section 9). In addition to acyclicity, PRISM also requires
+rules with unifiable heads to have mutually exclusive bodies (such that at most
+one of these bodies can be true simultaneously; this is the mutual exclusiveness
+assumption). ProbLog does not have this restriction, so rules with unifiable heads
+can have ‘overlapping’ bodies. For instance, the bodies of the two alarm rules in
+ourrunningexampleareoverlapping:eitherburglaryorearthquakeissufficientfor
+making the alarm go off, but both can also happen at the same time.
+LPADs, as used in the PITA system (Riguzzi and Swift 2013), do not have
+these syntactic restrictions, and are hence on par with ProbLog in this respect.
+However, the PITA system does not support the same tasks as the new ProbLog2
+system does. For instance, when computing marginal probabilities, ProbLog2 can
+dealwithmultiplequeriessimultaneouslyandcanincorporateevidence,whilePITA
+usesthemoretraditionalPLPsettingwhichconsidersonequeryatatime,without
+evidence(thesuccesprobability setting,seeSection4).Thesamealsoholdsforthe
+first ProbLog system (Kimmig et al. 2010). Note that while evidence can in some
+Inference and Learning in PLP using Weighted Formulas 9
+specialcasesbeincorporatedthroughmodelling,5 weherefocusonthegeneralcase,
+i.e.,theabilityofthesystemtohandleevidenceonanyarbitrarysubsetofallatoms
+in the Herbrand base.
+ProbLog2 is the first PLP system that posesses all the features considered in
+Table 2, i.e., that supports multiple queries and evidence while having none of the
+language restrictions. The experiments in this paper (Section 9) require all these
+features and can hence only be carried out in ProbLog2, but not in the other PLP
+systems.
+MarkovLogic(PoonandDomingos2006)isstrictlyspeakingnotaPLPlanguage
+as it is based on First-Order Logic instead of Logic Programming. Nevertheless,
+Markov Logic of course serves the same purpose as the above PLP languages. In
+terms of expressivity, Markov Logic has the drawback that it cannot express (non-
+ground)inductivedefinitions.Anexampleofaninductivedefinitionisthedefinition
+of the notion of a path in a graph in terms of the edges. This can be written in
+plain Prolog and hence also in ProbLog.
+path(X,Y) :- edge(X,Y).
+path(X,Y) :- edge(X,Z), path(Z,Y).
+In the knowledge representation community, it is well-known that inductive defini-
+tions can naturally be represented in Logic Programming (LP), due to LP’s least
+orwell-foundedmodelsemantics(Deneckeretal.2001).Incontrast,inFirst-Order
+Logic(FOL)onecannotexpressnon-groundinductivedefinitions,suchasthepath
+definition above (Gr¨adel 1992). The reason is, roughly speaking, that path is the
+transitive closure of edge, and FOL can express that a given relation is transitive,
+butcannotingeneralspecifythisclosure.Thisresultcarriesovertotheprobabilis-
+tic case: we can express inductive definitions in PLP languages like ProbLog but
+not in FOL-based languages like Markov Logic.6 While the non-probabilistic case
+has been well-studied in the knowledge representation literature (Denecker et al.
+2001; Gr¨adel 1992), the probabilistic case has only very recently received attention
+(Fierens et al. 2012).
+4 Inference Tasks
+In the literature on probabilistic graphical models and statistical relational learn-
+ing, the two most common inference tasks are computing the marginal probability
+of a set of random variables given some observations or evidence (we call this the
+MARG task), and finding the most likely joint state of the random variables given
+theevidence(knownastheMPEtask,forMostProbableExplanation).InPLP,the
+5 For instance, when encoding a Bayesian network in PLP, evidence on nodes at the top of the
+network (nodes without parents) can be incorporated by including deterministic facts in the
+program.
+6 Thisdiscussionappliestonon-groundProbLogprogramsandMarkovLogicNetworks(MLNs).
+InSection5.3weshowthateveryground ProbLogprogramcanbeconvertedtoanequivalent
+groundMLN.Theaboveimpliesthatnosuchconversionexistsonthenon-ground(first-order)
+level.
+10 D. Fierens et al.
+focushasbeenonthespecialcaseofMARGwherethereisonlyasinglequeryatom
+Q andnoevidence.Thistaskisoftencalledcomputingthesuccessprobability ofQ
+(De Raedt et al. 2007). The only works related to the general MARG or MPE task
+in the PLP literature make a number of restrictive assumptions about the given
+program such as acyclicity (Gutmann et al. 2011) and the mutual exclusiveness
+assumption of PRISM (Sato and Kameya 2008). There also exist approaches that
+transform ground probabilistic programs to Bayesian networks and then use stan-
+dardBayesiannetworkinferenceprocedures(Meertetal.2009).However,theseare
+also restricted to acyclic and already grounded programs.
+OurapproachfortheMARGandMPEinferencetasksdoesnotsufferfromsuch
+restrictionsandisapplicabletoallProbLogprograms.Wenowformallydefinethese
+tasks,inadditiontoathird,stronglyrelatedtask.LetAtbetheHerbrandbase,i.e,
+thesetofallground(probabilisticandderived)atomsinagivenProbLogprogram.
+We assume that we are given a set E⊂At of observed atoms and a vector e with
+their observed truth values. We refer to this as the evidence and write E=e. Note
+thattheevidenceisessentiallyapartialinterpretationoftheatomsintheProbLog
+program.
+• In the MARG task, we are given a set Q ⊂ At of atoms of interest, called
+query atoms. The task is to compute the marginal probability distribution
+of every such atom given the evidence, i.e. compute P(Q | E = e) for each
+• The EVID or ‘probability of evidence’ task is to compute P(E = e). It
+corresponds to the likelihood of data in a learning setting and can be used as
+a building block for solving the MARG task (see Section 6.2).
+• TheMPEtaskistofindthemostlikelyinterpretation(jointstate)ofallnon-
+evidence atoms given the evidence, i.e. finding argmax P(U = u | E = e),
+with U being the unobserved atoms, i.e., U=At\E.
+As the following example illustrates, the different tasks are strongly related.
+Example 4 (Inference tasks)
+Consider the ProbLog program of Example 1 and assume that we know that John
+calls, so E = {calls(john)} and e = {true}. It can be verified that calls(john)
+is true in 6 of the 16 models of the program, namely the models of total choices
+1, 2, 5, 6, 9 and 10 of Table 1. The sum of their probabilities is 0.196, so this is
+theprobabilityofevidence(EVID).TheMPEtaskboilsdowntofindingtheworld
+with the highest probability out of the 6 worlds that have calls(john) = true. It
+canbeverifiedthatthisistheworldcorrespondingtototalchoice9,i.e.,thechoice
+{earthquake,hears alarm(john),hears alarm(mary)}.AnexampleoftheMARG
+taskistocomputetheprobabilitythatthereisaburglary,i.e.,P(burglary =true|
+calls(john)=true)= P(burglary=true∧calls(john)=true).Thereare4modelsinwhich
+P(calls(john)=true)
+both calls(john) and burglary are true (models 1, 2, 5 and 6), and their sum of
+7 ThecommonPLPtaskofcomputingthesuccessprobability ofanatomQ isaspecialcaseof
+MARGwithQbeingthesingleton{Q}andE=∅.
+Inference and Learning in PLP using Weighted Formulas 11
+probabilities is 0.07. Hence, P(burglary =true|calls(john)=true)= 0.07/ 0.196
+= 0.357.
+Our approach to inference consists of two steps: 1) convert the program to a
+weighted Boolean formula and 2) perform inference on the resulting weighted for-
+mula. We discuss these two steps in the next sections.
+5 Conversion to a Weighted Formula
+Our conversion takes as input a ProbLog program L, evidence E=e and a set
+of query atoms Q, and returns a weighted Boolean (propositional) formula that
+contains all necessary information. The conversion is similar for each of the consid-
+ered tasks (MARG, MPE or EVID). The only difference is the choice of the query
+set Q. For MARG, Q is the set of atoms for which we want to compute marginal
+probabilities. For EVID and MPE, we can take Q=∅ (see Section 6.1.1).
+The outline of the conversion algorithm is as follows.
+1. Ground L yielding a program L while taking into account Q and E=e (cf.
+Theorem 1, Section 5.1).
+It is unnecessary to consider the full grounding of the program, we only need
+thepartthatisrelevanttothequerygiventheevidence,thatis,thepartthat
+capturesthedistributionP(Q|E=e).WerefertotheresultingprogramL
+as the relevant ground program with respect to Q and E=e.
+2. Convert the ground rules in L to an equivalent Boolean formula ϕ (cf.
+Lemma 1, Section 5.2).
+This step converts the logic programming rules to an equivalent formula.
+3. Asserttheevidenceanddefineaweightfunction(cf.Theorem2,Section5.3).
+To obtain the weighted formula, we first assert the evidence by defining the
+formula ϕ as the conjunction of the formula ϕ for the rules (step2) and for
+the evidence ϕ . Then we define a weight function for all atoms in ϕ.
+The correctness of the algorithm is shown below; this relies on the indicated theo-
+rems andlemma’s. Beforedescribing thealgorithmin detail,weillustrate itonour
+Alarm example.
+Example 5 (The three steps in the conversion)
+As in Example 4, we take calls(john) = true as evidence. Suppose that we want
+tocomputethemarginalprobabilityofburglary,sothequerysetQis{burglary}.
+The relevant ground program is as follows.
+% ground probabilistic facts
+0.1::burglary. 0.2::earthquake. 0.7::hears_alarm(john).
+% ground rules
+alarm :- burglary.
+alarm :- earthquake.
+calls(john) :- alarm, hears_alarm(john).
+12 D. Fierens et al.
+Note that mary does not appear in the grounding because, if we have no evi-
+dence about her hearing the alarm or calling, she does not affect the probability
+P(burglary |calls(john)=true).
+Step2convertsthethreegroundrulesoftherelevantgroundprogramtoanequiv-
+alent propositional formula ϕ (see Section 5.2). This formula is the conjunction of
+alarm↔burglary∨earthquake and calls(john)↔alarm∧hears alarm(john).8
+Step 3 adds the evidence. Since we have only one evidence atom in our example
+(namely, calls(john) is true), all we need to do is to add the positive unit clause
+calls(john) to the formula ϕ . The resulting formula ϕ is ϕ ∧calls(john). Step
+3 also defines the weight function, which assigns a weight to each literal in ϕ, see
+Section 5.3. This results in the weighted formula, that is, the combination of the
+weight function and the Boolean formula ϕ.
+We now explain the three steps of the conversion in detail.
+5.1 The Relevant Ground Program
+In order to convert the ProbLog program to a Boolean formula we first ground it.
+We try to find the part of the grounding that is relevant to the queries Q and the
+evidence E = e. In SRL, this is also called knowledge-based model construction
+(Kersting and De Raedt 2001). To do this, we make use of the concept of a depen-
+dency set with respect to a ProbLog program. We first explain our algorithm and
+then show its correctness.
+The dependency set of a ground atom a is the set of all ground atoms that
+occur in some proof of a. The dependency set of multiple atoms is the union of
+their dependency sets. We call a ground atom relevant with respect to Q and E
+if it occurs in the dependency set of Q∪E. We call a ground rule relevant if it
+contains only relevant atoms. It is safe to restrict the grounding to the relevant
+rules only. To find the relevant atoms and rules, we apply SLD resolution to prove
+all atoms in Q∪E (this can be seen as backchaining over the rules starting from
+Q∪E). We employ tabling to avoid proving the same atom twice (and to avoid
+going into an infinite loop if the rules are cyclic). The relevant rules are all ground
+rules encountered during the resolution process. As our ProbLog programs are
+range-restricted, all the variables in the rules used during the SLD resolution will
+eventually become ground, and hence also the rules themselves.
+The above grounding algorithm is not optimal as it does not make use of all
+available information. For instance, it does not make use of exactly what the evi-
+dence is (the values e), but only of which atoms are in the evidence (the set E).
+One simple, yet sometimes very effective, optimization is to prune inactive rules.
+We call a ground rule inactive if the body of the rule contains a literal l that is
+falseintheevidence(l canbeanatomthatisfalseine,orthenegationofanatom
+that is true in e). Inactive rules do not contribute to the semantics of a program.
+8 For subsequent steps, it is often convenient to write this formula in conjunctive normal form
+(CNF).Forexample,someknowledgecompilationsystemsrequireCNFinput.
+Inference and Learning in PLP using Weighted Formulas 13
+Hence they can be omitted. In practice, we do this simultaneously with the above
+process: we omit inactive rules encountered during the SLD resolution.9
+The result of this grounding algorithm is what we call the relevant ground pro-
+gramL forLwithrespecttoQandE=e.Itcontainsalltheinformationnecessary
+for solving the corresponding EVID, MARG or MPE task. The advantage of this
+‘focussed’ approach (i.e., taking into account Q and E = e during grounding) is
+that the program and hence the weighted formula becomes more compact, which
+makessubsequentinferencemoreefficient.Thedisadvantageisthatweneedtoredo
+the conversion to a weighted formula when the evidence and queries change. This
+is no problem since the conversion is fast compared to the actual inference (see
+Section 9).
+The following theorem shows the correctness of our approach.
+LetLbeaProbLogprogramandletL betherelevantgroundprogramforLwith
+respect to Q and E=e. L and L specify the same distribution P(Q|E=e).
+The proofs of all theorems in this paper are given in the appendix.
+We already showed the relevant ground program for the Alarm example in Ex-
+ample 5 (in that case, there were irrelevant rules about mary, but no inactive
+rules because there was no negative evidence). To illustrate our approach for cyclic
+programs, we use the well-known Smokers example (Domingos et al. 2008).
+Example 6 (ProbLog program for Smokers)
+The ProbLog program for the Smokers example models two causes for people to
+smoke: either they spontaneously start because of stress or they are influenced by
+one of their friends.
+0.2::stress(P) :- person(P).
+0.3::influences(P1,P2) :- friend(P1,P2).
+person(p1). person(p2). person(p3).
+friend(p1,p2). friend(p1,p3)
+friend(p2,p1). friend(p3,p1).
+smokes(X) :- stress(X).
+smokes(X) :- smokes(Y), influences(Y,X).
+With the evidence {smokes(p) = true,smokes(p) = false} and the query set
+{smokes(p)}, we obtain the following ground program:
+0.2::stress(p1). 0.2::stress(p2). 0.2::stress(p3).
+0.3::influences(p2,p1). 0.3::influences(p1,p2). 0.3::influences(p1,p3).
+% irrelevant probabilistic fact !! 0.3::influences(p3,p1).
+9 This deals with literals that are false in the evidence. Conversely, when a body of a ground
+rule contains a literal that is true in the evidence, it has to be kept and the rule cannot be
+simplified.Thereasonisthattheatom’spresencemightgiverisetoapositiveloop,whichhas
+to be detected during the conversion of the ground program to a Boolean formula in the next
+step.
+14 D. Fierens et al.
+smokes(p1) :- stress(p1).
+smokes(p1) :- smokes(p2), influences(p2,p1).
+% inactive rule !! smokes(p1) :- smokes(p3), influences(p3,p1).
+smokes(p2) :- stress(p2).
+smokes(p2) :- smokes(p1), influences(p1,p2).
+smokes(p3) :- stress(p3).
+smokes(p3) :- smokes(p1), influences(p1,p3).
+The evidence smokes(p) = false makes the third rule for smokes(p1) inactive.
+This in turn makes the probabilistic fact for influences(p3,p1) irrelevant. Nev-
+ertheless, the rules for smokes(p3) have to be in the grounding, as the truth value
+of the head of a rule constrains the truth values of the bodies.
+5.2 The Boolean Formula for the Ground Program
+We now discuss how to convert the rules in the relevant ground program L to an
+equivalent Boolean formula ϕ . Converting a set of logic programming (LP) rules
+to an equivalent Boolean formula is a purely logical (non-probabilistic) problem.
+ThishasbeenwellstudiedintheLPliterature,whereseveralconversionshavebeen
+proposed,e.g.Janhunen(2004).Notethattheconversionisnotmerelyasyntactical
+rewriting issue; the point is that the rules and the formula are to be interpreted
+accordingtoadifferentsemantics.Hencetheconversionshouldcompensateforthis:
+therulesunderLPsemantics(withClosedWorldAssumption)shouldbeequivalent
+to the formula under FOL semantics (without CWA).
+For acyclic rules, the conversion is straightforward, we can simply take Clark’s
+completion of the rules (Lloyd 1987; Janhunen 2004). We illustrate this on the
+Alarm example, which is indeed acyclic.
+Example 7 (Formula for the alarm rules)
+AsshowninExample5,thegroundingoftheAlarmexamplecontainstworulesfor
+alarm, namely alarm :- burglary and alarm :- earthquake. Clark’s comple-
+tionoftheserulesisthepropositionalformulaalarm ↔burglary∨earthquake,i.e.,
+the alarm goes off if and only if there is burglary or earthquake. Once we have the
+formula,weoftenneedtorewriteitinCNFform,whichisstraightforwardforacom-
+pletion formula. For the completion of alarm, the resulting CNF has three clauses:
+alarm ∨¬burglary, alarm ∨¬earthquake, and ¬alarm ∨burglary ∨earthquake.
+The last clause reflects the CWA.10
+For cyclic rules, the conversion is more complicated. This holds in particular
+for rules with positive loops, i.e., loops with atoms that depend positively on each
+other, as in the recursive rule for smokes/1. It is well-known that in the presence
+10 The Alarm example models a Bayesian network for the MARG task. For Bayesian networks,
+theproblemofconversiontoaweightedCNFformulahasbeenconsideredbefore,andseveral
+encodings exist (Darwiche 2009; Sang et al. 2005). For ProbLog programs modelling Boolean
+Bayesiannetworks,likeAlarm,ourCNFencodingcoincideswiththatofSangetal.(2005).
+Inference and Learning in PLP using Weighted Formulas 15
+of positive loops, Clark’s completion is not correct, i.e. the resulting formula is not
+equivalent to the rules (Janhunen 2004).
+Example 8 (Simplified Smokers example)
+Let us focus on the Smokers program of Example 6, but restricted to person p1
+and p2.
+0.2::stress(p1). 0.3::influences(p2,p1).
+0.2::stress(p2). 0.3::influences(p1,p2).
+smokes(p1) :- stress(p1).
+smokes(p1) :- smokes(p2), influences(p2,p1).
+smokes(p2) :- stress(p2).
+smokes(p2) :- smokes(p1), influences(p1,p2).
+Clark’s completion of the rules for smokes(p1) and smokes(p2) would result in a
+formula which has as a model {smokes(p),smokes(p),¬stress(p),¬stress(p),
+influences(p,p),influences(p,p),...}, but this is not a model of the ground
+ProbLog program: the only model resulting from the total choice {¬stress(p),
+¬stress(p),influences(p,p),influences(p,p),...},isthemodelinwhichsmokes(p)
+and smokes(p) are both false.
+Since Clark’s completion is inapplicable with positive loops, a range of more
+sophisticatedconversionalgorithmshavebeendevelopedintheLPliterature.Since
+the problem is of a highly technical nature, we are unable to repeat the full details
+in this paper. Instead, we briefly discuss the two conversion methods that we use
+in our work and refer to the corresponding literature for more details.
+Both conversion algorithms take a set of rules and construct an equivalent for-
+mula. The formulas generated by the two algorithms are typically syntactically
+different because the algorithms introduce a set of auxiliary atoms in the formula
+and these sets might differ. For both algorithms, the size of the formula typically
+increases with the number of positive loops in the rules. The two algorithms are
+the following.
+• The first algorithm is from the Answer Set Programming literature (Jan-
+hunen 2004). It first rewrites the given rules into an equivalent set of rules
+withoutpositiveloops(allresultingloopsinvolvenegation).Thisrequiresthe
+introduction of auxiliary atoms and rules. Since the resulting rules are free of
+positiveloops,theycanbeconvertedbytakingClark’scompletion.Theresult
+can then be written as a CNF. This algorithm is rule based, as opposed to
+the next algorithm.
+• The second algorithm was introduced in the LP literature (Mantadelis and
+Janssens 2010) and is proof-based. It first constructs all proofs of all atoms
+of interest, in our case all atoms in Q ∪ E, using tabled SLD resolution.
+The proofs are collected in a recursive structure, namely a set of nested tries
+(Mantadelis and Janssens 2010), which will have loops if the given rules had
+loops. The algorithm then operates on this structure in order to ‘break’ the
+loops and obtain an equivalent Boolean formula. This formula can then be
+written as a CNF.
+16 D. Fierens et al.
+Both the rule-based and the proof-based conversion algorithm return a formula
+that is ‘equivalent’ to the rules in L , in the sense of the following lemma.
+Let L be a ground ProbLog program. Let ϕ denote the formula derived from the
+rules in L . Then SAT(ϕ )=MOD(L ).
+Recall that MOD(L ) denotes the set of models of a ProbLog program L , as
+defined in Section 3.2. On the formula side, we use SAT(ϕ ) to denote the set of
+models of a formula ϕ .11
+Example 9 (Boolean formula for the simplified Smokers example)
+Consider the ground program for the simplified Smokers example, given in Ex-
+ample 8. The proof-based conversion algorithm converts the ground rules in this
+program to an equivalent formula (in the sense of Lemma 1) consisting of the con-
+junction of the following four subformulas.
+aux ↔ smokes(p)∧influences(p,p)
+aux ↔ stress(p)∧influences(p,p)
+Here aux and aux are auxiliary atoms that are introduced by the conversion
+(though they could be avoided in this case). Intuitively, aux says that person p1
+started smoking because he is influenced by person p2, who smokes himself. Note
+that while the ground program (in Example 8) is cyclic, the loop has been broken
+by the conversion process; this surfaces in the fact that the last subformula uses
+stress(p) instead of smokes(p).
+5.3 The Weighted Boolean formula
+The final step of the conversion constructs the weighted Boolean formula starting
+from the Boolean formula for the rules ϕ . First, the formula ϕ is defined as the
+conjunction of ϕ and a formula ϕ capturing the evidence E=e. Here ϕ is a
+conjunctionofunit clauses:thereis aunitclause a foreachtrueatomand aclause
+¬a foreachfalseatomintheevidence.Second,wedefinetheweightfunctionforall
+literalsintheresultingformula.Theweightofaprobabilisticliteral isderivedfrom
+the probabilistic facts in the program: if the relevant ground program contains a
+probabilistic fact p::f, then we assign weight p to f and weight 1−p to ¬f. The
+weightofaderivedliteral (aliteralnotoccuringinaprobabilisticfact)isalways1.
+The weight of a world ω, denoted w(ω), is defined to be the product of the weight
+of all literals in ω.
+11 Bothconversionsforcyclicrulesintroduceadditionalor‘auxiliary’atomsintoϕr.Wecansafely
+omit these atoms from the models in SAT(ϕr) because both conversions are ‘faithful’, so the
+truthvalueofauxiliaryatomsisuniquelydefinedbythetruthvalueoftheoriginalatoms.This
+meansthattheintroductionoftheauxiliaryatomsdoesnotcreateextramodels.Hence,w.r.t.
+theoriginalatomswehavethestatedequivalence:SAT(ϕr)=MOD(Lg).W.r.t.allatoms,ϕr
+andLg areequisatisfiable.
+Inference and Learning in PLP using Weighted Formulas 17
+Example 10 (Weighted formula for Alarm)
+WehaveseentheformulafortheAlarmprograminExample7.Ifwehaveevidence
+that calls(john) is true, we add a positive unit clause calls(john) to this formula
+(afterdoingthis,wecanpotentiallyapplyunitpropagationtosimplifytheformula).
+Thenwedefinetheweightfunction.Theformulacontainsthreeprobabilisticatoms
+burglary, earthquake and hears_alarm(john). The other atoms in the formula,
+alarmandcalls(john),arederivedatoms.Hencetheweightfunctionisasfollows.
+burglary (cid:55)→ 0.1 ¬burglary (cid:55)→ 0.9
+earthquake(cid:55)→ 0.2 ¬earthquake(cid:55)→ 0.8
+hears alarm(john)(cid:55)→ 0.7 ¬hears alarm(john)(cid:55)→ 0.3
+alarm (cid:55)→ 1 ¬alarm(cid:55)→ 1
+calls(john)(cid:55)→1 ¬calls(john)(cid:55)→ 1
+We have now seen how to construct the entire weighted formula from the rele-
+vant ground program. The following theorem states that this weighted formula is
+equivalent - in a particular sense - to the relevant ground program. We will make
+use of this result when performing inference on the weighted formula.
+Let L be the relevant ground program for some ProbLog program with respect to
+Q and E=e. Let MOD (L ) be those models in MOD(L ) that are consistent
+with the evidence E=e. Let ϕ denote the formula and w(·) the weight function of
+the weighted formula derived from L . Then:
+- (model equivalence) SAT(ϕ)=MOD (L ),
+- (weight equivalence) ∀ω ∈ SAT(ϕ): w(ω) = P (ω), i.e., the weight of ω
+according to w(·) is equal to the probability of ω according to L .
+Note the relationship with Lemma 1 (p. 16): Lemma 1 applies to the formula ϕ
+prior to asserting the evidence, whereas Theorem 2 applies to the formula ϕ after
+asserting evidence.
+Example 11 (Equivalence of weighted formula and ground program)
+The ground Alarm program of Example 5 has three probabilistic facts and hence
+23 = 8 total choices and corresponding possible worlds. Three of these possible
+worlds are consistent with the evidence calls(john) = true, namely the worlds
+resulting from choices in which hears alarm(john) is always true and at least one
+of {burglary,earthquake} is true. The reader can verify that the Boolean formula
+constructed in Example 10 has exactly the same three models, and that weight
+equivalence holds for each of these models.
+There is also a link between the weighted formula and Markov Logic Networks
+(MLNs). Readers unfamiliar with MLNs can consult Appendix B. The weighted
+formula that we construct can be regarded as a ground MLN. The MLN contains
+the Boolean formula as a ‘hard’ formula (with infinite weight). The MLN also has
+two weighted unit clauses per probabilistic atom: for a probabilistic atom a and
+18 D. Fierens et al.
+weight function {a (cid:55)→ p,¬a (cid:55)→ 1−p}, the MLN contains a unit clause a with
+weight ln(p) and a unit clause ¬a with weight ln(1−p).12
+Example 12 (MLN for the Alarm example)
+The Boolean formula ϕ for our ‘Alarm’ running example was shown in Example 5.
+The corresponding MLN contains this formula as a hard formula. The MLN also
+contains the following six weighted unit clauses.
+ln(0.1) burglary ln(0.9) ¬burglary
+ln(0.2) earthquake ln(0.8) ¬earthquake
+ln(0.7) hears alarm(john) ln(0.3) ¬hears alarm(john)
+We have the following equivalence result.
+Let L be the relevant ground program for some ProbLog program with respect to
+Q and E = e. Let M be the corresponding ground MLN. The distribution P(Q)
+according to M is the same as the distribution P(Q|E=e) according to L .
+Note that for the MLN we consider the distribution P(Q) (not conditioned on the
+evidence). This is because the evidence is already hard-coded in the MLN.
+6 Inference on the Weighted Formula
+TosolvethegiveninferencetaskfortheprobabilisticlogicprogramL,thequeryQ
+andevidenceE=e,wehaveconvertedtheprogramtoaweightedBooleanformula.
+A key advantage is that the inference task (be it MARG, MPE or EVID) can now
+be reformulated in terms of well-known tasks such as weighted model counting or
+weighted MAX-SAT on the weighted formula. This implies that we can use any of
+the existing state-of-the-art algorithms for solving these tasks. In other words, by
+the conversion of ProbLog to weighted formula, we get the inference algorithms for
+free.
+6.1 Task 1: Computing the probability of evidence (EVID)
+Computingtheprobabilityofevidencereducestoweightedmodelcounting(WMC),
+a well-studied task in the SAT community. Model counting for a propositional
+formula is the task of computing the number of models of the formula. WMC is
+the generalization where every model has a weight and the task is to compute the
+sum of weights of all models. The fact that computing the probability of evidence
+P(E=e) reduces to WMC on our weighted formula can be seen as follows.
+(cid:88) (cid:88)
+12 Thevaluesofthelogarithms(andhencetheweights)arenegative,butanyMLNwithnegative
+weights can be rewritten into an equivalent MLN with only positive weights (Domingos et al.
+2008).
+Inference and Learning in PLP using Weighted Formulas 19
+The first equality holds because P(E = e) by definition equals the total proba-
+bility of all worlds consistent with the evidence. The second equality follows from
+Theorem 2: model equivalence implies that the sets over which the sums range
+are equal, weight equivalence implies that the summed terms are equal. Comput-
+ing w(ω) is exactly what WMC on the weighted formula ϕ does. It is
+well-knownthatinferencewithBayesiannetworkscanbesolvedusingWMC(Sang
+et al. 2005). In (Fierens et al. 2011) we were the first to point out that this also
+holds for inference with probabilistic logic programs. As we will see in the experi-
+ments, this approach improves upon state-of-the-art methods in probabilistic logic
+programming.
+The above leaves open how we solve the WMC problem. There exist many ap-
+proaches to WMC, both exact (Darwiche 2004) and approximate (Gomes et al.
+2007). An approach that is particularly useful in our context is that of knowledge
+compilation, ‘compiling’ the weighted formula into a more ‘efficient’ form. While
+knowledge compilation has been studied for many different tasks (Darwiche and
+Marquis 2002), we need a form that allows for efficient WMC. Concretely, we com-
+piletheweightedformulaintoaso-calledarithmeticcircuit(Darwiche2009),which
+iscloselylinkedtotheconceptofdeterministic,decomposablenegationnormalform
+(d-DNNF) (Darwiche 2004).
+6.1.1 Compilation to an Arithmetic Circuit via d-DNNF
+We now introduce the necessary background on knowledge compilation and illus-
+trate the approach with an example.
+Knowledgecompilationisconcernedwithcompilingalogicalformula,forwhicha
+certainfamilyofinferencetasksishardtocompute,intoarepresentationwherethe
+sametasksaretractable(sothecomplexityoftheproblemisshiftedtothecompila-
+tionphase).Inthiscase,thehardtaskistocomputeweightedmodelcounts(which
+is #P-complete in general). After compiling a logical formula into a deterministic,
+decomposable negation normal form circuit (d-DNNF) representation (Darwiche
+2004) and converting the d-DNNF into an arithmetic circuit, the weighted model
+countoftheformulacanefficientlybecomputed,conditionedonanysetofevidence.
+This allows us to compile a single d-DNNF circuit and evaluate all marginals effi-
+ciently using this circuit.
+A negation normal form formula (NNF) is a rooted directed acyclic graph in
+which each leaf node is labeled with a literal and each internal node is labeled
+with a conjunction or disjunction. A decomposable negation normal form (DNNF)
+is a NNF satisfying decomposability: for every conjunction node, it should hold
+that no two children of the node share any atom with each other. A deterministic
+DNNF(d-DNNF)isaDNNFsatisfyingdeterminism:foreverydisjunctionnode,all
+children should represent formulas that are logically inconsistent with each other.
+For WMC, we need a d-DNNF that also satisfies smoothness: for every disjunction
+node, all children should use exactly the same set of atoms. Compiling a Boolean
+formulatoa(smooth)d-DNNFisawell-studiedproblem,andseveralcompilersare
+available (Darwiche 2004; Muise et al. 2012). These circuits are the most compact
+20 D. Fierens et al.
+circuit language we know of today that supports tractable WMC (Darwiche and
+Marquis 2002).
+A d-DNNF is a purely logical construct. It is constructed by compiling the for-
+mula,irrespectiveoftheassociatedweightingfunction.Hencead-DNNFallowsfor
+model counting, but not for WMC. In order to do WMC, we need to convert the
+d-DNNF into an arithmetic circuit, by taking into account the weighting function
+of our weighted formula. This conversion is done in two steps (Darwiche 2009):
+1)replaceallconjunctionsintheinternalnodesbymultiplications,andalldisjunc-
+tions by summations, 2) replace every leaf node involving a literal l by a subtree
+consisting of a multiplication node having two children, namely a leaf node with
+an indicator variable for the literal l and a leaf node with the weight of l according
+the weighted formula. We now illustrate this for the Alarm example.
+Example 13 (d-DNNF and Arithmetic Circuit for the Alarm example)
+WecontinuetheAlarmexample(Example10).Theformulaforthisexample,under
+the evidence calls(john) = true, is the conjunction of the following three subfor-
+mulas.
+alarm ↔burglary∨earthquake
+calls(john)↔alarm,hears alarm(john)
+calls(john)
+A corresponding d-DNNF is shown in Figure 1a. Note that the AND-nodes in the
+d-DNNF (like the root note) indeed satisfy the property of decomposability; while
+theOR-nodessatisfydeterminism.ThefunctionoftheOR-nodeonthelower-right
+is to make the d-DNNF smooth.
+Thearithmeticcircuitcorrespondingtothisd-DNNFisshowninFigure1b.The
+values in brackets in the interal nodes will be used later and can be ignored for
+now. The λ-variables in the leaves are the indicator variables for the literals. The
+indicator variable for a literal l is multiplied with a number, which is the weight of
+l according to our weighting function.
+Nowthatwehaveanarithmeticcircuitforourweightedformula,wearereadyto
+performWMCandcomputetheweightedmodelcount w(ω).Thiscount
+is found by simply evaluating the arithmetic circuit: we instantiate all indicator
+variables to the value 1 and then bottom-up evaluate all nodes, until we arrive at
+therootnode.Thevaluefoundattherootisthedesiredweightedmodelcountand
+also equals the probability of the evidence P(E=e).
+Example 14 (Evaluating the arithmetic circuit for the Alarm example)
+We use the arithmetic circuit for the Alarm program given in Example 13. Re-
+call that this program and circuit were obtained using calls(john) = true as
+the evidence, so we can use this circuit to calculate the probability of evidence
+P(calls(john) = true). This is done by instantiating all indicator variables λ to
+1, and then evaluting the circuit. Figure 1b illustrates this: the obtained values in
+each node are given between brackets. The value for the root is 0.196. This is the
+probability of evidence.
+Inference and Learning in PLP using Weighted Formulas 21
+calls(john) hears_alarm(john) OR alarm
+-burglary burglary OR
+earthquake -earthquake
+(a) d-DNNF
+λ[calls(john)] 1.0 λ[hears_alarm(john)] 0.7 * (0.18) * (0.1) λ[alarm] 1.0
+λ[-burglary] 0.9 * (0.2) * (0.8) λ[burglary] 0.1
+λ[earthquake] 0.2 λ[-earthquake] 0.8
+(b) arithmeticcircuit
+Fig. 1. The d-DNNF for the Alarm example and the corresponding arithmetic
+circuit.
+The above does not explain why we really need the indicator variables. The
+indicator variables allow us to add further evidence, on top of E = e, which is
+useful for MARG inference as we will see later. For instance, we can compute
+P(E = e ∧ X = true), for some additional atom X in the arithmetic circuit,
+by setting the indicator variable λ[X] to 1 and λ[−X] to 0 when evaluating the
+circuit.13
+13 In a purely logical context, setting indicator variables to 0 corresponds to conditioning the
+d-DNNFcircuit.
+22 D. Fierens et al.
+Example 15 (Evaluating the arithmetic circuit in case of additional evidence)
+AssumewewanttocomputeP(calls(john)=true∧earthquake=true),usingthe
+samearithmeticcircuitseenbefore,namelythecircuitforcalls(john)=true.Since
+weadditionallyhaveearthquake=true,wesetλ[earthquake]to1,λ[−earthquake]
+to 0, and all other indicator variables to 1 as before. The evaluation is illustrated
+in Figure 2, yielding the result 0.14. Hence P(calls(john) = true∧earthquake =
+true)= 0.14.
+Inthesameway,theprobabilityofanysetofevidencecanbecomputed,provided
+thatthissetextendstheinitialsetE=e(andthattheadditionalatomsalsoappear
+in the compiled circuit). This also means that Step 3 of our conversion algorithm
+(Section 5.3), where we add the evidence ϕ to the weighted Boolean formula, is
+not strictly needed: we can achieve the same result by using only the formula ϕ
+(capturingtherulesoftheprogram)andsettingtheindicatorvariablesinthecircuit
+according to the evidence E = e. However, asserting the evidence ϕ early makes
+the compilation phase more efficient (it allows for more unit propagation, etc).
+λ[calls(john)] = 1 1.0 λ[hears_alarm(john)] = 1 0.7 * (0.18) * (0.02) λ[alarm] = 1 1.0
+λ[-burglary] = 1 0.9 * (0.2) * (0.0) λ[burglary] = 1 0.1
+λ[earthquake] = 1 0.2 λ[-earthquake] = 0 0.8
+Fig. 2. Evaluating an arithmetic circuit with additional evidence (the nodes which
+get a different value than in Figure 1(b) are highlighted in boldface).
+InSRL,theworkofChaviraetal.(2006)isclosesttotheapproachinthissection.
+They perform inference in relational Bayesian networks by encoding them into a
+weighted Boolean formula and compiling this formula into an arithmetic circuit.
+The main difference is that relational Bayesian networks are not a programming
+languageandassumeacyclicity.Thatassumptiongreatlysimplifiesthestepofcon-
+verting to a weighted Boolean formula (cf. Section 5).
+In summary, to compute the probability of evidence we 1) compile the formula
+to a d-DNNF, 2) convert the d-DNNF into an arithmetic circuit, 3) evaluate the
+arithmetic circuit.
+Inference and Learning in PLP using Weighted Formulas 23
+6.1.2 Compilation to an Arithmetic Circuit via BDD
+Intheprobabilisticlogicprogramming(PLP)community,thestate-of-the-art(DeRaedt
+etal.2007)istocompiletheprogramintoanotherform,namelyareducedordered
+Binary Decision Diagram (BDD) (Bryant 1986). This approach is a special case
+of our above WMC approach (although it is usually not formulated like that; in
+fact, in Fierens et al. (2011) we were the first to point out the connection of the
+PLP-BDD approach to WMC).
+A BDD is a special kind of d-DNNF, namely one that satisfies the additional
+properties of ordering and decision, see Darwiche (2004). In our approach, we can
+alternatively replace the d-DNNF compiler by a BDD compiler. Computing the
+probability of evidence can then be done by either operating directly on the BDD,
+or by converting the BDD to an arithmetic circuit and evaluating the circuit (the
+first approach is merely a reformulation of the second). So while both compilation
+to BDD and d-DNNF are possible, there is theoretical and empirical evidence in
+the model counting literature that d-DNNFs outperform BDDs (Darwiche 2004).
+Our experimental results confirm the superiority of d-DNNFs (Section 9).
+We have now seen two ways of computing the probability of evidence: via d-
+DNNFsorBDDs.Wewillnowseehowthisapproachforcomputingtheprobability
+of evidence can be used as a building block for the MARG inference task (as is
+standard in the probabilistic literature).
+6.2 Task 2: Computing marginal probabilities (MARG)
+In MARG, we are given a set of query atoms Q and for each Q ∈ Q we need to
+computeP(Q |E=e).BydefinitionP(Q |E=e)= P(Q∧E=e).Hence,ifwehave
+N atoms in the query set Q, solving MARG reduces to computing the probability
+of the evidence, and computing N probabilities of the form P(Q∧E=e), i.e., the
+probability of the conjunction of the evidence with a single atom. In the previous
+section, we have already seen how we can compute such probabilities from the
+compiled arithmetic circuit, by appropriately instantiating the indicator variables
+λ and evaluating the circuit. The simplest approach is to apply this once for each
+query atom Q ∈ Q separately. However, we can solve this even more efficiently.
+Concretely, all required probabilities can be found in parallel. To be precise, all
+probabilities of the form P(X ∧E = e), with X being any atom in the circuit,
+can be computed simultaneously by traversing the circuit twice (bottom-up and
+top-down). The required traversal algorithm can be found in the literature, see
+Algorithm34(simpleversion)and35(optimizedversion)inDarwiche(2009).From
+this,weobtainallprobabilitiesoftheformP(X∧E=e).Wethenretainthosethat
+involve an atom from the query set (X ∈Q) and compute the required conditional
+probabilities P(Q | E = e) as P(Q∧E=e). As in the previous section, this entire
+approach can be performed using an arithmetic circuit derived from a compiled
+d-DNNF or from a BDD.
+The knowledge compilation approach is typically used for exact inference. When
+dealing with large domains, we often need to resort to computing approximate
+24 D. Fierens et al.
+marginals. Approximate inference is often achieved by means of sampling tech-
+niques,suchasMarkovChainMonteCarlo(MCMC).StandardMCMCapproaches
+like Gibbs sampling cannot deal with weighted formulas because the formula itself
+isdeterministic.Instead,weusetheMC-SAT algorithmthatwasdevelopedspecif-
+icallytodealwithdeterminism(PoonandDomingos2006).MC-SATisanMCMC
+algorithm that in every step of the Markov chain calls a SAT solver to construct a
+new sample. MC-SAT takes an MLN as input. Theorem 3 ensures that if we apply
+MC-SATon the appropriate MLN, we indeed obtain samples from the distribution
+P(Q|E=e).
+Tosummarize,wecurrentlyhavethreemethodsfortheMARGtask:exactinfer-
+ence by compilation to 1) d-DNNFs or 2) BDDs, or 3) approximate inference with
+MC-SAT.
+6.3 Task 3: Finding the most likely explanation (MPE)
+MPE is the task of finding the most likely interpretation (joint state) of all un-
+observed atoms given the evidence, i.e. finding argmax P(U = u | E = e), with
+U all unobserved atoms (i.e, all atoms in the ground program that are not in E).
+MPE inference on weighted formulas has been studied before. We consider two
+approaches.
+The first approach is to perform MPE by means of knowledge compilation. The
+compilation step (to compile an arithmetic circuit via a d-DNNF or BDD) is the
+same as before, only the traversal step differs.14 Again, the traversal algorithm can
+be found in the literature, see Algorithm 36 in Darwiche (2009). This yields the
+exact MPE solution.15
+The second approach is to perform MPE using techniques from the SAT solving
+community. Concretely, it is known that MPE reduces to partially weighted MAX-
+SAT(Park2002).Apopularapproximateapproachforsolvingthistaskisstochastic
+local search (Park 2002). An example algorithm is MaxWalkSAT, which is also the
+standard MPE algorithm for MLNs (Domingos et al. 2008).
+Since our current ProbLog implementation focusses on MARG inference rather
+thanMPE,wedonotdiscusstheseapproachesindetailandwillnotconsiderthem
+further in this paper.
+14 FortheMPEtask,itissufficienttocompileintoaDNNFcircuit,whichisnotnecessarilydeter-
+ministic.DNNFcircuitsarepotentiallymoresuccinctthand-DNNFcircuits,butunfortunately
+thereexistnocompilersspecificallyforDNNF.
+15 This approach yields the truth value of all ground atoms that occur in the relevant ground
+program(RGP)forthegivenevidence.AllprobabilisticatomsthatdonotoccurintheRGPare
+irrelevantw.r.t.theevidence(i.e.,theyareprobabilisticallyindependentoftheevidence).Hence,
+for each of these atoms, we can simply independently chose the truth value with maximum
+probabilityaccordingtotheassociatedprobabilisticfact.Thetruthvalueofallderivedatoms
+thatdonotoccurintheRGPisthenfoundbycomputingthewell-foundedmodeloftheMPE
+totalchoice.
+Inference and Learning in PLP using Weighted Formulas 25
+7 Learning Probabilistic Logic Programs from Partial Interpretations
+We now present an algorithm for learning the parameters (the probabilities of the
+probabilistic facts) of a ProbLog program from data. We use the learning from
+interpretations (LFI) setting.
+7.1 The Learning Setting
+Learning from (possibly partial) interpretations is a common setting in statistical
+relational learning, which has so far not yet been studied in its full generality for
+probabilistic programming languages (but see also Gutmann et al. (2011)).
+In the terminology used for inference in Section 4, partial interpretations corre-
+spond to evidence, and hence, in this section we shall often use the term evidence
+instead of partial interpretation. Let At be the Herbrand base, i.e., the set of all
+ground (probabilistic and derived) atoms in a given ProbLog program. In the fully
+observablecase,welearnfromasetofcompleteinterpretations,thatis,theobserved
+truth-valueseofalltheatomsintheHerbrandbaseAtaregivenandtheevidence
+variables E coincide with At. On the other hand, in the partially observable case,
+we learn from a set of partial interpretations, that is, we only observe the truth-
+values e of a set E ⊂ At of observed atoms. We now develop an algorithm, called
+LFI-ProbLog, that learns from (possibly partial) interpretations of a ProbLog pro-
+gram.Inagenerativesetting,oneistypicallyinterestedinthemaximumlikelihood
+parameters given the training data. This can be formalized as follows.
+Given:
+• a ProbLog program T containing a set of rules R and a set of probabilistic
+facts F ={p ::f } with unknown parameters p=(cid:104)p ,...,p (cid:105)
+• a set of (possibly partial) interpretations D = {E = e ,...,E = e }
+(the training examples)
+Find: the maximum likelihood probabilities p=(cid:104)p ,...,p (cid:105), that is,
+(cid:98) (cid:98)1 (cid:99)N
+p=argmaxP (D)=argmax P (E =e )
+where P (E = e ) is the probability of evidence E = e in the ProbLog
+Tp m m m m
+program T with parameters p.
+Example16illustratestheLFIsettingusingtheAlarmprogramfromExample1.
+Example 16 (Learning From Interpretations)
+P1::burglary. person(mary). alarm:- burglary.
+P2::earthquake. person(john). alarm:- earthquake.
+P3::hears_alarm(X):- person(X). calls(X) :- alarm, hears_alarm(X).
+A ProbLog program is given in which the probabilities P1, P2 and P3 are un-
+known and should be learned from partial interpretations, which contain the truth
+value for some of the atoms: {alarm = true},{earthquake = true,calls(mary) =
+true},{calls(john)=true}.ThegoalistofindtheprobabilitiesP1,P2andP3such
+that the combined probability of the partial interpretations is maximal.
+26 D. Fierens et al.
+One has to consider two cases when computing the maximum likelihood param-
+eters p.Inthe fully observablecase wherethetruthvaluesforeachof theatomsin
+the Herbrand base is known, one can obtain p by counting. In the more complex
+case of partial interpretations, one has to use an approach such as Expectation
+Maximization to deal with the partial observability.
+7.2 Full Observability
+Inthefully-observablecase,themaximumlikelihoodestimatep foraprobabilistic
+fact p :: f can be calculated directly from the interpretations. When p :: f
+is intensional, it represents multiple ground instances, that is, probabilistic facts:
+p ::f ,...,p ::f where Km is the number of ground instances represented
+n n,1 n n,K n m n
+by the fact p :: f in interpretation E = e . When p :: f is ground and
+n n m m n n
+extensional, Km is equal to 1 and the fact represents itself only. The maximal
+likelihood estimates can be calculated using the following formula.
+p = 1 (cid:88) M (cid:88) K n m δm where δm = (cid:26) 1 if f n,k =true ∈E m =e m (1)
+(cid:99)n Z n,k n,k 0 if f =false ∈E =e
+The sum is normalized by Z = (cid:80)M Km, the total number of probabilistic
+facts represented by f in all training examples. When Z is 0 in the data, p is
+n n (cid:99)n
+not calculated (there is no data to estimate it from).
+7.3 Partial Observability
+In many applications the training examples are only partially observed. In the
+alarm example, we may receive a phone call but we may not know whether an
+earthquake has occurred. In the partially-observable case – similar to Bayesian
+networks–itisimpossibletocomputethemaximumlikelihoodestimatesinclosed-
+form.Instead,weusetheExpectationMaximization(EM),seeAlgorithm1.Inthis
+algorithm, the parameters p0 are initialized randomly. During each iteration i, the
+ProbLog program T with parameters pi is used to estimate the probability of
+the unobserved atoms being true in each interpretation, P (f |E = e ) (the
+T pi n,k m m
+expectation step). These expectations are then used as to update the parameters
+of the program using the following equation (the maximization step).
+1 (cid:88) M (cid:88) K n m
+T pi n,k m m
+Algorithm1usestheinferencemechanismdescribedinSection6.2forcomputing
+the marginals in the expectation step. We can make two optimizations. Firstly, for
+thefactsf thatarenotcontainedinthedependencysetofapartialinterpretation
+E = e , the probability P (f |E = e ) is equal to pi. These facts slow
+m m T pi n,k m m n
+down the updating process and should therefore not be included in the sum. This
+canberealizedbycompilingthed-DNNFforthequeryP (E =e )andtouse
+Inference and Learning in PLP using Weighted Formulas 27
+the resulting d-DNNFs to compute the marginal probabilities P (f |E =e )
+T pi n,k m m
+onlyforthosefactsf includedinthed-DNNF.Forexample,whenwecompilethe
+d-DNNF for the third partial interpretation of Example 16, we obtain the ground
+programfrom Example5 andthe d-DNNFfrom Figure1a. Thisd-DNNF does not
+contain calls(mary) so this atom will not be used to update the probabilities for
+thethirdpartialinterpretation.Whennogroundingsforalearnablefactarepresent
+in any of the d-DNNFs, a zero probability is learned as no information is given.
+Secondly, one can observe that changing the parameters of a ProbLog program
+does not change the structure of the compiled d-DNNFs. This means that the d-
+DNNFs that have been compiled in the first iteration can be reused in all further
+iterations.Thealgorithmkeepsonupdatingtheparametersuntiltheloglikelihood
+of the interpretations is maximal. Each iteration of the algorithm is guaranteed to
+improve the likelihood of the data.
+Algorithm 1 The main loop of LFI-ProbLog. The ProbLog program is compiled
+into a d-DNNF for each partial interpretation E = e . After the compilation
+step, the algorithm follows an EM update scheme, first using the current model to
+completethedataandthenestimatingthenewmodelparametersfromtheresulting
+counts until convergence.
+1: function LFI-ProbLog(T = {p 1 :: f 1 ,...,p N :: f N } ∪ R,D = {E 1 =
+e ,...,E =e })
+2: for 1≤n ≤N do
+3: p0 ←rand(0,1) (cid:46) The fact probabilities are initialized with a random
+probability
+4: for 1≤m ≤M do (cid:46) Loop over training examples
+5: d-DNNF m ← compile(P T0 (E m =e m ))
+7: while not converged do (cid:46) EM algorithm
+8: i ←i +1
+9: for 1≤m ≤M do
+10: for 1≤n ≤N do
+11: for 1≤k ≤Km do
+12: compute P Ti−1 (f n,k |E m ) using d-DNNF m (cid:46) E Step
+13: for 1≤n ≤N do (cid:46) Loop over probabilistic facts
+14: p n i ← Z 1 n (cid:80)M m=1 (cid:80)K k= n m 1 P Ti−1 (f n,k |E m ) (cid:46) M Step (cf. Eq. 2)
+15: return {p n i ::f n | f n ∈F}∪R
+ThelearningalgorithmusesablackboxfortheMARGinferencetask(line12).In
+principle, any inference algorithm will work, including approximate ones. However,
+by choosing knowledge compilation for inference, we need to compile a circuit only
+once for each training example. This is the hard task. Once we have a circuit,
+computing expectations becomes easy, and we can reuse the circuit many times,
+for all i, k and n in lines 6, 10 and 11 of Algorithm 1. Furthermore, all marginal
+28 D. Fierens et al.
+probabilities P (f |E ) for the same evidence set E and parameterization p
+Tp n,k m m
+can be computed at once, in only two passes over the d-DNNF circuit.
+7.4 Discussion
+The above learning algorithm is based on the LFI algorithm that we developed
+in earlier work (Gutmann et al. 2011), see the discussion in Section 1. Our new
+algorithm has some advantages over the earlier version. First, the new algorithm
+can deal with cyclic programs (the old algorithm uses Clark’s completion, which
+applies only to acyclic programs, cf. Section 5.2). Second, the new algorithm scales
+better as it employs a more efficient approach for inference in the expectation
+step, namely compilation to d-DNNFs instead of to BDDs (see the experiments
+in Section 9.3.3). Furthermore, the new description of the algorithm more clearly
+separates the learning from the inference steps.
+The complexity of parameter learning (and of MARG and MPE inference) is
+worst-case exponential in the treewidth (Robertson and Seymour 1986) of the
+weighted Boolean formula when using knowledge compilation to d-DNNF (Dar-
+wiche 2001). This theoretical complexity bound is in line with the complexity of
+classicalalgorithmsforinferenceandlearninginprobabilisticgraphicalmodels.For
+example, hidden Markov models have a constant treewidth in terms of the number
+of time steps considered. Learning the parameters of these models is linear in the
+number of time steps, both when using LFI-ProbLog with d-DNNF compilation
+and, for example, expectation maximization with the classical junction tree algo-
+rithm. These bounds assume that both algorithms succeed at finding the optimal
+tree decomposition of the model, which itself is a hard task in theory. In practice,
+however, there exist heuristics that can find good tree decompositions of many
+different kinds of models.
+8 Implementation of the System ProbLog2
+The first ProbLog system (Kimmig et al. 2010) focused on the inference task of
+computingthesuccessprobabilityofasingleatom(Section4)andonlearningfrom
+entailment (Gutmann et al. 2008b). ProbLog2, the new ProbLog system described
+in this paper, focusses on different tasks, namely computing marginal probabilities
+and the probability of evidence, as well as learning from interpretations. This new
+settingiscloserinspirittotheworkongraphicalmodelsandStatisticalRelational
+Learning (like Markov Logic). As a consequence of this new emphasis, the design
+of ProbLog2 is quite different from that of the first ProbLog. The implementation
+of the first ProbLog was tightly integrated in YAP Prolog (Kimmig et al. 2010). In
+contrast, ProbLog2 consists of a number of relatively loosely-coupled components,
+and involves almost no Prolog code. This new design is closer in spirit to that of
+some Answer Set Programming systems than to Prolog.
+We now briefly discuss the different components of the implementation. Most of
+these components are existing state-of-the-art programs, rather than being tailor-
+made for ProbLog.
+Inference and Learning in PLP using Weighted Formulas 29
+• The grounding component computes the relevant ground program from the
+given ProbLog program (and query and evidence). This is the only compo-
+nent that is written in (YAP) Prolog. It is essentially a meta-interpreter that
+collects proofs to construct the dependency set (Section 5.1).
+• The conversion component converts the rules in the relevant groundprogram
+to a Boolean (CNF) formula. The user can choose between the proof-based
+and the rule-based conversion (Section 5.2). For the proof-based conversion
+(Mantadelis and Janssens 2010), we use our own implementation. For the
+rule-based conversion, we use the code of Janhunen (2004), as used in the
+Answer Set Programming community.
+• The exact inference component is based on knowledge compilation and con-
+sistsoftwoparts:acompilerandanevaluationalgorithm.Forcompilationto
+d-DNNF,theusercanchoosebetweenthe‘c2d’compilerbyDarwiche(2004)
+orthemorerecent‘DSHARP’compiler(Muiseetal.2012).16 Forcompilation
+For constructing and evaluating the corresponding arithmetic circuit we use
+our own code.
+• The approximate inference component converts the weighted formula to a
+Markov Logic Network and then uses the MC-SAT (Poon and Domingos
+2006) code from the Alchemy package to perform the sampling.
+• The learning component, LFI-ProbLog, builds heavily on the inference com-
+ponent,asexplainedbefore(Section7).ItisessentiallyanExpectationMax-
+imization loop around the inference component.
+As mentioned, the above components are relatively loosely-coupled. They are bun-
+dled into a pipeline by means of Python code. A major advantage of our design is
+that it allows to build an entire ProbLog system by (mostly) using existing state-
+of-the-art programs for the different components, such as Janhunen’s conversion
+program and the various d-DNNF and BDD compilers. Moreover, research on con-
+version of logic programs, knowledge compilation, weighted model counting, etc,
+continues, with new tools being released. Whenever a new tool becomes available
+for a particular component, we can benefit from this, and integrate it into our sys-
+tem.Suchadesignofcoursealsohasdrawbacks.Thetwomaindrawbacksarethat
+there is a certain latency between the components because of I/O issues, and that
+the system is complex to install and configure because of the different components
+written in different programming languages.
+16 Allexperimentsinthispaperusec2d.
+17 InadditiontotheMARG,MPEandlearningtasks,theProbLog2systemsupportsMAPand
+decision-theoreticinference(VandenBroecketal.2010),whicharenotdiscussedhere.
+30 D. Fierens et al.
+9 Experiments
+The goal of our experiments is to establish the feasibility of our approach, and to
+analyzetheinfluenceofthedifferentparameters.WefocusonMARGinferenceand
+learning. Concretely, we aim to answer six questions.
+Q1 Is working with the relevant rather than the complete ground program more
+efficient?
+Q2 Which of the two considered algorithms for converting the ground program
+to a Boolean formula (rule-based or proof-based conversion) performs best?
+Q3 Which of the two considered approaches for knowledge compilation (using
+d-DNNFs or BDDs) performs best?
+Q4 When computing success probabilities (the ‘classical’ ProbLog setting), does
+ProbLog2 outperform the previous ProbLog implementation?
+Q5 When learning from data generated from a known ProbLog program, can we
+recover the parameters of the original program given a reasonable amount of
+data?
+Q6 Whenlearningfromreal-worlddata,canweobtainresultscomparabletothe
+ones obtained with a state-of-the-art system (namely Alchemy)?
+Note that in Q6 we compare our system to Alchemy, which is the standard system
+9.1 Programs and Datasets
+We perform experiments on three types of applications.
+Social networks. Weusethe standardSmokers application(Domingosetal.2008).
+The ProbLog program contains the following intensional probabilistic facts and
+rules.
+0.2::stress(P) :- person(P).
+0.3::influences(P1,P2) :- friend(P1,P2).
+0.1::cancer_spont(P) :- person(P).
+0.3::cancer_smoke(P) :- person(P).
+smokes(X) :- stress(X).
+smokes(X) :- smokes(Y), influences(Y,X).
+cancer(P) :- cancer_spont(P).
+cancer(P) :- smokes(P), cancer_smoke(P).
+Inaddition,theprogramcontainsground(non-probabilistic)factsforthepredicates
+person/1 and friend/2. The number of such facts is varied; see the next section.
+Collective classification. We use the relational WebKB dataset.18 In WebKB, uni-
+versity web pages need to be tagged with classes (like course page, student page,
+Inference and Learning in PLP using Weighted Formulas 31
+etc). This is modeled with a predicate has class(Page,Class). The rules in the
+ProbLog program are the following; they specify how the class C of a page P de-
+pends on the textual content of P (the words W on the page), and on the classes
+of pages that link to P.
+has_class(P,C) :- word_class(P,W,C).
+has_class(P,C) :- has_class(P2,C2), link_class(P,P2,C,C2).
+For the predicate word class/3, there is a different intensional probabilistic fact
+for every (word,class)-pair in the dataset. Each such intensional probabilistic fact
+looks as follows.
+prob::word_class(P,word1,class1) :- has_word(P,word1).
+Thereasonwhyweneedadifferentintensionalprobabilisticfactforeach(word,class)-
+pair is that for every such pair the involved probability (prob) can be different.
+Similarly, for the predicate link class/4, there is one intensional probabilistic fact
+for every pair of classes in the dataset.
+prob::link_class(P,P2,class1,class2) :- links_to(P,P2).
+The predicates that occur in the ‘bodies’ of these intensional probabilistic facts
+(has word/2 and links to/2) are defined in the dataset. The probabilities of the
+probabilistic facts were learned from data using LFI-ProbLog.
+Probabilistic grids. For comparing ProbLog2 to the previous ProbLog implemen-
+tation, we use the classical ProbLog application of probabilistic graphs (De Raedt
+et al. 2007). The program represents a graph in which edges are labelled with a
+probability.Hereweusea16×16gridasthegraph.Thisconsistsofnodesn ,with
+x,y ∈{1,...,16}, lined out on a square grid with horizontal, vertical and diagonal
+directed edges between adjacent nodes. Concretely, the edges are the following.
+n →n ∀x ∈{1,...,15},y ∈{1,...,16} (horizontal)
+n →n ∀x ∈{1,...,16},y ∈{1,...,15} (vertical)
+n →n ∀x ∈{1,...,15},y ∈{1,...,15} (diagonal)
+x,y x+1,y+1
+Every edge has probability 0.5. Such a probabilistic graph is modelled in ProbLog
+by a set of probabilistic edge/ facts. For instance, the horizontal edge from n
+to n is represented as the probabilistic fact 0.5::edge(n_1_1,n_2_1). The goal
+is to find the probability of there being a path between certain nodes in the graph,
+where path is defined in the usual Prolog way.
+path(X,Y) :- edge(X,Y).
+path(X,Y) :- edge(X,Z), path(Z,Y).
+9.2 Experimental Setup
+Wenowdescribehowweusethesethreeprograms(Smokers,WebKBandgrids)in
+our experimental setup.
+32 D. Fierens et al.
+9.2.1 Inference Setup
+MARG inference. We test MARG influence on Smokers and WebKB. The main
+parameter influencing the complexity of our inference experiments is the ‘domain
+size’, i.e., the number of constants considered. For Smokers, the domain size is the
+number of people; for WebKB, it is the number of webpages (we take subsets of all
+pages that occur in the dataset). In our experiments, we vary the domain size and
+see how different measures, such as runtime, evolve. For each considered domain
+size we generate multiple different instances of the MARG task (10 for Smokers,
+8 for WebKB), as described below. We report median results over these different
+instances (we use median because it is more stable than arithmetic average).
+Given a particular domain size, one instance of the MARG task is generated as
+follows. (1) For both Smokers and WebKB, the program involves ground (non-
+probabilistic) facts for certain ‘background’ predicates. We first generate interpre-
+tations for these predicates. For Smokers, the background predicate is friend/2,
+which determines the actual social network. We use a generator of synthetic power
+law random graphs (since such graphs are known to resemble real social networks)
+and convert the obtained graph to friend/2 facts. For WebKB, the background
+predicates are has word/2 and links to/2, for which interpretations can be found
+in the dataset. (2) Given the domains and background facts, we select the set of
+query and evidence atoms, Q and E. For Smokers, we use 50% of all smokes/1
+and cancer/1 atoms as evidence and the other smokes/1 and cancer/1 atoms as
+queries. All atoms for the other predicates are neither query nor evidence. For We-
+bKB, we have a similar setup: we use 50% of all has class/2 atoms as evidence
+andtheotherhas class/2atomsasquery.(3)Thepreviousstepgeneratesthesets
+Q and E, but not yet the values for the evidence atoms, i.e. the vector of truth
+values e. To do so, we generate a ‘sample’ of the ProbLog program. This is done
+by independently sampling each ground probabilistic fact, and then computing the
+well-founded model of the resulting logic program (as dictated by the ProbLog se-
+mantics). The result is a complete interpretation of all predicates in the program.
+From this interpretation, we extract the truth values of all atoms in the evidence
+set E, and we use these truth values to construct the vector e. (We similarly store
+the values of all atoms in the query set Q because we need them later as ‘query
+ground truth’; see Section 9.3.2).
+Special case: success probability. The above is for MARG inference in the presence
+of multiple queries and evidence. In addition we also perform an experiment in the
+classical success probability setting, where the goal is to compute the probability
+of a single query, without evidence (Kimmig et al. 2010). For this experiment, we
+use the probabilistic grid program. Per experiment, we ask a single query of the
+form path(n_i_i,n_16_16) where i is being varied from 1 to 15. In other words:
+we are asking for the probabibity of there being a path from a node n on the
+diagonal of the grid to n , the lower right corner of the grid. The smaller the
+value of i, the longer these paths become (and the more possible paths there are),
+and hence the harder the computation. We measure the effect of the value of i
+Inference and Learning in PLP using Weighted Formulas 33
+on the runtime of the query in both ProbLog2 and the first ProbLog implemen-
+the experiment 10 times and average the measured runtimes.
+9.2.2 Learning Setup
+In the learning experiments, we estimate the probabilities of all probabilistic facts
+from data.
+For Smokers, we again vary the domain size. For each size we generate 170 ex-
+periments. We sample 40, 50, ..., 200 interpretations from which we retain 10,
+40, 70 and 100 percent of the atoms together with their truth value in the partial
+interpretations. From these interpretations we learn the probabilities for all in-
+tensional probabilistic facts in the program (predicates stress/1, influences/2,
+cancer_spont/1 and cancer_smoke/1).
+For WebKB, the dataset consists of four disjoint sets of webpages, one per uni-
+versity. Per university, we use only the 20 words that contain the most information
+(as measured by information gain with respect to the class labels). We perform
+four-fold cross validation using both the Alchemy system (with a standard MLN
+for this application) and LFI-ProbLog.
+The ProbLog program that we use for learning is slightly different from the one
+we use for inference. In addition to the rules given earlier (Section 9.1), we include
+in the program two more causes for a page to have a certain class.
+has_class(P,C) :- fixed_prior(P,C).
+has_class(P,C) :- learnable_prior(P,C).
+Thepredicatelearnable prior/2accountsforthepagesthataretaggedwithaclass
+that can not be explained through words and links. There is one such probabilistic
+fact for each class.
+prob::learnable_prior(P,class1) :- page(P).
+The predicate fixed prior/2 makes sure that every page can be tagged with every
+class.
+0.001::fixed_prior(P,C) :- page(P), class(C).
+Finally,forcomputationalreasons,wemodifytherulethatspreadsinfluenceacross
+links (link class/4) such that pages can only influence their direct neighbors.
+Welearnallprob-parametersintheprogram(nottheprobabilityoffixed prior/2).
+Thelearnedprogramistoobigtoperformexactinference.Hence,whenevaluating
+the learned program (which requires running inference), we use an approximation,
+namely we remove all probabilistic facts with a learned probability below 0.05.
+9.3 Experimental Results
+We now discuss our results in terms of the six questions raised earlier.
+34 D. Fierens et al.
+0 10 20 30 40 50 60 70 80 90 100
+noisrevnoc
+proof-based (naive)
+proof-based (RGP)
+rule-based (naive)
+rule-based (RGP)
+number of people
+(a) runtimeofconversiontoaweightedBooleanformula
+0 10 20 30 40 50 60 70 80 90 100
+proof-based (naive)
+proof-based (RGP)
+rule-based (naive)
+rule-based (RGP)
+number of people
+(b)sizeoftheBooleanformula(numberofclausesintheCNF)
+2 4 6 8 10 12 14 16 18 20
+d-DNNF / proof-based
+BDD / proof-based
+d-DNNF / rule-based
+BDD / rule-based
+number of people
+(c) runtimeofexactinference(compilation+traversal)
+0 10 20 30 40 50 60 70 80 90 100
+doohilekilgol
+proof-based
+rule-based
+number of people
+(d) normalized negative log-likelihood of MC-SAT (lower is
+0 10 20 30 40 50 60 70 80 90 100
+proof-based
+rule-based
+number of people
+(e) numberofsamplesdrawnbyMC-SAT
+Fig. 3. Results for Smokers as a function of domain size. (When the curve for
+an algorithm ends at a particular domain size, this means that the algorithm is
+intractable beyond that size.)
+Inference and Learning in PLP using Weighted Formulas 35
+0 10 20 30 40 50 60 70 80 90 100
+noisrevnoc
+proof-based (naive)
+proof-based (RGP)
+rule-based (naive)
+rule-based (RGP)
+number of pages
+(a) runtimeofconversiontoaweightedBooleanformula
+0 10 20 30 40 50 60 70 80 90 100
+proof-based (naive)
+proof-based (RGP)
+rule-based (naive)
+rule-based (RGP)
+number of pages
+(b)sizeoftheBooleanformula(numberofclausesintheCNF)
+0 5 10 15 20 25
+d-DNNF / proof-based
+BDD / proof-based
+d-DNNF / rule-based
+number of pages
+(c) runtimeofexactinference(compilation+traversal)
+0 10 20 30 40 50 60 70 80 90 100
+doohilekilgol
+proof-based
+rule-based
+number of pages
+(d) normalized negative log-likelihood of MC-SAT (lower is
+0 10 20 30 40 50 60 70 80 90 100
+proof-based
+rule-based
+number of pages
+(e) numberofsamplesdrawnbyMC-SAT
+Fig. 4. Results for WebKB as a function of domain size. (When the curve for
+an algorithm ends at a particular domain size, this means that the algorithm is
+intractable beyond that size.)
+36 D. Fierens et al.
+9.3.1 Q1 - Influence of the Grounding Algorithm
+Question Q1 is: is working with the relevant rather than the complete ground
+program more efficient? To answer this question, we measured the time needed for
+grounding, the size of the resulting ground program, and the size of the Boolean
+formula derived from this program.
+The grounding step. The idea behind the relevant ground program (RGP) is to
+reduce the grounding by pruning clauses that are irrelevant or inactive w.r.t. the
+queriesandevidence.Oursetupissuchthatallclausesarerelevant.Hence,theonly
+reduction comes from pruning inactive clauses (that have a false evidence literal in
+the body). The effect of this pruning is small: on average the size of the ground
+program is reduced by 17% (results not shown).
+ImplicationsontheconversiontoaBooleanformula.Theproof-basedconversion
+becomes intractable (i.e., takes prohibitively long) for large domain sizes, but the
+size where this happens is significantly larger when working on the RGP instead of
+onthecompletegrounding(seeFig.3a/4a).AlsothesizeoftheBooleanformulais
+reducedsignificantlybyusingtheRGP(uptoa90%reductioninnumberofclauses
+intheCNF,Fig.3b/4b).Thereasonwhya17%reductionoftheprogramcanyield
+a 90% reduction of the corresponding formula is that loops in the program cause
+a ‘blow-up’ of the formula. Removing only a few rules in the ground program can
+alreadybreakloopsandmaketheformulasignificantlysmaller.Notethattheproof-
+based conversion suffers from this blow-up more than the rule-based conversion
+does.
+Computingthegroundingisalwaysveryfast,bothfortheRGPandthecomplete
+grounding (milliseconds on Smokers; around 1s for WebKB). Hence, as an answer
+toquestionQ1,weconcludethatusingtheRGPinsteadofthecompletegrounding
+is beneficial and comes at almost no computational cost. Hence, from now on we
+always use the RGP.
+9.3.2 Q2 - Influence of the Conversion Algorithm
+Question Q2 is: which of the two considered algorithms for converting the ground
+programtoaBooleanformulaperformsbest?Recallthatwehaveseenarule-based
+andaproof-basedconversion(Section5.2).Toanswerthisquestion,wemeasurethe
+time of the conversion process, the size of the resulting formula, and how efficient
+this formula is for inference.
+Theconversionstep.Theproof-basedalgorithm,byitsnature,doesmoreeffortto
+converttheprogramintoacompactformula.Thishasimplicationonthescalability
+of the algorithm: on small domains the algorithm is fast, but on larger domains it
+becomes intractable (Fig. 3a/4a). In contrast, the rule-based algorithm is able to
+deal with all considered domain sizes and is always fast (runtime at most 0.5s).
+A similar trend holds in terms of the size of the formula. For small domains, the
+proof-based algorithm generates smaller formulas than the rule-based algorithm,
+but for larger domains the opposite holds (Fig. 3b/4b).
+Implications on inference. The ultimate question is how efficient the formulas
+Inference and Learning in PLP using Weighted Formulas 37
+of the different conversions are for subsequent inference. We discuss this for exact
+inference in the next section; here we focus on approximate inference. We use the
+MC-SAT inference algorithm (Section 6.2) as a tool to evaluate how efficient the
+differentformulasareforinferencebyrunningMC-SATonthetwotypesofformulas
+and measuring the quality of the estimated marginals. Evaluating the quality of
+approximatemarginalsisnon-trivialwhencomputingtruemarginalsisintractable.
+We use the same solution as the original MC-SAT paper: we let MC-SAT run for a
+fixed time (10 minutes) and measure the quality of the estimated marginals as the
+likelihood of the ‘query ground truth’ according to these estimates; see Poon and
+Domingos (2006).
+On domain sizes where the proof-based algorithm is still tractable, inference
+results are better with the proof-based formula than with the rule-based formula
+(see Fig. 3d, and to a smaller extent Fig. 4d). This is because the proof-based
+formulas are more compact and hence more samples can be drawn in the given
+time (Fig. 3e/4e).
+As an answer to question Q2, we conclude that for smaller domains the proof-
+based algorithm is preferable because of the smaller formulas. On larger domains,
+the rule-based algorithm should be used.
+9.3.3 Q3 - Influence of the Inference Algorithm
+For exact inference, our approach consists of knowledge compilation, with either
+d-DNNFs or BDDs. Question Q3 is: which of the two considered approaches, d-
+DNNFs or BDDs, performs best? To answer this question, we increase the domain
+size up to the point where inference (doing the compilation to d-DNNF or BDD)
+becomes intractable. It is useful to distinguish between compilation of rule-based
+and proof-based formulas.19
+Proof-basedformulas.OntheSmokersdomain,BDDsperformrelativelywell,but
+they are nevertheless clearly outperformed by the d-DNNFs (Fig. 3c). On WebKB,
+the difference is even larger: BDDs are only tractable on domains of size 3 or 4,
+whiled-DNNFsreachuptosize18(Fig.4c).WhenBDDsbecomeintractable,this
+is mostly due to memory problems.20
+Rule-based formulas. As seen before, these formulas are less compact than the
+proof-based formulas (at least for those domain sizes where exact inference is fea-
+sible). The results clearly show that the d-DNNFs are much better at dealing with
+these non-compact formulas than the BDDs are. Concretely, the d-DNNFs are still
+19 In the PLP literature, BDDs have almost exclusively been used for proof-based formulas
+(De Raedt et al. 2007; Gutmann et al. 2011). Compiling our proof-based formulas to BDDs
+yieldsexactlythesameBDDsasusedbyGutmannetal.(2011).Inthespecialcaseofasingle
+queryandnoevidence,thisalsoequalstheBDDsusedDeRaedtetal.(2007).
+20 ItmightbesurprisingthatBDDs,whicharethestate-of-the-artinPLP,donotperformbetter.
+However,oneshouldkeepinmindthatweareusingBDDsforexactinferencehere.BDDsare
+alsousedforapproximateinference,onesimplycompilesanapproximateformulaintoaBDD
+(DeRaedtetal.2007).Thesamecanbedonewithd-DNNFs,andweagainexpectimprovement
+overBDDs.
+38 D. Fierens et al.
+2 4 6 8 10
+Fig. 5. Runtime of ProbLog1 and ProbLog2 on the probabilistic grid query, as a
+functionofthedistance16−i betweenthestartandendnode.(Whenthecurvefor
+analgorithmendsataparticularpoint,thismeansthatthealgorithmisintractable
+beyond that point.)
+tractableuptoreasonablesizes.Incontrast,usingBDDsontheserule-basedformu-
+las is nearly impossible: on Smokers the BDDs only solve size 3 and 4, on WebKB
+they even do not solve any of the inference tasks on rule-based formulas.
+As an answer to question Q3, we conclude that the use of d-DNNFs pushes the
+limit of exact MARG inference significantly further as compared to BDDs, which
+were the standard in PLP.
+9.3.4 Q4 - Computing Success Probabilities with ProbLog2
+Question Q4 is: when using the ‘classical’ ProbLog setting of computing suc-
+cess probabilities, does ProbLog2 (our new ProbLog implementation) outperform
+ProbLog1 (the previous ProbLog implementation)?
+For ProbLog1 we use the default parameter settings and we table the path/
+predicate. For ProbLog2 we use the proof-based conversion and we compile to d-
+DNNF. These settings are motivated by our previous conclusions, which show that
+the proof-based conversion works well on programs that are small enough to allow
+for exact inference (as we do here) and that d-DNNFs are superior to BDDs.
+As explained before (Section 9.2.1), we ask the query path(n_i_i,n_16_16),
+wherewevaryi from15to1.Thesmalleri,thelargerthe‘distance’16−i between
+the start and end node, and hence the harder the problem. Figure 5 shows the
+measured runtimes for ProbLog1 and ProbLog2.
+TheresultsshowthatProbLog2scalesbetterthanProbLog1.ProbLog1istractable
+up to distance 6. From distance 7 onwards, it becomes intractable, i.e., it incurs a
+time-out. We have put the time limit on 300 seconds and repeated every experi-
+ment10times.Fordistance7,all10repetitionstimed-out,whilefordistance6the
+Inference and Learning in PLP using Weighted Formulas 39
+average runtime was only 1.2 seconds.21 This shows that the runtime of ProbLog1
+explodes beyond distance 6. In contrast, ProbLog2 is tractable up to distance 10.
+For distance 10, all 10 repetitions finish in time, taking on average 110 seconds.
+For distance 11, only 5 out of 10 repetitions still finish in time. From distance 12
+onwards, all 10 repetitions time out.
+9.3.5 Q5 - Ability to Learn the Original Probabilities
+QuestionQ5is:whenlearningfromdatageneratedfromaknownprogram,canwe
+recover the parameters of the original program given a reasonable amount of data?
+We answer this question by generating data from the given Smokers program (Sec-
+tion9.1),applyingourlearningalgorithmtothisdata,andmeasuringthedifference
+between the learned probabilities and those in the original program. We measure
+this difference in two ways. First, we use the mean absolute error (MAE) between
+both sets of probabilities. Second, we use the Kullback-Leibler(K-L)-divergence,
+a measure of similarity between a ‘true’ probability distribution (the one of the
+original program) and an ‘approximating’ distribution (the one of the learned pro-
+gram). ProbLog allows for an efficient calculation of the K-L-divergence because of
+the independence of the probabilistic facts; see Appendix D.
+Both the MAE (Figure 6) and the K-L-divergence (Figure 7) show that LFI-
+ProbLog can learn the original probabilities: both MAE and K-L-divergence ap-
+proach zero when more examples are given. The 100% knowledge line shows the
+optimalwayofcalculatingtheprobabilities,giventheinterpretations.Theremain-
+ing cases, 10%, 40% and 70% show that the quality of the approximations, as
+expected, drops when more atoms become unobserved. However, the approxima-
+tions remain of good quality. Hence we can conclude that LFI-ProbLog is capable
+of recovering the original probabilities and is robust against missing values. When
+we compare the figures for the different domain sizes, we see that the results are
+independent of the number of persons in the domain.
+9.3.6 Q6 - Learning of real-world data
+Question Q6 is: when learning from real-world data, can we obtain results compa-
+rable to the ones obtained with a state-of-the-art system? To answer this question,
+we compare LFI-ProbLog with the Alchemy system for Markov Logic, running
+four-fold cross validation on the WebKB dataset. Table 9.3.6 shows the negative
+log-likelihood obtained with LFI-ProbLog and Alchemy on the test-sets of the four
+folds. In the case of Alchemy, we report two results: ‘Alchemy’ stands for using the
+system with its default parameters, ‘Alchemy*’ stands for Alchemy with a modi-
+fied setting that puts a very strong prior on the weights (prior around zero, with
+standard deviation 0.1 instead of the default 100).22
+21 To verify that the measurement for distance 7 is not a glitch, we also tried distance 8 and
+further,butProbLog1consistentlytimed-outforallofthese.
+22 ThismodifiedsettingwasrecommendedtousbytheAlchemydevelopers(personalcommuni-
+cationwithDanielLowd).
+40 D. Fierens et al.
+(a) 4persons
+(b) 5persons
+(c) 6persons
+(d) 7persons
+Fig. 6. Mean absolute error (MAE, lower is better) when learning from Smokers
+data with 10%, 40%, 70% and 100% knowledge of the possible world.
+Inference and Learning in PLP using Weighted Formulas 41
+(a) 4persons
+(b) 5persons
+(c) 6persons
+(d) 7persons
+Fig. 7. K-L-divergence (lower is better) when learning from Smokers data with
+10%, 40%, 70% and 100% knowldege of the possible world.
+42 D. Fierens et al.
+Test Set LFI-Problog Alchemy* Alchemy
+Cornell 1309.72 613.37 1603.31
+Texas 1210.51 640.56 1075.75
+Washington 646.39 622.55 1420.87
+Wisconsin 1033.90 783.51 3479.04
+Table 3. Negative Log-Likelihood (lower is better) on the WebKB learning experi-
+ment.
+LFI-ProbLog outperforms Alchemy with its default settings on three of the
+four folds. However, Alchemy with the strong prior (Alchemy*) outperforms LFI-
+ProbLog on all four folds. We conclude that LFI-ProbLog is competitive with
+Alchemy, but parameter tuning can have a large impact. These results illustrate
+the importance of setting a suitable prior when learning. This is a topic that we
+havenotyetexploredindetailforLFI-ProbLogbutthatweplantostudyinfuture
+research.
+10 Conclusion
+The contributions of this paper are threefold.
+First,wehaveintroducedatwo-stepprocedureforMPEandMARGinferencein
+general probabilistic logic programs. In a first step it generates a weighted Boolean
+formula that captures all relevant information about a specific query, evidence and
+probabilistic logic program. This step relies on well-known conversion techniques
+from logic programming. The second step then invokes well-known solvers (for in-
+stance for WMC and weighted MAX-SAT) on the generated weighted formula.
+The resulting inference procedure is akin to that employed by Darwiche (2009)
+and others (Park 2002; Sang et al. 2005) for probabilistic graphical models (where
+many inference problems are also cast in terms of weighted Boolean formulas) but
+adapted to the much more expressive class of probabilistic logic programs. Our
+conversion-based approach is advantageous because it allows us to employ a wide
+rangeofwell-knownandoptimizedsolversontheweightedformula,essentiallygiv-
+ing us “inference algorithms for free”. Furthermore, the approach also improves
+upon the state-of-the-art in probabilistic logic programming, where one has typi-
+callyfocussedoninferencewithasinglequeryatomandnoevidence(cf.Section4),
+often by using BDDs. By using d-DNNFs instead of BDDs, we obtained speed-ups
+that push the limit of exact MARG inference significantly further.
+Second, we have developed an Expectation-Maximization approach to learning
+probabilisticlogicprogramsfrominterpretations.Thisapproachemploysournovel
+inference procedures in the expectation step. The learning from interpretation set-
+tingisakintothatusedinthegraphicalmodelandStatisticalRelationalLearning
+(SRL) communities.
+Third, the two approaches have been incorporated in a novel implementation
+of the PLP language ProbLog, which unlike its previous implementation in YAP-
+Inference and Learning in PLP using Weighted Formulas 43
+Prolog (Kimmig et al. 2010), is closer to that of answer set programming systems
+than to Prolog systems,
+Overall our approach provides new insights into the relationships between PLP,
+graphicalmodelsandSRL.Asoneimmediateoutcome,wepointedoutaconversion
+of probabilistic logic programs to ground Markov Logic, which allowed us to apply
+MC-SAT to PLP inference. This contributes to further bridging the gap between
+PLP and the field of SRL.
+Appendix A Proofs
+In this appendix we give the proofs of Theorem 1 to 3.
+Proof of Theorem 1
+ToproveTheorem1wefirstgivenecessarysomelemma’s.WeusepruneInactive(L,
+E=e)todenotetheresultofremovingfromagroundprogramLallrulesthatare
+inactive under the evidence E=e.
+LetLbeagroundnormallogicprogramandletL(cid:48) =pruneInactive(L,E=e).For
+each world/interpretation ω that is consistent with the evidence E=e it holds:
+a) for each subset A of atoms: A is an unfounded set with respect to ω under
+program L if and only if it is so under program L(cid:48), and
+b) ω is the well-founded model of L if and only if it is the well-founded model of
+L(cid:48).
+Proof:
+Parta:WeusethenotionofunfoundedsetseeDefinition3.1inVanGelderetal.
+(1991). We prove both directions of the ‘if and only if’.
+• If A is an unfounded set with respect to ω under program L, then this also
+holds under program L(cid:48):
+The definition of unfounded set imposes a certain condition on each rule in
+theprogramwhoseheadisinthesetA,werefertothisastheunfoundedrule
+condition. If we know that this condition holds for all such rules in L, then it
+also holds for all such rules in L(cid:48), because the latter set of rules is a subset of
+the former (L(cid:48) is the result of removing inactive rules from L).
+• If A is an unfounded set with respect to ω under program L(cid:48), then this also
+holds under program L:
+The ‘if’ part of this ‘if-then’ implies that the unfounded rule condition holds
+for all rules in L(cid:48), so to prove the ‘then’ part we only need to show that the
+unfounded rule condition also holds for all rules in L\L(cid:48) (i.e., for all rules
+in L that were removed because of being inactive under the evidence). Every
+ruler ∈L\L(cid:48) containsatleastoneatominitsbodythatisfalseaccordingto
+theevidence(thatiswhatmader inactive).Sincethislemmaappliesonlyto
+worlds ω that are consistent with the evidence, we have for every such world
+44 D. Fierens et al.
+ω: every rule r ∈L\L(cid:48) contains in its body at least one atom false in ω. This
+is a sufficient condition to make the rule r an unfounded rule, see condition
+‘1.’ in Definition 3.1 in Van Gelder et al. (1991).
+Partb: WecannowusePartatoprovethat,foreveryevidence-consistentworld
+ω, ω is the well-founded model (WFM) of L if and only if it is the WFM of L(cid:48).
+The WFM is the fixed point of the W operator (Van Gelder et al. 1991). For
+a program L, this operator is defined as W (ω)=T (ω)∪¬U (ω), see Definition
+3.3 in Van Gelder et al. (1991). We prove below that, for every evidence-consistent
+L L(cid:48) L L(cid:48) L L(cid:48)
+their fixed points are identical, hence Part b holds.
+• For every evidence-consistent world ω: T (ω)=T (ω)
+L L(cid:48)
+LconsistsofallrulesinL(cid:48)plussomerulesthatareinactiveundertheevidence.
+For each evidence-consistent ω, the bodies of the inactive rules in L are false
+under ω and hence these rules cannot ‘fire’. Hence these rules play no role in
+the execution of the T operator on ω. Hence T (ω)=T (ω).
+P L L(cid:48)
+• For every evidence-consistent world ω: U (ω)=U (ω):
+L L(cid:48)
+U (ω) is the greatest unfounded set with respect to (wrt) ω, which is defined
+astheunionofallunfoundedsetswrtω,seeDefinition3.2inVanGelderetal.
+(1991).PartasaysthatanysubsetAofatomsisanunfoundedsetwrtωunder
+program L if and only if it is so under program L(cid:48). Hence U (ω)=U (ω).
+L L(cid:48)
+Let L be a ground ProbLog program and let L(cid:48) =pruneInactive(L,E=e). Then
+MOD (L)=MOD (L(cid:48)).
+Proof: MOD (L)isdefinedasthesetofallworldsω thatareconsistentwiththe
+evidenceE=eandaremodelsoftheProbLogprogramL,i.e.,forwhichthereexists
+atotalchoiceC andWFM(C∪R)=ω,withR therulesinLandWFM()thewell-
+founded model. The previous lemma implies that, for every ω consistent with the
+evidence,removinginactiverulesfromagivenlogicprogramdoesnotalterwhether
+or not ω is the WFM of that program or not. In other words: ω ∈ MOD (L) if
+and only if ω ∈MOD (L(cid:48)). Hence MOD (L)=MOD (L(cid:48)). (cid:3)
+E=e E=e E=e
+Let L be a ground ProbLog program and let L(cid:48) =pruneInactive(L,E=e). Then
+L L(cid:48)
+Proof: We prove the stronger condition ∀ω : P (ω | E = e) = P (ω | E = e) The
+L L(cid:48)
+conditional probability P (ω |E=e) of an interpretation ω according to program
+L is:
+• (case1) if ω ∈MOD (L) then
+Inference and Learning in PLP using Weighted Formulas 45
+Since ω agrees with E = e, we have that the combined assignment ω,E = e
+is simply equal to ω. Hence:
+Wenowprovethatforeveryω,P (ω |E=e)=P (ω |E=e).Theproofconsists
+L L(cid:48)
+of two parts.
+1. We need to prove that we are in case1 under L if and only if we are in
+case1 under L(cid:48). In other words: for every ω: ω ∈ MOD (L) if and only if
+ω ∈MOD (L(cid:48)). This follows from the previous lemma.
+2. We need to prove that if we are in case1 (i.e. if ω ∈ MOD (L)), then the
+conditionalprobabilitygivenbythefractioninEquationA1isthesameunder
+L as under L(cid:48).
+• ThenumeratoristhesameunderLandL(cid:48).Thiscanbeseenasfollows.
+For any ω ∈ MOD (L), the probability P(ω) is by definition equal
+to the probability of ω’s total choice. The ProbLog programs L and
+L(cid:48) differ in their rules, but they have exactly the same probabilistic
+facts and hence determine the same probability distribution over total
+choices. Hence P(ω) is the same under L as under L(cid:48).
+• The sum in the denominator is also the same under L and L(cid:48). This can
+beseenasfollows.First,thesetMOD (L)overwhichthesumranges
+is the same under L as under L(cid:48) because of the above lemma. Second,
+each term in the sum is the same under L as under L’, i.e. for every
+ω ∈MOD (L) the probability P(ω) is the same under L as under L(cid:48)
+(because of the same reasoning as for the numerator).
+This concludes the proof. (cid:3)
+LetLbeaProbLogprogramandletL betherelevantgroundprogramforLwith
+respect to Q and E=e. Then P (Q |E=e)=P (Q |E=e).
+Proof: It follows from the grounding semantics of ProbLog that replacing the orig-
+inal program L by its full grounding (w.r.t. the Herbrand base) L preserves the
+distribution, i.e., P (Q|E=e)=P (Q|E=e). The relevant ground program
+L differs from L only in that it does not contain inactive rules (with respect to
+E=e)orirrelevantrules(withrespecttoQ∪E).Thelemmaabovestatesthatre-
+movinginactiverulespreservesthedistributionP(Q|E=e).Removingirrelevant
+rulesalsopreservesthisdistribution;thiscanbeseenasfollows.Theprobabilityof
+anatombeingtruecanbedeterminedfromallproofsoftheatomandtheprobabili-
+tiesoftheprobabilisticfactsappearingintheseproofs,seeDeRaedtetal.(2007).Ir-
+relevantrulesare-bydefinition-rulesthatarenotusedinanyproofofanyatomin
+Q∪E.HenceomittingsuchirrelevantrulesdoesnotalterthedistributionP(Q,E).
+Hence, also the distribution P(Q | E = e) is preserved because P(Q | E = e) can
+be defined in terms of P(Q,E), i.e., P(Q|E=e)= P(Q,E=e) = P(Q,E=e) .
+46 D. Fierens et al.
+Proof of Theorem 2
+Let L be the relevant ground program for some ProbLog program with respect to
+Q and E=e. Let MOD (L ) be those models in MOD(L ) that are consistent
+with the evidence E=e. Let ϕ denote the formula and w(·) the weight function of
+the weighted formula derived from L . Then:
+- (model equivalence) SAT(ϕ)=MOD (L ),
+- (weight equivalence) ∀ω ∈ SAT(ϕ): w(ω) = P (ω), i.e., the weight of ω
+according to w(·) is equal to the probability of ω according to L .
+Proof: The proof consists of two parts.
+Model equivalence. Consider Lemma 1 (Section 5.2). The lemma is about the
+formulaϕ thatcapturestherulesbutnotyettheevidence.Thelemmastatesthat
+SAT(ϕ ) = MOD(L ). The present theorem is about the formula ϕ = ϕ ∧ϕ ,
+where ϕ captures the evidence. The effect of adding ϕ to the formula is that
+all worlds not consistent with the evidence are ruled out. Hence SAT(ϕ ∧ϕ ) =
+MOD (L ).
+Weight equivalence.Weightequivalencesaysthattheprobabilityofeverymodel
+(according to L ) is equal to the weight of the model (according to our weight
+function w(·)). This follows from the way the probability and the weight function
+are defined.
+• The probability of a model of a ProbLog program, according to the distri-
+bution semantics, is the probability of the underlying total choice, which in
+turn is defined as the product of probabilities of each of the atomic choices.
+Formally, the probability of a model ω is:
+(cid:89) (cid:89) (cid:89) (cid:89)
+with PA+(ω) (respectively PA−(ω)) being the set of all ground probabilis-
+tic atoms that are true (resp. false) in ω and p(·) denoting the probability
+distribution specified by the probabilistic facts.
+• The weight of a world ω according to our weight function is the product of
+the weights of all literals l constituting the world/interpretation ω:
+Theliterals/atomsinω fallintofourgroups:probabilisticatomsthataretrue
+in ω (denoted PA+(ω), non-probabilistic or derived atoms that are true in
+ω (denoted DA+(ω)), and similar for the atoms that are false in ω (PA−(ω)
+and DA−(ω)). Hence:
+(cid:89) (cid:89) (cid:89) (cid:89) (cid:89)
+By definition of the weight function, the weight of an atom a ∈ PA+(ω) is
+Inference and Learning in PLP using Weighted Formulas 47
+p(a), the weight of a ∈ PA−(ω) is 1−p(a), the weight of a ∈ DA+(ω)∪
+DA−(ω) is 1. Hence:
+(cid:89) (cid:89) (cid:89) (cid:89)
+(cid:89) (cid:89)
+This proves weight equivalence. (cid:3)
+Proof of Theorem 3
+Let L be the relevant ground program for some ProbLog program with respect to
+Q and E = e. Let M be the corresponding ground MLN. The distribution P(Q)
+according to M is the same as the distribution P(Q|E=e) according to L .
+Proof: We prove that (1) the set of worlds with non-zero probability according to
+theMLNisthesameasthesetofworldswithnon-zeroprobabilityaccordingtothe
+ProbLog program and the evidence; (2) for every such world ω, P (ω) = P (ω |
+(Part 1) A world has non-zero probability according to an MLN if it satisfies all
+hardclausesintheMLN.ThehardclausesintheMLNarethesameastheclausesin
+theweightedformulaϕ.Hencethesetofworldswithnon-zeroprobabilityaccording
+to the MLN equals SAT(ϕ). Theorem 2 (model equivalence) implies that this set
+equals MOD (L ), which is exactly the set of worlds with non-zero probability
+according to the ProbLog program and the evidence.
+(Part 2) The probability of a world ω ∈SAT(ϕ) according to an MLN is defined
+as P (Q) = W(ω)/Z, with W(ω) the product of exponentiated weights of the
+soft clauses satisfied in ω, and Z the normalization constant. The probability of
+ω according to the ProbLog program conditioned on the evidence is P (ω|E =
+e) = P (ω)/P (E = e). We now show that both expressions are the same (i.e.
+• The numerators are the same (W(ω)=P (ω)): The only soft clauses in the
+MLN are unit clauses, whose weights are derived from the probabilistic facts.
+Theunitclausesaresuchthat,foranygivenworldω,thereisoneunitclause
+per probabilistic atom that is satisfied. W(ω) is the product of the expo-
+nentiated weights of all these clauses. It follows from the way these weights
+are defined in terms of the weighted formula, and from weight equivalence
+between the weighted formula and the ProbLog program (Theorem 2), that
+this product is equal to the probability of the total choice of ω according to
+the ProbLog program and hence to the numerator P (ω).
+• The denominators are the same (Z = P (E = e)): The normalization con-
+stantZ oftheMLNisdefinedas W(ω).Theevidenceprobability
+P (E = e) equals P(ω). These sums are equal since (a) the
+sets over which they range are equal due to Theorem 2 (model equivalencce),
+48 D. Fierens et al.
+calls(john) hears_alarm(john) OR alarm
+calls(john) hears_alarm(john) OR alarm
+AND burglary
+-burglary burglary OR
+-burglary earthquake
+earthquake -earthquake
+(a) Anonsmoothd-DNNF (b) Asmoothd-DNNF
+Fig. C1. A d-DNNF and the corresponding smooth d-DNNF for the formula
+burglary ∨earthquake.
+(b) the summed terms are equal (because of the same reasoning as for the
+numerator).
+This concludes the proof. (cid:3)
+Appendix B Markov Logic
+WebrieflyreviewMarkovLogic(Domingosetal.2008).WhileMarkovLogicgener-
+allyworkswithFOLformulas,weconsideronlythegroundcase,asthisissufficient
+for our paper.
+A Markov Logic Network (MLN) consists of two parts: a set of ‘soft’ formulas f ,
+whicheachhaveanassociatedweightw ∈R,andasetof‘hard’formulas.AnMLN
+determines a probability distribution on the set of possible worlds (determined by
+the Herbrand base). The probability of a world ω is 0 if it violates some hard
+formula and is 1e (cid:80) i wiδi(ω) otherwise, where the sum is over all soft formulas and
+δ (ω)istheindicatorfunctionbeing1ifthesoftformulaf istrueinworldω and0
+otherwise.Notethattheexponent w δ (ω)isthesumofweightsofsatisfiedsoft
+formulas in world ω; the higher this sum, the more likely ω is. The name ‘MLN’
+comes from the fact that this probability distribution can also be written as the
+distribution of a Markov network.
+Appendix C The need for smoothing d-DNNFs
+Thealgorithmweusetocomputemarginalprobabilitiesrequiresasmoothd-DNNF.
+A smooth d-DNNF is a d-DNNF where for every disjunction node all children use
+exactly the same set of atoms. That is, if C ··C are the children of an OR node
+C, then Atoms(C ) = Atoms(C ), for i (cid:54)= j, where Atoms(C ) is the set of atoms
+which C uses.
+Figure C1a shows a non-smooth d-DNNF, while Figure C1b shows the corre-
+sponding smooth d-DNNF (which we have already shown before in Figure 1a but
+we repeat here for convenience). Consider the non-smooth d-DNNF. The OR node
+Inference and Learning in PLP using Weighted Formulas 49
+doesn’t satisfy smoothness, since the sets of atoms of its children differ ({burglary,
+earthquake}and{burglary};thenegationisignoredhere).Henceweneedtotrans-
+form this d-DNNF into a smooth d-DNNF, see Figure C1b. This is done by sub-
+stituting the burglary node by an AND node, then adding the burglary node as
+a child to the new AND node and creating a new smoothing node for the missing
+atom -earthquake. The smoothing node is an OR node which links to earthquake
+and -earthqake. It is then linked to the AND node.
+Let us illustrate how smoothness affects the computation of probabilities using
+ourAlarmrunningexample(sonottherestrictedversionoftheexampleconsidered
+above). We have seen the arithmetic circuit (AC) corresponding to the smooth d-
+DNNF for this example before, recall Figure 2 on p. 22. This figure also illustrates
+how we can compute the probability of the conjunction P(earthquake = true∧
+calls(john) = true). This yields the value 0.14, which is indeed the correct value.
+In contrast, Figure C2 shows the same evaluation process on an AC for the non-
+smooth d-DNNF. This results in an incorrect value (0.196). This shows the need
+for smoothness of the d-DNNF.
+λ[calls(john)] = 1 1.0 λ[hears_alarm(john)] = 1 0.7 * (0.18) * (0.1) λ[alarm] = 1 1.0
+* (0.9) * (0.2) λ[burglary] = 1 0.1
+λ[-burglary] = 1 0.9 λ[earthquake] = 1 0.2
+Fig. C2. The arithmetic circuit corresponding to the non-smooth d-DNNF for the
+Alarm example.
+Appendix D Kullback-Leibler Divergence Between ProbLog Programs
+The Kullback-Leibler divergence D(P||Q) is a non-symmetric measure for the dif-
+ferenceoftwoprobabilitydistributionsP andQ (cf.Wasserman(2003)).Itisused
+in probability theory as well as in information theory where it is also known as
+informationgain.TheK-Ldivergenceaggregatesthedifferenceofthetwodistribu-
+tions on all elements of the outcome space. It is only defined if the support of Q is
+larger than the one of P, that is, for all i where P(i)>0 also Q(i)>0.
+We use the K-L divergence to evaluate the LFI-ProbLog learning algorithm
+(cf. Algorithm 1) and measure how close the learned program T is to the ground
+50 D. Fierens et al.
+truthprogramT .Wearedoingparameterestimation,thatis,thestructureofthe
+program is fixed and only the fact probabilities change. Hence we can restrict the
+definition of the K-L divergence to programs that are identical except for the fact
+probabilities.
+Definition 1 (K-L Divergence)
+Let T = F ∪R and T = F ∪R be ground ProbLog programs such that the
+probabilistic facts are identical except for the probabilities, that is, F = {p ::
+f |1≤i ≤n}andF ={q ::f |1≤i ≤n}.LetAt denotetheHerbrandbaseofT
+and T (note that they have the same Herbrand base). We denote interpretations
+as subsets of atoms, i.e., L ⊆ At is the interpretation in which the atoms that are
+in L are true and the other atoms are false. Then the K-L Divergence between T
+and T is defined as
+1 2 T1 P (L)
+ThereareexponentiallymanyinterpretationsL⊆At,whichmakesevaluatingthe
+K-L divergence as defined above impossible in practice. However, the probabilistic
+facts in a ProbLog program are independent, which can be exploited to compute
+the K-L divergence in linear time by looping once over F.
+Let T = F ∪R and T = F ∪R be ground ProbLog programs such that the
+probabilistic facts are identical except for the probabilities, that is, F = {p ::
+f |1≤i ≤n} and F ={q ::f |1≤i ≤n}. Then the K-L Divergence between T
+and T can be calculated as
+n (cid:18) (cid:19)
+D(T ||T )= (cid:88) p log p i +(1−p )log 1−p i · (D2)
+1 2 i q i 1−q
+ItispossibletoextendtheK-Ldivergenceandthetheoremtonon-groundfacts.
+Todo so, one needs tomultiply eachsummand p logpi +(1−p )log1−pi with the
+i qi i 1−qi
+number of ground instances of the probabilistic fact f .
+We prove Theorem 4 by induction over the number of probabilistic facts.
+Base case n =1.
+D(T ||T ) = (cid:88) P (L)log P T1 (L)
+1 2 T1 P (L)
+= P ({f })log T1 1
+= p log 1 +(1−p )log 1
+n (cid:18) (cid:19)
+= (cid:88) p log p i +(1−p )log 1−p i
+Inference and Learning in PLP using Weighted Formulas 51
+Inductive case n → n +1. To simplify the notation, we define Tn+1 = T ∪
+{p ::f } and Tn+1 =T ∪{q ::f }
+n+1 n+1 2 2 n+1 n+1
+= L⊆(At (cid:80) ∪{fn+1}) P T 1 n+1 (L)log P P T T 2 1 n n + + 1 1 ( ( L L ) )
+(cid:34) (cid:35)
+= L (cid:80) ⊆At P T 1 n+1 (L∪{f n+1 })log P P T T 1 2 n n + + 1 1 ( ( L L ∪ ∪ { {f fn n + + 1 1 } } ) ) +
+(cid:34) (cid:35)
+L (cid:80) ⊆At P T 1 n+1 (L)log P P T T 1 2 n n + + 1 1 ( ( L L ) )
+Probabilistic facts are independent and thus we can
+factorize the probabilities
+(cid:34) (cid:35)
+= L (cid:80) ⊆At p n+1 ·P T1 (L)log p qn n + + 1 1 · · P P T T 2 1 ( ( L L ) ) +
+(cid:34) (cid:35)
+L (cid:80) ⊆At (1−p n+1 )·P T1 (L)log ( ( 1 1 − − p qn n + + 1 1 ) ) · · P P T T 2 1 ( ( L L ) )
+using the rules for log and factoring out the constants
+(cid:34) (cid:35)
+(cid:16) (cid:17)
+= p n+1 L (cid:80) ⊆At P T1 (L) logp qn n + + 1 1 +log P P T T 2 1 ( ( L L ) ) +
+(cid:34) (cid:35)
+(cid:16) (cid:17)
+(1−p n+1 ) L (cid:80) ⊆At P T1 (L) log1 1 − − p qn n + + 1 1 +log P P T T 1 2 ( ( L L ) )
+expanding the inner sums and factoring out constants
+(cid:34) (cid:35)
+(cid:16) (cid:17)
+= p logpn+1 (cid:80) P (L) +
+(cid:34) (cid:35)
+(cid:16) (cid:17)
+p n+1 L (cid:80) ⊆At P T1 (L) log P P T T 2 1 ( (L L) ) +
+(cid:34) (cid:35)
+(cid:16) (cid:17)
+n+1 1−qn+1
+(cid:34) (cid:35)
+(cid:16) (cid:17)
+(1−p n+1 ) L (cid:80) ⊆At P T1 (L) log P P T T 2 1 ( ( L L ) )
+since P (L) is 1, rearranging yields
+(cid:16) (cid:17) (cid:16) (cid:17)
+= p logpn+1 +(1−p ) log1−pn+1 +
+n+1 qn+1 n+1 1−qn+1
+L (cid:80) ⊆At P T1 (L)log P P T T 2 1 ( ( L L ) )
+using the inductive assumption
+(cid:16) (cid:17) (cid:16) (cid:17)
+= p logpn+1 +(1−p ) log1−pn+1 +
+n+1 qn+1 n+1 1−qn+1
+52 D. Fierens et al.
+n (cid:16) (cid:17)
+(cid:80) p logpi +(1−p )log1−pi
+i qi i 1−qi
+rearranging the terms
+n+1(cid:16) (cid:17)
+= (cid:80) p logpi +(1−p )log1−pi
+i qi i 1−qi
+Acknowledgements
+Wethankthereviewersfortheirusefulsuggestions.WethankMauriceBruynooghe,
+Jesse Davis, Kristian Kersting, Angelika Kimmig and Theofrastos Mantadelis for
+useful discussions.
+Daan Fierens, Guy Van den Broeck and Bernd Gutmann are supported by the
+Research Foundation-Flanders (FWO-Vlaanderen). Joris Renkens is supported by
+PF-10/010 NATAR. Research supported by the European Commission under con-
+tract number FP7-248258-First-MM.

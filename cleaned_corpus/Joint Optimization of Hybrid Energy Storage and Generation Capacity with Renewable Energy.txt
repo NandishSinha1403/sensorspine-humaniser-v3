@@ -1,0 +1,540 @@
+1v2385.9031:viXra
+Joint Optimization of Hybrid Energy Storage
+and Generation Capacity with Renewable
+Peng Yang, Student Member, IEEE, and Arye Nehorai, Fellow, IEEE
+In an isolated power grid or a micro-grid with a small carbon footprint, the penetration of renewable energy is
+usuallyhigh.Insuchpowergrids,energystorageisimportanttoguaranteeanuninterruptedandstablepowersupplyfor
+endusers.Differenttypesofenergystoragehavedifferentcharacteristics,includingtheirround-tripefficiency,power
+and energy rating, energy loss over time, and investment and maintenance costs. In addition, the load characteristics
+and availability of different types of renewable energy sources vary in different geographic regions and at different
+timesof year. Therefore joint capacity optimization for multiple types of energy storage and generation isimportant
+when designing this type of power systems. In this paper, we formulate a cost minimization problem for storage
+and generation planning, considering both the initial investment cost and operational/maintenance cost, and propose
+a distributed optimization framework to overcome the difficulty brought about by the large size of the optimization
+problem. The results will help in making decisions on energy storage and generation capacity planning in future
+decentralized power grids with high renewable penetrations.
+Index Terms
+energy storage, capacity planning, renewable energy sources, micro-grid, distributed optimization
+NOMENCLATURE
+R Set of different renewable generators
+r Types of renewable generators
+rr Renewable generation per unit generation capacity during time period t
+Cr Renewable energy cost during time period t
+Rr Renewable generation during time period t
+Rr Maximum generation capacity
+TheauthorsarewiththePrestonM.GreenDepartmentofElectricalandSystemsEngineering,WashingtonUniversityinSt.Louis,St.Louis,
+MO,63130USA.E-mail:yangp@ese.wustl.edu, nehorai@ese.wustl.edu.
+ThisworkwassupportedbytheInternationalCenterforAdvancedRenewableEnergyandSustainability(I-CARES)atWashingtonUniversity
+inSt.Louis.
+June7,2018 DRAFT
+S Set of different energy storage types
+s Types of energy storage
+δs Rated power/energy ratio
+ηs One-way energy efficiency
+Ss Energy storage capacity
+ξs Energy loss ratio per unit time
+Cs Energy storage cost during time period t
+Charged energy during time period t
+Discharged energy time period t
+H Set of different of diesel generators
+h Types of diesel generators
+Cs Diesel energy cost during time period t
+Hh Diesel generation during time period t
+Hh Maximum generation capacity
+Hh,+ Ramp up constraint
+Hh,− Ramp down constraint
+T Set of time periods in planning horizon
+D Energy demand from users during time period t
+G Energy shortage or energy drawn from main grid during time period t
+a Amortization factor per time period
+c Investment cost per unit storage or generator
+c Operational/maintenancecost of energy storage or generator
+f Objective function for planning problem
+α Maximal energy shortage probability allowed
+G Energy shortage threshold
+Cj Feasible set for the jth scenario
+xj Boundary parameters for the jth scenario
+xj Design parameters for the jth scenario
+z Global boundary parameters
+z Global design parameters
+B Group index mapping for boundary conditions
+B Element-wise index mapping for boundary conditions
+ρ Dual variable update step-size
+τ, µ Parameters for adaptive dual variable step-size
+r Maximum diesel generation capacity ratio
+r Shortfall-to-demandratio
+June7,2018 DRAFT
+I. INTRODUCTION
+Renewable energy sources [1], including solar and wind energy, provide only about 3% of the electricity in
+the United States. However, high penetration of renewable energy is becoming the trend for various reasons.
+The projected future shortage in fossil fuels, environmentalconcerns, and advances in smart grid [2] technologies
+stimulatetheincreasingpenetrationofrenewableenergy.Researchershaveshownthatsupplyingalltheenergyneeds
+of the United States from renewable energy is realizable in the future [3]. According to the National Renewable
+EnergyLaboratory(NREL),renewableenergypotentiallywillsupportabout80%ofthetotalelectricityconsumption
+in the U.S. in 2050[4]. The high penetrationof renewable energy is especially commonin (remote) isolated grids,
+or micro-grids with small carbon footprints [5], which are self-sustained most of the time.
+Mostrenewableenergysources,includingwindandsolar,arehighlyintermittent.Theavailabilityofsuchenergy
+sources varies significantly in different geographical locations. In the same location, the amount of generation
+also fluctuates depending on the time of day, season, and weather conditions. A grid with high renewable energy
+penetrationneedstobuildsufficientenergystoragetoensureanuninterruptedsupplytoendusers[6],[7].Thereare
+differenttypesofenergystorages,includingsuper-capacitors,flywheels,chemicalbatteries,waterpumps,hydrogen,
+and compressed air [8]-[13]. Differenttypes of energystorage have differentcharacteristics, e.g., round-tripenergy
+efficiency, maximum capacity/power rating, energy loss over time, and investment/operationalcosts. For example,
+flywheelenergystorage hashigh energyefficiencyand charge/dischargerates, butthe rate of energyloss overtime
+is relatively high.Chemicalbatteries have relativelyhighenergyefficiencyand low energyloss overtime, however
+their maintenance cost is high due to their low durability, which is quantified by cycling capacity1. Water pumps
+and hydrogen energy storages have low energy efficiency, but their energy loss over time is small. Therefore they
+are often used for longer-term energy storage.
+Although there has been research on planning and/or operating a specific type of energy storage system for
+isolated electricity grids [14]-[17], few works consider exploiting the different characteristics of multiple types of
+energystorageandthedifferentavailabilitiesofmultipletypesofrenewableenergysources,formingahybridenergy
+generation and storage system. Nevertheless, jointly planning for energy storage along with renewable generation
+capacity potentially results in a more economical and efficient energy system.
+Since the future grid is becoming decentralized, we consider the scenario of an isolated grid, or a micro-grid
+with a small carbon footprint, whose energy is generated mainly from renewable energy sources. To make the
+scenario more practical, we assume the grid also has traditional diesel generators. The diesel generator on its own
+isinsufficienttosupplythedemandofthegrid,asitsgenerationcapacityissignificantlylessthanthepeakload.We
+formulateanoptimizationproblemwiththeobjectiveofminimizingtheinvestmentcostandoperational/maintenance
+costofenergystorageandgenerators,byfindinganoptimalcombinationofdifferentenergystoragesandgenerators
+(which we refer to as design parameters) and optimizing their operations.
+Therenewablegenerationanduserdemandschangewithtime,andhavedifferentcharacteristicsatdifferenttimes
+1Themaximumnumberofcharging cycles (fullchargeanddischarge).
+June7,2018 DRAFT
+of dayanddifferentdaysofthe year. Itis oftendifficultto obtainan accurateprobabilitydensityfunctionto reflect
+thesecomplexcharacteristics.Therefore,severalyearsofhistoricaldatamaybeneededtoobtainbetteroptimization
+results. As the size of historical database increases, the design horizon of the optimization problem increases, and
+the problem becomes increasingly difficult to solve. To resolve this problem, we reformulate the original problem
+as a consensus problem. The entire design horizon is divided into multiple shorter horizons, and thus the design
+parametersbecome the consensusparameters, which should be consistent across all sub-problems.This framework
+can also be extended to the case of solving chance-constrained optimization using scenario approximations, as
+we will elaborate later. We propose to solve the consensus problem in a parallel distributed manner based on
+the alternating direction method of multipliers (ADMM) [18], which mitigates the curse of dimensionality due to
+increased number of scenarios.
+The rest of this paper is organized as follows. In Sec. II we briefly review some relevant works. In Sec. III we
+describe the system model, including the energy storage and generators. In Sec. IV we formulate the optimization
+problem and solve it in a distributed manner. We provide numerical examples in Sec. V, and conclude the paper
+in Sec. VI.
+Notations: We use italic symbols to denote scalars, bold italic symbols to denote vectors, calligraphic symbols
+to denote sets, card(·) to denote the cardiality of a set, and superscript ⊤ to denote matrix or vector transpose.
+We use {aj} to denote a collection of all aj’s for j ∈ J, and (a) to denote the jth element of vector a. The
+concatenation of two vectors [a;b] is equivalent to [a⊤,b⊤]⊤.
+II. RELATEDWORK
+There have been several works on optimization with energy storages and renewable generation, and we briefly
+reviewsomeofthemhere.In[8],the authorsinvestigatedthe combinedoptimizationofa windfarmanda pumped
+storage facility from the perspective of a generation company, using a two-step stochastic optimization approach.
+The optimization produces optimal bids for the day-ahead spot market, and optimal operation strategies of the
+facilities. The optimal planning of generation and energy storage capacity was not considered. Zhou et al. [10]
+proposeda compositeenergystorage system thatcontainsbothhigh energydensitystorageand highpowerdensity
+storage. The proposedpower converter configurationenables actively distributing demands among different energy
+storages. Brown et al. provided an economical analysis of the benefits of having pumped storage in a small island
+system with abundant renewable energy, and proposed to find the optimal pumped storage capacity through linear
+programming.In[16], theauthorsconsideredoptimizingthe ratingof energystoragein a wind-dieselisolatedgrid,
+and demonstrated that high wind penetration potentially results in significant cost savings in terms of fuel and
+operating costs.
+The main contributions of our work are two fold. First, instead of a single type of energy storage or renewable
+energy source, we consider a hybrid system with multiple types of energy storage and renewable energy sources,
+andjointlyoptimizetheircapacitiesandoperation.Thisjointoptimizationexploitsthebenefitsfromeachindividual
+element, and therefore is more cost efficient. Second, we propose a distributed optimization framework,so that the
+June7,2018 DRAFT
+capacity design problem becomes scalable when the number of scenarios increases.
+III. SYSTEMMODEL
+A. Energy storage model
+Assume there is a set S of differenttypes of energystorages. We use superscripts∈S to denote the type of the
+storage. Each type of energy storage is characterized by a group of parameters. We use ηs to denote the one-way
+energy efficiency of energy storage type s; δs to denote the ratio between the rated power and rated energy; ξs to
+denote the energy loss ratio per unit time period. The cost of energy storage includes the initial investment cost
+cs and operational/maintenancecost cs . We use as to denote the amortization factor.
+Let Ss denote the energy in storage s at the beginning of time period t, satisfying the following equation:
+Ss− Ps−ξsSs if Ps ≥0,
+t ηs t t t
+Ss−ηsPs−ξsSs if Ps <0,
+where positive P
+s denotes discharge from s torage s during time period t, and negative P
+s denotes charge to the
+storage. Make the following substitution:
+Ps =Ps,+−Ps,− , Ps,+ ≥0, Ps,− ≥0, (2)
+and we can then rewrite (1) as
+t+1 t ηs t t t
+An interpretationof (3) is that the energystored in a specific energystorage type equals the stored energyat the
+beginning of the previous time point, minus (plus) the discharge (charge) during the previous time period, minus
+the energy loss due to the nature of the storage.
+The amount of stored energy and the charge/discharge power is constrained by the capacity of the storage, i.e.,
+0≤Ss ≤Ss , (4)
+t max t max
+In this work we use δs to denote the ratio between the rated power and the rated storage capacity. Therefore
+Ps,+ = ηsδsSs and Ps,− = δsSs . If the ratio is not fixed, we can introduce another design variable for the
+max max max max
+rated power, and modify the investment cost so that it depends on both Ss and {Ps,+,Ps,−}.
+max max max
+The cost of each type of energy storage during time period t, denoted by Cs, includes the amortized investment
+cost and the operational/maintenancecost, i.e.,
+Cs =ascs Ss +cs (Ps,+,Ps,− ). (6)
+t inv max o/m t t
+In this equation, the operational/maintenance cost depends on the amount of charge and discharge, and any fixed
+cost can be included as a constant term in this cost function.
+June7,2018 DRAFT
+Note that we made substitution (2), and therefore constraints (1) and (3) are equivalent if only one element of
+{Ps,+,Ps,−
+} is non zero for all s,t. Theorem 1 (in Sec. IV-A) guaranteesthat this condition is satisfied,
+and therefore the two constraints are indeed equivalent.
+B. Generator model
+The generators are classified into traditional diesel generators and renewable generators. For diesel generators,
+the constraints include the generation capacity and generator ramp constraints. Let H denote the set of all diesel
+generators, and Hh denote the generation of generator type h∈H during time period t. We then have
+0≤Hh ≤Hh , (7)
+Hh,− ≤Hh −Hh ≤Hh,+ , (8)
+ramp t+1 t ramp
+where Hh denotes the maximum generation capacity, and Hh,− and Hh,+ denote ramp down and ramp
+max ramp ramp
+up constraints, respectively. The cost of diesel generators consists of the amortized investment cost and the
+operational/maintenancecost, denoted by
+Ch =ahch Hh +ch (Hh). (9)
+t inv max o/m t
+Usually a second-order quadratic function or piece-wise linear function is used for ch (Hh). Any environmental
+tax can also be included in this cost function.
+We employ multiple types of renewable generators, including wind and solar, which are considered as non-
+dispatchable generations. Let Rr denote the renewable generation from type r∈R generator during time period t,
+and Rr denote the installed capacity. Then the generation can be written as
+Rr =rrRr , (10)
+whererr isarandomvariabledenotingtherenewablegenerationperunitgenerationcapacity.Thecostforrenewable
+energy during time period t is then
+Cr =arcr Rr +cr (Rr). (11)
+t inv max o/m t
+In addition to the generator types we discuss here, other types of generators, e.g., hydro and nuclear generators
+can also be modeled similarly and included in the planning problem.
+C. Load balance constraint
+Thetotalgenerationshouldequalthetotaldemandinapowergridatalltimes.LetG denotetheenergyshortage
+for an isolated grid, or the energy drawn from the main grid for a micro-grid. The total generation and discharge
+from the energy storages should be equal to the total consumption and charge to the energy storages. We can then
+write the load balance constraint as follows:
+D = Rr+ Hh+ Ps,+−Ps,− +G ,∀t, (12)
+t t t t t t
+r∈R h∈H s∈S
+X X X(cid:0) (cid:1)
+where D denotes the demand from users. Note that G can be negative, which denotes energy injection to the
+main grid from a micro-grid, or dumped energy in an isolated grid.
+June7,2018 DRAFT
+IV. STORAGE AND RENEWABLEGENERATIONPLANNING
+A. Optimal planning problem
+The planning goalis to find the optimalportfolio of differenttypes of energystorage and generators,so that the
+totalcost(includinginvestmentandoperational/maintenance)isminimized,whilemostoftheneedsofthegridcan
+be satisfied. Let T denote the planning horizon, and the objective function can then be written as
+f(S ,R ,H )=
+max max max
+Cs+ Cr+ Ch .
+!
+t∈T s∈S r∈R h∈H
+Duetotheintermittencyofrenewableenergysources,itispossiblethatinextremecases,thetotallocalgeneration
+will not meet the total demand. We write the grid reliance constraint (for micro-grids) or the energy shortage
+constraint (for isolated grids) as
+Gj ≤G , (14)
+where G is a threshold which can be a function of current time and demand. There are also constraints on the
+minimum and maximum capacity for each type of storage and generator, which are denoted as
+Ss,cap ≤Sh ≤Ss,cap,∀s,
+min max max
+Rr,cap ≤Rh ≤Rr,cap,∀r, (15)
+min max max
+Hh,cap ≤Hh ≤Hh,cap,∀h.
+min max min
+We then formulate the optimization problem for energy planning as
+min f(S ,R ,H )
+max max max
+Smax,Rmax,Hmax
+subject to Storage const. (3)−(5), ∀s,t
+Generator const. (7)−(10), ∀r,h,t
+Load balance const. (12), ∀t
+Energy shortage const. (14), ∀t
+Capacity const. (15).
+One problem with this formulation is whether constraints (1) and (3) are equivalent. Based the problem setup,
+we have the following theorem.
+Theorem 1. In a cost minimization context, given an increasing positive operational cost function for charging
+and discharging, by making the substitution (2), we have that Ps,+Ps,− = 0 for all t, i.e., only one of Ps,+ and
+can be non-zero for any given time period t.
+Proof: See Appendix A.
+June7,2018 DRAFT
+Additional costs and constraints can also be easily included in this formulation. For example, an environmental
+tax for traditional diesel generators, and government incentives for renewable generations can be included in the
+correspondingcostfunctions.Themaximumalloweddieselgenerationcapacityspecifiedbycertainenergypolicies
+can be included in the generator constraints.
+Remark 1: The problem formulation can be slightly modified into a chance-constrained problem. Instead of the
+deterministic constraint (14), we can use the following probabilistic constraint:
+where α ∈ [0,1] is the maximal energy shortage probability allowed. Constraint (17) means that local generators
+and storages have a probability less than or equal to α to be short of energy greater than G . In this case, using
+the results from [19], [20], the probabilistic constraint can be approximated by a set of deterministic constraints,
+sampled from the probability distribution of the random parameters from the probabilistic constraint. To be more
+specific,leteachscenariobearandomrealizationofload,renewablegeneration,andinitialconditionsoftheenergy
+storages. The number of required scenarios J = card(J) is determined by the number of design parameters and
+the probability measure. Let N denote the number of design parameters. If the number of scenarios J is no less
+than ⌈2Nα−1ln(2α−1)+2α−1ln(ǫ−1)+2N⌉, then the solution to the scenario approximation problem has a
+probability at least 1−ǫ to satisfy the original chance constrained problem. The problem formulation and method
+of solving the problem are very similar to (16). We will point out the difference in Remark 2.
+B. Formulation of consensus problem
+Therenewablegenerationanduserloadsin(16)areallrandom.Inpractice,historicaldataisusedintheproblem
+formulation.Witha largenumberofrealizationsoftherandomparametersfromhistoricdata,theproblembecomes
+increasingly difficult to solve due to the increase of dimensionality. In the rest of this section, we will reformulate
+the original problem (16) as a consensus problem, which can be solved in a distributed manner.
+We divide the entire planning horizon T into sub planning horizons Tj, which we call scenarios for simplicity.
+Let J denote the set of all horizons, and we have that T = ∪ j∈JTj. For convenience, we assume Tj’s are
+arranged in the order of time. Let xj = [Sj ;Rj ;Hj ] denote the design parameters for the jth scenario,
+d max max max
+z =[S ;R ;H ] denotethe globaldesignparameters,Cj denotethefeasibleset forthejth scenariowith
+d max max max
+C = ∩ j∈JCj. In practice, the energy in storages at the beginning of each time period is not random, but rather
+depends on the energy from the previous time period. Assuming the energy stored at the beginning of a scenario
+should be equal to the energy stored at the end of the previous scenario, we need additional constraints to ensure
+thisconditionis satisfied. LetSj denotethe energystorageatthe beginningof the jth scenario,and Sj denotethe
+energystorage at the end of the jth scenario. In [21], we followed the approachin [15], and imposedan additional
+assumption that the energy in each energy storage at the end of the optimization horizon should be equal to that
+at the beginning of the optimization horizon, i.e., Sj = Sj,j ∈ J. However, this assumption makes the solution
+suboptimal. In this work, we eliminate this assumption and add additional consensus constraints across scenarios.
+June7,2018 DRAFT
+Let xj = [Sj;Sj] denote the boundary parameters for the jth scenario, and z denote the global boundary
+parameters. Let B(j) denote the mapping for the indices of the boundary conditions for the jth scenario, and thus
+z denotesthe correspondingboundaryparametersforthe jthscenario.We alsouse the scalar functionB(j,i)
+todenoteelement-wiseindexmapping,i.e.,(xj) correspondsto(z ) .TheconstraintsSj =Sj−1,j ∈J can
+b i b B(j,i) 0 T
+then be written as xj = z ,j ∈ J. Using the notations xj = [xj;xj], z = [z ;z ], and z˜j = [z ;z ],
+b b,B(j) d b d b d b,B(j)
+we then formulate the original optimization problem (16) as follows:
+min fj(xj)
+subject to xj =z˜j, j ∈J.
+The solution z from solving (18) will satisfy that z ∈C.
+Remark 2: If the probabilistic constraintis considered, and scenario approximationapproach is used, the formu-
+lationhavetobeslightlyrevised.Accordingto[19],therandomsamplesforeachscenariohastobegeneratedfrom
+independent identical distributions. Note that the starting energy stored in the storages also has to be drawn from
+certain probabilitydistributions.Theconsensusformulationfor the energystorageboundaryconditionscan then be
+removed. The number of generated scenarios has to be greater than or equal to the minimum number described in
+Remark 1.
+C. Distributed Optimization
+The challenge in solving (18) is that as the number of scenarios increases, the problem becomes increasingly
+difficult due to high time complexity. We propose to solve the problem in a distributed manner based on the
+alternating direction method of multipliers (ADMM) [18], which mitigates the time complexity issue and makes
+the problem scalable.
+To enforce the equality (consensus) constraint in (18), an additional quadratic term is added to the original
+Lagrangian, forming the augmented Lagrangian which can be written as
+(cid:0) fj(xj) (cid:1) +vj⊤(xj −z)+ kxj −zk2 ,
+j X ∈J(cid:16) (cid:17)
+where {vj} denote the dual variables, and ρ is a pre-defined parameter which is the dual variable update step
+size. The quadraticterm penalizesthe differencebetween the local variables{xj} and correspondingentriesof the
+global variable z, denoted by z˜j.
+The ADMM algorithm iterates among the following steps, with subscript k denoting the iteration number.
+1) x-minimization step: For each j ∈J, the following local minimization problems are solved in parallel:
+argminf(xj)+vj⊤(xj −z˜j)+ kxj −z˜jk2.
+xj∈Cj k 2 k 2
+June7,2018 DRAFT
+2) z-minimization step:
+argmin vj⊤(xj −z˜j)+ kxj −z˜jk2 .
+z ∈C k+1 k 2 k+1 k 2
+k j X ∈J(cid:16) (cid:17)
+To solve for the z-minimization step, we consider z and z separately. Decompose vj = [vj;vj], and we then
+rewrite (21) as
+argmin vj⊤ (xj −z )+ kxj −z k2 +
+z d d,k+1 d 2 d,k+1 d 2 (22)
+j X ∈J (cid:16)
+vj⊤ (xj −z )+ kxj −z k2 .
+b b,k+1 b,B(j) 2 b,k+1 b,B(j) 2
+Solving (22), we obtain that
+z = xj + vj , (23)
+d,k+1 J k+1 ρ k
+j∈J(cid:18) (cid:19)
+(z ) = B(j,i)=g b,k+1 i b i . (24)
+b,k+1 g P (cid:16) B(j,i)=g 1 (cid:17)
+When the algorithm converges,the resulting zj has to Psatisfy the constraints of each sub-problem,i.e., z˜j ∈Cj.
+Therefore we have that z ∈C =∩ j∈JCj.
+3) Dual-variable update: For each j ∈J, the dual variables are updated in parallel:
+k+1 k k+1 k+1
+(cid:16) (cid:17)
+Since (20) and (25) can be parallelized, the problem is scalable as the number of scenarios increases. The
+convergence of this approach is guaranteed, as proved in [18]. For faster convergence, we use an adaptive dual
+update stepsize ρ. The primal residual rp and dual residual rd are defined as
+rp = xj −z˜j , (26)
+X(cid:0) (cid:1)
+As larger ρ penalizes more on the primal residual, and smaller ρ penalizes on the dual residual, the parameter ρ is
+updated following the rule below:
+τρ if krpk>µkrdk,
+ρ otherwise,
+where τ > 1, µ > 1. The algorithm converge
+s when both the primal and dual residual are less than a certain
+threshold.
+June7,2018 DRAFT
+TABLE I: Parameters for energy storage and generators.
+Round-trip Fullcharge time Energyloss Investment Cost Lifespan
+Category Type O/Mcost
+Efficiency (hours) Ratio† (M$/MWh) (years)
+S1:Flywheel 0.92 0.25 0.05 7.800 20 linear
+Energystorage S2:Li-ionbattery 0.88 4.00 0.01 1.700 15 linear
+S3:Pumpedstorage 0.80 10.00 0.00 0.450 50 linear
+R1:Solarpanel – – – 5.284 30 linear
+Renewable generator
+R2:Windturbine – – – 2.414 20 linear
+Traditional generator H1:Dieselgenerator – – – 0.400 5 quadratic
+† Thisparameter wasnotprovidedin[22].
+V. NUMERICAL EXAMPLES
+In this section, we provide a series of numerical examples using real data from online databases, to showcase
+how the proposed framework can help in making decisions on renewable generation and energy storage planning.
+A. Data and parameters
+1) Renewable generation data: We consider two types of renewable generation, wind and solar, and simulate
+renewablegenerationdatafromNationalSolarRadiationDataBase (NSRDB) fromNREL[23],[24].Thedatabase
+provideshourlysolar radiation data as well as wind speed data. The solar generationis calculated using the hourly
+“modeled direct normal” radiation measurements and the hourly mean zenith angle. Denote the normal radiation
+measurement as Rs, the longitude of the target location as θ, and the solar panel tilt angle as θ . The power
+received on panel Rs is then calculated by
+whereµ isthepanelefficiencyandRs istheratedpoweroutput.Theoptimaltiltangleforsolarpanelisdetermined
+according to [25].
+The wind power output is calculated using the following equation:
+µ ρ V3 if V ≤V ≤V ,
+r air in rated
+0 otherwise,
+is the density of air, d is t
+diameter of the wind turbine, and µ
+is the wind turbine efficiency. The
+generation output is zero when the wind speed is lower than the cut-in speed V or higher than the cut-out speed
+V .
+Boththesolarandwindgenerationsarenormalizedbytheratedpoweroutputs.Thecostsforrenewablegenerators
+are obtained from [26] and included in Table I.
+June7,2018 DRAFT
+2) Load data: We use the ERCOT hourly load data from [27]. The data is normalized by the average hourly
+demand.
+3) Energystorageparameters: Weselectthreetypesofenergystorageasprototypesforoursimulations,including
+flywheel storage, Li-ion battery, and pumped storage. The correspondingparameters are determined based on [22]
+and included in Table I.
+4) Definitions: To quantify G and the maximum capacity of diesel generator Hcap, we define two quantities:
+the shortfall-to-demand ratio, r , and the diesel generation capacity ratio, r . We define the threshold G at
+time t as G = r D , and therefore the shortfall-to-demand ratio is the ratio between the threshold G and
+th SD t th
+the current demand. The maximum diesel generator capacity Hcap is determined by Hcap = r max(D ), and
+max max DC t
+therefore the diesel generation capacity ratio is the ratio between the maximum diesel generator capacity and the
+peak demand.
+B. Result of storage and generation planning
+In this subsection we perform a case study using the setup described in Sec. V-A. The solar panel tilt angles
+are adjusted twice a year according to [25]. Solar panel efficiency is set to be 20%, with rated power output to be
+150W/m2. Wind turbine cut-in and cut-out wind speeds are set to be 3m/s and 20m/s, with rated power output
+achievedatthewindspeedof10m/s.Thewindturbineefficiencyissettobe50%.Inthefollowingsimulations,we
+considerthe averagehourlyloadto beunitmegawatt(1MW)forillustrativepurposes,while a micro-gridisusually
+on the scale of 5-10MW. We use the ERCOT hourly load data from years 2008-2010 to generate the load data,
+and the NSRDB data to generate the renewable generation data. The maximum hourly load is 1.8050 MWh, and
+the minimumhourlyloadis 0.5557MWh. TheaveragehourlygenerationsfromperunitMW ofwind turbinesand
+solar panelsare 0.1217MWh and0.2366MWh, respectively.The normalizeddata (in heatmap)and corresponding
+box plots are shown in Fig. 1.
+We set r = 0.50 and r = 0.05, meaning that the maximum allowed diesel generation capacity is half of
+the peak load, and the maximum energy shortfall to demand from local generators is 5%. The CVX toolbox [28]
+is used to solve for the x-updates. The optimization results are available in Table II. All costs are for a thee-year
+design horizon. The investment costs are amortized for three years.
+We notice that although the planned diesel generation capacity is high (equivalent to the upper limit, which is
+half of the peak load), the actual averagegenerationfromthese generatorsare relativelylow. Overall, only 18.22%
+of the consumed energy is from diesel generators, i.e., renewable energy constitutes 81.78% of the total consumed
+energy2.
+The hourly energy shortage distribution is plotted in Fig. 2. For most of the time, the energy shortage G is
+closeto zero,meaningthatthe totalgeneration(includingstoragedischarge)isclose tothe totaldemand(including
+2Weassumetherenewable generators aregenerating as muchenergy as they can, andthus there isexcess generation oncertain occasions.
+Onlytheactual energyconsumedbytheendusersiscounted here.
+June7,2018 DRAFT
+0:00 3:00 6:00 9:00 12:00 15:00 18:00 21:00
+Hour of day
+0:00 3:00 6:00 9:00 12:00 15:00 18:00 21:00
+noitareneG
+Hour of day
+0:00 3:00 6:00 9:00 12:00 15:00 18:00 21:00
+noitareneG
+Hour of day
+Fig. 1: Plots for normalized load, solar generation,and wind generation data. The plots on the left show box plots,
+and the plots on the right show raw data.
+TABLE II: Results for r =0.50, r =0.05 over a three-year design horizon.
+Plannedcapacity Investment cost O./M.cost Totalcost
+S1 0.5855 0.6851 0.0019 0.6870
+S2 3.2595 1.1082 0.0274 1.1356
+S3 4.3051 0.1162 0.0390 0.1553
+R1 2.4985 1.3202 0.1554 1.4755
+R2 5.5192 1.9985 0.0883 2.0868
+H1 0.9025 0.2166 0.5336 0.7502
+Total – 5.4448 0.8456 6.2904
+Energy Shortage (MW)
+ytilibaborP
+Fig. 2: Hourly energy shortage distribution. Negative value denotes that generation is greater than demand.
+June7,2018 DRAFT
+0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+Diesel Generator Capacity Ratio
+egatnecreP
+noitareneG
+Fig. 3: Total cost and percentage of renewable generation as a function of diesel generation capacity ratio.
+TABLE III: Geographic locations and climates.
+City GPSCoordinates Climate type
+SanAntonio 29◦25’N98◦30’W humidsubtropical /hotsemi-arid
+St.Louis 38◦37’N90◦11’W humidcontinental /subtropical
+SanFrancisco 37◦47’N122◦25’W cool-summerMediterranean
+storage charge).There are also occasionswhen there is excess generation,which is either dumpedin isolated grids
+or injected to the main grid in grid-connected micro-grids.
+C. Result with different diesel generation capacities
+The maximum allowed diesel generation capacity affects the planning for renewable generation and energy
+storages. Intuitively, the lower the allowed diesel generation capacity, the more renewable generators and energy
+storagesare requiredto ensureanuninterruptedenergysupply.Inthissection, we considerdifferentdieselcapacity
+ratios r while keeping other parameters fixed. The diesel capacity ratio r is changed from 0 to 1, with
+increments of 0.1. The resulting total cost and average renewable generation percentage over the three planning
+years are illustrated in Fig. 3.
+It can be observed that when r is smaller then 0.5 and decreases, the total cost increases rapidly, whereas
+the percentage of renewable energy do not increase much. This potentially provides guidelinesfor determining the
+capacity of diesel generators in an micro-grid, when balancing financial cost and environmentalcost.
+D. Results with data from different geographic locations
+The geographic location has a significant effect on the availability of different renewable energy sources. We
+consider the case of three cities in the United States, described in Table III, using a similar setup as described in
+Sec. V-B. The hourly data is not available for all the locations, and therefore we use the same hourly load data for
+allthreeregions.ItcanbeobservedfromTableIVthattheavailabilityofdifferentresourcessignificantlyaffectsthe
+June7,2018 DRAFT
+TABLE IV: Comparison of optimization results for different geographic locations.
+SanAntonio St.Louis SanFrancisco
+S1 (MWh) 0.5855 0.1078 0.0013
+S2 (MWh) 3.2595 3.1140 3.8601
+S3 (MWh) 4.3051 4.5006 5.3880
+R1 (MWh) 2.4985 2.3587 5.2976
+R2 (MWh) 5.5192 4.8909 3.2458
+H1 (MWh) 0.9025 0.9020 0.9025
+Totalcost(M$) 6.2904 5.5331 6.5856
+Renewable (%) 81.78 75.32 83.06
+plannedcapacity of differentrenewablegenerators.Since San Francisco has more wind resources, only a relatively
+smallcapacity ofwind generatoris neededto satisfy the energydemands.Forsimilar reasons, San AntonioandSt.
+Louis require less solar panel installation. Other characteristics, e.g., the variability of renewable energy sources,
+also affect the planned capacity for different types of energy storages.
+Remark3: Inthispaperweconsiderrelativelyisolatedgrids.Tomakebetteruseofrenewablegeneration,itwould
+bemoreefficienttoconsideraninterconnectednetworkofmultiplemicro-grids,withinter-gridenergytransmission.
+In this way, less renewablegenerationand energystorage capacitywould be neededto satisfy the energydemands.
+The optimization problem will more complicated, and new issues, e.g., long-distance power transmission, need to
+be considered.
+VI. CONCLUSIONS
+We considered the problem of jointly optimizing multiple energy storage, renewable generator, and diesel
+generator capacities, in the context of an isolated grid, or a micro-grid with a small carbon footprint. The joint
+optimization exploits the different characteristics of multiple energy storage types, as well as the availability of
+different sources of renewable energy. To mitigate the large dimensionality of the optimization problem due to the
+use of large volumes of historical data, we formulated the original optimization problem as a consensus problem,
+which can be solved in a parallel distributed manner. We provided a series of numerical examples to illustrate
+how the proposed framework can be used for planning purposes in practice. To be more specific, we considered
+scenarios with different maximum diesel generation capacities, and also compared the different planning results
+in different geographic regions. The proposed work will be helpful in designing renewable generation and energy
+storagesystemsforfuturedecentralizedpowergridswithlargerenewablepenetration,andhelppolicymakersmake
+decisions related to renewable energy and sustainability.
+In our future work we will consider the problem of optimally operating a given hybrid energy storage and
+generation system, taking into account the stochastic nature of demand and renewable generation. We will also
+study the case of an interconnected network of multiple micro-grids, each with local energy generation and inter-
+June7,2018 DRAFT
+grid energy transmission, which potentially makes better use of renewable energy.
+A. Proof of Theorem 1
+Proof: Let
+{Ps,+,Ps,−
+} denote two pairs of charge/discharge satisfying
+Ps,+−Ps,− =Ps, Ps,+Ps,− =0,
+We then have
+t t t t t t
+Since Ps,+−Ps,− =Pˆs,+−Pˆs,− , we then have Ps,+ <Ps,+, and Ps,− <Ps,− . Because the operational cost is
+t t t t t t t t
+an increasing function of
+{Ps,+,Ps,−
+}, we obtain that
+(Ps,+,Ps,−
+o/m t t o/m t t
+Therefore the optimal pair
+{Ps,+,Ps,−
+} must satisfy that
+= 0, i.e., only one of
+t t t t t t
+non-zero.

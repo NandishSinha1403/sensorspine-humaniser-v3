@@ -1,0 +1,247 @@
+1v5276.1141:viXra
+Accelerated Parallel Optimization Methods for
+Large Scale Machine Learning
+HaipengLuo PatrickHaffner and Jean-Franc¸oisPaiement
+PrincetonUniversity AT&TLabs-Research
+haipengl@cs.princeton.edu {haffner,jpaiement}@research.att.com
+Thegrowingamountofhighdimensionaldataindifferentmachinelearningappli-
+cationsrequiresmoreefficientandscalableoptimizationalgorithms.Inthiswork,
+we considercombiningtwo techniques,parallelism andNesterov’sacceleration,
+todesignfasteralgorithmsforL -regularizedloss. WefirstsimplifyBOOM[10],
+a variantof gradientdescent, and study it in a unified framework, which allows
+ustonotonlyproposearefinedmeasurementofsparsitytoimproveBOOM,but
+alsoshowthatBOOMisprovablyslowerthanFISTA[1]. Movingontoparallel
+coordinatedescentmethods, we then proposean efficientaccelerated versionof
+Shotgun [3], improving the convergencerate from O(1/t) to O(1/t2). Our al-
+gorithmenjoysaconciseformandanalysiscomparedtopreviouswork,andalso
+allowsonetostudyseveralconnectedworkinaunifiedway.
+1 Introduction
+Manymachinelearningproblemsboildowntooptimizingspecificobjectivefunctions.Inthispaper,
+weconsiderthefollowinggenericoptimizationproblemassociatedwithL -regularizedloss:
+min F(w)= min ℓ(xTw,y )+λkwk ,
+where(x ,y ) representntrainingexamplesofthetask, eachwithfeaturevectorx ∈ Rd
+i i i=1,...,n i
+andlabel/responsey ,andℓisasmoothconvexlossfunctionwithrespecttoitsfirstargument.This
+objectivefunctionistheheartofseveralimportantmachinelearningproblems,includingLasso[20]
+whereℓ(yˆ,y)= 1kyˆ−yk2,andsparselogisticregression[13]whereℓ(yˆ,y)=ln(1+exp(−yyˆ)).
+Muchefforthasbeenputintodevelopingoptimizationmethodsforthismodel,rangingfromcoordi-
+nateminimization[5],randomizedcoordinatedescent[17],stochasticgradientdescent[2,16],dual
+coordinateascent[18],tohigherordermethodssuchasinteriorpointmethods[6],L-BFGS[14],to
+nameafew. However,the needforfaster andmorescalablealgorithmsisstill growingdueto the
+emergenceofapplicationsthatmakeuseofmassiveamountofhighdimensionaldata(e.g.[19]).
+Onedirectiontodesignfasteralgorithmsistoutilizeparallelcomputationsonsharedmemorymulti-
+processorsoronclusters.Somemethodsparallelizeoverexamples[7,9,21],whileothersparallelize
+overfeatures[3,15]. Asthereferencesofthelatterapproachargue,itissometimesmorepreferable
+toparallelizeoverfeaturesforL -regularizedloss,whichwillthusbethefocusofthiswork.
+Anotherdirectiontodesignmoreefficientalgorithmsistomakeuseofthecurvatureoftheobjective
+function to obtain faster theoretical convergencerate. It is well known that for smooth objective
+functions, vanilla gradient descent only converges at a suboptimal rate O(1/t), while Nesterov’s
+accelerationtechniquewouldallowtheoptimalrateO(1/t2)[12]. Recentprogressalongthisline
+includes generalizing Nesterov’s acceleration to randomized coordinate descent [11, 8]. Even if
+the objective is not smooth, algorithms that still enjoy the same fast convergence rate have been
+Input:normalizeddatamatrixX,smoothnessparameterβ,regularizationparameterλ.
+Setstepsizeη =1/(cβ),where
+• Option1(FISTA):c=ρ,whereρisthespectralradiusofXTX.
+• Option2(BOOM):c=κ,whereκ=max κ andκ =|{j :X 6=0}|.
+• Option3(OurMethod):c=κ¯,whereκ¯ =max n κ X2.
+j i=1 i ij
+Initializew =u .
+fort=1,2,...do (inparallelforeachcoordinate)
+t+1 λη t t
+t+1 t t+1 t t
+Algorithm1:ParallelAcceleratedGradientDescent
+proposedforfunctionsthatareasumofasmoothpartandasimpleseparablenon-smoothpart,such
+astheL -regularizedlossweconsiderhere(seeforinstancetheFISTAalgorithm[1]).
+Inthisworkweaimtocombinebothofthetechniquesmentionedabove,thatis,todesignparalleliz-
+ableacceleratedoptimizationalgorithms. Similarworkincludes[10,4]. Westartbyrevisitingand
+improvingBOOM [10], a parallelizablevariantof acceleratedgradientdescentthattriesto utilize
+the sparsity and elliptical geometry of the data. We first give a simplified form of BOOM which
+allows one to clearly see the the connection between BOOM and FISTA, and also to study these
+algorithmsinaunifiedframework. Surprisingly,weshowthatBOOMisactuallyprovablyslower
+thanFISTAwhendataisnormalized,whichisanequivalentwayofutilizingtheellipticalgeometry.
+Moreover,wealsoproposearefinedmeasurementofsparsitythatimprovestheoneusedinBOOM.
+Movingontoparallelcoordinatedescentalgorithms,wethenproposeanacceleratedversionofthe
+Shotgunalgorithm[3]. Shotgunconvergesas fastas vanilla gradientdescentwhile onlyupdating
+a small subset of coordinates per iteration (in parallel). Our accelerated version even improves
+the convergencerate from O(1/t) to O(1/t2), that is, the same convergencerate as FISTA while
+updatingmuchfewercoordinatesperiteration.Ouralgorithmisaunifiedframeworkofaccelerated
+singlecoordinatedescent[11,8], multiplecoordinatedescentandfullgradientdescent. However,
+insteadofdirectlygeneralizing[11,8]ortheveryrecentwork[4],wetakeadifferentroutetopresent
+Nesterov’saccelerationtechniquesothatourmethodenjoysasimplerformthatmakesuseofonly
+oneauxiliarysequenceandouranalysisisalsomuchmoreconcise.Wediscusshowthesealgorithms
+areconnectedandwhichoneisoptimalunderdifferentcircumstances. Wefinallymentionseveral
+computationaltrickstoallowhighlyefficientimplementationofouralgorithm.
+2 Gradient Descent: Improving BOOM
+Inthissection,weinvestigatealgorithmsthatmakeuseofafullgradientateachround.Specifically,
+werevisit,simplifyandimprovetheBOOMalgorithm[10].
+ThereareessentiallytwoformsofNesterov’saccelerationtechnique,onewhichfollowstheoriginal
+presentationof Nesterov and uses two auxiliary sequencesof points, and the other which follows
+thepresentationofFISTAandusesonlyoneauxiliarysequence.BOOMfallsintothefirstcategory.
+To make the algorithm more clear and the connection to other algorithms more explicit, we will
+firsttranslateBOOMintothesecondform. Beforedoingso,tomakethingsevenmoreconcisewe
+assumethatthedataisnormalized. Specifically,letXbeannbydmatrixsuchthattheith rowis
+xT. WeassumeeachcolumnofXisnormalizedsuchthat n X2 =1forallj ∈{1,...,d}. It
+isclearthatthisiswithoutlossofgenerality(seefurtherdiscussionattheendofthissection).
+NowwearereadytopresentoursimplifiedversionofBOOM (seeAlgorithm1, Option2). Here,
+β is the smoothness parameter of the loss function such that its second derivative ℓ′′(yˆ,y) (with
+respecttothefirstargument)isupperboundedbyβ forallyˆandy. Forinstance,β = 1forsquare
+lossusedinLassoandβ =1/4forlogisticloss. γ istheusualcoefficientforNesterov’stechnique
+whichsatisfies: γ =(1−θ )/θ ,withθ =0,θ = 1(1+ 1+4θ2).Finally,theshrinkage
+functionP isdefi t nedasP ( t w) t+ = 1 sign(w 0 )max{| t w +1 |−a 2 ,0}.Onecans t eethatBOOMexplicitly
+makesuseofthesparsityofthedata,andusesκ,ameasurementofsparsity,toscalethegradient.
+Whenwritteninthisform,itisclearthatBOOMisveryclosetoFISTA(seeAlgorithm1,Option
+1). The only differenceis that BOOM replacesρ with the sparsity κ. The questionsare, whether
+thisslightmodificationresultsinafasteralgorithm? DoesBOOMconvergesfasterbyutilizingthe
+sparsityofthedata? Thefollowinglemmaandtheoremanswerthesequestionsinthenegative.
+Lemma1. Letρ,κ¯andκbedefinedasinAlgorithm1. Thenwehaveρ≤κ¯ ≤κ.
+Proof. LetzbeauniteigenvectorofXTXwithrespecttotheeigenvalueρ. Onehasρ=zT(ρz)=
+zT(XTXz)=kXzk2 = n X z .ByCauchy-Schwarzinequality,wecontinue
+2 i=1 j:Xij6=0 ij j
+(cid:16) (cid:17)
+ρ≤ 12 X2z2 = κ X2z2 = z2 κ X2 ≤κ¯ ≤κ,
+ ij j  i ij j j i ij !
+i=1 j:X Xij6=0 j:X Xij6=0
+wherethelasttwoequalitiesmakeuseofthefactthat z2 =1and X2 =1respectively.
+Theorem1. SupposeF(w)admitsaminimizerw∗.APslongasc≥ρ,PAlgorithm1insuresF(w )−
+F(w∗) ≤ 2cβkw −w∗k /t2 aftertiterations. Inotherwords,toreachǫaccuracy,Algorithm1
+needsT =O( cβ/ǫ)iterations.
+WeomittheprpoofofTheorem1sinceitisadirectgeneralizationoftheoriginalproofforFISTA.
+TogetherwithLemma1,thistheoremsuggeststhatweshouldalwayschooseFISTAoverBOOMif
+weknowρ,sinceitusesalargerstepsizeandconvergesfaster. Inpractice,computingρmightbe
+timeconsuming. However,ausefulsideproductofLemma1isthatitproposesarefinedmeasure-
+mentofsparsityκ¯,whichisclearlyalsoeasytocomputeatthesametime.Weincludethisimproved
+variantin Option 3 of Algorithm1. Note that for anyfixed j, X2 ,...,X2 formsa distribution,
+andthusκ¯shouldbeinterpretedasthemaximumweightedaveragesparsityofthedata.
+GeneralityofFeatureNormalizing. Onemightdoubtthatourresultsholdmerelybecauseofthe
+normalizationassumptionofthedata. Indeed,authorsof[10]emphasizethatoneoftheadvantages
+of BOOM is that it utilizes the elliptical geometry of the feature space, which does not exist any
+moreifeachfeatureisnormalized.However,onecaneasilyverifythattheoutputsofthefollowing
+twomethodsarecompletelyidentical: 1)applyBOOMdirectlyontheoriginaldata;2)scaleeach
+featurefirstsothatthedataisnormalized,applyBOOM,andattheendscalebackeachcoordinate
+oftheoutputaccordingly. Therefore,featurenormalizationdoesnotaffectthebehaviorofBOOM
+atall. Putitdifferently,featurenormalizationisanequivalentwaytoutilizetheellipticalgeometry
+ofthedata. NotethatthesameargumentdoesnotholdforFISTA.Indeed,whileourresultsshow
+thatFISTAisprovablyfasterthanBOOM,experimentsin[10]showtheoppositeonunnormalized
+data. ThissuggeststhatweshouldalwaysnormalizethedatabeforeapplyingFISTA.
+3 Coordinate Descent: Accelerated Shotgun
+Updatingallcoordinatesin parallelis notrealistic, either becauseof a limited numberof coresin
+multi-processorsorcommunicationbottlenecksinclusters. Thereforeinthissection,weshiftgears
+andconsideralgorithmsthatonlyupdateasubsetofthecoordinatesateachiterations. Tosimplify
+presentation, we assume there is no regularization(i.e. λ = 0) and againdata is normalized. We
+proposeageneralizedandacceleratedversionoftheShotgunalgorithm1[3](seeAlgorithm2).
+WhatShotgundoesisto performcoordinatedescentonseveralrandomlyselected coordinates(in
+parallel),withthesamestepsizeasintheusual(single)coordinatedescent.Ifthenumberofupdates
+periterationP is welltuned,Shotgunconvergesasfastasdoinga fullgradientdescent, evenif it
+updatesmuchfewercoordinates.Themaindifferencebetweenshotgunandouracceleratedversion
+isthatasusualacceleratedmethods,ouralgorithmmaintainsanauxiliarysequenceu atwhichwe
+computegradients. However,u isnotjust(1−γ )w +γ w asinAlgorithm1. Instead,a
+t+1 t t+1 t t
+smallstepbackhastobetaken,whichisreflectedintheextratermc (u −w )whereconstantc
+willbespecifiedlaterinTheorem2. Intuitively,thisstepbackistoreducethemomentumduetothe
+factthatwearenotupdatingallcoordinates.AnotherimportantgeneralizationofShotgunisthatwe
+1NotethatShotgunhasalreadybeensuccessfullyacceleratedwithCoordinateDescentNewtonmethod[3],
+butnoanalysisoftheconvergencerateisprovidedforthisheuristicmethod.
+Input:numberofparallelupdatesP,stepsizecoefficientη,smoothnessparameterβ
+Initializew =u .
+for t=1,2,...,do
+pickarandomsubsetS of{1,...,d}suchthat|S |=P.
+for j =1toddo
+u − η∇f(u ) ifj ∈S ;
+w = t,j β t j t
+else.
+t+1 t t+1 t t t t t+1
+Algorithm2:AcceleratedShotgun
+introducean extrastep size coefficientη, which allows usto unifyseveralalgorithms(see further
+discussionbelow). Notethatη isfixedto1intheoriginalShotgun. Wenowstatetheconvergence
+rateofourAlgorithminthefollowingtheorem.
+Theorem2. SupposeF(w)admitsaminimizerw∗. IfP andη > 0aresuchthat η(1+σ) < 1
+whereσ = (P−1)(ρ−1) (recallρisthespectralradiusofXTX),constantγ isdefinedasinSection
+2,andc t = θt θ + t 1 1− 2 d P 1− η 2 (1+σ) ,thenthefollowingholdsforanyt>1,
+(cid:0) (cid:0) (cid:1)(cid:1) βd2kw −w∗k2
+wheretheexpectationiswithrespecttotherandomchoices(cid:0)ofsubsetsS ,(cid:1)...,S .
+Proof. For any iteration k, we first consider the expectation of F(w ) conditioning on
+S ,...,S ,whichwedenotebyE [F(w )]. StaringfromLemma3.3in[3],wehave
+1 k−1 k k+1
+k k+1 k d β k j 2 β k j
+j=1(cid:18) (cid:19)
+(cid:16) (cid:17)
+Letw ∈Rd beanarbitrarypoint,bytheaboveinequalityandtheconvexityofF wehave
+k k+1 k k+1 k k
+(cid:16) (cid:17)
+Also,directcalculationsshow
+k k+1 k dβ k k k+1 k dβ2 k
+(cid:2) (cid:3)
+whichwitha=−β 1− η(1+σ) andb= d leadsto
+(cid:0) (cid:1)
+k k+1 k k+1 k k+1 k k
+(cid:2) (cid:3)
+By the law oftotalexpectation,takingtheexpectationwith respectto S ,...,S onbothsides
+andpluggingw=w andw=w∗ respectivelygives
+k+1 k S1:k k+1 k k+1 k k k
+and (cid:2) (cid:3)
+k+1 S1:k k+1 k k+1 k k
+wherewedefineδ
+F((cid:2) w
+≥1foranyk >0,we(cid:3)nowmultiplyboth
+sidesofEq.(2)byθ −1,andaddtheresulttoEq. (3),arrivingat
+k k+1 k k S1:k k k+1 k k+1 k k k k k
+(cid:2) (cid:3)
+Multiplyingbothsidesbyθ andusingthefactthatθ2 =θ2−θ ,weobtain
+k k+1 k−1 k S1:k k k+1 k k k+1 k k k k k
+Letw′ besuchthat (cid:2) (cid:3)
+Wecontinuewith
+k k+1 k−1 k S1:k k k k k k k k k
+−w∗k2 (cid:3).
+Notethat (cid:2) (cid:3)
+k+1 k k k k
+k+1 k k+1 k k k k k+1 k+1 k+1
+k+1 k k+1 k k k k k+1 k+1 k+1
+(bythedefinitionofγ andc )
+=θ u −(θ −1)w ,. (bythedefinitionofu )
+k+1 k+1 k+1 k+1 k+1
+Sowefinallyarriveat
+k k+1 k−1 k k+1 k
+where v = E kθ u −(θ −1)w −w∗k2 . Summing these inequalitiesfrom k = 1 to
+k S1:k−1 k k k k
+k =t−1,andnotingthata<0bytheassumption η(1+σ)<1,wehave
+(cid:2) 2(cid:3)
+βd2kw −w∗k2
+θ2 δ ≤−ab2v = 1 .
+Byinductiononecanverifythatθ ≥t/2foranyt>(cid:0) 1,andthusE(cid:1)q. (1)follows.
+We now explain how to interpret this result and how to choose parameters P and η. First,
+note that to reach ǫ accuracy (i.e. E[F(w )] − F(w∗) ≤ ǫ), Algorithm 2 requires T =
+O d β/ ǫη 1− η(1+σ) iterations. ForanyfixedP,onecanverifythatη∗ = 1/(1+σ)
+ist(cid:16)heoqptim
+oiceforηtom
+n(cid:17)imizeT
+. Pluggingη∗ backinT
+andminimizingoverP,onecan
+checkthatP =disthebestchoice. Inthiscase,sinceσ =ρ−1,η∗ =1/ρandc =0,Algorithm
+2actuallydegeneratestoFISTAandT =O( ρβ/ǫ),recoveringtheresultsinTheorem1exactly.
+Ofcourse,attheenditisnotthenumberofipterations,butthetotalcomputationalcomplexitythat
+wecareaboutmost. Supposeweimplementthealgorithmwithoutusinganyparallelcomputation.
+Then as we will discuss later, the time complexity for each iteration would be O(nP) (recall n
+is the number of examples), and the total complexity O(T nP) is minimized when η = 1 and
+P = 1, leadingto O(nd β/ǫ). In thiscase, ouralgorithmdegeneratesto an acceleratedversion
+of randomized (single) coordinate descent. Note that this essentially recovers the algorithms and
+resultsin[11,8],butinamuchsimplerform(andanalysis).
+Finally, we consider implementing the algorithm using parallel computation. Note that η∗ =
+1/(1+σ)isalwaysatmost1. Sowefixηtobe1(asintheoriginalShotgunalgorithm),leadingto
+thelargestpossiblestepsize1/β andapotentiallysmallP. Ignoringfornowhardwareorcommu-
+nicationlimits, we assume in thiscase updatingP coordinatesin parallelcosts approximatelythe
+sametimenomatterwhatP is. Inotherwords,weareagainonlyinterestedinminimizingT . One
+canverifythattheoptimalchoicehereforP is 2(d−1+1)andT =O(ρ β/ǫ). Thisimprovesthe
+convergenceratefromO(1/ǫ)toO( 1/ǫ)comparedtoShotgun,andisalmostasgoodasFISTA
+(withmuchlesscomputationperiteration).
+EfficientImplementation.WediscusshowtoefficientlyimplementAlgorithm2. 1)Atfirstglance
+it seems that computing vector u needs to go over all d coordinates. However, one can easily
+generalizethetrickintroducedin[8]toupdateonlyP coordinatesandcomputewanduimplicitly.
+2) Another widely used trick is to maintain inner products between examples and weight vectors
+(i.e. Xw andXu), so thatcomputinga singlecoordinateofthegradientcanbedoneinO(n), or
+evenfasterinthecaseofsparsedata.3)InsteadofchoosingS uniformlyatrandom,onecanalsodo
+thefollowing: arbitrarilydividetheset{1,...,d}intoP disjointsubsetsofequalsizeinadvanced
+(assumingdisamultipleofP forsimplicity),thenateachiteration,selectoneandonlyoneelement
+fromeachoftheP subsetsuniformlyatrandomtoformS . Thiswouldonlyleadtoaminorchange
+oftheconvergenceresults(indeed,oneonlyneedstoredefineσtobe(ρ−1)P/d). Theadvantage
+ofthisapproachisthatitsuggeststhatwecanseparatethedatamatrixXbycolumnsandstorethese
+subsetsonP machinesseparatelytonaturallyallowparallelupdatesateachiteration.

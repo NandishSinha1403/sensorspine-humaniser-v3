@@ -1,0 +1,806 @@
+]NG.oib-q[
+1v4682.9041:viXra
+StatisticalScience
+2014,Vol.29,No.2,214–226
+(cid:13)c InstituteofMathematicalStatistics,2014
+Scalable Genomics with R
+and Bioconductor
+Michael Lawrence and Martin Morgan
+Abstract. This paper reviews strategies for solving problems encoun-
+tered when analyzing large genomic data sets and describes the imple-
+mentation of those strategies in R by packages from the Bioconductor
+project. We treat the scalable processing, summarization and visual-
+ization of big genomic data. The general ideas are well established and
+include restrictive queries, compression, iteration and parallel comput-
+ing. We demonstrate the strategies by applying Bioconductor packages
+to the detection and analysis of genetic variants from a whole genome
+sequencing experiment.
+Keywords and phrases: R,Bioconductor,genomics,biology,bigdata.
+1. INTRODUCTION within the memory of a current commodity com-
+puter, and is not processed in a timely and inter-
+Big data is encountered in genomics for two rea-
+active manner. To successfully wrangle a large data
+sons: the size of the genome and the heterogeneity
+set, we need to intimately understand its structure
+of populations. Complex organisms, such as plants
+and carefully consider the questions posed of it.
+and animals, have genomes on the order of billions
+Therearethreeprimarytypesofdataingenomics:
+of base pairs (the human genome consists of over
+sequence vectors, annotated ranges and feature-by-
+three billion base pairs). The diversity of popula-
+sample matrices of summary statistics (Figure 1).
+tions, whether of organisms, tissues or cells, means
+Biological sequences are represented as strings of
+we need to sample deeply to detect low frequency
+characters from a restricted alphabet. For example,
+events. To interrogate long and/or numerous ge-
+a DNA sequence consists of the letters A, C, G and
+nomicsequences,manymeasurementsarenecessary.
+T, each referring to a particular type of nucleotide.
+For example,a typical whole genomesequencing ex- A genome consists of a set of DNA sequences, one
+periment will consist of over one billion reads of 75– for each chromosome. We generalize the concept of
+100 bp each. The reads are aligned across billions sequence and define the term sequence vector to
+of positions, most of which have been annotated meaneitherasequenceoravector thatrunsparallel
+in some way. This experiment may be repeated for to a sequence. The latter may be some curated or
+thousands of samples. Such a data set does not fit computed value, such as the cross-species conserva-
+tion or coverage from a sequencing experiment. The
+Michael Lawrence is Computational Biologist, coverage is a common summary that represents the
+Genentech, 1 DNA Way, South San Francisco, number of features overlapping each position in the
+California 94080, USA e-mail: michafla@gene.com. reference sequence.
+Martin Morgan is Principal Staff Scientist, Fred Aswelearnmoreaboutagenome,weannotatege-
+Hutchinson Cancer Research Center, 1100 Fairview nomic ranges with information like gene structures
+Ave. N., P.O. Box 19024, Seattle, Washington 98109, and regulatory binding sites. The alignment of se-
+USA e-mail: mtmorgan@fhcrc.org.
+quences to a reference genome is another type of
+range-based annotation.
+This is an electronic reprint of the original article
+published by the Institute of Mathematical Statistics in Tocomparedataacrosssamples,weoftensumma-
+Statistical Science, 2014, Vol. 29, No. 2, 214–226. This rize experimental annotations over aset of reference
+reprint differs from the original in pagination and featurestoyieldafeature-by-samplematrix.Forex-
+typographic detail. ample, we might count read alignments overlapping
+M. LAWRENCEAND M. MORGAN
+Fig.1. Cartoonvisualizationofallthreetypesofgenomicdata:genome-lengthvectors,ranged,featuresandsummaries(from
+bottom to top). Data from two samples are compared (red vs. blue). The bottom plot displays the coverage, a genome-length
+vector. The exon ranges are shown in the middle. The top plot presents summaries, the per-exon read counts.
+a common set of genes across a number of sam- abstractions that make it accessible to statisticians
+ples. Larger matrices often arise in genetics, where and bioinformatics professionals who are not soft-
+thousands of samples are compared over millions of ware engineers per se. One aspect of R that is par-
+SNPs, positions that are known to vary within a ticularly useful is its “copy on write” memory se-
+population. In every case, the summaries are tied to mantics, which insulates the user from the details of
+a genomic range. reference-based memory management. The funda-
+To analyze the results of an experiment, we need mental R data structure is the atomic vector, which
+to integrate data of different types. For example,
+is both convenient and efficient for moderately sized
+we might have alignments for a ChIP-seq experi-
+data. Anatomic vector is homogeneous indata type
+ment, where the sequences have been enriched for
+andsoeasilystoredinonecontiguous blockofmem-
+binding to a particular transcription factor. A typ-
+ory. Many vector operations are implemented in na-
+ical analysis involves checking coincidence with an-
+tive (C) code, which avoids invoking the R inter-
+notated binding sites for that transcription factor,
+preterasititeratesovervectorelements.Inatypical
+as well as looking for correlation between gene ex-
+multivariate data set, there is heterogeneity in data
+pression and binding signal upstream of the gene.
+type across the columns and homogeneity along a
+The gene expression values might be drawn from a
+column, so vectors are naturally suited for column-
+geneby asamplematrix summarizedfroman RNA-
+oriented data storage, as in the basic data.frame.
+seq experiment. The genomic range is the common
+Vectorized computations can usually be expressed
+threadthatintegratesallthreetypesofdata.These-
+with simpler and more concise code compared to
+quence,thatis,thegenome,actsasthescaffold,and
+explicit iteration. The strengths of R are also its
+ranges coordinate the annotations and summarized
+weaknesses: the R API encourages users to store en-
+features by locating them on the same sequence.
+The R language [13] is widely applied to prob- tire data sets in memory as vectors. These vectors
+lems in statistics and data analysis, including the areimplicitlyandsilentlycopiedtoachievecopy-on-
+analysis of genomic data [8], as evidenced by the write semantics, contributing to high memory usage
+large number of available software packages provid- and poor performance.
+ing features ranging from data manipulation to ma- There are general strategies for handling large
+chine learning. R provides high-level programming genomic data that are well suited to R programs.
+SCALABLE GENOMICS
+Sometimes the analyst is only interested in one as- Dynamic generation requires fast underlying com-
+pect of the data, such as that overlapping a single putations to load, filter and summarize the data,
+gene. In such cases, restricting the data to that sub- and fast rendering to display the processed data on
+set is a valid and effective means of data reduction. the screen.
+However, once our interests extend beyond a single This paper describes strategies to surmount com-
+regionortheregionbecomestoolarge,resourcecon- putational and visualization challenges in the anal-
+straints dictate that we cannot load the entire data ysis of large genomic data and how they have been
+setintomemoryatonce,andweneedtoiterate over implemented in the R programming language by a
+the data to reduce them to a set of interpretable number of packages from the Bioconductor project
+summaries. [5]. We will demonstrate their application to a
+real data set: the whole-genome sequencing of the
+Iteration lends itself to parallelism, that is, com-
+HapMapcelllineNA12878,thedaughterintheCEU
+puting on multiple parts of the same problem si-
+trio. The GATK project genotyped the sample ac-
+multaneously. Thus, in addition to meeting mem-
+cordingtotheirbestpractices andincludedthecalls
+ory constraints, iteration lets us leverage additional
+in their resource bundle, along with the alignments
+processing resources to reduce overall computation
+for chr20, one of the shortest chromosomes. Real-
+time. Investing in additional hardwareis often more
+istically, one would analyze the data for the entire
+economical than investment in software optimiza-
+genome, but the chr20 subset is still too large to be
+tion. This is particularly relevant in scientific com-
+processed on a commodity laptop and thus is suffi-
+puting, where we are faced with a diverse, rapidly
+cient for our purposes.
+evolving set of unsolved problems, each requiring
+specialized software. Thecosts of investment in gen-
+2. LIMITING RESOURCE CONSUMPTION
+eralpurposehardwareareamortizedovereachprob-
+lem, rather than paid each time for software opti- Our ultimate goal is to process and summarize a
+large data set in its entirety, and iteration enables
+mization. This also relates to maintainability: opti-
+this by limiting the resource commitment at a given
+mization typically comes at a cost of increased code
+point in time. Limiting resource consumption gen-
+complexity. Many types of summary and filter op-
+eralizes beyond iteration and is a fundamental tech-
+erations are cheap to implement in parallel because
+nique for computing with big data. In many cases,
+the data partitions can be processed independently.
+it may render iteration unnecessary. Two effective
+We call this type of operation embarrassingly paral-
+approaches for being frugal with data are restric-
+lel.For example,thecountingofreadsoverlappinga
+tion and compression.Restriction means controlling
+gene does not dependon thecounting for a different
+which data are loaded and lets us avoid wasting re-
+gene.
+sourceson irrelevantor excessive data. Compression
+Given the complexity and scope of the data, an-
+helps by representing the same data with fewer re-
+alysts often rely on visual tools that display sum-
+sources.
+maries and restricted views to communicate infor-
+mation at different scales and level of detail, from 2.1 Restricting Queries
+the whole genome to single nucleotide resolution.
+Restrictionisappropriatewhenthequestionofin-
+Plotinteractivity isalways ausefulfeaturewhenex-
+terest requires only a fraction of the available data.
+ploring data, and this is particularly true with big
+Itisapplicableindifferentways tosequencevectors,
+data.Theviewisalways restrictedintermsofitsre-
+range-based annotations and feature-by-sample ma-
+gion and detail level, so, in order to gain a broader
+trices. We can restrict data along two dimen-
+and deeper understanding of the data, the viewer sions: row/record-wise and/or column/attribute-
+will need to adjust the view, either by panning to wise, with genomic overlap being an important row
+a different region, zooming to see more details or filter. Sequences and genomic vectors are relatively
+adjusting the parameters of the summary step. The simple structures that are often restricted by range,
+sizeofthegenomeandtherangeofscalesmakeitin- that is, extraction of a contiguous subsequence of
+feasible to pre-render every possible view. Thus,the per-position values. Row-wise restriction is useful
+views need to be generated dynamically, in lazy re- when working with large sets of experimentally gen-
+action to the user. Performance is an important fac- erated short sequences. The sequence aligner gen-
+tor in interpretability: slow transitions distract the erates alignments as annotations on a reference se-
+viewer and obfuscate relationships between views. quence, and these alignments have many attributes,
+M. LAWRENCEAND M. MORGAN
+such as genomic position, score, gaps, sequence and analysis to a particular region and include all of the
+sequence quality. Restriction can exclude the irrele- reads falling within it.
+vant attributes. Analysts often slice large matrices, To optimize range-based queries, we often sort
+such as those consisting of SNP calls, by both row and index our data structures by genomic coordi-
+(SNP) and column (individual). nates. We should consider indexing an investment
+A special mode of restriction is to randomly gen- because an index is generally expensive to generate
+erate a selection of records. Down-sampling can ad- but cheap to query. The justification is that we will
+dress many questions, especially during quality as- issue a sufficient number of queries to outweigh the
+sessment and data exploration. For example, short initial generation cost. Three primary file formats
+reads are initially summarized in FASTQ files con- follow thispattern:BAM,Tabix andBigWig [7,10].
+taining a plain text representation of base calls Each format is best suited for a particular type of
+and corresponding quality scores. Basic statistics of data. The BAM format is specially designed for se-
+quality assessment such as the nucleotide count as quencealignmentsandstoresthecomplexalignment
+a function of sequencing cycle or overall GC con- structure, as well as the aligned sequence. Tabix is
+tent are very well characterized by random samples meant for indexing general range-based annotations
+of a million reads, which might be 1% of the data. stored in tabular text files, such as BED and GFF.
+This samplefits easily in memory. Computations on Finally, BigWig is optimized for storing genome-
+this size of data are very nimble, enabling interac-
+length vectors, such as the coverage from a sequenc-
+tiveexplorationoncommoditycomputers.Anessen-
+ing experiment. BAM and Tabix compress the pri-
+tialrequirementisthatthedatarepresentarandom
+mary data with block-wise gzip compression and
+sample.
+save the index as a separate file. BigWig files are
+The ShortRead package is designed for the QA
+similarly compressed but are self-contained.
+and exploratory analysis of the output from high-
+The Rsamtools package is an interface between R
+througput sequencing instruments. It defines the
+and the samtools library, which implements access
+FastqSamplerobject, which drawsrandom samples
+toBAM,Tabixandotherbinaryfileformats.Rsam-
+from FASTQ files. The sequence reads in our data
+tools enablesrestrictionofBAMqueriesthroughthe
+set have been extracted into a FASTQ file from the
+ScanBamParamobject.Thisobjectcan beusedasan
+publicly available alignments. We wish to check a
+argument to all BAM input functions, and enables
+few quality statistics before proceeding. We begin
+restriction to particular fields of the BAM file, to
+by loading a random sample of one million reads
+specific genomic regions of interest and to proper-
+from the file:
+ties of the aligned reads (e.g., restricting input to
+paired-end alignments that form proper pairs).
+One common scenario in high-throughput se-
+quencing is the calculation of statistics such as cov-
+erage (the number of short sequence reads overlap-
+ping each nucleotide in the genome). The data re-
+With the sequences loaded, we can compute some
+quired for this calculation usually come from very
+QA statistics, like the overall base call tally:
+large BAM files containing alignment coordinates
+(including the alignment “cigar”), sequences and
+quality scores for tens of millions of short reads.
+Only the smallest element of these data, the align-
+In a complete workflow, we would generate an ment coordinates, is required for calculation of cov-
+HTML QA report via the report function. erage.Byrestrictinginputtoalignmentcoordinates,
+An example of a situation where random sam- we transform the computational task from one of
+pling does not work is when prototyping a statis- complicated memory management of large data to
+tical method that depends on a significant amount simple vectorized operations on in-memory objects.
+of data to achieve reasonable power. Variant call- We can directly implement a coverage estimation
+ing is a specific example: restricting the number of by specifying a ScanBamParam object that restricts
+readswouldleadtolesscoverage,lesspowerandless to the alignment information. The underlying cov-
+meaningful results. Instead, we need to restrict the erage calculation is implemented by the IRanges
+SCALABLE GENOMICS
+package, which sits at the core of the Bioconduc- concerned about regions with extremely high cover-
+tor infrastructure and provides fundamental algo- age: these are often due to alignment artifacts.
+rithmsanddatastructuresformanipulatingandan-
+notating ranges. It is extended by GenomicRanges
+to add conveniences for manipulating ranges on the
+genome:
+Calculating the sum is then more efficient than
+with conventional vectors:
+This is only an estimate, however, because we have
+ignored the complex structure of the alignments,
+Sometimes we are interested in the values of a
+for example, the insertions anddeletions. Rsamtools
+genomic vector that fall within a set of genomic fea-
+provides a convenience function for the more accu-
+tures. Examples include the coverage values within
+rate calculation:
+a set of called ChIP-seq peaks or the conserva-
+tion scores for a set of motif hits. We could ex-
+2.2 Compressing Genomic Vectors tract the subvectors of interest into a list. However,
+large lists bring undesirable overhead, and the data
+Some vectors, in particular, the coverage, have
+would no longer be easily indexed by genomic po-
+long stretches of repeated values, often zeroes. An
+sition. Instead, we combine the original vector with
+efficient compression scheme for such cases is run-
+the ranges of interest. In IRanges, this is called a
+length encoding. Each run of repeated values is re-
+Viewsobject.ThereisanRleViewsobjectfordefin-
+duced to two values: the length of the run and the
+ing views on top of an Rle.
+repeated value. This scheme saves space and also
+To demonstrate, we slice our original coverage
+reduces computation time by reducing computation
+vector by our high coverage cutoff to yield the re-
+size. For example, the vector 0,0,0,1,1,5,5,5 would
+gions of high coverage, overlaid on the coverage it-
+have run-values 0,1,5 and run-lengths 3,2,3. The
+self, as an RleViews object:
+data have been reduced from a size of 8 to a size of
+6 (3 values plus 3 lengths). TheIRanges Rleclass is
+a run-length encoded vector that supports the full
+R vector API on top of the compressed representa-
+tion. Operations on an Rle gain efficiency by taking
+advantage of the compression. For example, the sum
+methodcomputes a sumof therunvalues,usingthe
+run lengths as weights. Thus, the time complexity
+is on the order of the number of runs, rather than
+the length of the vector. This lets us efficiently calculate the average cov-
+The cov object we generated in the previous sec- erage in each region:
+tion is a list of Rle objects, one per chromosome.
+The Biostrings package [12] provides XString-
+Views for views on top of DNA, RNA and amino
+acid sequences. XString is a reference, rather than
+a value as is typical in R, so we can create multiple
+For this whole-genome sequencing, the data are XStringViews objects without copying the under-
+quite dense and complex, so the compression actu- lying data. This is an application of the fly-weight
+ally decreases efficiency. However, in the course of design pattern: multiple objects decorate the same
+analysis we often end up with sparser data and thus primary data structure, which is stored only once in
+better compression ratios. In this analysis, we are memory.
+M. LAWRENCEAND M. MORGAN
+We can apply XStringViews for tabulating the region:
+nucleotides underlying the high coverage regions.
+First, we need to load the sequence for chr20, via
+the BSgenome package and the addon package for
+human:
+Therepeats.splitobjectisnotanordinarylist.
+Long lists are expensive to construct, store and
+While the human genome consists of billions of
+process. Creating a new vector for each group re-
+bases, our genome object is tiny. This is an exam-
+quires time, and there is storage overhead for each
+ple of lazy loading: chromosomes are loaded, and
+vector. Furthermore, data compression is less effi-
+cached,asrequested.Inourcase,werestricttochr20
+cientwhenthedataaresplitacrossobjects.Depend-
+and form the XStringViews.
+ingontheimplementation ofthelistelements, these
+costs can be significant. This is particularly true of
+We verify that the cached sequence occupies the the S4 object system in R [2]. Another detriment to
+same memory as the subject of the views: R lists is that list elements can be of mixed type.
+Thus, there are few native routines for computing
+on lists. For example, the R sum function efficiently
+sumstheelementsofahomogeneousnumericvector,
+but there is no support for calling sum to calculate
+Finally, we calculate and compare the nucleotide
+the sum of each numeric vector in a list. Even if
+frequencies:
+such routines did exist for native data types, there
+are custom data types, such as ranges, and we aim
+to facilitate grouping of any data that we can model
+as a vector.
+While the R sum function is incapable of comput-
+ing group sums, there is an oddly named function
+Wenoticethatthehighcoverage regionsareA/T-
+called rowsum that will efficiently compute them,
+rich, which is characteristic of low complexity re-
+given a numeric vector and a grouping factor. This
+gions.
+hints that a more efficient approach to grouping
+2.3 Compressing Lists may be to store the original vector along with a
+partitioning. The IRanges R package includes a
+The high coverage regions in our data may be
+CompressedList framework that follows this strat-
+associated with the presence of repetitive elements
+egy. A CompressedList consists of the data vec-
+that confuse the aligner. We obtain the repeat an-
+tor, sorted by group, and a vector of indexes where
+notations from the UCSC genome browser with the
+each group ends in the data vector (see Figure 2).
+rtracklayer package, which, in addition to a browser
+IRanges providesCompressedListimplementations
+interface, handles input and output for various an-
+for native atomic vectors and other data types in
+notation file formats, including BigWig. Our query
+the IRanges infrastructure, and the framework is
+for the repeats is restricted to chr20, which saves
+extensible to new data types. A CompressedList
+download time. We subset to the simple and low
+is homogeneous, so it is natural to define methods
+complexity repeats, which are the most likely to be
+on subclasses to perform operations particular to a
+problematic:
+type of data. For example, there is a sum method
+for the NumericList class that delegates internally
+to rowsum. This approach bears similarity to stor-
+ing data by columns: we improve storage efficiency
+by storing fewer objects, and we maintain the data
+Ourgoalistocalculatethepercentofeach highcov- in its most readily computable form. It is also an
+erage region covered by a repeat. First, we split the application of lazy computing, where we delay the
+repeats according to overlap with a high coverage partitioningofthedatauntilacomputationrequires
+SCALABLE GENOMICS
+ThenascentXVector packageaimstodothesame
+for other R data types, such as integer, double and
+logical values.
+3. ITERATING
+3.1 Splitting Data
+Iterative summarization of data may be modeled
+as three separate steps: split, apply and combine
+[15]. The split step is typically the only one that de-
+pends on the size of the input data. The apply step
+Fig. 2. Grouping via partitioning vs. splitting into multiple
+operates on data of restricted size, and it should re-
+objects.Top:theinputvector,withelementsbelongingtothree
+differentgroups:red,blueandyellow.Middle:typicalsplitting ducethedatatoascalethatfacilitates combination.
+of vector into three vectors, one per group. This brings the Thus,themostchallenging stepis thefirst:splitting
+overhead of multiple objects. Bottom: the data are virtually the data into chunks small enough to meet resource
+split by a partitioning, encoded by the number of elements in
+constraints.
+each group (the vector is assumed to be sorted by group).
+Twomodesof splittingare particularly applicable
+to genomic data: sequential chunking and genomic
+it. We are then in position to optimize the parti- partitioning. Sequential chunking is a popular and
+tioning according to the specific requirements of the generaltechnique thatsimplyloads recordsinfixed-
+operation. count chunks, according to the order in which they
+Sincerepeats.listisaCompressedList,wecan are stored. Genomic partitioning iterates over a dis-
+take advantage of these optimizations: joint set of ranges that cover the genome. Typical
+partitioning schemes include one range per chromo-
+some and sub-chromosomal ranges of some uniform
+size. Efficient range-based iteration, whether over a
+partitioning or list of interesting regions, depends
+on data structures, file formats and algorithms that
+This value can be compared to the percent of are optimized for range-based queries.
+chr20 covered: Under the assumption that repeat regions are
+leading to anomalous alignments, we aim to filter
+from our BAM file any alignments overlapping a re-
+peat.Aswewillbeperformingmanyoverlap queries
+Instead of a CompressedList, we could have
+againsttherepeatdataset,itisworthindexingitfor
+solvedthisproblemusingcoverageandRleViews.
+faster queries. The algorithms for accessing BAM,
+Thedownsideof compression is that thereis over-
+Tabix and BigWig files are designed for genome
+head to explicit iteration because we need to ex-
+browsers and have not been optimized for process-
+tract a new vector with each step. The Biostrings
+ing multiple queries in a batch. Each query results
+package has explored a solution. We can convert
+in a new search. This is unnecessarily wasteful, at
+our XStringViews object chr20.views to a DNA-
+least when the query ranges are sorted, as is often
+StringSet that contains one DNAString for each
+thecase.We could improvethealgorithm bydetect-
+view window. The data for each DNAString has
+ingwhetherthenextrange is inthesamebin and,if
+never been copied from the original chr20 sequence,
+so, continuing the search from the current position.
+andany operations on aDNAStringoperatedirectly
+The IRanges package identifies interval trees [3] as
+on the shared data. While this solution may seem
+an appropriate and well-understood data structure
+obvious, it relies heavily on native code and is far
+for range-based queries, and implements these using
+from the typical behavior of R data structures:
+a combination of existing C libraries [6] and new
+C source code. The query is sorted, and every new
+searchbeginsatthecurrentnode,ratherthanatthe
+root. We build a GIntervalTree for the repeats:
+M. LAWRENCEAND M. MORGAN
+The GIntervalTree from GenomicRanges enables The memory usage started at about 500 MB and
+thesameoptimizationwhendataarealignedtomul- peakedatabout1200MB,sotheiterationconsumed
+tiple chromosomes. up to 700 MB. With 8 GB of ram, we might be able
+To configure streaming, we specify a yieldSize to process up to 10 million reads at once, assuming
+whenconstructingtheobjectrepresentingourBAM linear scaling.
+file. We will filter at the individual read level, but it Asanalternativetostreamingoverchunks,wecan
+should be noted that for paired-end data Rsamtools iterate over a partitioning of the genome or other
+supportsstreamingbyreadpair,suchthatmembers domain. Genomic partitioning can be preferable to
+of the same pair are guaranteed to be in the same streaming when we are only interested in certain re-
+chunk. Since BAM files are typically sorted by po- gions.ThetileGenomefunction isa convenience for
+sition, not pair, this is a significant benefit: generating a set of ranges that partition a genome.
+We rely on it to reimplement thecoverageiterative
+calculation with a partitioning:
+To filter the BAM, we first need to define a
+filter rule that excludes reads that overlap a re-
+peat.Thelow-level Rsamtools interfaceprovidesthe
+read data as a DataFrame, which we convert into a
+GAlignments object from the GenomicAlignments
+package, which provides data structures and utili-
+ties for analyzing read alignments:
+A caveat with partitioning is that since many
+query algorithms return ranges with any overlap of
+thequery,caremustbetakentointersecttheresults
+with each partition, so that reads are not double
+counted, for example.
+SincewearewritinganewBAMfile,thisisiteration
+By computing the coverage, we have summarized
+with a side effect rather than a reduction.
+the data. Computing summaries is often time con-
+To demonstrate reduction, we will calculate the
+suming, but since the summaries are smaller than
+coverage inan iterative fashion,whichendsupiden-
+the original data, it is feasible to store them for
+tical to our original calculation:
+later use. Caching the results of computations is an
+optimization technique known as memoization. An
+analysis rarely follows a linear path. By caching the
+data at each stage of the analysis, as we proceed
+from the raw data to a feature-level summary, often
+with multiple rounds of feature annotation, we can
+avoid redundant computation when we inevitably
+Choosing an appropriate yield size for each iter- backtrack and form branches. This is an application
+ation is important. There is overhead to each iter- of incremental computing. We export our coverage
+ation, mostly due to I/O and memory allocation, as a BigWig file, for later use:
+as well as the R evaluator. Thus, one strategy is to
+increase the size of each iteration (and reduce the
+number of iterations) until the data fit comfortably 3.2 Iterating in Parallel
+in memory. It is relatively easy to estimate a work-
+There are two basic modes of parallelism: data-
+able yield size from the consumption of processing a
+level and task-level. Embarrassingly parallel prob-
+singlechunk.Thegcfunctionexposesthemaximum
+lems illustrate data parallelism. Work flows might
+amount of memory consumed by R between resets:
+less frequently involve task parallelism, where dif-
+ferent tasks are applied to the same data chunk.
+These are generally more challenging to implement,
+especially with R, which does not offer any special
+support for concurrency. The Streamer package has
+explored this direction.
+SCALABLE GENOMICS
+Multicore and cluster computing are similar in of an abstraction oriented toward genomics work-
+that they are modular, and scaling algorithms to flows.TheBiocParallel packagedefinesthisabstrac-
+usemultiplecoresormultiplenodescaninvolvecon- tion and implements it on top of BatchJobs, parallel
+ceptually similar steps, but there are some critical andforeach to supportthemost common configura-
+differences. Multiple cores in the same system share tions. An important feature of BiocParallel is that
+thesamememory,as well as other resources.Shared it encapsulates the parallelization strategy in a pa-
+memory configurations offer fast inter-thread data rameter object that can be passed down the stack
+transfer and communication. However, the shared to infrastructure routines that implement the itera-
+resourcescanquicklybecomeexhaustedandpresent tion. Thus, for common use cases the user can take
+a bottleneck. Computing on a cluster involves sig- advantage of parallelism by solely indicating the ap-
+nificant additional expertise to access and manage propriateimplementation. Iteration is carried outin
+cluster resources that are shared between multiple a functional manner, so the API mirrors the *apply
+functions in base R: bplapply, bpmapply, etc.
+users and governed by a scheduler. Interacting with
+To illustrate use of parallel iteration, we diagnose
+a scheduler introduces an extra step into a work-
+the GATK genotype calls introduced earlier. One
+flow. We place jobs in a queue,and the jobs are exe-
+approach is to generate our own set of nucleotide
+cuted asynchronously. Another complication is that
+tallies, perform some simple filtering to yield a set
+we need to share the data between every computer.
+of variant calls, and compare our findings to those
+A naive but often sufficient method is to store the
+from GATK. The set of nucleotide tallies is a more
+data in a central location on a network file system
+detailed form of the coverage that consists of the
+and to distributethedata via thenetwork. Thenet-
+count of each nucleotide at each position, as well as
+work overhead implied by this approach may penal-
+some other per-position statistics. Tallies are useful
+ize performance.
+fordetectinggeneticvariantsthroughcomparisonto
+When the ratio of communication to computation
+a reference sequence.
+time is large, communication dominates the overall
+The VariantTools package provides a facility for
+calculation. The main strategies for addressing this
+summarizing the nucleotide counts from a BAM
+are to (a) ensure each task represents a significant
+file over a given range. We can iterate over the
+amount of work and (b) identify points where data
+tiling in parallel using the bplapply function.
+sizes of inputs (e.g., file names) and outputs (e.g.,
+The BPPARAM argument specifies the parallel im-
+vector ofcounts across regions of interest) aresmall.
+plementation. MulticoreParam is appropriate for
+Data partitioning is usually conveyed to workers in-
+a multicore workstation, whereas we might use
+directly, for example, via specification of the range
+BatchJobsParam for scheduling each iteration as a
+of data to be processed, rather than inputting and
+job on a cluster:
+explicitly partitioning data. This approach reduces
+thecommunicationcostsbetweentheserialandpar-
+allel portions of thecomputation and avoids loading
+the entire data set into memory.
+The R packages foreach [14], parallel (distributed The above is an example of explicit iteration.
+withR[13]),pbdR[11]andBatchJobs [1]provideab- Thanks to the encapsulation and abstraction af-
+stractions and implementations for executing tasks fordedbyBiocParallelParam,thepileupVariants
+inparallelandsupportboththesharedmemoryand function supports parallel iteration directly, so the
+cluster configurations. BatchJobs and pbdR are pri- implementation becomes much simpler:
+marily designed for asynchronous execution, where
+jobs are submitted to a scheduling system, and the
+user issues commands to query for job status and This is an example of an embarrassingly parallel so-
+collectresultsuponcompletion.Theothertwo,fore- lution: each iteration is a simple counting exercise
+ach and parallel, follow a synchronous model con- and is independent of the others. An example of a
+ducive to interactive use. nonembarrassingly parallel algorithm is our demon-
+Different use cases and hardware configurations stration of BAM filtering: each iteration has the
+benefit from different parallelization strategies. An side effect of writing to the same file on disk. The
+analystmightapplymultiplestrategiesinthecourse increased complexity of coordinating the I/O across
+of an analysis. This has motivated the development jobsunderminesthevalueofparallelisminthatcase.
+M. LAWRENCEAND M. MORGAN
+4. SCALING GENOMIC GRAPHICS erage isashortcutthat avoids pointless renderingof
+data that is beyond the display resolution and the
+4.1 Managing Graphical Resources
+perceptive abilities of the viewer:
+Graphics software is special in that it performs
+two roles: distilling information from the data and
+visually communicating that information to the
+user. The first role is similar to any data processing
+pipeline; the unique aspect is the communication.
+The communication bandwidth of a plot is limited A good summary will guide the user to the most
+by the size and resolution of the display device and interesting parts of the data. Genomic data are typ-
+ically sparsely distributed along the genome, due to
+the perceptive capabilities of the user. These limita-
+thenonuniformdistributionofgenesandexperimen-
+tions become particularly acute in genomics, where
+tal protocols that enrich for regions of interest. Cov-
+itwould bevirtually impossibleto communicate the
+erage is a particularly useful summary, as it helps
+details of a billion alignments along a genome of 3
+guide the viewer to the regions with the most data.
+billion nucleotides.
+Thefollowing gets theaverage coverage for 800 win-
+When considering how best to manage graphi-
+dows (perhaps appropriate for an 800 pixel plot).
+cal resources, we recall the general technique of re-
+The result is shown in the top panel of Figure 3:
+striction.Restrictionhasobviousapplicability toge-
+nomic graphics: we can balance the size of the view
+and the level of detail. As we increase the size of the In cases where a BigWig file or other cached sum-
+view, we must decrease the level of detail and vice mary is unavailable, we can rely on a heuristic that
+versa. This means only so much information can be estimates the coverage from the index of a BAM
+communicated in a single plot, so the user needs to or Tabix file. The index stores offsets into the BAM
+view many plots in order to comprehend the data. forefficientrange-basedqueries.Insteadofaccessing
+It would be infeasible to iteratively generate every the index to resolve queries, we calculate the differ-
+possible plot, so we need to lazily generate plots in ence in the file offsets for each range and derive a
+response to user interaction. For example, the typi- relative coverage estimate at a coarse level of res-
+cal genome browser supports panning and zooming olution. In practice, this reduces the required time
+about the genome, displaying data at different lev- to compute the coverage from many minutes to a
+few seconds. When the plot resolution exceeds the
+els of detail, depending on the size of the genomic
+resolution of the index, we again rely on the index
+region.
+to query the BAM file for the reads that fall within
+4.2 Displaying Summaries Efficiently therelativelysmallregionandcomputethecoverage
+directly. A heuristic seems acceptable in this case,
+When plotting data along a restricted range,
+because improved accuracy is immediately accessi-
+graphics software can rely on the support for range-
+ble by zooming. This is in contrast to pure statis-
+based queries presented previously. Controlling the
+tical computations, where crude estimates are less
+levelofdetailismorechallengingbecauseitrelieson
+appreciated, even in the exploratory context, since
+summaries. As the viewed region can be as large as
+resolution is not so readily forthcoming.
+the genome, generating summaries is often compu-
+The estimateCoverage function from the bio-
+tationally intensive and introduces undesirable la-
+vizBase package[17]estimatesthecoveragefromthe
+tency to plot updates. One solution to this prob-
+BAMindexfile.ThebottompanelofFigure3shows
+lemiscachingsummariesatdifferentlevelsofdetail.
+the output of estimateCoverage for the example
+Global summarieswill beregularly accessed and ex-
+data set and allows for comparison with the more
+pensive to compute, and thus are worth caching,
+exact calculation derived from the BigWig file. The
+whereas the detailed data exposed upon drill-down
+two results are quite similar and both required only
+can be computed lazily. This strategy is supported
+a few seconds to compute on a commodity laptop.
+by the BigWig format. In addition to storing a full
+4.3 Generating Plots Dynamically
+genomic vector, BigWig files also contain summary
+vectors, computed over a range of resolutions, ac- The design of interactive graphics software typi-
+cording to the following statistics: mean, min, max cally follows the model–view–controller pattern (see
+and standard deviation. Plotting the aggregate cov- Figure 4). The view renders data retrieved from
+SCALABLE GENOMICS
+Fig. 3. The results of two coverage calculations over chr20. Top: the calculation based on cached values in the BigWig file.
+Bottom: the estimated coverage from the BAM index file.
+the data model, and the controller is the interface is communicated to the user through the view, and
+through which the user manipulates the view and userinputisreceived throughthecontroller. Acom-
+data model. The data model abstracts the underly- plex application will consist of multiple interactive
+ing data source, which might be memory, disk or a views, linked through a common data model, itself
+dynamiccomputation.Theabstractionsupportsthe composed of multiple modules, chained together as
+implementation of complex optimizations without stages in a pipeline. The viewer, plots and pipeline
+exposing any of the complexity to client code. Data stages are interlinked to form a network.
+Fig.4. Anapplicationofthemodel–view–controllerpatternandpre-computed summariestogenomicvisualization.Coverage
+is displayed at two levels of resolution (whole chromosome and the current zoom) after efficient extraction from the multi-
+-resolution BigWig file. The BAM file holding the read alignments is abstracted by a multi-stage data model, consisting of the
+BAM source, a dynamic read quality filter and two filters that effectively split the alignments according to compatibility with
+the known transcript annotations. The view contains several coordinately-zoomed plots, as well as an ideogram and coverage
+overview. Each plot obtains its data from one of the data model components. The controller might adjust the data model filter
+settings and the current zoom in response to user commands.
+M. LAWRENCEAND M. MORGAN
+Fig.5. Exampleplotfordiagnosinggenotype calls,consistingofthenucleotidetallies,genotype callsandreferencesequence,
+from top tobottom. The plotisdynamicallygenerated for theselected region of interest, without processing the entire genome.
+The viewer might check to see if the tallies support the called genotypes. In this case, the data are consistent.
+A simple data model abstracts access to the pri- sources. The ggbio package builds on biovizBase to
+mary data, such as an in-memory GRanges object support genomic plot objects that are regenerated
+of transcript annotations or a BAM file on disk. We as the user adjusts the viewport.
+can extend the simple model to one that dynami- To diagnose the GATK genotype calls, we com-
+cally computes on data as they are requested by the bine the reference sequence, nucleotide pileup and
+the genotype calls. The result is shown in Figure 5.
+application. This is an example of lazy computing.
+The ggbio package produced the plot by relying on
+Each operation is encapsulated into a data model
+restricted query support in biovizBase. We have al-
+that proxies an underlying model. The proxy mod-
+readyintroducedtheextractionofgenomicsequence
+els form a chain, leading from the raw data to the
+and the calculation of nucleotide pileups. The geno-
+processed data that are ready for plotting [16]. Dy-
+types were drawn by the VariantAnnotation pack-
+namic computation avoids unnecessarily processing
+age from a Variant Call Format (VCF, [4]) file with
+theentiregenomewhentheuserisonlyinterestedin
+a range-based index provided by Tabix.
+a few small regions, especially when the parameters
+To generate the plot, we first select the region of
+of the transformations frequently change during the
+interest:
+session. The data may be cached as they are com-
+puted, and the pipeline might also anticipate future
+requests; for example, it might prepare the data on
+either side of the currently viewed region, in antic-
+Next, we construct the plot object and render it:
+ipation of scrolling. Caching and prediction are ex-
+amples of complex optimizations that are hidden by
+the data model. The plumbr R package [9] provides
+a proxy model framework for implementing these
+types of ideas behind the data frame API.
+Wehavebeenexperimentingwithextendingthese
+approaches to genomic data. The biovizBase pack-
+age implements a graphics-friendly API for re-
+stricted queries to Bioconductor-supported data
+SCALABLE GENOMICS
+Since the plot object is a logical representation of REFERENCES
+the plot, that is, it references the original data, we
+[1] Bischl, B., Lang, M., Mersmann, O., Rahnen-
+can adjust various aspects of it and generate a new
+fuehrer, J. and Weihs, C. (2011). Computing
+rendering.Inparticular,wecanchangethecurrently
+on high performance clusters with R: Packages
+viewed region, and the data for the new region are
+BatchJobs and BatchExperiments. Technical Re-
+processed dynamically to generate the new plot. In port 1, TU Dortmund.
+this example, wezoom outto a larger region around [2] Chambers, J. M. (2008). Software for Data Analysis:
+the first region: Programming with R. Springer, NewYork.
+[3] Cormen, T. H.,Leiserson, C. E., Rivest, R. L. and
+Stein, C. (2001). Introduction to Algorithms, 2nd
+Current work is focused on the MutableRanges ed. McGraw-Hill, Boston, MA. MR1848805
+package, which generalizes and formalizes the de- [4] Danecek, P., Auton, A., Abecasis, G., Al-
+signs in biovizBase. It defines dynamic versions of bers, C. A., Banks, E., DePristo, M. A.,
+Handsaker, R. E., Lunter, G., Marth, G. T.,
+the GenomicRanges data structures, for example,
+Sherry, S. T., McVean, G., Durbin, R. and
+there is a DynamicGRanges that implements the
+1000GenomesProjectAnalysisGroup(2011).
+GRanges API on top of a BAM file. Only the re-
+ThevariantcallformatandVCFtools.Bioinformat-
+quested regions are loaded, and they are optionally ics 27 2156–2158.
+cachedforfuturequeries.AProxyGRanges performs [5] Gentleman, R. C., Carey, V. J., Bates, D. M. and
+dynamic computations based on another GRanges. others(2004).Bioconductor:Opensoftwaredevel-
+This will enable a new generation of interactive ge- opmentforcomputationalbiologyandbioinformat-
+nomic visualization tools in R. An early adopter is ics. Genome Biol.5 R80.
+[6] Kent, W. J., Sugnet, C. W., Furey, T. S., Roskin,
+epivizr, the R interface to the web-based epiviz, a
+K.M.,Pringle,T.H.,Zahler,A.M.andHaus-
+web-based genome browser with supportfor general
+sler, D. (2002). The human genome browser at
+interactive graphics, including scatterplots and his- UCSC. Genome Res. 12 996–1006.
+tograms. [7] Kent, W. J., Zweig, A. S., Barber, G., Hin-
+richs, A. S. and Karolchik, D. (2010). BigWig
+5. CONCLUSION andBigBed:Enablingbrowsingoflargedistributed
+datasets. Bioinformatics26 2204–2207.
+We have introduced software and techniques for
+[8] Lawrence, M.,Huber,W.,Pag`es, H.,Aboyoun, P.,
+analyzing and plotting big genomic data. The Bio-
+Carlson, M.,Gentleman, R.,Morgan, M.and
+conductorprojectdistributesthesoftwareasanum- Carey, V.(2013).Softwareforcomputingandan-
+ber of different R packages, including Rsamtools, notating genomic ranges. PLoS Computational Bi-
+IRanges, GenomicRanges, GenomicAlignments, ology 9 e1003118.
+Biostrings, rtracklayer, biovizBase and BiocParal- [9] Lawrence, M.andWickham, H.(2012).plumbr:Mu-
+lel. The software enables the analyst to conserve table and dynamic data models. R package version
+0.6.6.
+computational resources, iteratively generate sum-
+[10] Li, H., Handsaker, B., Wysoker, A., Fennell, T.,
+maries and visualize data at arbitrary levels of de-
+Ruan, J.,Homer, N.,Marth, G.,Abecasis, G.,
+tail. These advances have helped to ensure that R
+Durbin, R. and 1000 Genome Project Data
+andBioconductorremainrelevantintheageofhigh- Processing Subgroup (2009). The Sequence
+throughput sequencing. We plan to continue in this Alignment/Map format and SAMtools. Bioinfor-
+direction by designing and implementing abstrac- matics 25 2078–2079.
+tions that enable user code to be agnostic to the [11] Ostrouchov, G.,Chen,W.-C.,Schmidt, D.andPa-
+mode of data storage, whether it be memory, files tel, P. (2012). Programming with big data in R.
+or databases. This will bring much needed agility to
+[12] Pag`es, H., Aboyoun, P., Gentleman, R. and
+resource allocation and will enable the user to be
+DebRoy, S. (2013). Biostrings: Stringobjects rep-
+more resourceful, without the burden of increased
+resenting biological sequences, and matching algo-
+complexity. rithms. R package version 2.25.6.
+[13] R Development Core Team (2010). R: A Lan-
+ACKNOWLEDGMENTS guage and Environment for Statistical Computing.
+R Foundation for Statistical Computing, Vienna,
+SupportedinpartbytheNationalHumanGenome
+Austria.
+Research Institute of the National Institutes of
+[14] Revolution Analytics and Weston, S. (2013). fore-
+Health (U41HG004059 to M. M.) and the National ach:ForeachloopingconstructforR.Rpackagever-
+Science Foundation (1247813 to M. M.). sion 1.4.1.
+M. LAWRENCEAND M. MORGAN
+[15] Wickham, H. (2011). The split-apply-combinestrategy plumbing of interactive graphics. Comput. Statist.
+for dataanalysis. Journal of Statistical Software 40 24 207–215. MR2506079
+1–29. [17] Yin, T., Lawrence, M. and Cook, D. (2013).
+[16] Wickham, H., Lawrence, M., Cook, D., Buja, A., biovizBase: Basic graphic utilities for visualization
+Hofmann, H. and Swayne, D. F. (2009). The of genomic data. R package version 1.9.1.

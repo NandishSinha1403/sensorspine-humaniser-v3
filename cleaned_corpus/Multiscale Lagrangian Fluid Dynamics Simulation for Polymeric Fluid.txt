@@ -1,0 +1,411 @@
+]hp-pmoc.scisyhp[
+2v7991.5090:viXra
+Multiscale Lagrangian Fluid Dynamics Simulation
+for Polymeric Fluid
+Takahiro Murashima1,2 and Takashi Taniguchi1,2
+1Department of Chemical Engineering,
+Kyoto University, Kyoto 615-8510, Japan
+2CREST, JST, Kawaguchi, Saitama 332-0012, Japan
+(Dated: March 31, 2022)
+We have developed a simulation technique of multiscale Lagrangian fluid dynamics to tackle
+hierarchical problems relating to historical dependency of polymeric fluid. We investigate flow
+dynamics of dilute polymeric fluid by using the multiscale simulation approach incorporating La-
+grangian particle fluid dynamics technique (the modified smoothed particle hydrodynamics) with
+stochastic coarse-grained polymer simulators (the dumbbell model). We have confirmed that our
+approach is nicely in agreement with the macroscopic results obtained by a constitutive equation
+corresponding to the dumbbell model, and observed microscopic thermal fluctuation appears in
+macroscopic fluid dynamics as dispersion phenomena.
+PACS numbers: 47.11.St, 47.50.-d, 83.10.Ff, 83.10.Gr, 83.10.Mj, 83.50.Ha
+Keywords: Multiscale simulation, Polymer rheology, CONNFFESSIT, Lagrangianfluid dynamics
+∗Electronic address: murasima@cheme.kyoto-u.ac.jp
+†Electronic address: taniguch@cheme.kyoto-u.ac.jp
+I. INTRODUCTION
+Polymer rheology is complicated and exhibits various phenomena, e.g. vortex growth,
+die swell, or Weissenberg effect, caused by a collaboration between microscopic dynamics of
+polymers and macroscopic fluid dynamics[1]. In order to investigate such complex fluids, we
+usually take either one of the following two approaches[2]. One is a fluid dynamics approach
+regarding whole system as a continuum from a macroscopic viewpoint, and the other is a
+molecular dynamics approach from a microscopic viewpoint. Although there is a significant
+difference among applicable time and lengths scale in these approaches, we can improve our
+comprehension of polymer rheology from the intercommunication between the different hi-
+erarchies through parameters in constitutive equations. A lot of constitutive equations have
+been proposed to investigate variety of polymer rheology, but they are not always applicable
+to any kinds of polymeric liquids and the generalization of them is a considerably difficult
+issue. Then, in order to treat more general polymer rheology, an available approach is to
+incorporate the fluid dynamics approach directly with the molecular dynamics approach
+without constitutive equations. CONNFFESSIT (Calculation of Non-Newtonian Flow: Fi-
+nite Elements and Stochastic Simulation Technique) proposed by Laso and O¨ttinger[3] is
+one of the hierarchical approaches without assuming constitutive equations, and is a pioneer
+work in the multiscale simulation field, communicating with macroscopic finite elements
+and microscopic ensembles of polymers. However, it is an extremely heavy technique due
+to remeshing process in the finite element method to solve macroscopic fluid dynamics. Af-
+ter updating the displacements of particles holding microscopic ensembles of polymers, it is
+needed to remesh the finite elements in order to preserve one-to-one correspondence between
+macroscopic elements and microscopic particles representing the center of mass of ensem-
+bles. To avoid thedifficulty ofremeshing, asemi-Lagrangianapproach[4] has beenproduced,
+where the convection terms are treated using a finite volume scheme, although this tech-
+nique is acceptable only when the local stress does not depend on the history of flow. The
+heterogeneous multiscale method with the fully Eulerian approach at macroscopic level[5, 6]
+is sufficiently practical when we consider historically independent fluids, e.g. simple fluids,
+or Newtonian fluids.
+In order to treat historical dependency associating with deformations and orientations of
+polymer coils and their entanglements, we develop a fully Lagrangian multiscale simulation
+method, in which fluid points embedding microscopic internal degrees of freedom move
+with the flow field. Some multiscale simulations are similar in the concept to our new
+method[7, 8]. However, these methods are involved and somewhat cumbersome, since they
+use the Eulerian and Lagrangian schemes alternatively in their numerical schemes. Our new
+simulation method is technically simple. By using our method, we can directly trace the
+material points retaining their strain and strain rate history and easily handle historically
+dependent fluids.
+Here we employ the modified smoothed particle hydrodynamics (MSPH) method[9] as a
+macroscopic solver. The MSPH method highly improves its accuracy especially at points
+near the boundary of the domain as compared with the conventional smoothed particle hy-
+drodynamics (SPH) method[10]. As a microscopic polymer simulation, we use the dumbbell
+model which is the simplest model of polymer in a dilute polymer solution and a standard
+one as used in CONNFFESSIT. An ensemble of the dumbbell model corresponds to an
+analytical model, e.g. the Maxwell model, and therefore we can verify the validity of our
+simulation results as a benchmark.
+We would like to mention Ellero et al.’s work since the first fully Lagrangian multiscale
+simulation method has been accomplished by them[11]. In their simulation, the normal SPH
+method has been employed to solve the macroscopic fluid dynamics. The SPH method fun-
+damentally belongs to a kind of difference methods, therefore the first derivative of arbitrary
+function is defined between two smoothed particles. However the MSPH method is a variant
+of least square fitting methods, the derivative is defined just on a corresponding smoothed
+particle in case of the MSPH method. The MSPH method is rather straightforward to apply
+to any differential equations than the original SPH method.
+The paper is organized as follows. In the next section we explain the multiscale La-
+grangian fluid dynamics method. We review the MSPH method and the dumbbell model
+there. In Section III, the hybrid simulation is applied to study start-up flows in a 2-
+dimensional channel. Section IV summarizes conclusions.
+II. MULTISCALE LAGRANGIAN FLUID DYNAMICS
+Cauchy’s continuum equation of motion serves as a starting point to consider general
+fluids:
+where ρ is the density of fluid, v is the flow velocity, t is time, σ is the stress tensor, and
+f is the body force. A convective term does not appear in the above equation because we
+treat fluids here in a Lagrangian manner. The stress tensor σ is represented by isotropic
+pressure p and the deviatoric stress tensor τ:
+where I isthe d×didentity matrix anddis the dimension of thespace. Usually, the pressure
+p is obtainable because of the incompressibility condition, but the deviatoric stress tensor τ
+is not, which arises from microscopic internal degrees of freedom. Since the tensor τ fully
+depends on microscopic states, the derivation of the tensor is considerably difficult especially
+in complex fluid cases such as polymer fluids. Even so, many constitutive relations for the
+tensor τ have been found phenomenologically or on the basis of microscopic consideration
+of polymer chains[12]. They are qualitatively useful in applying to polymer processing, even
+if they do not hold microscopically detailed structures. Because, these microscopic details
+are compressed to macroscopic parameters appearing in the constitutive relations.
+Polymeric fluids represent stress-strain and stress-strain rate historical dependency com-
+ing from microscopic polymer dynamics. The historical dependence of stress is essential
+in several polymeric phenomena such as strain hardening or shear thinning. In order to
+handle the effect of microscopic polymer dynamics we need to consider microscopic details
+omitted in the above constitutive equations. The easiest way to incorporate polymer dy-
+namics is to perform a molecular dynamics simulation of polymers, but such a simulation
+is impractical to investigate rheological behaviors due to the shortness of computationally
+accessible time. The other effective simulations have already been developed, and these sim-
+ulations have been found to represent not only qualitatively but also quantitatively sufficient
+results[13, 14]. Even so, there is still a gap to apply these simulation methods to polymeric
+flow problems since they are specialized to find the stress-strain and -strain rate relations
+in a small simulation box. If we treat such a simulation system so as to give a constitutive
+relation under any applied flow, the polymeric flow problems on which microscopic polymer
+dynamics gives essential influence become solvableby incorporating themicroscopic polymer
+simulation into a fluid dynamics simulation. Such a multiscale simulation method will be
+available within near future since computer technology is rapidly developing and parallel
+computing environments become easy to available. Therefore, we are addressing to advance
+computational techniques to fully utilize the high performance computing technology. The
+multiscale simulation technique become increasingly important in the future.
+In order to develop consistently effective techniques for a future multiscale simulation,
+first of all, we demand a Lagrangian method to solve fluid dynamics because of its historical
+dependence coming from the microscopic degrees of freedom. Secondly, highly parallel com-
+puting technique is necessary. We present such a multiscale parallel computing technique.
+We solve start-up flow problems of polymeric fluid in a 2-D channel as a benchmark test in
+the section III.
+A. Macroscopic Fluid Dynamics Simulation
+We mentioned the importance of historical dependence of microscopic systems incor-
+porated into the macroscopic system in the previous section. In order to simulate non-
+Newtonian fluids with a nonlinear relation between shear stress and strain rate, we have to
+solve the Cauchy’s equation of motion in a Lagrangian manner. If we use a Eulerian method
+to non-Newtonian fluids, we need to consider the convection of the stress from adjacent
+grids, which means the history of fluids is no longer maintained in the Eulerian manner
+without introducing auxiliary field such as orientation tensor field and a variable describing
+the stretch of polymer coils. In some trivial cases such as stationary flows it is easy to
+obtain the stream line and to know the path through which the fluids flowed in the past. In
+such cases, we are able to treat the non-Newtonian fluids even in the Eulerian framework by
+taking into account the convection of the stress[3]. However, their applications are limited
+to predictable cases. In usage of Lagrangian methods we can treat more general cases.
+Before we solve any differential equations, we have to know spatial derivatives of fields,
+for example ∇ · σ appearing in Cauchy’s equation of motion. In the Lagrangian picture,
+the distribution of fluid particles which are used as substitutes for Eulerian grids does not
+necessarily have a regular pattern and changes momentarily. So it is difficult to define the
+derivative values in the Lagrangian frame.
+Using some kernel functions to interpolate between the unstructured fluid particles, the
+SPH method accomplished to obtain average values of the derivatives[10]. Therefore, when
+we use the SPH method to solve a differential equation, we have to be aware of using the
+average values. The SPH derives the smoothed derivatives of fields even when the values
+are drastically changing among fluid particles.
+In order to remove the problem mentioned above, we implement the MSPH technique
+based on the Taylor expansion of the original SPH averages[9]. By using the MSPH method,
+we are available to obtain first and higher derivatives instead of the averaged derivatives
+which are given in the original SPH method. Once we calculate the derivative values on a
+fluid particle, or a calculation point, we have only to substitute them into the differential
+equations, and then we find their solutions by using a time integrating scheme, for example
+the velocity Verlet algorithm or the Runge-Kutta method. The MSPH method do not need
+any alternations of original differential equations, whereas the SPH method demand further
+considerations because the derivative of fields obtained by using SPH is the average value
+of the differences defined between fluid particles[11]. The distinction in their treatments
+results from an approximation accuracy of these methods: The approximation accuracy of
+SPH is the first order while that of MSPH is the second order.
+Here we summarize the MSPH method briefly (see ref.[9] for more information). This
+method can be regarded as a variant of unstructured grid methods and least square fitting
+techniques. Based on the SPH procedure, an average of discrete field f(x ) on fluid particles
+x are defined by weighted sum:
+where W(x) is a Gaussian type function of distance x within a finite region Ω. Originally,
+field f(x) is continuous, hereafter we use the following continuous representation:
+hf i = dxf W , (4)
+where f ≡ f(x) and W ≡ W(|ξ −x|). Then we obtain the following set of equations in
+accordance with the usual SPH procedure:
+hf i ≡ h∇ f i = dxf ∇ W , (5a)
+hf i ≡ h∇ ∇ f i = dxf ∇ ∇ W , (5b)
+where ∇ X denotes a spatial derivative of X with respect to the α-component of ξ, i.e.
+ξα. We assign coordinate axes to subscript and superscript Greek characters in the present
+paper. Substituting f in the above equations (5) to the following Taylor series of f around
+a reference position ξ represented as
+ξ ξ,α ξ,βγ
+the next equations are derived up to the second order in R:
+hf i = f h1i+f hRαi+ f hRβRγi, (7a)
+hf i = f h1i +f hRαi + f hRβRγi , (7b)
+hf i = f h1i +f hRαi + f hRβRγi . (7c)
+We can rewrite these equations (7) to the Matrix form;
+hf i h1i hRαi 1hRβRγi f
+    
+hf i = h1i hRαi 1hRβRγi f . (8)
+    
+ hf i   h1i hRαi 1hRβRγi  f 
+    
+The number of rows in Eq. (8) is seven in two dimensional space, whereas thirteen in
+three dimensional space. Considering the commutativity of spatial derivatives (∇ ∇ f =
+∇ ∇ f), we can reduce the number of rows in Eq. (8) from seven to six in two dimensions
+because of f = f , and from thirteen to ten in three dimensions;
+hf i h1i hRαi C(β,γ)hRβRγi f
+    
+hf i = h1i hRαi C(β,γ)hRβRγi f . (9)
+    
+    
+Here we introduce coefficients C(β,γ) ≡ 1− 1δ where δ is Kronecker’s delta.
+In order to obtain the differential values f ≡ ∇ f , our procedure is as follows. At
+first we calculate the average values h·i in Eq. (9) in the usual SPH manner, and then we
+solve the above linear equation (9) by using, for example, the LU decomposition.
+Here, we adopt a Gaussian kernel function W(x) firstly used in the MSPH method[9]:
+, if |x| ≤ 2h
+0, otherwise
+where d is a dimensionality of the space and the cut-off radius is 2h. The normalization
+parameter A equals to 1.04823, 1.10081 and 1.18516 for d = 1, 2 and 3, respectively. The
+density of each distributed particle ρ(ξ) is obtained by integrating the kernel function in the
+same manner as the ordinal SPH method:
+where m is mass of particle.
+Asabenchmarkofourmultiscalesimulation, weinvestigatetwotypesofmacroscopicsim-
+ulation with constitutive relations, Newtonian viscosity model (Newton model) andMaxwell
+constitutiveequation(Maxwell model). Newtonmodelissymbolicallyrepresentedbyadash-
+podwithaviscosityconstant η. ThedeviatoricstresstensorofNewtonmodelisproportional
+to strain rate:
+(cid:0) (cid:1)
+where κ is velocity gradient tensor defined as κ ≡ ∇v. Maxwell model is symbolically
+represented by connecting a dashpod with a viscosity constant η and a spring with an
+elastic constant G in series. Maxwell constitutive equation is expressed as follows:
+where λ is a relaxation time. The constants η in Eq. (13) and G are connected through
+η = Gλ.
+Assuming the deviatoric stress tensor τ in the Cauchy’s equation of motion (1) as to be
+Newton model, we obtain the Navier-Stokes equation:
+Even though we can solve the Navier-Stokes equation directly by using the MSPH method,
+we elaboratelysolve the Cauchy’s equation ofmotion(1)after obtaining thedeviatoric stress
+tensor τ to be applicable to general problems.
+We shortly mention how to determine the isotropic pressure p. When we consider high
+pressure case, e.g. a flow in a duct or shock wave, we can treat an incompressible fluid by
+solving the Poisson equation of pressure p as shown in Ref. [15]. In low pressure case, the
+effect of compressibility is negligibly small even if we assume a barotropic fluid p = p(ρ). In
+this work, we investigate a fluid in low pressure environment only.
+We investigate start up flow profiles obtained by solving the Cauchy’s equation of motion
+(1) with two different types of constitutive equations, Newton model (12) and Maxwell
+model (13). For convenience, we concentrate on the flow behavior between two parallel
+plates. Assuming translational symmetry for the z-direction which is parallel to plates
+and perpendicular to the flow direction, we can treat the present system in two dimensional
+space. At first, we prepare a rectangular system box (Lx·Ly) in which particles areregularly
+displaced as shown in Figure 1. We set the initial distance a between nearest neighbor
+particles, the mass of particles m and simulation time interval t as unity. The total number
+of particles N are L ×L . We set the thickness of plates l to 3a larger than h in order to
+maintain the density of fluid near the plates as much as that of bulk. We assume the fixed
+boundary condition for fluid particles on plates and the periodic boundary condition for the
+x-direction. Applying the body force f = (1.0×10 3,0.0)×m/(a2t2) to the fluid, the fluid
+flows toward the x-direction. Values of simulation parameters are summarized in Table I.
+The displacements of fluid particles are updated according to the following equation after
+solving the Cauchy’s equation of motion (1):
+where r is the position of fluid particle. In order to treat the time-derivative numerically,
+we discretize it as
+df fNew −fOld
+with the finite difference ∆t = 0.01t . We use the velocity-Verlet algorithm as time-integral
+scheme.
+Figures 2 and 3 represent the flow profiles in cases of Newton model and Maxwell model,
+respectively. From the positions of tracer particles we can extract their characters of flow
+behaviors. In case of Newton model, flow profiles show a plane Poiseuille flow, however,
+those of Maxwell model represent a plug flow like behavior when the elastic constant is very
+small and the relaxation time is very long. Maxwell model (13) corresponds to Newton
+model (12) in the limit λτ˙ → 0, while keeping η constant, which means that the elastic
+property of the spring can be negligible. Therefore, when the relaxation time λ becomes
+smaller, the flow behavior of Maxwell model approaches to that of Newton model.
+B. Microscopic Polymer Simulation
+In this study, we select the dumbbell model as microscopic model of polymer in our
+multiscale simulation since the dumbbell model is the simplest and in the statistical limit
+it corresponds to an analytical model, i.e. the Maxwell model. The dumbbell model is
+modeling a dilute polymeric fluid without entanglements between polymers. The dynamics
+of a dumbbell consists of elastic dynamics and thermal fluctuation.
+(cid:18) 2λ (cid:19) r λ
+where Q is end-to-end vector of the dumbbell, and Φ is the Gaussian white noise that is
+satisfying the following equations:
+α β ′ αβ ′
+We can derive the expression for the dumbbell model (17) from microscopic view points[16,
+17]. Forsimplicity, we only explain about the roles of each term here. The parentheses of the
+first term in Eq. (17) consists of Affine deformation and elastic dynamics. The relaxation
+time λ is related to the elastic constant G as discussed in the previous subsection. When the
+relaxation time of dumbbell is large, the dumbbell is easy to be extended since the elastic
+constant G = η/λ is small. The relaxation time of dumbbell also appears in the coefficient of
+second term in the right-hand-side of Eq. (17) through the fluctuation-dissipation theorem.
+The dumbbell with a long relaxation time is sensitive to the Affine deformation rather than
+the elastic relaxation and the thermal fluctuation. The averaged stress in a microscopic
+simulation system is represented by Kramers-Kirkwood formula:
+Generally speaking, the Kramers-Kirkwood formula consists of contributions from a solvent,
+intramolecular forces, external forces, dynamics of beads, and isotropic pressure[2]. To
+simplify our arguments, we only consider the effects of intramolecular forces and isotropic
+pressure in Eq. (19). This lead us to concentrate on the orientation and length of end-to-end
+vector of dumbbell.
+To update the end-to-end vector according to Eq. (17), we adopt the second order
+stochastic Runge-Kutta algorithm here[18]. This algorithm decreases order of numerical er-
+rorsfromO((∆t)2) containedinordinaryBrowniandynamics algorithmstoO((∆t)3). These
+errors are caused by its numerical algorithm not by the random noise. Initial conditions of
+dumbbells are prepared by performing the dumbbell simulation under a stationary condition
+over twice of the relaxation time.
+Figure 4 shows the stress history under a constant shear rate κ = 1.0/t with λ =
+100t and G = 0.01m/a comparing the dumbbell model and Maxwell model. The thermal
+fluctuation appears after the Newtonian viscosity η = τ/κ grows up to the zero shear
+viscosity, however it doesn’t appear or negligibly small in the transient region. This stress
+history process can be separated into two processes, elongation and rotation of dumbbells,
+respectively. The border line exists at more or less t/λ = 1. The stress tensor (19) is
+insensitive to the effect of random noise in the elongation process, since the orientations
+of dumbbells are almost same direction. In the rotation process, however, the angular
+velocityofdumbbellsissensitivetothelengthofend-to-endvector, andthereforethethermal
+fluctuation becomes influential. Increasing the number of dumbbells N , the fluctuation of
+stress is decreasing in proportional to N− by the law of large numbers in statistics because
+the stress is defined by astatistical average ofG(QQ−I) over N dumbbells as shown inEq.
+(19). We expect the dumbbell model corresponds to Maxwell model in the limit N → ∞.
+As shown in Fig. 4, the thermal fluctuation has been almost suppressed when N = 10000.
+C. Macro-micro Hybridization
+In the previous subsections IIA and IIB, we have introduced the simulation techniques
+of macroscopic fluid dynamics and microscopic polymer dynamics and explained about their
+features. Now we incorporate them in order to treat polymeric fluid dynamics. The main
+idea of our hybrid simulation is similar to that of CONNFFESSIT; we perform the polymer
+simulation in stead of the constitutive equation in order to obtain the stress tensor σ in
+Cauchy’s equation of motion (1).
+The procedure of our simulation is summarized to the following steps:
+1. Macroscopic fluid dynamics simulation to update r, v, and p.
+2. MSPH method to obtain ∇v.
+3. Microscopic polymer simulation to update τ.
+4. MSPH method to obtain ∇ · σ.
+5. Return to 1.
+We perform these processes every time steps. We adopt the linked list algorithm[19] to find
+a pair of particles at macroscopic fluid simulation in order to decrease the calculation time
+O(N2) to O(N) for N particles. In each step, we can perform the calculations on a particle
+independently from those of other particles, and therefore we benefit from usage of parallel
+computing.
+III. NUMERICAL RESULTS ON HYBRID SIMULATION
+Now we investigate the flow profiles of multiscale Lagrangian fluid dynamics simulation
+and compare the resultant flow profiles with the macroscopic results shown in Sec. IIA. We
+perform the multiscale simulation under the same condition explained in Sec. IIA, however
+we use the dumbbell model to obtain the deviatoric stress tensor τ. We set the number
+of dumbbells N in each fluid particle to 1000. Under the environment using 2×3.16 GHz
+Quad-CoreIntelXeonprocessor(8cores)andOpenMP(OpenMulti-Processing)programing
+interface, the calculation time for 100 cycles of the simulation procedure explained in the
+previous section IIC is about 2.5 minutes, which corresponds to t = 1.0t because of ∆t =
+0.01t .
+Figure5represents theflow behaviors obtained fromour new simulation technique. Com-
+paring between Figs. 3 and 5, the tendencies of these flows are almost similar, except for the
+thermal fluctuation observed in Fig. 5. When the relaxation time λ is small, the fluctuation
+of fluid becomes larger. There are two reasons. One reason is that the coefficient of random
+noise in Eq. (17) is large in λ small case, because of the fluctuation dissipation theorem.
+Another one is that time of elongation process, discussed in Sec. IIB, becomes short, and
+then the thermal fluctuation appears earlier.
+We have also performed the multiscale simulation with N = 10000. The resultant flow
+behaviors have been very close to those of the Maxwell model which are shown in Fig. 3,
+since the thermal fluctuation in this case has been almost suppressed as mentioned in Sec.
+IIB.
+Strictly speaking, the incompressibility doesn’t satisfied at some local regions in the
+present simulation. In order to improve this failure, we should solve the Poisson equation of
+isotropic pressure p[15].
+IV. CONCLUSION
+We have developed the multiscale Lagrangian fluid dynamics technique to simulate a
+hierarchical polymeric fluid where the stress on each particle consisting of a large number
+of molecules depends on history of shear strain and/or shear rate. We have investigated the
+simplest case of polymeric flow problems, and then obtained the desirable results.
+Our multiscale simulation has extensibilities to deal with more complex phenomena on
+polymeric fluid by upgrading the dumbbell model to either a direct polymer simulation such
+as the Kremer-Grest model[20] or a more effective model to introduce the idea of poly-
+mer reptation and entanglements such as the slip-link model[13] and the primitive chain
+network model[14]. Our application to flow problems on complex boundaries, e.g. con-
+traction/expansion flow or free boundary flow, can be straightforward. Microscopic level
+simulations are independent of others, and therefore they can be highly parallelized.
+Although we referred only to polymeric fluids in the present paper, our multiscale ap-
+proach can be applied to general flow problems, e.g. granular materials and powder systems,
+only if the density of materials is sufficiently uniform in the macroscopic scale in the frame-
+work of this paper. When we apply our multiscale simulation to nonuniform density case,
+we need to delete the incompressibility condition at macroscopic level, and we should con-
+sider the grand canonical ensemble at microscopic level simulations in order to exchange
+microscopic internal freedom degrees among macroscopic particles.
+Acknowledgements
+We would like to thank all members in the group of Multiscale Simulation for Softmatters
+for their advices and fruitful discussions. This research was supported by Core Research
+for Evolutional Science and Technology (CREST) of Japan Science and Technology Agency
+Corporation (JST).
+[1] Boger, D. V.; Walters, K. Rheological phenomena in focus; Elsevier: Amsterdam ; London,
+1993.
+[2] Bird, R. B.; Armstrong, R. C.; Hassager, O. Dynamics of polymeric liquids; Wiley: New York
+; Chichester, 1987.
+[3] Laso, M.; O¨ttinger, H. JOURNAL OF NON-NEWTONIAN FLUID MECHANICS 1993, 47,
+1-20.
+[4] Phillips, T.; Williams, A. JOURNAL OF NON-NEWTONIAN FLUID MECHANICS 1999,
+87, 215-246.
+[5] Ren, W.; Vanden-Eijnden, E.; Maragakis, P.; E, W. JOURNAL OF CHEMICAL PHYSICS
+2005, 123, 134109.
+[6] Yasuda, S.; Yamamoto, R. PHYSICS OF FLUIDS 2008, 20, 113101.
+[7] Laso, M.; Picasso, M.; Ottinger, H. AICHE JOURNAL 1997, 43, 877-892.
+[8] Halin, P.; Lielens, G.; Keunings, R.; Legat, V. JOURNAL OF NON-NEWTONIAN FLUID
+MECHANICS 1998, 79, 387-403.
+[9] Zhang, G.; Batra, R. COMPUTATIONAL MECHANICS 2004, 34, 137-146.
+[10] Monaghan, J. REPORTS ON PROGRESS IN PHYSICS 2005, 68, 1703-1759.
+[11] Ellero, M.; Espanol, P.; Flekkoy, E. PHYSICAL REVIEW E 2003, 68, 041504.
+[12] Doi, M.; Edwards, S. F. The theory of polymer dynamics; Clarendon Press: Oxford, 1986.
+[13] Shanbhag, S.; Larson, R.; Takimoto, J.; Doi, M. PHYSICAL REVIEW LETTERS 2001, 87,
+195502.
+[14] Masubuchi, Y.; Takimoto, J.; Koyama, K.; Ianniruberto, G.; Marrucci, G.; Greco, F. JOUR-
+NAL OF CHEMICAL PHYSICS 2001, 115, 4387-4394.
+[15] Koshizuka, S.; Oka, Y. NUCLEAR SCIENCE AND ENGINEERING 1996, 123, 421-434.
+[16] O¨ttinger, H. C. Stochastic processes in polymeric fluids : tools and examples for developing
+simulation algorithms; Springer: Berlin ; New York, 1996.
+[17] Larson, R. G. The structure and rheology of complex fluids; Oxford University Press: New
+York ; Oxford, 1999.
+[18] Branka, A.; Heyes, D. PHYSICAL REVIEW E 1998, 58, 2611-2615.
+[19] Rapaport, D. C. The art of molecular dynamics simulation; Cambridge University Press:
+Cambridge, 2003.
+[20] Kremer, K.; Grest, G. JOURNAL OF CHEMICAL PHYSICS 1990, 92, 5057-5086.
+TABLE I: Fixed parameter values in this paper.
+∆t 1.0×10 2t
+(L ,L ) (20a,30a)
+f (1.0×10 3,0.0)×m/(a2t2)
+FIG. 1: Initial configuration for Lagrangian fluid simulation.
+t=50t t=100t t=150t
+FIG. 2: Profiles of Newtonian flow (t = 50t ,100t ,150t ).
+t=50t t=100t t=150t
+FIG. 3: Flow profiles in case of Maxwell model (t = 50t ,100t ,150t ) with λ = 10.0t and
+G = 0.1m/a (upper group), or λ = 1000t and G = 0.001m/a (lower group). In both cases,
+FIG. 4: The stress histories under the constant shear rate κ = 1.0/t for the systems consists of
+the dumbbells with N = 100, N = 1000, and N = 10000, and for the Maxwell constitutive
+equation. The thermal fluctuation depends on the number of dumbbells.
+t=50t t=100t t=150t
+FIG. 5: Flow profiles obtained by performing multiscale Lagrangian fluid dynamics (t =
+50t ,100t ,150t ) with λ = 10.0t and G = 0.1m/a (upper group), or λ = 1000t and
+G = 0.001m/a (lower group). Each fluid particle has 1000 dumbbells instead of Maxwell model.

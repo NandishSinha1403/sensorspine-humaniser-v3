@@ -1,0 +1,796 @@
+Bayesian design of synthetic biological systems
+Chris Barnes, Daniel Silk, Xia Sheng and Michael P.H. Stumpf
+Theoretical Systems Biology Group, Division of Molecular Biosciences,
+Imperial College London, London SW7 2AZ, UK
+Email: christopher.barnes@imperial.ac.uk, m.stumpf@imperial.ac.uk
+Hereweintroduceanewdesignframeworkforsyntheticbiologythatexploitstheadvantagesof
+Bayesianmodelselection. Wewillarguethatthedifferencebetweeninferenceanddesignisthatin
+the former we try to reconstruct the system that has given rise to the data that we observe, while
+inthelatter,weseektoconstructthesystemthatproducesthedatathatwewouldliketoobserve,
+i.e. the desired behavior. Our approach allows us to exploit methods from Bayesian statistics,
+including efficient exploration of models spaces and high-dimensional parameter spaces, and the
+ability to rank models with respect to their ability to generate certain types of data. Bayesian
+model selection furthermore automatically strikes a balance between complexity and (predictive
+or explanatory) performance of mathematical models. In order to deal with the complexities of
+molecular systems we employ an approximate Bayesian computation scheme which only requires
+us to simulate from different competing models in order to arrive at rational criteria for choosing
+between them. We illustrate the advantages resulting from combining the design and modeling
+(or in-silico prototyping) stages currently seen as separate in synthetic biology by reference to
+deterministicandstochasticmodelsystemsexhibitingadaptiveandswitch-likebehavior,aswellas
+bacterial two-component signaling systems.
+1 Introduction
+As we are beginning to understand the mechanisms governing biological systems we are starting to
+identify potential ways of guiding or controlling the behavior of cellular and molecular systems. Ra-
+tionally reengineering organisms for biomedical or biotechnological purposes has become the central
+aim of the fledgling discipline of synthetic biology. By redirecting regulatory and physical interactions
+or by altering molecular binding affinities we may, for example, control metabolic processes [1, 2]
+or alter intra and inter cellular communication and decision making processes [3, 4]. The range of
+potential applications of such engineered systems is vast: designing microbes for biofuel production
+[5, 6] and bioremediation [7]; developing control strategies which drive stem cells through the various
+decisions to become terminally differentiated (or back) [8, 9], with the aim of developing novel thera-
+peutics [10, 11]; construction of new drug-delivery systems with homing microbes delivering molecular
+medicines directly to the site where they are needed [12]; use of bacteria or bacterial populations
+(employing swarming and quorum sensing) as biosensors [13]; and gaining better understanding of all
+manner of biological systems by systematically probing their underlying molecular machinery.
+Arangeoftoolsandbuildingblocksforsuchengineeredbiologicalsystemsarenowavailablewhich
+allow us to, at least in principle, build such systems from simple and reusable biological components
+[14]. Inelectronicsystems, suchmodularityhasbeencrucialandhasallowedthecost-effectiveproduc-
+tion of reliable components that can be combined to produce desired outputs. Biology, however, poses
+]NM.oib-q[
+1v6401.3011:viXra
+different and novel challenges that are intimately linked to the biophysical and biochemical properties
+of biomolecules and the media in which they are suspended. Especially in crowded environments such
+as found inside living cells the lack of insulation between different components, i.e. the very real
+possibility of undesired cross talk, can create problems; with increasing miniaturization similar, albeit
+quantum effects, are now also surfacing in electronic circuits [15].
+1A Designobjectives 1B Modeldefinitions
+inputI outputO
+1C Systemevolution 1D Posteriordistribution
+1 2 3 4 5 p(M | D)
+population
+Figure 1: Bayesian approach to system design. A) The design objectives are encoded by the speci-
+fication of input and output characteristics. B) One or more competing designs for the system are
+specified together with priors on the parameters. A distance function, ∆(x,O), relates model output
+to the desired output characteristic. C) The system is evolved using sequential Monte Carlo. Each
+population more accurately approximates the desired behavior. D) The model posterior probability
+encodes the ability of each design to achieve the desired behavior. The parameter posterior shows
+parameters that are sensitive or insensitive to the input-output specification.
+Assyntheticbiologygearsuptobringengineeringmethodsandtoolstobearonbiologicalproblems
+the way in which we manipulate biological systems and processes is likely to change. Historically, each
+new branch of engineering has gone through a phase of what can be described as tinkering before
+rationally planned and executed designs became common place. Arguably, this is the current state
+of synthetic biology and it has indeed been suggested that the complexity of synthetic biological
+systems over the past decade has reached a plateau [16]. From the earliest days, explicit quantitative
+modeling of systems has been integral to the vision and practice of synthetic biology and it will
+become increasingly important in the future. The ability to model how a natural or synthetic system
+will perform under controlled conditions must in fact be seen as one of the hallmarks of success of the
+integrative approaches taken by systems and synthetic biology.
+Here we present a statistical approach to the design of synthetic biological systems that utilizes
+methods from Bayesian statistics to train models according to specified input-output characteristics.
+It incorporates modeling and automated design and is general in the sense that it can be applied
+to any system that can be described by a mathematical model which can be simulated. Because of
+the statistical nature of this approach, previously challenging problems such as handling stochastic
+models, accounting for kinetic parameter uncertainty and incorporating environmental stochasticity
+can all be handled in a straightforward and consistent manner.
+2 Bayesian approach to system design
+The question of how to design a system to perform a specified task can be viewed as an analogue to
+reverse engineering. In design we want to elucidate the most appropriate system to achieve our design
+objectives; in reverse engineering we aim to infer the most probable system structure and dynamics
+that can give rise to some observational data. In this respect, the design question can be viewed as
+statistical inference on data we wish to observe.
+In the Bayesian approach to statistical inference the posterior distribution is the quantity of in-
+terest and this is given by the normalized product of the likelihood and the prior. In most practical
+applications the posterior distribution cannot be derived analytically but if the likelihood (and prior)
+can be expressed mathematically we can use Monte Carlo methods to sample from the posterior. In
+many cases where the model structure is complex the likelihood cannot be written in closed form
+and traditional Monte Carlo techniques cannot be applied. These include inference for the types of
+stochastic processes encountered in systems and synthetic biology. In these cases a family of tech-
+niques known collectively as approximate Bayesian computation (ABC) can be applied: these use
+model simulations to approximate the posterior distribution directly. Here we use a sequential Monte
+Carlo ABC algorithm known as ABC SMC to move from the prior to the approximate posterior via a
+series of intermediate distributions [17]. This framework can also be used to perform Bayesian model
+selection [18] and has been implemented in the software package ABC-SysBio [19].
+Figure 1 depicts the approach presented here. The design objectives are first specified through
+input-outputcharacteristics. Herethesehavebeendepictedasasingletimeseries, thoughthemethod
+can be applied in a much broader sense with multiple inputs and outputs. A set of competing designs
+isthenspecifiedthroughdeterministicorstochasticmodelseachcontainingasetofkineticparameters
+andassociatedpriordistributions. Thedistancefunctionmeasuresthediscrepancybetweenthemodel
+outputandtheobjective. Inprincipalitispossibletospecifyadistributionovertheobjectiveandeach
+model could also contain experimental error. The ABC SMC algorithm then automatically evolves
+the set of models towards the desired design objectives. The results are a set of posterior probabilities
+representing the probability for each design to achieve the specified design objectives in addition to
+the posterior probability distribution of the associated kinetic parameters. This approach is similar in
+spirit to some existing methods for the automated design of genetic networks such as those adopting
+evolutionary algorithms [20, 21], Monte Carlo methods [22, 23] or optimization [24, 25, 26] but the
+advantagesofourmethodovertraditionalonesarethatwecanutilizepowerfulconceptsfromBayesian
+statistics in the design of complex biological systems, including
+the rational comparison of models under parameter uncertainty using Bayesian model selection
+which automatically accounts for model complexity (number of parameters) and robustness to
+parameter uncertainty
+aposteriordistributionoverpossibledesignparametervaluesthatcanbeanalyzedforparameter
+sensitivity and robustness and provide credible limits on design parameters
+the treatment of stochastic systems at the design stage including the design of systems with
+required probability distributions on system components.
+methods for the efficient exploration of high dimensional parameter space
+In the following we demonstrate the power of this approach by examining, from this new perspec-
+tive, systems that have been of interest in the recent literature. First we consider systems that are
+1 A 2 A 3 A 4 A
+B C B C B C B C
+5 A 6 A 7 A 8 A
+B C B C B C B C
+9 A 10 A 11 A
+B C B C B C
+1 2 3 4 5 6 7 8 9 10 11
+1 2 3 4 5 6 7 8 9 10 11
+−1.0 0.5 K_AB
+−3 0 2 k_AC
+−1.0 0.5 K_AC
+−3 0 2 k_BC
+−1.0 0.5 K_BC
+2B −3 0 2 k_FA
+−1.0 0.5 K_FA
+−3 0 2 k_FB
+−1.0 0.5 K_FB
+−3 0 2 k_IA
+−1.0 0.5 K_IA
+Figure 2: Biochemical adaptation. A) 11 networks capable of biochemical adaptation. A,B,C rep-
+resent enzymes that catalyze reactions in their active state. For example A B indicates that A
+converts B from its inactive to active state and A B indicates that A converts B from its active
+to inactive state. The input is applied to species A and the output is taken to be the concentration
+of the active form of C. The concentrations of active and inactive forms sum to 1. Reactions with
+no origin node refer to background activating/deactivations enzymes. B) Posterior probability for
+achieving biochemical adaptation when there is no cooperativity. C) Posterior probability for achiev-
+ing biochemical adaptation when cooperativity is included. The error bars in panels B and C indicate
+the variability in the marginal model posteriors over three separate runs. D) Parameter posterior
+distribution, represented by univariate and bivariate marginal distributions, for model 11 in the case
+of no cooperativity.
+capable of biochemical adaptation [27]. We then look at the ability of two bacterial two component
+system (TCS) topologies to achieve particular input-output behaviors; and finally we finish with an
+analysis of designs for a stochastic toggle switch with no cooperative binding at the promoter.
+3 Biochemical adaptation
+Biochemicaladaptationreferstotheabilityofasystemtorespondtoaninputsignalandreturntothe
+pre-stimulus steady state (Figure 1A). Ma et al [27] identified two three-node network topologies that
+are necessary for biochemical adaptation: a negative feedback loop with a buffering node (NFBLB)
+and an incoherent feedforward loop with a proportioner node (IFFLP). Within these categories they
+identifiedelevensimplenetworksthatwerecapableofadaptation(Figure2A).WeappliedtheBayesian
+design approach to these eleven networks using Michaelis-Menten kinetic models with and without
+cooperativity(seeappendixBfortheordinarydifferentialequations(ODEs)describingthesemodels).
+The desired output characteristics were defined through the adaptation efficiency, E, and sensitivity,
+S, given by
+(cid:12) (cid:12) (cid:12) (cid:12)
+(cid:12)(O O )/O (cid:12) (cid:12)(O O )/O (cid:12)
+E = (cid:12) 2 − 1 1(cid:12) S = (cid:12) peak − 1 1(cid:12),
+(cid:12) (cid:12) (cid:12) (cid:12)
+(cid:12) 2 1 1 (cid:12) (cid:12) 2 1 1 (cid:12)
+where I ,I are the input values (here fixed at 0.5 and 0.6 respectively), O ,O are the output steady
+state levels before and after the input change and O is the maximal transient output level. We
+defined the two component distance to be (cid:15) = E,S 1 such that as (cid:15) decreases the behavior ap-
+proaches the desired behavior. The final population was defined to obey the toletances (cid:15) = 0.1,1.0 ,
+which defines close to perfect adaptation (when O O O /50) and a fractional response equal to
+the fractional change in input.
+The results of the model selection are shown in Figure 2 (B and C). When cooperativity is not
+included the most robust designs for producing the desired input-output characteristics are the inco-
+herent feedforward loops, but when cooperativity is added the posterior shifts significantly towards
+the negative feedback topology. If a system with these requirements were to be implemented then
+not only would designs 11 and 4 be clear candidates for further study, but many of the designs can
+be effectively ruled out and the ranking of the models provides a clear strategy for an experimental
+programme. These results also illustrate how small changes in context or incomplete understanding
+of a system can produce a large change in the most robust design. The Bayesian framework allows
+us to incorporate such uncertainty — or safeguard against our ignorance — naturally into the design
+process.
+The posterior distribution provides information on which parameters are correlated and which are
+themostsensitivetothedesiredbehavior. Theposteriorformodel11undernocooperativityisshown
+in Figure 2D, where the ODE model is given by
+dA (1 A) A
+= Ik − F k
+dB (1 B) B
+= Ak − F k
+dC (1 C) C
+= Ak − Bk ,
+dt (1 C)+K − C +K
+where X = A,B,C corresponds to the concentrations of the active forms of proteins (1 X cor-
+responds to the concentrations of the inactive form). I represents the input signal and the k and
+K represent the reaction rate parameters (of which there are 12 in total). F and F represent
+background deactivating enzymes with concentration fixed to 0.5.
+Theposteriorshowsinparticularthattheparametersforthebackgrounddeactivatingenzyme(k
+and K ) on node B are correlated, and that K should be large; this is exactly the requirement for
+the linear regime necessary for the IFFLP system to achieve adaptation [27]. A principal component
+analysis of the posterior (Figure S1) shows other correlated parameters on the first few principal
+components. The last principal component describes the direction of least variance and therefore the
+most sensitive parameters. From this we can deduce for example that the reaction between nodes A
+and C is relatively unimportant. A similar analysis for model 4 in the case of cooperativity (Figures
+S2 and S3) shows for example that the behavior is insensitive to the values of the Hill coefficients and
+the details of the reaction between nodes A and C.
+4 Robust oscillator design
+Biochemical oscillations are increasingly being implemented in various synthetic systems [28, 29, 30,
+31]. ArecentstudybyTsaiet al[32]comparedtheabilityoffivesmallnetworkstoachieveoscillations.
+ThefivedesignsareshowninFigure3Awhereeachnoderepresentstheactiveformofaprotein, edges
+represent enzymatic reactions and thicker edges represent increased feedback strength. We applied
+our Bayesian design methodology to the original problem and further investigated the ability of these
+designs, provided in detail in appendix C, to achieve particular amplitude-frequency values.
+1 A 2 A 3 A
+C B C B C B
+Figure 3: Robust oscillator models. A) 5 oscillator models. Model 1 is a loop of repressive enzymatic
+reactions. Models 2 and 3 have an additional positive feedback loop on node A with the feedback
+strength stronger in model 3 (represented by the thicker loop). Models 4 and 5 have an additional
+negative feedback loop on node A with the feedback strength stronger in model 5. B) Posterior
+probability for achieving Hopf bifurcation type limit cycle oscillations. C) Posterior probabilities for
+speciesAachievingoscillationswithamplitudeof0.1andafrequencyof1Hz. D)Posteriorprobabilities
+for species C achieving oscillations with amplitude of 0.1 and a frequency of 1Hz. The error bars in
+panels B, C and D indicate the variability in the marginal model posteriors over three separate runs.
+Figure 3B shows the posterior probability for each model to achieve limit cycle behavior induced
+by a Hopf bifurcation. The addition of the negative feedback loop in models 4 and 5 does not improve
+the ability to achieve oscillations. We find that the addition of a positive feedback loop on species A
+in models 2 and 3 increases the ability of the system to achieve limit cycle behavior, but no significant
+increase in the posterior probability is provided by increasing the feedback strength. This is in conflict
+with the original study that found that model 3 outperformed model 2 [32]. Our approach does
+sample parameter space predominantly in regions where the desired behavior is more likely, rather
+than entirely at random as was done in the previous study; on balance this suggests that the posterior
+probability for delivering robust oscillations is approximately the same for models 2 and 3.
+Moreinsightcanbegainedintothisdiscrepancybyspecifyingaparticularfrequencyandamplitude
+oftheoscillatorasthedesiredoutputbehavior. Figures3CandDshowthemodelposteriorprobability
+after requiring an amplitude of 0.1 and a frequency of 1.0 Hz on species A and C respectively. The
+first thing to note is that the model posterior is significantly different in the two cases. When the
+constraintsareappliedtospeciesA,model3isfavoredwiththeincreaseinfeedbackstrengthdecreasing
+theabilitytoreachthespecifiedbehavior. WhentheconditionsareappliedtospeciesC(andspeciesB
+bysymmetry)wegetaposteriorthatmoreresemblestheoriginalfindings;thattheincreaseinfeedback
+strength does indeed increase the ability to reach the specified oscillations. Thus the posterior for the
+Hopf bifurcation behavior represents a sum over all possible oscillator characteristics; in a manner
+that is reminiscent of Bayesian model averaging.
+If we examine the posterior distribution and the principal component analysis for model 2 to
+achieve Hopf bifurcations (Figures S4 and S5), we can see that the parameters k and k , which
+are the strengths of the deactivating reactions on nodes A and B, are constrained to be similar in
+magnitude to k . We also see that within this model the feedback strength, k , does not affect the
+dynamics significantly. Here, and elsewhere, we can use the posterior distributions in order to gain
+insights into the sensitivity and robustness of the system to variations in parameters, irrespective of
+whether the system’s dynamics are deterministic or stochastic: our ABC SMC framework allows us
+to extract such information on the fly as part of the sequential design process.
+5 Bacterial two component systems
+Two component systems (TCS) allow bacteria to sense external environmental stimuli and relay in-
+formation into the cell, e.g. to the gene expression apparatus. They consist of a histidine kinase
+(HK) that autophosphorylates upon interaction with a specific stimulus. The phosphate group is then
+passed on to a cognate response regulator protein (RR) which, once phosphorylated, can regulate
+transcription [33].
+Naturally occurring TCS differ in the number of phosphate binding domains. In the most common
+formtherearetwophosphatebindingdomains(Figure4A)butanalternativeformexiststhatconsists
+ofaphosphorelaymechanismwithfourphosphatebindingdomains(Figure4B).Theseshallbereferred
+to as the orthodox and unorthodox TCSs, respectively [34]. The reason for the existence of two forms
+of TCS remains largely unknown but it has been demonstrated that the phosphorelay is robust to
+noise and can provide an ultrasensitive response to stimuli [34, 35], whereas the orthodox system
+can provide behavior that is independent of the concentrations of its components [36]. Here we have
+applied the Bayesian approach to directly compare the ability of orthodox and unorthodox designs to
+achieve various input-output behaviors, using ODE models similar to ones described previously [34]
+(see appendix D).
+Figures 4C-F show four types of behaviors that may be desired in synthetic TCS systems (e.g. for
+bioremediation or biopharmaceutical applications), and the corresponding posterior probabilities of
+the orthodox and unorthodox models to achieve them. In Figure 4C the specified behavior is that of
+a fast response to a square pulse input signal. That is the output should show a maximum within 0.1
+secondsafterthepulsestartsandaminimum0.1secondsafterthepulseends. Ascanbeseenfromthe
+posterior probabilities, both models achieve this behavior easily, as one would expect from a signaling
+system, with the orthodox system slightly outperforming the unorthodox system. In Figure 4D the
+ability of the two systems to achieve a steady output state for t > 2 seconds under a constant input
+signal is examined, and again both systems perform comparably with the orthodox system appearing
+slightly more favorable.
+In Figure 4E the input signal is a high frequency sinusoid with a mean of 0.6, and the desired
+output is a constant signal with the same mean and root mean square < 0.3; this would mimic a
+system that is robust to high-frequency noise. The output trajectories at some intermediate and final
+populations are shown in Figure S6. In this example the unorthodox system clearly outperforms
+the orthodox system, which indicates the increased robust to noisy signals that comes with the relay
+architecture [34]. But the direct comparison of the two models’ ability to cope with noise, which is
+becoming possible in this approach, also reveals some unexpected characteristics: inspection of the
+posterior distribution (Figure S7) shows that all the dephosphorylation reaction rates, k ,k ,k , are
+0 2 4 6 8 10
+noitartnecnoc
+output, RRp
+orth unorth
+3A 3C 3D 3E 3F
+input, S input, S
+output, RRp output, RRp
+output, RRp
+0 2 4 6 8 10 0 2 4 6 8 10 0 2 4 6 8 10
+time time time
+orth unorth orth unorth orth unorth
+model model model
+Figure 4: Bacterial two component systems. A) Orthodox system where HK denotes the histidine
+kinase and RR the response regulator, both of which have phosphorylated forms, HKp and RRp.
+Arrows represent reactions involving phosphate groups and the k represent the rate parameters. S
+is the input stimulus signal that causes autophosphorylation of the histidine kinase. B) Phosphorelay
+system with three phosphate-binding domains, where H, D refer to histidine and aspartate domains
+respectively. C-F) Specified input-output behavior (above) and posterior probabilities for the two
+designs to achieve it (below). The input signal corresponds to the stimulus, S, and the output signal
+isrepresentedbytheconcentrationofphosphorylatedresponseregulator,RRp. Theerrorbarsindicate
+the variability in the marginal model posteriors over three separate runs.
+minimized while the rate of the signal induced autophosphorylation (k ) is large. Thus the noise
+reduction mechanism in the unorthodox system works by saturating the system.
+In Figure 4F the input is again a step function but the output is more specific; it much reach to
+> 0.8anddropto< 0.2within0.5secondsofthepulsestartandend, respectively, thusapproximately
+reproducing the input. Figure S8 shows the evolution of the system in this case. Here the orthodox
+model clearly outperforms the unorthodox model. Inspection of the posterior distribution (Figure S9)
+shows that both the rate of the signal induced autophosphorylation and the rate of phosphorylation of
+the response regulator by the histidine kinase, k ,k , are large while the rate of dephosphorylation of
+the response regulator, k , is small. This ensures that the shape of the signal is transferred faithfully
+through the system.
+6 Stochastic genetic toggle switch without cooperativity
+The genetic toggle switch is a synthetic realization of a bistable switch that forms the basis of cellular
+memory [37]. It is formed by two genes A and B, whose respective proteins repress the production
+of the other protein; protein A represses the production of protein B and vice versa (Figure 5). The
+presence of an interaction with inducer molecules allows the system to switch between steady states
+with the probability of spontaneous switching low enough such that, in the absence of an interaction,
+the system will effectively remain in its appropriate steady state indefinitely.
+Here we consider four versions of the stochastic genetic toggle switch that are all bistable without
+the requirement for cooperative binding of the proteins to the gene promoter [38]. Note that the
+deterministic models are not necessarily bistable; these are shown in Figure 5A and consist of the
+basic toggle switch, an exclusive version containing only one promoter, a version that includes bound
+repressor degradation (BRD), and a version containing a protein-protein interaction between A and
+B with the resulting complex nonfunctional. The additional reactions are are always to reduce the
+probability of the ’deadlock’ state where both A and B are bound to the promotors of B and A
+respectively [38]. We modeled the switches using a continuous time Markov jump process which
+obeys the chemical master equation. Only protein level reactions were modeled which makes the
+modelssimpler(andfastertosimulate)whileretainingtheimportantbehavior. Thestochasticmodels
+for all four switches are given in appendix E. For such complicated stochastic dynamical systems
+the advantages of a Bayesian perspective over conventional model design strategies (based e.g. on
+optimization) come to the fore: without an appreciation of the whole distribution choice of the best
+model would be subject to considerable uncertainty.
+S R k9 S R k10
+gA gB gA gB
+S R S R AB
+gA gB gA gB
+0 20 40 60 80 100
+S R output, B
+0 20 40 k2
+0 20 40 k4
+0 20 40 k6
+0 20 40 k7
+Figure 5: Stochastic toggle switch. A) Four different designs for a toggle switch without cooperative
+binding. Going clockwise from top left we have the basic switch, the exclusive switch where there is
+onlyonerepressorsite,thebasicswitchwithboundrepressordegradation(BRD),andthebasicswitch
+with a protein-protein interaction. Genes gA,gB express proteins A,B and S,R represent inducer
+molecules. The species AB represents complex formation. The rate constants for the reactions are
+shown for the exclusive switch (protein degradation and transcription factor dissociation from the
+promoter are not shown). B) The specified input-output behavior. C) The posterior probabilities for
+each model to achieve the toggle switch behavior. D) Parameter posterior distribution, represented
+by univariate and bivariate marginal distributions, for model 2 (exclusive switch).
+Figure 5B shows the desired toggle switch behavior. The inducer S is added between t = 10 and
+t = 30, after which the level of protein B should reach a steady state with a mean number of 40.
+Between t = 60 and t = 80 the inducer R is added after which the level of protein B should drop
+to zero. The inducer numbers are both assumed to be 40 molecules which is fixed in the specified
+range. The desired output behavior was specified via the two component distance metric, defined to
+be (cid:15) = d ,d ,
+(cid:80) t ∈ α (x t − y)2 d 2 =
+(cid:115)(cid:80)
+t ∈ β (x t − 0)2 ,
+where x is the number of protein B at time t, y is the target (here fixed at 40), α = t : 30 < t 60 ,
+β = t : 0 < t 10 and 80 < t 100 , n = #α and n = #β. The final population was defined to
+be (cid:15) = 7.0,0.05 . Here d represents the distance in the ”on” region and d represents the distance
+in the “off” region.
+Figure S10 shows the evolution of the stochastic simulations towards the desired behavior. Figure
+5Cshowstheposteriorprobabilitiesforeachsystemtoachievethespecifiedbehavior,andinparticular
+demonstrates that the exclusive toggle switch outperforms all the others. This chimes with intuition,
+since the exclusive switch removes the possibility of the deadlock state without the addition of any
+extra reactions. The fact that the BRD switch performs worse than the original toggle shows that the
+addition of the two extra degradation reactions does not offer a great enough performance increase for
+the extra parameters, a manifestation of the parsimony principle or Occam’s razor which is inherent
+to the Bayesian model selection framework used here.
+The reactions that comprise the exclusive switch are given by
+A gB B+gA+P
+A+gB+P B gA
+−→ − −−→ −
+where gA,gB represent the gene promotors for protein A,B respectively and are fixed at one copy,
+A gB,B gA represent the bound transcription factors and S,R represent the inducer molecules.
+The P species, fixed to be one copy, ensures only A or B can be bound at any one time. Examination
+of the posterior distribution for this model, Figure 5D, clearly shows a large correlation between k
+and k , which are the production and decay rates of protein B, respectively. This is clearly seen in
+the principal components (Figure S11) through the combination k +k dominating the first PC and
+the combination k k dominating the last PC. Thus the system is sensitive to only the difference
+in these rates which is typical in birth-death processes.
+7 Discussion
+Inthispaperwehavepresentedanewmethodforthedesignofsyntheticbiologicalsystemsemploying
+ideas from Bayesian statistics. We have demonstrated its utility and generality on three different
+systems spanning biochemical, signaling and genetic networks, as well as oscillatory systems. This
+methodhasadvantagesovertraditionaldesignapproachesinthatthemodelingisincorporateddirectly
+into the design stage. The statistical nature of the method has many attractive features including the
+handling of stochastic systems, the ability to perform model selection and the handling of parameter
+uncertainty in a well defined manner. We used the ABC-SysBio software [19] which takes as input a
+set of SBML files and as such can be used by bioengineers and experimentalists to rationally compare
+their competing designs for a system. By using this method we hope that the implementation time of
+synthetic systems can be reduced by defining a program of experimental work based on the posterior
+probabilities of each design.
+Monte Carlo sampling of parameter spaces has been used to assess the robustness of engineered
+and biological systems in the past. But like in the statistical case, simple Monte Carlo sampling
+tends to waste too much effort and time on those regions which are of no real interest for reverse-
+engineeringordesignpurposes. Ourstatisticallybasedsequentialapproachhomesinontothoseregions
+where the probability of observing the desired behavior is appreciable. This allows us a more nuanced
+comparativeassessmentofdifferentdesignproposals,especiallywhendynamicsareexpected(orindeed
+desired)toexhibitelementsofstochasticity. AndtheBayesianmodelselectionapproachautomatically
+strikes a balance between the systems’ abilities to generate the desired behavior effectively but also
+robustly.
+Further developments will include the incorporation of methods for model abstraction to reduce
+computation time [39] and to handle a database of standard parts as in other existing design software
+systems [40, 41]. Moreover, it is also possible to include the generation of novel structures (by e.g.
+using stochastic-context free grammars [42] to propose alterations to a reaction/interaction network)
+as part of the design process. Just like in the case where ideas from control engineering and statistics
+can gainfully be combined in order to reverse-engineer the structure of naturally evolved biological
+systems, we feel that in the design of synthetic systems such a union will also be fruitful.
+A Approximate Bayesian Computation : ABC SMC
+Here we outline the background behind approximate Bayesian computation (ABC) and describe the
+ABC SMC algorithm [17], which is implemented in the software package ABC-SysBio [19]. ABC
+methods have been developed to infer posterior distributions in cases where likelihood functions are
+computationally intractable or too costly to evaluate. They replace the calculation of the likelihood
+with a comparison between observed and simulated data.
+A.1 Background
+Let θ Θ be a parameter vector with prior π(θ) and f(y θ) be the likelihood of the data y . In
+Bayesian inference we are interested in the posterior density
+f(y θ)π(θ)
+Now imagine the case where we cannot write down the likelihood in closed form but we can simulate
+from the data generating model. We can proceed by first sampling a parameter vector from the prior,
+θ π(θ), and then sampling a data vector, x , from the model conditional on θ , ie x f(x θ ).
+This alone gives the joint density π(θ,x). To obtain samples from the posterior distribution we must
+condition on the data y and this is done via an indicator function, i.e.
+π(θ,x y) = (cid:82) | A y ,
+where I (z) denotes the indicator function and is equal to 1 for z . Here = x : x = y , so
+B ∈ B A { ∈ D }
+the indicator is equal to one when the simulated data and the observed data are identical. This forms
+a rejection algorithm, and in this instance the accepted θ are from the true posterior density π(θ y).
+For most models it is impossible to achieve simulations with outputs in the subset and so an
+approximation must be made. This is the basis for ABC. In the first instance we can replace by
+= x : ρ(x,y) (cid:15) where ρ : R+ is a distance function comparing the simulated
+y,(cid:15)
+data to the observed data. We then have
+π (cid:15) (θ,x y) = (cid:82) | A y,(cid:15) ,
+y,(cid:15) Θ |
+where π is an approximation to the true posterior distribution. The rationale behind ABC is that if (cid:15)
+is small then the resulting approximate posterior, π , is close to the true posterior. Often, for complex
+models or stochastic systems, the subset is still too restrictive. In these cases we can resort to
+y,(cid:15)
+comparisons of summary statistics. We now specify the subset = x : ρ (x,y) (cid:15) where
+y,η,(cid:15) S
+η : is a summary statistic and the distance function now takes the form ρ : R+. We
+D → S S×S →
+often write the marginal posterior distribution as π(θ ρ(x ,y) (cid:15)).
+A.2 ABC SMC
+The simplest ABC algorithm is known as the ABC rejection algorithm [43] and proceeds as follows
+R1 Sample θ from π(θ).
+R2 Simulate a dataset x from f(x θ ).
+R3 If ρ(x ,y) (cid:15) accept θ , otherwise reject.
+R4 Return to R1.
+This gives draws from π but can be very inefficient in high dimensional models or when the overlap
+between the prior and posterior distributions is small. One way to improve the efficiency of the rejec-
+tion algorithm is to perform sequential importance sampling (SIS) [44]. In SIS, instead of sampling
+directly from the posterior distribution, sampling proceeds via a series of intermediate distributions.
+The importance distribution at each stage is constructed from a perturbed version of the previous
+population. This approach can be used in ABC and the resultant algorithm is known as ABC SMC
+[17]. Described here is a slightly modified version that automatically calculates the (cid:15) schedule and as
+such, only the final value, (cid:15) , needs be specified. To obtain N samples θ1,θ2,θ3....,θN (known as
+particles) from the posterior, defined as, π(θ ρ(x ,y) (cid:15) ), proceed as follows
+S1 Initialize (cid:15) =
+Set the population indicator t = 0
+S2.0 Set the particle indicator i = 1
+S2.1 If t = 0, sample θ independently from π(θ)
+If t > 0, sample θ from the previous population θi with weights w .
+Perturb the partic ∗ le, θ K (θ θ ) where K is t { he t −p 1 e } rturbation kerne t l − . 1
+If π(θ ) = 0, return to S2.1
+Simulate a candidate dataset x f(x θ ).
+If ρ(x ,y) > (cid:15) return to S2.1
+S2.2 Set θi = θ and di = ρ(x ,y), calculate the weight as
+1 if t = 0
+w t i = π(θ t i) if t > 0
+If i < N, set i = i+1, go to S2.1
+S3 Normalize the weights.
+Determine (cid:15) such that Pr(d (cid:15)) = 0.9.
+If (cid:15) > (cid:15) , set t = t+1, go to S2.0.
+Here K (θ θ ) is the component-wise random walk perturbation kernel that, in this study, takes the
+form K (θ θ) = θ +U( δ,δ) where δ = 1range θ . The denominator in the weight calculation
+can be seen as the probability of observing the current particle given the previous population.
+A.3 Model selection
+In Bayesian inference comparison of a discrete set of models can be be performed using the marginal
+posterior. Consider the joint space defined by (M,θ) Θ ; Bayes theorem can then be written
+| (cid:48) (cid:48) (cid:48) | (cid:48) (cid:48)
+where f(y M), the marginal likelihood, can be written
+Therefore the posterior probability of a model is given by the normalized marginal likelihood which
+may or may not be weighted depending on whether the prior over models is informative or uniform
+respectively. It has recently been noted that model selection using summary statistics can be prob-
+lematic because the summary statistic must be sufficient for the joint space, M,θ , rather than just
+θ [45]. This is not a concern here since in all our examples we use the full data set with no summary
+or we define our posterior distributions through the summary statistics.
+Model selection can be incorporated into the ABC framework by introducing the model indicator
+M and proceeding with inference on the joint space. For example, the ABC rejection algorithm with
+model selection [46] proceeds as follows
+MR1 Sample M from π(M).
+MR2 Sample θ from π(θ M ).
+MR3 Simulate a dataset x from f(x θ ,M ).
+MR4 If ρ(x ,y) (cid:15) accept (M ,θ ), otherwise reject.
+MR5 Return to R1.
+Once N samples have been accepted an approximation to the marginal posterior, π(M = m y), is
+#accepted m
+Model selection can also be incorporated into the ABC SMC algorithm [18]. To obtain N samples
+(M,θ)1,(M,θ)2,(M,θ)3....,(M,θ)N from the posterior, defined as, π(M,θ ρ(x ,y) (cid:15) ), proceed
+as follows
+MS1 Initialize (cid:15) =
+Set the population indicator t = 0
+MS2.0 Set the particle indicator i = 1
+MS2.1 If t = 0, sample (M ,θ ) from the prior π(M,θ) = π(M)π(θ M).
+If t > 0, sample M with probability P (M ) and perturb M KM (M M ).
+Sample θ from the previous population θ(M ) with weights w .
+∗ ∗∗ t 1 t 1
+Perturb the particle, θ
+is the perturbation kernel.
+If π(M ,θ ) = 0, return to MS2.1
+Simulate a candidate dataset x f(x M ,θ ).
+If ρ(x ,y) > (cid:15) return to MS2.1
+MS2.2 Set (M,θ)i = (M ,θ ) and di = ρ(x ,y), calculate the weight as
+1 if t = 0
+t t t π(M t i,θ t i) if t > 0
+S = (cid:80) P (M j )KM (Mi M j )
+S = (cid:80) w t k −1 K t,Mi(θ t i | θ t k −1 )
+2 k ∈ M t i=Mt−1 Pt−1(M t i=Mt−1)
+If i < N, set i = i+1, go to MS2.1
+S3 Normalize the weights.
+Obtain the marginal model probabilities given by
+P (M = m) = (cid:80) wi(Mi,θi)
+i=Mt−1 t t t
+Determine (cid:15) such that Pr(d (cid:15)) = 0.9.
+If (cid:15) > (cid:15) , set t = t+1, go to MS2.0.
+There are two obvious additions to the algorithm when compared to parameter inference. The model
+kernel, KM , perturbs the resampled models using a multinomial distribution, and the additional
+term in the weight denominator accounts for the probability of observing the current model given the
+previous population.
+A.4 Prior distribution
+The prior distribution encodes our knowledge of the system and should be set according to known
+biochemical properties. However, often the kinetic parameters are not well known and can be very
+difficult or even impossible to measure in vivo. In these cases we make the prior distribution non
+informative by specifying a large range over possible, biophysically and biochemically plausible values.
+As more information becomes available, through experimental studies or otherwise, the prior can be
+updated to reflect our increased knowledge of the system. Interestingly, for some systems, our design
+method could help to constrain kinematic parameters where experimental data are unavailable.
+A.5 The distance function and output tolerance
+In system design we would rarely insist on achieving the true posterior distribution corresponding to
+(cid:15) = 0, butwouldliketoreachtheobjectivewithinsometolerance. AtheoremduetoWilkinson(2008)
+[47] states that if we assume that the data can be considered as
+where η(θˆ) is a draw from the model at the ’best’ input and e is an additive, independent error, then
+the approximate posterior distribution, π(θ ρ(x ,y) (cid:15)) can be interpreted as the ’true’ posterior
+π(θˆy). While the independence assumption | is not a ≤ lways true, this theorem provides some insight
+intotherelationshipbetweenthefinal(cid:15)valueandthetoleranceonourspecifiedbehavior. Forexample
+when using uniform kernels, as in this study, if our desired output behavior is a constant of 0.5 and we
+finish the inference at (cid:15) = 0.05 our final trajectories will be distributed U(0.45,0.55) giving a tolerance
+of 10% on the output behavior. This can be used when considering our desired output objectives.
+Toachieveother errordistributions, such asGaussianerrors, we can always explicitly specifythe error
+model in the design objectives.
+A.6 Deterministic models
+Inference for deterministic models such as ordinary differential equations can be problematic since
+there is a one to one relationship between the parameter vector θ and the data set x. Therefore,
+in the absence of observational error, the posterior distribution resembles a delta function, δ(θ θˆ)
+where xˆ = f(θˆ) is data ’closest’ to y. An additional problem for ABC methods is that the minim − um
+distance, ρ(xˆ,y), is greater than zero [49]. However, in practice, observational data have associated
+experimental errors and when this is included explicitly in the model, the problem is resolved. In the
+case of systems design, we omit the explicit error model for clarity, but note that it could be included
+with assumptions on the form of the distribution.
+B Biochemical adaptation
+B.1 Models
+We used the same models as those used in [27], which are enzymatic reactions assuming Michaelis-
+Mentenkinetics. Belowwegivethefullmodelsincludingcooperativitybutthemorespecificcaseofno
+cooperativity is when the exponents, n , are set to one. Here A,B,C denote the concentrations of the
+active form of the species and (1 A),(1 B),(1 C) the concentrations of the inactive form. Species
+E and F refer to background activating and deactivating enzymes respectively and are assumed to
+have a constant concentration of 0.5. The models were simulated in the range 0 t 200.
+dA (1 A)nIA AnFA
+= Ik − F k
+dt IA (1 A)nIA +KnIA − A FA AnFA +KnFA
+dB (1 B)nCB BnFB
+= Ck − F k
+dt CB (1 B)nCB +KnCB − B FB BnFB +KnFB
+dC (1 C)nAC CnBC
+dt AC (1 C)nAC +KnAC − BC CnBC +KnBC
+dA (1 A)nIA AnFA
+= Ik − F k
+dt IA (1 A)nIA +KnIA − A FA AnFA +KnFA
+dB (1 B)nEB BnCB
+= E k − Ck
+dt B EB (1 B)nEB +KnEB − CB BnCB +KnCB
+dC (1 C)nAC CnBC CnFC
+= Ak − Bk F k
+dt AC (1 C)nAC +KnAC − BC CnBC +KnBC − C FC CnFC +KnFC
+− AC BC FC
+dA (1 A)nIA AnFA
+= Ik − F k
+dt IA (1 A)nIA +KnIA − A FA AnFA +KnFA
+dB (1 B)nEB BnCB
+= E k − Ck
+dt B EB (1 B)nEB +KnEB − CB BnCB +KnCB
+dC (1 C)nBC CnAC
+dt BC (1 C)nBC +KnBC − AC CnAC +KnAC
+dA (1 A)nIA AnBA
+dt IA (1 A)nIA +KnIA − BA AnBA +KnBA
+dB (1 B)nAB BnFB
+= Ak − F k
+dt AB (1 B)nAB +KnAB − B FB BnFB +KnFB
+dC (1 C)nAC CnFC
+= Ak − F k
+dt AC (1 C)nAC +KnAC − C FC CnFC +KnFC
+dA (1 A)nIA AnBA
+dt IA (1 A)nIA +KnIA − BA AnBA +KnBA
+dB (1 B)nAB BnFB
+= Ak − F k
+dt AB (1 B)nAB +KnAB − B FB BnFB +KnFB
+dC (1 C)nEC CnAC
+= E k − Ak
+dt C EC (1 C)nEC +KnEC − AC CnAC +KnAC
+dA (1 A)nIA AnBA
+dt IA (1 A)nIA +KnIA − BA AnBA +KnBA
+dB (1 B)nCB BnFB
+= Ck − F k
+dt CB (1 B)nCB +KnCB − B FB BnFB +KnFB
+dC (1 C)nAC CnFC
+= Ak − F k
+dt AC (1 C)nAC +KnAC − C FC CnFC +KnFC
+dA (1 A)nIA AnBA AnFA
+= Ik − Bk F k
+dt IA (1 A)nIA +KnIA − BA AnBA +KnBA − A FA AnFA +KnFA
+− IA BA FA
+dB (1 B)nEB BnCB
+= E k − Ck
+dt B EB (1 B)nEB +KnEB − CB BnCB +KnCB
+dC (1 C)nAC CnFC
+= Ak − F k
+dt AC (1 C)nAC +KnAC − C FC CnFC +KnFC
+dA (1 A)nIA AnBA AnFA
+= Ik − Bk F k
+dt IA (1 A)nIA +KnIA − BA AnBA +KnBA − A FA AnFA +KnFA
+− IA BA FA
+dB (1 B)nCB BnFB
+= Ck − F k
+dt CB (1 B)nCB +KnCB − B FB BnFB +KnFB
+dC (1 C)nEC CnAC
+= E k − Ak
+dt C EC (1 C)nEC +KnEC − AC CnAC +KnAC
+dA (1 A)nIA AnBA
+dt IA (1 A)nIA +KnIA − BA AnBA +KnBA
+dB (1 B)nEB BnCB
+= E k − Ck
+dt B EB (1 B)nEB +KnEB − CB BnCB +KnCB
+dC (1 C)nEC CnAC
+= E k − Ak
+dt C EC (1 C)nEC +KnEC − AC CnAC +KnAC
+dA (1 A)nIA AnFA
+= Ik − F k
+dt IA (1 A)nIA +KnIA − A FA AnFA +KnFA
+dB (1 B)nAB BnFB
+= Ak − F k
+dt AB (1 B)nAB +KnAB − B FB BnFB +KnFB
+dC (1 C)nBC CnAC
+dt BC (1 C)nBC +KnBC − AC CnAC +KnAC
+dA (1 A)nIA AnFA
+= Ik − F k
+dt IA (1 A)nIA +KnIA − A FA AnFA +KnFA
+dB (1 B)nAB BnFB
+= Ak − F k
+dt AB (1 B)nAB +KnAB − B FB BnFB +KnFB
+dC (1 C)nAC CnBC
+dt AC (1 C)nAC +KnAC − BC CnBC +KnBC
+B.2 Distance
+Thetwocomponentdistancemetricwasdefinedtobe(cid:15) = E,S 1 ,whereE andS aretheadaptation
+efficiency and sensitivity defined by
+(cid:12) (cid:12)
+(cid:12)(O O )/O (cid:12)
+E = (cid:12) 2 − 1 1(cid:12)
+(cid:12) (cid:12)
+(cid:12) 2 1 1 (cid:12)
+(cid:12) (cid:12)
+(cid:12)(O O )/O (cid:12)
+S = (cid:12) peak − 1 1(cid:12),
+(cid:12) (cid:12)
+(cid:12) 2 1 1 (cid:12)
+where I ,I are the input values (here fixed at 0.5 and 0.6 respectively), O ,O are the output steady
+state levels before and after the input change and and O is the maximal transient output level.
+The final population was defined to be (cid:15) = 0.1,1.0 .
+B.3 Priors
+The priors on the Michaelis-Menten rates were chosen to correspond to the parameter ranges used in
+the original study; logk U( 1,1) and logK U( 3,2) [27].
+C Robust oscillator design
+C.1 Models
+Weusedthesamemodelsasthoseusedin[32],simulatedintherange0 t 10. AgainA,B,C denote
+the concentrations of the active form of the species and (1 A),(1 B),(1 C) the concentrations
+of the inactive form. The feedback is modeled using Michaelis-Menten kinetics but the conversion of
+inactive form into active form is assumed to have a constant rate.
+= k (1 A) A
+dt 1 − − Kn1 +Cn1
+= k (1 B) B
+dt 3 − − Kn2 +An2
+= k (1 C) C
+dt 5 − − Kn3 +Bn3
+Designs 2 and 3
+dt 1 − − Kn1 +Cn1 7 − Kn4 +An4
+= k (1 B) B
+dt 3 − − Kn2 +An2
+= k (1 C) C
+dt 5 − − Kn3 +Bn3
+Designs 4 and 5
+= k (1 A) A k A
+dt 1 − − Kn1 +Cn1 − 7 Kn4 +An4
+= k (1 B) B
+dt 3 − − Kn2 +An2
+= k (1 C) C
+dt 5 − − Kn3 +Bn3
+C.2 Distance
+For the direct Hopf bifurcation detection the distance metric was defined to be
+(cid:15) = i i
+i − −| i |
+where λ is the ith complex eigenvalue of the linearized system in the steady state. Here (cid:15) = 0
+represents the location in parameter space where a limit cycle emerges through a Hopf bifurcation
+[48]. The final population was at (cid:15) = 0.001.
+Toinvestigatetheabilitytoachieveparticularamplitude-frequencyvalues,thedistancewasdefined
+as (cid:15) = d ,d ,d , where
+d = maxx minx A ,
+andnisaninteger,f isthetargetfrequency,f isthefrequencydeterminedfromthelargestcomponent
+of the Fourier spectrum, A is the target amplitude and t is a cut to remove initial transients (= 2s).
+The final population was defined to be (cid:15) = 0.05,0.05,0.05 .
+C.3 Priors
+The priors were chosen to correspond to parameter ranges used in the original study; k U(0,10),
+k U(0,1000), k U(0,10), k U(0,1000), k U(0,1000), k U(0,100), k
+2 ∼ 3 ∼ 4 ∼ 6 ∼ 7 ∼ 7 ∼
+U(500,600), n U(1,4) and K U(0,4) [32].
+D Bacterial two component systems
+D.1 Models
+The models we used were based on the ones found in [34]. All simulations were performed in the range
+0 t 10.
+Orthodox system
+We modeled the following reactions
+RR.
+AdditionallyweassumedthatthetotalconcentrationofHK = HK+HKpandRR = RR+RRp
+were equal to one. This resulted in the following ordinary differential equations
+Orthodox system
+We labelled the occupied states of the phosphorelay as
+where H1, D1 and H2 are the binding domains on the Histidine Kinase and x, o represent an empty,
+occupied domain respectively. We modeled the following reactions
+Again we assumed that the total concentration of HK = HK and RR = RR + RRp were
+equal to one. This resulted in the following ordinary differential equations
+4 4 6 3 7 1 8 2 1
+4 6 6 5 7 2 8 2 1 1 2 2
+3 3 4 7 5 4 6 3 7 3 8 5 1 3 2 2
+dt − − − −
+3 3 4 4 5 4 6 7 7 1 8 6 1 4
+3 3 4 8 5 6 6 5 7 5 8 5 1 3
+dt − − − −
+3 5 2 6 4 6 5 6 6 8 7 2 8 6 1 4
+dt − − − −
+2 6 4 7 6 7 7 3 8 8 1 7
+4 4 6 7 8 7 1 2 3 5 9
+D.2 Distance
+The distance functions for input-output behaviors (cid:15) were defined to be
+(cid:110) (cid:111)
+(cid:15) = H(0)(argmax x 2.0),H(0)(argmin x 4.0)
+1 t t − t t −
+(cid:15) = (x 1.0)2
+(cid:15) = (x 0.5)2
+(cid:110) (cid:111)
+(cid:15) = (cid:15) ,H(0)(1 maxx 0.2),H(0)(minx 0.2)
+where H(0) is the Heaviside function ensuring the distance is positive.
+D.3 Priors
+The priors on all variables were distributed as U(0,1000).
+E Stochastic genetic toggle switch
+E.1 Models
+WemodeledeachtoggleswitchusingacontinuoustimeMarkovjumpprocesswhichobeysthechemical
+master equation. We neglected processes at the RNA level and just modeled at the protein level.
+This makes the models simpler while retaining all the relevant behavior. In all the following gA,gB
+represent the gene promotor for protein A,B respectively and are fixed at one copy. A gB,B gA
+represent the bound transcription factors and S,R represent the switch and reset signals. Because the
+concentrationofthesearefixedtheyhavetheeffectofremovingAandB fromthesystemrespectively.
+The models were simulated in the range 0 t 200
+Here, in addition to the species in design 1, we have introduced the P species, fixed to be one copy,
+which ensures only A or B can be bound at any one time
+R B.
+Here we have the same reactions in design 1 butinclude two extra reactions forthe decay of the bound
+gA.
+Herewehavethesamereactionsindesign1butincludetwoextrareactionsforthebinding/unbinding
+of the proteins A and B
+A+B.
+E.2 Distance
+The two component distance metric was defined to be (cid:15) = d ,d ,
+d = t α t −
+(cid:115)(cid:80)
+d 2 = t ∈ β t − ,
+where x is the number of protein B at time t, y is the target (here fixed at 40), α = t : 30 < t 60 ,
+β = t : 0 < t 10 and 80 < t 100 , n = #α and n = #β. The final population was defined to
+be (cid:15) = 7.0,0.05 .
+E.3 Priors
+The priors for production, binding and interaction rates were distributed as U(0,50) and the priors
+for the degradation rates were given U(0,5) distributions.

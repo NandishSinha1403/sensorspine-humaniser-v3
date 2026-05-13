@@ -1,0 +1,674 @@
+1v6356.2021:viXra
+TheAnnalsofAppliedStatistics
+2011,Vol.5,No.4,2668–2687
+(cid:13)c InstituteofMathematicalStatistics,2011
+EFFICIENT, ADAPTIVE CROSS-VALIDATION FOR TUNING AND
+COMPARING MODELS, WITH APPLICATION TO
+DRUG DISCOVERY
+By Hui Shen, William J. Welch
+and Jacqueline M. Hughes-Oliver
+University of British Columbia, University of British Columbia
+and North Carolina State University
+Cross-validation (CV)iswidelyusedfortuningamodelwith re-
+spect to user-selected parameters and for selecting a “best” model.
+For example, the method of k-nearest neighbors requires the user
+tochoose k,thenumberof neighbors, andaneuralnetwork hassev-
+eraltuningparameterscontrollingthenetworkcomplexity.Oncesuch
+parametersareoptimizedforaparticulardataset,thenextstepisof-
+tentocomparethevariousoptimizedmodelsandchoosethemethod
+with the best predictive performance. Both tuning and model selec-
+tion boil downtocomparing models, eitheracross different valuesof
+the tuning parameters or across different classes of statistical mod-
+els and/or sets of explanatory variables. For multiple large sets of
+data, like the PubChem drug discovery cheminformatics data which
+motivated this work, reliable CV comparisons are computationally
+demanding, or even infeasible. In this paper we develop an efficient
+sequential methodology for model comparison based on CV. It also
+takes into account the randomness in CV. The number of models is
+reduced via an adaptive, multiplicity-adjusted sequential algorithm,
+where poor performers are quickly eliminated. By exploiting match-
+ingofindividualobservations,itissometimesevenpossibletoestab-
+lish the statistically significant inferiority of some models with just
+one execution of CV.
+Received December 2008; revised June 2011.
+1Supported by the Natural Sciences and Engineering Research Council of Canada,
+theNational Institutesof Health,USAthrough theNIHRoadmap for Medical Research,
+Grant1P20HG003900-01,andtheMathematicsofInformationTechnologyandComplex
+Systems, Canada.
+Key words and phrases. Assaydata,cheminformatics, drugdiscovery,k-nearestneigh-
+bors, multiplicity adjustment, neural network, PubChem, randomized-block design, se-
+quential analysis.
+This is an electronic reprint of the original article published by the
+Institute of Mathematical Statistics in The Annals of Applied Statistics,
+2011,Vol. 5, No. 4, 2668–2687. This reprint differs from the original in pagination
+and typographic detail.
+2 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+1. Introduction. Theapplication area thatmotivated thisresearch illus-
+tratestheenormouscomputationalburdenthatcanoccurwhencross-valida-
+tion(CV)isusedtotuneandselectstatisticalmodels.OurExploratoryCen-
+ter for Cheminformatics Research, funded by the National Institutes of
+HealthRoadmapforMedicalResearch,iscomparingstatisticalmodelingme-
+For a given assay, activity (the response variable) against a particular bi-
+ological target is measured for thousands or tens of thousands of drug-
+like molecules. Several high-dimensional sets of chemical descriptors (ex-
+planatory variables) are available to characterize the chemical properties
+of the molecules. A statistical model attempts to relate biological activity
+to the chemical descriptors as part of drug discovery. Currently, for each
+assay, the web-based Cheminformatics Modeling Laboratory or ChemMod-
+Lab [Hughes-Oliver et al. (2011)] compares, via CV, 16 statistical methods,
+many of which are computationally demanding, and five candidate sets of
+descriptor variables. Thus, 16×5=80 modeling strategies are assessed and
+compared on data sets with thousandsof observations and high-dimensional
+explanatory variables.
+Moreover, ideally each of these 80 strategies should betuned with respect
+to one or more user-selected parameters, greatly increasing the number of
+candidatemodelstobecompared.Forexample,aneuralnetworkhasseveral
+user-defined tuning parameters controlling the network complexity, such as
+thenumberofhiddenunitsandadecayparameter.Ifmanysetsofvaluesfor
+the tuning parameters are tried, potentially hundreds or thousands of com-
+putationally demandingmodelsneedtobecomparedforthelargePubChem
+data sets.
+CV [Stone (1974)] is widely used for this type of study, albeit usually
+on a much smaller scale. In a 10-fold cross-validation, for example, the ob-
+servations are split into 10 groups or folds, one group is considered as test
+data for assessing prediction accuracy, and the other nine groups are used
+for model fitting. This process is repeated with each of the groups in turn
+as test data. Thus, further increasing the computational burden already de-
+scribed, a fixed model (a statistical model with given values of all tuning
+parameters and a descriptor set) has to be fitted 10 times.
+Thereisyetanotheradditiontothecomputationalchallenge. CVisbased
+on a random split of the data, and, as we illustrate in Section 2, there can
+be considerable variation from one split to another. Thus, numerous data
+splits may be necessary to compare models reliably.
+Thus, the overall computational effort appears to be simply infeasible for
+the comprehensive comparisons we have outlined for large PubChem assay
+data sets. To our knowledge, currently all comparisons of this type hence
+have some degree of unreliability and/or suboptimality, due to randomness
+in CV and lack of effective tuning, respectively.
+EFFICIENT, ADAPTIVECROSS-VALIDATION 3
+Much theoretical work has been done on CV. Stone (1974, 1977) focused
+mainlyonpropertiesforleave-one-out (orn-fold)CV.Li(1987),Shao(1993)
+and Zhang (1993) investigated v-fold CV procedures for linear models and
+general v. Burman (1989) established theoretical results for v-fold CV for
+a wider class of models. More recently, Dudoit and van der Laan (2005) de-
+rived asymptotic propertiesfor abroad definitionof CV(e.g., leave-one-out,
+v-fold, Monte Carlo, etc.) for model selection and performance assessment,
+andYang(2006)establishedtheconsistencyofCVforclassification.Thethe-
+oretical developments parallel the extremely wide use of CV by researchers
+for assessing and selecting models, for example, Dietterich (1998), Hawkins,
+Basak and Mills (2003), Sinisi and van der Laan (2004) and Hughes-Oliver
+et al. (2011).
+In this article we will focus on 10-fold CV, though the methodology ap-
+plies to v-fold CV for any feasible v. We propose a data-adaptive approach
+involving multiple repeats of CV for the candidate models. At any stage,
+the CV analyses available from repeated data splits are used to perform
+amultiplicity-adjusted statistical test toeliminate all candidatemodelsthat
+are inferior to at least one other. Only those models that survive move on to
+the next stage and have a further CV performed to increase the test power
+based on a new, common data split. In this way, during model tuning, very
+poor settings of the tuning parameters are quickly dismissed and computa-
+tionaleffortisconcentratedonthebestsettings.Thesearchterminateswhen
+one setting emerges as the winner, or when the differences in performance
+between thesurvivingsettings arepractically unimportantwithsomestatis-
+tical confidence.Asimilarapproachisusedtocompareoptimizedmodels.In
+the PubChem application there will be one optimized model for each statis-
+tical modelingstrategy, thatis,aclass ofmodelssuchas k-nearestneighbors
+withoneoftheavailable descriptorsets.Itisalsopossibletocombinetuning
+with comparison across optimized models in one dynamic search.
+Second, we develop more efficient tests for comparing models. This ex-
+tends the idea of matching by using the same data splits across CVanalyses
+[e.g., Dietterich (1998)]. By matching at the level of individual observations
+rather than data split, moderate differences in performance between models
+can sometimes be detected with just one set of CV analyses from one data
+split. Thus, poor performers are potentially eliminated with a minimum of
+computing.
+Overall, the aim of this article is to develop a sequential approach for
+comprehensiveandreliablemodeltuningandselectionviaCV.Inparticular,
+for the PubChem applications, users of ChemModLab will have automatic
+comparisonofavastnumberoftunedmodelingstrategies, withareasonable
+turn-around time.
+Related to our sequential tests via CV, Maron and Moore (1997) devel-
+oped a “racing” algorithm to test a set of models in parallel. The algorithm
+4 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+sequentially increases data points to build and test candidate models before
+using all of the data. In their paper, leave-one-out CV was used to compute
+the prediction error. In contrast, our algorithms use all the data points at
+all stages, 10-fold CV is implemented to estimate the prediction error, and
+computational speed-up is achieved by reducing the number of models.
+The paper is organized as follows. In Section 2 we describe a typical Pub-
+Chem data set and the performance assessment measures relevant to the
+application. In Section 3 we illustrate that there may be substantial varia-
+tion in CV performance estimates from one random data split to another,
+requiring multiple data splits for reliable comparison. Section 4 describes
+three data-adaptive algorithms for sequentially comparing models. Whereas
+Section 4isfocusedontuningagiven modelingstrategy, thatis,agiven sta-
+tistical method and set of data, Section 5 considers tuning and comparisons
+across qualitatively different modeling strategies, that is, different types of
+statistical models and/or different explanatory variable sets. The PubChem
+data set is used throughout for illustration. Finally, some conclusions are
+presented in Section 6.
+2. PubChem AID362 data and assessment measures. ChemModLab
+[Hughes-Oliver et al. (2011)] catalogs the data for five assays: AID348,
+AID362, AID364, AID371 and AID377. (“AID” stands for “Assay ID.”)
+In this paper we will focus on AID362, a formylpeptide receptor ligand
+binding assay that was conducted by the New Mexico Molecular Libraries
+Screening Center; the same CVcomparison methodologies would beapplied
+independently to other assays in PubChem.
+AID362 has assay data for 4,275 molecules. Various responses are avail-
+able, but here we work with a binary inactive/active (0/1) measure. Of the
+4,275 molecules, only60wereassayed tobeactive. Viacomputational chem-
+istry,ChemModLabgenerates fivesetsofdescriptor(explanatory)variables:
+Burden numbers, pharmacophore fingerprints, atom pairs, fragment finger-
+prints and Carhart atom pairs, with 24, 121, 395, 597 and 1,578 variables,
+respectively.
+The purpose of building a statistical model here is to predict the AID362
+inactive/active assay response from the descriptor variables. Note that the
+descriptorvariablesareproducedbycomputational chemistry.Thus,itisfea-
+sible to compute them cheaply for vast numbersof compoundsin a chemical
+library or even in a virtual library of chemical formulas for molecules that
+have not yet been synthesized. The aim of the predictive model, built from
+assay data for relatively few molecules, is to choose the molecules in the big-
+ger library that are most likely to be active when assayed. Such a focused
+search generates “hits” for drug development more efficiently than assaying
+all the compounds available, even if this is feasible.
+The typical rarity of active compounds and the aim of identifying a small
+number of promising compounds in a large library means that special pre-
+EFFICIENT, ADAPTIVECROSS-VALIDATION 5
+dictive performance measures have been developed for modeling in drug
+discovery. Misclassification rate, often used for a binary response, is not ap-
+propriate, as even the useless, null model that always classifies as “inactive”
+will have a high accuracy rate when active molecules are so rare. The objec-
+tive is more to rank compounds in terms of their probability of activity, so
+that a sample of the desired size of the most promising compounds can be
+chosen from a library.
+A widely used criterion is a simple function of the number of hits found,
+h , among 300 compounds selected using a predictive model. Specifically,
+suppose a predictive model generates pˆ, the probability that compound i
+among N unassayed compounds is active (i=1,...,N). We then order the
+compound indices via the permutation π such that pˆ ≥···≥pˆ . Sup-
+pose first there are no ties. The 300 compounds indexed by π ,...,π
+are selected for assay, and h is simply the number of actives (hits) found
+among them. In general, if pˆ ties with the a+b estimated probabilities
+pˆ π(300−a+1) ,...,pˆ π(300+b) for a≥1 and b≥0, then h 300 is defined as
+(1) h 300 =h 300−a + h tie ,
+where h 300−a and h tie are the number of hits found among the compounds
+with indices π(1),...,π(300−a) and π(300−a+1),...,π(300+b), respec-
+tively. This is the expected number of hits if a compounds are randomly
+selected from the a+b with tied probabilities to make a total of 300 se-
+lected. No ties for pˆ is just a special case of (1) with a=1 and b=0.
+Initialenhancement(IE),used,forexample,byHughes-Oliveretal.(2011),
+is just (h /300)/r, where r is the activity rate in the entire collection of N
+compounds. Thus, it measures the rate of finding actives among the 300
+chosen compounds relative to the expected rate under random selection.
+A good model should have IE values much larger than 1. As IE is just a lin-
+early increasing function of h , the two criteria are equivalent, and we use
+the simpler h in this article. Users concerned about the arbitrariness of
+selecting 300 compounds may prefer the average hit rate (AHR) proposed
+by Wang (2005), which averages performance over all selection sizes but fa-
+vors models which rank active compounds ahead of inactive compounds in
+terms of pˆ. Algorithms 1 and 3 in Section 4 could be applied directly to
+AHR without modification.
+Indefiningtheassessmentmeasureh ,wehaveassumedthereisatrain-
+ing data set to build a model and a further independent test set of N com-
+pounds available to assess it. This article is concerned with CV, however,
+where the same n observations are used for training and for testing. Under
+10-fold CV, for instance, when a particular data fold is removed to serve as
+test data, the model fitted to the remaining data generates the pˆ values for
+the compounds in that fold. After cycling through all 10 folds, the pˆ values
+are put together so that there is a pˆ for all n compounds. We then define
+6 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+h (or an alternative criterion) exactly as above except that we choose 300
+compounds from the n≥300 instead of from an independent set of size N.
+3. Variation in cross-validation. We now demonstrate that there can be
+substantialvariation intheperformanceestimates from10-fold CVfromone
+random split of the data to another, potentially requiring multiple splits for
+reliable model tuning or selection. For illustration, the PubChem AID362
+assay data will be modeled using a neural network (NN) [see, e.g., Ripley
+(1996)] with one hidden layer and a variation of Burden numbers [Burden
+(1989)] as the descriptor set. For the AID362 assay, there are 60 active
+compounds among 4,275 molecules, and the Burden number descriptor set
+has 24 variables.
+We will tune two important parameters of the NN: the number of units
+in the hidden layer, which controls the size or complexity of the network,
+andadecay parameter,wheresmaller values shrinkthenetwork weights less
+and lead again to a more complex network. In this tuning study, size takes
+the values 5, 7 and 9, and decay takes the values 0.1, 0.01 and 0.001. Thus,
+tuning will select among 3×3=9 models generated by all combinations of
+the two tuning parameters.
+For each model, 10-fold CV is run for 100 random splits of the data, and
+the histograms in Figure 1 show the estimated distributions of the h as-
+sessment measure defined in (1). We can see that there are considerable dif-
+ferences between the h distributions across the tuning parameters values
+considered, that is, tuning is important. There is also considerable varia-
+tion within a fixed set of tuning parameter values. For example, for size=5
+and decay=0.01, which is one of the better performing models, h ranges
+from 26 to 37. We will take the population mean performance over a large
+number of repeated cross-validations as a reliable measure of performance,
+reliable in the sense that random cross-validation variation is eliminated.
+Table 1 displays the observed sample means of h with their standard er-
+rors. Models 2, 5, 6, 8 and 9 have better sample means than models 1, 3, 4
+and 7. Moreover, the standard errors are fairly small relative to the differ-
+ences between the sample means across these two groups, suggesting that
+the weaker performers could be dismissed with fewer than 100 random data
+splits, whereas finding the best parameter values among the better models
+will take considerable work (though perhaps not requiring 100 random data
+splits).ThisisthebasicideaunderlyingtheadaptivealgorithmsofSection4.
+Such a comparison should take into account that data split would nat-
+urally be a blocking factor. Every time a random data split is generated,
+all models under consideration are assessed via CV using this same split.
+Thus,the 100 data splits leading to the data in Figure 1 are 100 blocks. Fig-
+ure 2 shows the results for five blocks, with each line representing one split.
+The approximate parallelism of the curves indicates that including split as
+a blocking factor will lead to more powerful comparisons. Figure 2 also sug-
+EFFICIENT, ADAPTIVECROSS-VALIDATION 7
+Fig. 1. Histograms showing the distribution of h values from 10-fold CV across 100
+datasplitsforneuralnetworkswithdifferentvaluesofsizeanddecay,andBurdennumbers
+as the descriptor set.
+gests that comparing models based on just one split may lead to a biased
+estimator of performance. For each curve, suppose we select the model (set
+of tuningparameter values) with thelargest observed value of h .We note
+firstthat,probablyduetoselection bias,theh valueofthewinningmodel
+tends to be in the upper tail of its distribution in Figure 1. Second, for the
+fifth split, suboptimal model 3 has the best value of h . Thus, there is
+a need for multiple splits for reliable assessment and comparison.
+8 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+Sample means of h for 10-fold CV across 100 data splits for neural networks with
+different values of size and decay, and Burden numbers as the descriptor set, applied to
+the PubChem AID362 assay data
+Neuralnetworkmodel
+1 2 3 4 5 6 7 8 9
+Size 5 5 5 7 7 7 9 9 9
+Decay 0.1 0.01 0.001 0.1 0.01 0.001 0.1 0.01 0.001
+# of hits 18.7 31.2 28.7 18.6 30.2 30.7 18.5 30.7 31.4
+S.E. 0.18 0.24 0.27 0.19 0.24 0.27 0.18 0.22 0.26
+Rank 7 2 6 8 5 3 9 4 1
+4. Algorithms for adaptive model search via sequential CV.
+4.1. Algorithm 1 (data splits as blocks). Suppose there are m models to
+becompared.For much of this article, we will becomparing m sets of values
+for the tuning parameters of a given type of statistical modeling method,
+in the context of a fixed descriptor (explanatory variable) set. Comparisons
+across qualitatively different statistical models and/or different sets of ex-
+planatory variables are also possible, however (Section 5). The algorithm
+will attempt to remove models sequentially until m is reduced to 1.
+At each iteration, a new random data split is created for CV, and 10-fold
+(or v-fold in general) CV estimates of performance are computed for the
+surviving models. For each model, CV requires 10 model fits for the new
+split. Thus, regular CV is applied; the various algorithms to be described
+Fig. 2. h values for 10-fold CV and five data splits (five lines) for neural networks
+with different values of size and decay, and Burden numbers as the descriptor set.
+EFFICIENT, ADAPTIVECROSS-VALIDATION 9
+are efficient by reducing the number of times such a regular CV analysis has
+to be performed.
+Specifically, suppose there are m surviving models, and results from run-
+ning 10-fold CV are available for s≥2 random splits. The assessment mea-
+sure is computed for every model and split. We will use h in (1), but for
+this first version of the algorithm any user-defined measure could be em-
+ployed, for example, the average hit rate in Section 2 or, for a continuous
+response, the empirical predictive mean squared error. In general, y will
+denote the CV assessment measure for model i and data split j.
+If a randomly chosen split is applied across all models, split is a blocking
+factor, and we can model y as generated by
+whereµisanoveralleffect,τ istheeffectofmodeli,β istheeffectofsplitj,
+and ε for i=1,...,m and j=1,...,s are random errors, assumed to have
+independent normal distributions with mean 0 and variance σ2. This is the
+model for a randomized block design, though we point out that randomiza-
+tion within a block, for example, executing the analyses for the m models
+in a random order, has no relevance for such a “computer experiment.”
+We want to test the hypotheses
+H :τ =τ versus H :τ 6=τ
+0 i i′ 1 i i′
+for all i6=i. For a particular pair of models indexed by i and i, rejecting
+H in favor of H at some significance level implies that one of the models
+may be eliminated as inferior to the other. After removing all such domi-
+nated models, at the next iteration, further CV computational effort will be
+concentrated on the surviving models.
+At least initially, m may be large, and a multiplicity-adjusted test is de-
+sirable. Tukey’s test[Dean andVoss (1999),Chapter4, Montgomery (1997),
+Chapter 3] is a common choice for such multiple comparisons, and we adopt
+it throughout. Other tests for multiple comparisons could be applied, such
+as Fisher’s least significant difference test or Duncan’s multiple range test,
+etc. [Montgomery (1997), Chapter 3]. Let
+denote the sample mean performance over the s splits for model i (i =
+1,...,m). For any i6=i, the null hypothesis H is rejected in favor of H at
+level α if
+10 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+Fig. 3. Adaptive model search via sequential CV (Algorithm 1: iterate until one model
+is left or a maximum of S data splits has been performed).
+is the Tukey value, q (m,(m−1)(s−1)) is the studentized range statis-
+tic with m and (m−1)(s−1) degrees of freedom, and MSE(m,s) is the
+mean squarefor error undera randomized-block analysis of variance with m
+models (treatments) and s splits (blocks). A set of simultaneous 100(1−α)
+percent confidence intervals for all pairwise differences τ −τ for i6=i is
+(m,s)).
+Theproperties of statistical tests in analysis of variance modelsin general
+are often justified via randomization [e.g., Kempthorne (1952, 1955)]. As
+already noted, randomization of models to a split (block) is irrelevant here,
+and it is questionable whether the nominal significance level α is actually
+achieved under the null hypothesis. In any case, as the algorithm iterates
+and more blocks are added, a sequence of tests is performed. Even if each
+stage has the correct significance level for removing a model when it is not
+inferior, the entire procedure would not. Overall, then, α is best viewed as
+controlling a greedy algorithm, where larger values would remove models
+more aggressively, and the gain in computational speed is accompanied by
+more risk of converging to a suboptimal model. We use α=0.05 throughout
+for empirical demonstrations and compare the solutions found with more
+exhaustive searches.
+Figure 3 gives pseudo code for the above sequential algorithm. It iterates
+until only one model is left, subject to a maximum of S random data splits
+and hence S CV analyses for any model. We use S =100 hereafter. Note
+thatthisalgorithmneedsatleasttwoexecutionsofCVforeachinitialmodel
+from two random data splits.
+EFFICIENT, ADAPTIVECROSS-VALIDATION 11
+Algorithm 1 applied to tuning the values of size and decay for a neural network for the
+PubChem AID362 assay data with Burden numbers as the descriptor set. The models
+surviving after each split are denoted by a check mark
+Neuralnetwork model
+of splits 1 2 3 4 5 6 7 8 9
+0 X X X X X X X X X
+2 X X X X X X
+3 X X X X X X
+4 X X X X X X
+5 X X X X X
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . . . . . . .
+57 X X X X X
+58 X X X X
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . . . . . . .
+68 X X X X
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . . . . . . .
+For illustration, we revisit the PubChem AID362 example in Section 3,
+wherethedescriptorsetisformedfromBurdennumbers,andtheproblemis
+to tune the parameters decay and size for a neural network model. The nine
+candidate models, that is, the nine combinations of decay and size values,
+were given in Table 1.
+Table 2 shows the results of applying Algorithm 1 to this example. After
+s=2 splits, the average h values for the nine models, y¯ ,...,y¯ , are
+17.5,33.0,27.0,17.0,30.0,28.5,16.5,31.5,29.0,
+MSE(9,2)=3.39, and the Tukey value is 7.51 for significance level α=0.05.
+Since y¯ 2. −y¯ i· >7.51 for i=1, 4 and 7, these three models are dismissed.
+Recall from Table 1 that they are indeed the worst when averaged over 100
+splits,butthesequential algorithm eliminates themafter justtwo CVsplits.
+Hence, in Table 2, only models 2, 3, 5, 6, 8 and 9 survive the second split
+and are included for a third round of CV based on another split. After five
+splits,model3isremoved.Models5,6and8areremoved after58,69and70
+splits,respectively.Thetworemainingmodels,2and9,arestillincontention
+when the algorithm stops due to restricting the computational effort to 100
+splits.Fromtheaverage h valuesgiven inTable1,weknowthatthesetwo
+models are very similar in performance, and are hard to distinguish. This
+motivates Algorithm 3 in Section 4.3, but next we improve Algorithm 1.
+12 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+4.2. Algorithm 2 (observations as blocks). Algorithm 1 in Section 4.1
+needs at least two CV data splits for every one of the m models, which
+may be computationally expensive if m is large. We now describe another
+multiplicity-adjusted test, aimed at eliminating bad models after only one
+CV data split.
+Unlike Algorithm 1, the revised algorithm is applicable only to an as-
+sessment measure that is a sum or average of contributions from individual
+observations. The criterion h in (1) is of this form, and we continue to
+use it, but we note that only the active compounds in the data set can
+make a nonzero contribution to h , and it is sufficient to consider them
+only. Specifically, suppose there are A≥2 active compounds in the data set
+(A=60 for the AID362 assay). For any given model, its CV analysis leads
+to estimated probabilities of activity pˆ ≥···≥pˆ for the n compounds
+in the data set. We can write
+where y is the contribution from active compound j. From the definition
+of h in (1),
+1, if active compound j is one of the first
+300−a compounds selected,
+(5) y ∗ =  , if active compound j appears among the
+a+b compounds with pˆtying with pˆ ,
+0, otherwise.
+(Recallthatpˆ π(300) tieswiththea+bestimatedprobabilitiespˆ π(300−a+1) ,...,
+pˆ with a≥1 and b≥0, which includes no ties if a=1 and b=0.)
+Forexample,supposeaCVanalysisleadstoestimated probabilitiesofac-
+tivitypˆ ≥···≥pˆ suchthatpˆ hastheeighttiespˆ ,...,pˆ .
+Ofthe,say,A=60activecompounds,25haveestimatedprobabilitiesamong
+pˆ ,...,pˆ ; they each have y =1 in (5) because they must each con-
+tributeone hitto h .Another two active compoundshave estimated prob-
+abilities among pˆ ,...,pˆ ; they each have y =3/8, the probability
+ofbeingselected 298th,299thor300thwhentheeightselections 298,...,305
+are made in random order.
+We now consider CV to compare m models based on one common ran-
+dom data split. Let y be the contribution of active compound j to h
+for model i, for i=1,...,m and j =1,...,A. A multiplicity-adjusted test
+parallels that in Section 4.1. In the randomized-block analysis, the blocks
+are now the A active compounds rather than data splits (there is only one).
+If a randomly chosen split is applied across all models, we can model y as
+generated by
+EFFICIENT, ADAPTIVECROSS-VALIDATION 13
+Fig. 4. Algorithm 2 applied to tuning a neural network (NN) for the PubChem AID362
+assay data with Burden numbers as the descriptor set. NN sizes of 5, 7 and 9 are denoted
+by small, medium and large plotting symbols, respectively, and decay values of 0.001, 0.01
+and 0.1 are denoted by ▽, ◦ and △, respectively. The two models surviving after 100 splits
+are connected with dashed lines.
+where µ is an overall effect, τ is the effect of model i, β is the effect of
+active compound j, and the ε are random errors, assumed to have inde-
+pendent normal distributions with mean 0 and variance σ . Similarly, the
+Tukey value in (3) is replaced by
+where the studentized range statistic q has degrees of freedom m and (m−
+1)(A−1). Analogous hypothesis tests eliminate all models significantly dif-
+ferent from the one with the best observed performance.
+If s≥2 data splits have been made, we could define blocks in terms of
+activecompoundsand datasplits,thatis,thenumberofblockswouldbesA.
+Some experimentation indicates that Algorithm 1 in Section 4.1 eliminates
+inferior models faster, however, for s≥2. Thus, for Algorithm 2 we use the
+Tukey test based on active compoundsas blocks only for the firstdata split.
+After very poor models are eliminated, a second split is made and the data-
+adaptive search proceeds for the surviving models as in Section 4.1 with
+s≥2 splits as blocks.
+We now revisit the example of tuning a neural network in Section 4.1
+(the results for Algorithm 1 were presented in Table 2). Figure 4 depicts
+Algorithm 2’s progress, plotting h versus split. After running one split of
+10-fold CV, the model with size=5 and decay=0.01 has the largest h
+14 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+value. The vertical line drawn down from this value has length T (m,A),
+where m=9 and A=60. It is based on Tukey’s test with the 60 active
+compounds as blocks. The h values for models 1, 4 and 7 fall below this
+line and they are eliminated with one CV split. For 2,3,... splits, y¯ i·, the
+average of h over the splits, is plotted for the surviving models, and the
+vertical lines have length T (m,s), where m is the number of models sur-
+viving to s splits. It is seen that after 2, 3 or 4 splits of CV, no further
+models are eliminated. After 5 splits, model 3 is dismissed,and after 9 splits
+models 2, 5, 6, 8 and 9 still survive. The two models with the largest h
+averages, models2and9,areconnected withdashedlines inFigure4.These
+models are still competitors after 100 splits of CV. The vertical line drawn
+at 100 splits is very short; nonetheless, these models are so close in per-
+formance that they cannot be distinguished. Again, this motivates Algo-
+rithm 3.
+4.3. Algorithm 3 (modified stopping criterion). As has already been il-
+lustrated, if the predictive performances for several candidate models are
+very similar, it can take many data splits and CV analyses to distinguish
+them. Particularly for model tuning, it would be more efficient to mod-
+ify the stopping criterion so that the algorithm stops once it is clear that
+the current leading performer cannot be beaten by a practically important
+amount.
+Weimplementsuchastoppingcriterionviatheconfidenceintervalsin(4).
+Again, rank the m>1 models surviving at any iteration in terms of their
+average predictive performances, that is, y¯ (1)·≥y¯ (2)·≥···≥y¯ (m)·. Notation-
+ally, we will use s (number of splits) for the number of blocks in these
+averages, but the same method can be applied with observations as blocks
+as in Section 4.2. From (4),
+(m,s)) for i=2,...,m.
+At some confidence level, we want to be sure that τ −τ <p for all i=
+2,...,m,where p is a given practically insignificant performancedifference.
+Thus, to stop with the model giving y¯ (1)· declared as the winner, y¯ (i)·−y¯ (1)·
++T α (m,s)<p 0 for all i=2,...,m. As the y¯ (i)· are nonincreasing with i, the
+revised stopping criterion is simply
+.
+For the example of tuning a neural network for the AID362 assay data
+and Burden number descriptors, the values of y¯ (2)·−y¯ (1)·+T
+for data splits 1–38 are as follows:
+10.59,6.96,5.08,3.16,3.27,2.60,2.14,2.20,1.67,...,1.05,0.91.
+(The hybrid observations/splits as blocks algorithm of Section 4.2 is being
+used here.) If we take p =1 as the practically insignificant performancedif-
+EFFICIENT, ADAPTIVECROSS-VALIDATION 15
+Fig. 5. Algorithm 3 applied to tuning a neural network (NN) for the PubChem AID362
+assay data with Burden numbers as the descriptor set. NN sizes of 5, 7 and 9 are denoted
+by small, medium and large plotting symbols, respectively, and decay values of 0.001 and
+0.01aredenoted by ▽ and ◦,respectively. Theresults forsplits1–7areasinFigure4and
+are not shown. All NNs with decay of 0.1 have been eliminated by split 8, as is the NN
+with size of 5 and decay of 0.001.
+ference,thealgorithmstopsafter38splitsof10-foldCV,withsurvivingmod-
+els2,5,6,8and9.Model2withsize=5anddecay=0.01 wouldbedeclared
+the “tuned” model for practical purposes. If we set p =2, the algorithm
+stops after just nine splits. Models 2, 5, 6, 8 and 9 are again the survivors,
+and again model 2 is declared the winner for the neural networks/Burden
+numbers modeling strategy. Figure 5 illustrates the iterations of the algo-
+rithm. In particular, the vertical lines shown to the right of the performance
+averages for 8, 9, 37 and 38 splits start at y¯ (2)· and have length T α (m,s).
+If they extend less than p 0 past y¯ (1)· [i.e., y¯ (2)·+T α (m,s)<y¯ (1)·+p 0 ], then
+the revised stopping criterion (6) is satisfied.
+Recall that when we try to establish the one winning model via Algo-
+rithms 1 or 2, 100 data splits and CV analyses are insufficient to separate
+models2and9.Therefore,themodifiedstoppingcriterionsavesconsiderable
+computing time here.
+5. Comparing statistical methods or explanatory variable sets. Recall
+that Section 1 described 80 statistical methods/descriptor set modeling
+strategies compared by ChemModlab. When comparing qualitatively dif-
+ferent statistical methods and/or explanatory variable sets, there are two
+possible search implementations:
+16 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+• Tune then compare:
+Step 1. Tune each modeling strategy independently by repeating one of
+the algorithms in Section 4. For ChemModLab, this would mean
+80 tuning searches.
+Step 2. Compare the tuned models, again by applying one of the algo-
+rithms in Section 4.
+Asweshallillustrate,theCVanalysesinStep1canbereusedinStep2,
+possibly leading to minimal further computing at Step 2. This approach
+is preferred when one wants to assess the performance of every modeling
+strategy after tuning. It requires many searches in Step 1, however.
+• Simultaneously tune and compare: Carry out one search, simultaneously
+tuning and comparing the model strategies.
+Thisapproach,weshallsee, can requiremuch less computing.Its draw-
+back, however, is that it does not necessarily provide accurate estimation
+of the predictive performances of suboptimal strategies; we justinfer they
+are dominated by the winning strategy.
+Forsimplicity,wewillillustratethesetwosearchimplementationsbycom-
+paring two statistical methods/descriptor sets for the AID362 PubChem
+assay. Extension to all 80 strategies explored by ChemModLab is straight-
+forward. One strategy is a neural network with Burden number descriptors,
+which we call NN/Burden. NN/Burden was investigated in Section 4, and
+we already know that size=5 and decay=0.01 provides good values of the
+tuningparameters. Thesecond strategy is k-nearest neighborswith Carhart
+atom pairs as explanatory variables, which we call KNN/Carhart.
+For KNN/Carhart, we need to tune k, the number of neighbors. We con-
+sider k in the range 1,2,...,10. Figure 6 shows the results of running Algo-
+rithms 2 and 3 in Sections 4.2 and 4.3. Algorithm 2 stops after 11 CV data
+splits, and the model with k=8 emerges as the winner. (This agrees with
+more exhaustive computations to check our algorithm.) If we use the stop-
+ping criterion p =1 in (6), the algorithm stops after just eight data splits.
+With p =2, only five data splits are required. All these variants point to
+k=8.
+We now consider the tune-then-compare implementation for comparing
+NN/ Burden with KNN/Carhart. For definiteness, we take p =2 in (6)
+as the stopping criterion. In Step 1, the two strategies are tuned indepen-
+dently, which has already been described. In Step 2, NN/Burden (size=5
+and decay=0.01) is compared with KNN/Carhart (k=8). Running Algo-
+rithm3inSection4.3forthreedatasplitsissufficienttoestablishthattuned
+KNN/Carhart is better than tuned NN/Burden at significance level 0.05.
+The 95% confidence interval for the difference in mean h is [2.31,11.29].
+In Step 1, the total number of model fits (with 10 fits per 10-fold CV) is
+10(9+6×4+5×4)=530 for NN/Burden and 10(10+7+4×3)=290
+EFFICIENT, ADAPTIVECROSS-VALIDATION 17
+Fig.6. Algorithms2and3appliedtotuningk-nearestneighbors(KNN)forthePubChem
+AID362 assay data with Carhart atom pairs as the descriptor set. Values of k=4,...,10
+are denoted by the plotting symbols 4,...,9,0.
+for KNN/Carhart. The same data splits were used for NN/Burden and
+KNN/Carhart. Thus, for Step 2, the first splits from Step 1 can be reused
+and no further CV computations are required. Therefore, the total number
+of model fits in both steps to establish that KNN/Carhart (with k=8) is
+superior is 530+290=820. No model required more than 10 random splits
+to define the CV folds.
+For the simultaneous tune and compare implementation, the nine NN/
+Burden models (with different values of size and decay) and the 10 KNN/
+Carhartmodels(withdifferentvaluesofk)areputtogetheras m=19initial
+models. The results of running Algorithm 3 in Section 4.3 with p =2 are
+shown in Table 3. We see after just one split, with the active compounds
+as blocks, three NN/Burden models and one KNN/Carhart model are elim-
+inated. After two data splits, with splits as blocks, only one NN/Burden
+model and five KNN/Carhart models survive. After three splits, the re-
+maining NN/Burden model is eliminated. The five KNN/Carhart models
+leftsurvivethroughfivesplits,whenthestoppingcriterionissatisfied.These
+models have k=6,7,8,9 and 10 and average h values of 35.6, 37.1, 37.7,
+35.9 and 36.7, respectively. Therefore, we will again choose KNN/Carhart
+with k = 8 as the overall best model. The total number of model fits is
+10(19+15+6+5×3)=550, with no model requiring more than five ran-
+dom splits of the data.
+The second approach, simultaneously tuning and comparing models, re-
+quires less computer time here because the best KNN/Carhart models out-
+18 H.SHEN,W. J. WELCH AND J. M. HUGHES-OLIVER
+Simultaneously tuning NN/Burden and KNN/Carhart models for the PubChem AID362
+assay data. The size and decay values for the NN/Burden models are defined in Table 1;
+KNN/Carhart model k has k-nearest neighbors. The models surviving after each split are
+denoted by a check mark; KNN/Carhart models 2–5 and 6–10 survive the same number
+of splits, respectively
+NN/Burdenmodel KNN/Carhartmodel
+of splits 1 2 3 4 5 6 7 8 9 1 2–5 6–10
+0 X X X X X X X X X X X X
+1 X X X X X X X X
+performalltheNN/Burdenmodels,andthelattercanbequicklyeliminated.
+In contrast, the tune-then-compare implementation spends much computa-
+tional effort in tuning the inferior modeling strategy, NN/Burden. It does,
+however, lead to an accurate, quantitative assessment of the difference in
+predictive performance between NN/Nurden and KNN/Carhart.
+6. Conclusions and discussion. Throughout we used 10-fold CV, even
+for k-nearest neighbors where it is computationally straightforward to use
+n-fold(leave-one-out) CV.Weused10-foldCVforconsistencyacrossmodel-
+ing methods: n-fold CV would be computationally infeasible for the method
+of neural networks also considered here and for many other methods. In
+addition, n-fold CV has well-known limitations. Theoretically, Shao (1993)
+showed its inconsistency in model selection. For applications like the molec-
+ular databases in PubChem, it is also well known that n-fold CV can give
+over-optimistic estimates of predictive performance if the data have sets of
+similar compounds (“twins”). It is easy to predict one such compound’s
+assay value from its near-analogs.
+We illustrated that tuning a model may have a large effect on predictive
+performance. We also showed that the variation in CV performance esti-
+mates from one data split to another may necessitate multiple data splits
+for reliable comparison of different sets of tuning parameter values or of
+different tuned statistical modeling methods/explanatory variable sets. The
+data-adaptive algorithms developed in Sections 4 and 5 attempt to make
+reliable comparisons based on enough data splits, but sequentially focus the
+computational effort on models with better predictive performance.
+ThebasicsequentialalgorithminSection4.1usesdatasplitsasablocking
+factor, and hence requires at least two data splits for each candidate model.
+EFFICIENT, ADAPTIVECROSS-VALIDATION 19
+The variation in Section 4.2 uses individual observations as the blocking
+factor, and can sometimes eliminate very inferior models after just one data
+split and CV analysis. To use observations as blocks, the performance mea-
+sure must be an average over observations. The specialized h measure
+appropriate for the PubChem data set used throughout is of this type, as
+are more traditional metrics such as mean squared prediction error in re-
+gression problems or misclassification rate for classification problems.
+Thesame approach can beapplied to tuninga modelingstrategy with re-
+spect to user-specified parameters and to comparing tuned modeling strate-
+gies. Simultaneously tuning and comparing will be computationally efficient
+relative to nonsequential strategies if there are many poor modeling strate-
+gies that are dominated by other methods.
+Parallelization of the algorithms is straightforward, as regular 10-fold CV
+is always used for a specific model and data split. Thus, with 10 processors,
+say,each processorsimplyperformsoneofthe10fitsofasingleCVanalysis.
+With more than 10 processors, the 10 fits for each of two or more models on
+the same split could be sent to the processors. Reconciling the results from
+the parallel computations is fairly trivial; it is model fitting that dominates
+computational complexity here.
+Theproposeddata-adaptiveCValgorithmissequential.Ateachiteration,
+a multiplicity-adjusted statistical test is developed to eliminate all inferior
+modeling strategies. An issue not addressed in this article is how to take
+account of the multiple testing across iterations. This is the topic of future
+study.
+We gave an example where two different sets of explanatory variables
+were compared. In practice, some statistical models also have to be “tuned”
+with respect to selection of variables within a given set. This could also
+be done via our sequential CV algorithms, at least for a small number of
+candidate subsets of variables. Much adaptation would be necessary if there
+isacombinatorialexplosionofpossiblesubsets,andagainthisisfuturework.
+In practice, some tuning parameters are usually treated as continuous
+factors, for example, decay for a neural network. Future study will also
+include sequential CV algorithms for continuous factors.

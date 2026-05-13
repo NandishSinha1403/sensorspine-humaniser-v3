@@ -1,0 +1,557 @@
+A Pointillism Approach for Natural Language
+Processing of Social Media
+Peiyou Song Anhei Shu Anyu Zhou Dan Wallach Jedidiah R. Crandall
+Computer Science Computer Science Computer Science Computer Science Computer Science
+University of New Mexico Rice University Harbin Engineering University Rice University University of New Mexico
+Albuquerque NM 87131 Houston TX 77251 Harbin 150086, China Houston TX 77251 Albuquerque NM 87131
+Email: peiyou@cs.unm.edu
+Abstract— media for challenging languages such as Chinese without any
+The Chinese language poses challenges for natural language lexiconornotionofwords?Weproposeapointillismapproach
+processingbasedontheunitofawordevenforformalusesofthe tonaturallanguageprocessing,andthroughexperimentsshow
+Chinese language, social media only makes word segmentation
+that longer words and phrases can be put back together based
+in Chinese even more difficult. In this document we propose
+only on temporal correlations of trigrams.
+a pointillism approach to natural language processing. Rather
+than words that have individual meanings, the basic unit of a To motivate the pointillism approach to natural language
+pointillismapproachistrigramsofcharacters.Thesegramstake
+processing in this document, we focus on the Chinese lan-
+on meaning in aggregate when they appear together in a way
+guage. A unique feature of the Chinese writing system is that
+that is correlated over time.
+Our results from three kinds of experiments show that when it is a linear sequence of non-spaced ideographic characters.
+words and topics do have a meme-like trend, they can be The fact that there are no delimiters between words poses
+reconstructed from only trigrams. For example, for 4-character the well-known problem of segmentation. A natural language
+idioms that appear at least 99 times in one day in our data,
+processing system with a lexicon could perform quite well,
+the unconstrained precision (that is, precision that allows for
+however, the unknown words which are not registered in the
+deviation from alexicon when the resultis just as correctas the
+lexicon version of the word or phrase) is 0.93. For longer words lexicon, become the bottle-neck in terms of precision and
+andphrasescollectedfromWiktionary,includingneologisms,the recall [1]. For Chinese, Chooi and Ling [2] observed that if
+unconstrained precision is 0.87. We consider these results to be one can obtain good recall for unknown words, the overall
+very promising, because they suggest that it is feasible for a
+segmentation is better. However, in Chinese social media
+machinetoreconstructcomplexidioms,phrases,andneologisms
+unknown words are used regularly.
+with good precision without any notion of words. Thus the
+colorfulandbaroqueusesoflanguagethattypifysocialmediain In this document, we illustrate an approach to recognize
+challenging languages such as Chinese may in fact be accessible
+trends, not based on words as are traditional methods but
+to machines.
+based on trigrams, and use the trends to find words which
+I. INTRODUCTION can be either known or unknown. This method uses only a
+corpuswithatimeseries,meaningthatasystemdictionaryand
+Social media poses many challenges for natural language
+grammar knowledge is not required. The underlying concept
+processing. Many of these challenges center around the con-
+of the proposed method is as follows. We regard the problem
+cept of a word. For example, social media users might in-
+of trend analysis as finding the trigrams which have the same
+vent new words called neologisms, which can express more
+trend.Weobservethatthetrigramsthathavecorrelatedtrends
+meaning than the original word or evade content filtering.
+over a long period of time have a high probability that they
+An example in English would be “Intarweb” to refer to the
+belong to the same topic or even belong to the same word.
+Internet, by using the neologism “Intarweb” net users are
+We concatenate the trigrams back until it becomes a word or
+adding the additional meaning that the Internet and web are
+a phrase.
+not something that is fully understood.
+Chinese social media compounds these problems that are The rest of this document is organized as follows. First, we
+caused by the notion of a word, both because the written give some background about the Chinese language and Sina
+Chinese language does not delimit words with spaces and Weibo in Section II. Then Section III discusses some prelim-
+because Chinese net users use neologisms very heavily. How inary observations that motivate the approach and Sections V
+can we track trends, discover memes, and perform other basic andIVexplainthekeyalgorithmsandproceduresfordiscover-
+natural language processing techniques for Chinese social ingbigramandtrigramtrendsandthenconcatenatingtrigrams
+mediawhenitisnotevenclearthattheproblemofsegmenting to form a word or phrase. Our experimental methodology and
+Chinese social media into words is a tractable problem? results are explained in Section VI. Then the discussion in
+This document is centered around a thought experiment: SectionVIIandrelatedworksinSectionVIIIarefollowedby
+how much can machines understand about trends in social the conclusion.
+II. BACKGROUND,INBRIEF
+English speakers expect words to be separated by whites-
+pace or punctuation. In Chinese, however, words are simply
+concatenated together. Therefore, in order to understand Chi-
+nese text, the first thing that we need to do is to divide the
+sentences into word segments. The problem of mechanically
+segmentingChinesetextintoitsconstituentwordsisadifficult
+problem. During the process of segmentation of Chinese, two
+mainproblemsareencountered:segmentationambiguitiesand
+unknown word occurrences.
+Sincesocialmediaisheavilycenteredaroundcurrentevents,
+it contains many new named entities that will not appear in
+even the most comprehensive lexicons. Neologisms, another
+0 10 20 30 40
+typeofunknownwords,arecreatedtoexpressanewmeaning
+or the same meaning with different nuance. Neologisms are
+also an integral part of social media.
+For example: in the following post from a microblogging
+site of China, weibo.com, there is at least one unknown word
+in each sentence.
+SINAWeibohasthemostactiveusercommunityamongthe
+othertop3portalsites:Tencent,SohuandNetEase.Moreover,
+SINA has the best relationship with the Chinese government.
+Recently, even government employees and government media
+use SINA weibo to broadcast news and other events [6].
+Microblogging entails real-time sharing of content that
+is specific to a time and audience. This is in contrast to
+traditionalmediathathasalongernewscycleandaprolonged
+processthatmakesthecontentandtimingofthecontentmore
+uniform. Compared to other online corpora, microblogs are
+distinguished by short sentences and casual language. Most
+microblog sites limit the maximum length of a post to 140
+UTF-8 characters1, demanding precise and clear execution.
+Microblogsareimportantbirthplacesofnewwords.Moreover,
+microblogpostshavetimestamps.Thisinformationisessensial
+to our pointillism approach.
+III. OBSERVATIONS
+To illustrate how a word can create ambiguities for word
+segmenters, we use 中华人民共和国 (People’s Republic of
+China) as an example. This is neither a neologism nor an
+unknownwordthatcannotbefoundinthedictionary,butitis
+agoodexampleofsegmentationambiguitiesandgramtrends.
+Theword中华人民共和国(People’sRepublicofChina)is
+seven characters long and has smaller words within, as shown
+in Figure 1.
+Fig.1. People’sRepublicofChina.
+1Notethat,comparedtoEnglish,140Chinesecharactersusuallycarrymuch
+moreinformationthan140lettersinEnglish.
+ecnerruccO
+ZhongHuaRen
+RenMinGong
+PingGuoDian
+Fig.2. Trigramtrendsfor中华人民共和国onWeibo.
+Figure 2 shows the plot of trigram frequency of occurrence
+for a period of 47 days2. 中华人民共和国 has 5 trigrams:
+MinGong),民共和(MinGongHe),and共和国(GongHeGuo).
+What can be seen in Figure 2 is that trigrams from 中华
+人民共和国 have a very distinictive temporal correlation
+when compared to other trigrams, such as the trigram 苹果
+电 (PingGuoDian, the first three characters of 苹果电脑, or
+AppleComputers).Thex-axisistimeindays.They-axisisthe
+number of occurrences of the trigram per day for our dataset,
+which at the time this data was taken was only about 2% of
+all Weibo posts. What is most interesting are trigrams that are
+not words themselves, but through time correlations serve as
+asortofgluetoholdtrigramswhichbelongtothesameword
+together.
+Theobservationsthattherearetimecorrelationsthatappear
+among trigrams leads to the question: can we use this feature
+to find words, phrases, memes or even find topics? In this
+research, we examine the possibility of using only time corre-
+lation information of grams to concatenate words and phrases
+without a lexicon or knowledge of the grammar.
+IV. PROCEDURES
+In this section, we explain the key algorithms and pro-
+cedures for discovering bigram and trigram trends and then
+concatenating trigrams to form a word or phrase.
+Step 1: Collecting posts with time sequences.
+Starting from 23 July, 20113, we send a request every
+second to the public timeline and the Weibo server returns
+roughly200postsrespondingtoeachrequest.These200posts
+are not continuous in terms of post ID .
+Step 2: Count the frequency of occurrence of grams.
+2The data is from 23 July 2011 to 18 August 2011 and 24 August 2011
+to 11 September 2011. Due to system failure, we missed the data from 19
+August2011-23August2011.
+3Wehavecollecteddatacontinuouslyuntilnow,butinthisdocument,we
+onlyusethedatafrom23Julyto23March2012.
+Given a Chinese text with time series information, the hand, and used this model to decide which vector should be
+system will divide the text into trunks of three consecutive used in finding the relationship between trigrams. Once we
+charactersthatarecalledtrigrams.Oursystemobtainsthefre- decide which vector we are going to use to find similarity, we
+quencyofoccurrenceofeachtrigramhourly.Inthisdocument, concatenate the trigrams.
+wemostlyusethefrequencyofoccurrenceofeachtrigramfor Let us use an English meme, “putting lipstick on a pig”, as
+a daily basis. an example to explain how we concatenate trigrams.
+Suppose Connector has thus far produced “putting lipstick
+Step 3: Check if the trigram is a valid root.
+on a”. The system now considers which trigram from the set
+For convenience, we call the program connecting the tri-
+“on a boat”, “on a pig”, “on a clear” and “on a plain” it
+grams based on time correlation information “Connector.” We { }
+should concatenate next. The root trigram is the first trigram,
+call the first trigram we feed into Connector the root trigram.
+“puttinglipstickon”,withwhichConnectorstarts.Theparent
+Not all trigrams can be used as the root for concatenating
+trigram is the last trigram appended to the phrase (at this
+trigrams. There are two kinds of trigrams that cannot be root
+point “lipstick on a” is the parent trigram). The stem trigram
+trigrams.
+is the one which has the lowest frequency in “putting lipstick
+First:trigramsthatarerarelyusedwheremostoftheirdaily
+on a”. We use the median value of the frequency vector to
+frequenciesarezeros.Thisisimportantbecauseifavectorhas
+decide which trigram’s frequency is the lowest, and the stem
+too many zeros this would bias the cosine similarity value.
+trigram should be closest to the real frequency of the phrase.
+Second: trigrams which have no obvious fluctuation in our
+To decide whether we should connect a trigram to the phrase
+examination period. We measure this by obtaining the cosine
+we are working on, we compare the cosine similarity value
+similarity value between the trigram and the constant vector
+betweeneachcandidatetrigramandtheroot(simRoot),parent
+1,1,...,1 . If the value is higher than a certain threshold, 0.98
+{ } (simParent), and stem trigram (simStem). We use simScore to
+in our current system, then it is considered too normal and
+measure how close a gram is to the phrase.
+will be treated as an invalid root for concatenation.
+Step 4: Find time correlation of grams. simScore=max simRoot,simParent,simStem
+The trigrams that have temporal correlations and overlap
+The candidate trigrams are sorted by simScore. We recur-
+willbeconcatenatedtogether.Thedetailedalgorithmsforthis
+sively search for the next trigram to concatenate by a depth-
+step are described in the next section.
+first traversal into highest-score nodes first. Only the top 5
+V. ALGORITHMS candidate trigrams are considered. The traversal stops when
+allcandidatetrigramshaveasimScorelowerthanathreshold,
+Cosinesimilarityisusedtojudgewhethertwotrigramshave
+whichissetmanuallyto0.97.Wesetathresholdof60seconds
+correlated trends.
+for Connector to concatenate trigrams, to avoid unbounded
+<A ,B > searches.
+n A 2 n B 2 −
+i=1 i × i=1 i simPath= cos.Sim(simStem,trigram i )
+where <,> denotes an�inner product b�etween two vectors. i � =1
+We tested three types of vectors, the daily frequency of where, n is the number of characters in the phrase.
+trigrams (FT), the daily difference in frequency of trigrams The phrase which has the highest simPath is considered to
+(DFT) and the daily rate of change in frequency (CFT). bethefinalresult.Ifthereareotherphraseswhichalsohavea
+simPathhigherthanthethreshold,weoutputthemaspossible
+results, as shown in Section VII-A.
+FT (trigram)
+CFT (trigram)=log
+(trigram) VI. EVALUATION
+To gain a better understanding of the capabilities and limi-
+tations of connecting trigrams into longer words and phrases,
+DFT (trigram)=FT (trigram) FT (trigram)
+day day day 1
+− − we performed three experiments. For these experiments, we
+During our initial experiments we found that, for some were interested in both known words (in the dictionary) and
+trigrams, CFT cosine similarity works better, and for other unknown words or phrases (not in the dictionary). Unknown
+trigrams DFT works better. In light of this, we used an words are the already existing words that are not in the dic-
+SVM(SupportVectorMachine)tolearnwhichparameterswe tionary. They include named entities and neologisms. Named
+shoulduseforconnectingthewords.Thefeaturesweusedfor entities can be the names of people, companies, movies, and
+the SVM were cosine similarity between the root trigram and anything that is given a name. Neologisms are words created
+the constant vector 1,1,...,1 , maximum change rate of the recently, they are usually not words before they are created.
+root, minimum FT, maximum FT, mean of FT, and the length We collect three different types of word and phrase sets:
+of the time period of vectors. The corresponding variable y is long words or phrases from Wiktionary, hot keywords or
+avectorofFT,DFTandCFT.Weusedthelibsvmpackage[9] phrases from weibo.com, and 4-character idioms from Wik-
+to train our model. We labeled 100 data points for training by tionary. Words or phrases in Wiktionary include both known
+We also found that the results tended to be effected by new
+PRECISIONSVALUEFORLONGWORDSINWIKTIONARY.
+events. For example, for one named entity, 中国银行业监
+Namedentities(133) 0.5 0.79 督管理委员会 (China Banking Regulatory Commission) in
+Newwords(16) 0.53 0.93 wiktionary, the result of Connector is 中国银行百年行庆
+Phrases(244) 0.44 0.75
+(Bank of China One Hundred Year Anniversary).
+4-characteridioms(29) 0.90 0.90
+The fact that UP scores tend to be much higher than
+Total(422) 0.50 0.79
+LCP scores in or results implies that even with a relatively
+comprehensive lexicon, such as Wiktionary, the lexicon is
+incomplete and not up to date. This motivates the pointillism
+and unknown words and they usually do not have an obvious
+approach: our aim in this document is to move away from
+trend4.4-characteridiomsareknownwordsanddonotusually
+lexicons. Using an online corpus and analysing time enables
+have obvious trends. Hot keyword lists from weibo.com are
+us to extract newly created words/phrases, and even topics,
+newly created words or phrases, and have obvious trend(s) in
+with unknown words in real time.
+a certain period.
+Moreover, we found that when there are several candidate
+The procedures of these experiments start from Step 3
+phrases which start from the same root trigrams, Connector
+in Section IV (Step 1 and 2 have been done before the
+wouldreturntheonewhichisusedmostfrequentlyinacertain
+experiments). The output of Connector is compared with the
+period of time, and this one may not be the one listed on
+original dataset, and judged by a human to determine if it is
+Wiktionary. If we shorten the experiment duration and just
+a correct result.
+include the period which had a trend, Connector would just
+For this document, because our emphasis is on connecting
+return the exact phrases which were involved in the trend.
+trigrams into longer words and phrases rather than on how to
+In light of this, in Section VI-B, we use the hot keywords
+detect trends, we assume that the word or phrase exists in our
+(or phrases) announced by weibo.com and set the experiment
+database and that the root trigram is given. For this reason we
+durationforfromoneweekbeforetooneweekafterthepeak.
+havenonegativeobservations,onlypositiveobservations.This
+Among the four types of words, 4-character idioms showed
+is why we focus on precision and do not report recall in this
+the best UP score and high LCP. This is because 4-character
+document. To compare two scenarios, one where Connector
+idioms are fixed and most of them are from ancient Chinese,
+mustonlymatchwordsorphrasesinalexiconandonewhere
+there are rarely other phrases which share the same root
+a human can judge if Connector constructed a valid word
+trigramswith4-characteridioms.Thisimpliesthatifthewords
+or phrase, we report two different precision scores: lexicon-
+or phrases are stable or fixed then they are not influenced by
+constrained and unconstrained.
+currenteventsheavily.Totestthishypothesis,inSectionVI-C,
+Lexicon-constrained precision (LCP) is calculated as:
+we collect 4-character idioms only from Wiktionary and test
+them in a 3-month and an 8-month period separately.
+Matching Wiktionary or Weibo
+B. Weibo hot keywords
+Valid Root Trigrams
+Weibo.com lists 50 hot keywords, or phrases, hourly, daily
+Unconstrained precision (UP) is calculated as:
+andweekly.Weusedtheweeklyhotkeywordsof2November,
+2011 to find out how Connector works on unknown words
+Matching Wiktionary or Weibo Correct
+UP = { }∩{ } or phrases with pronounced trends. We picked 7 days before
+Valid Root Trigrams
+and 7 days after 2 November, 2011 as the frequency vector,
+Matching Wiktionary or Weibo are those exactly so the vector length is 15. As in the previous section, UP
+match with the words or phrases listed by them. Correct is the reasonable results judged by a human (39) divided by
+are those different from the phrases listed by the source, but the valid root trigrams (43). LCP is the results which match
+judged to be correct by a human. the keywords provided by weibo.com (24) perfectly divided
+by the valid root trigrams (43). The UP we measured in this
+A. Long words and phrases from Wiktionary
+experiment is 0.907 (39/43), and the LCP is 0.558 (24/43).
+We collected 500 words or phrases which were longer than These are promising results since some of the phrases are
+3 characters from wiktionary.com [10]. The results for each longerthan7characters,containseveralwords,andespecially
+type are listed in Table I. have stop words in them.
+Except for 4-character idioms, the LCP scores are less than The 7 invalid trigrams are due to the fact that some
+0.55.LCPneedstobeputinthepropercontextforoursystem. keywords listed by Weibo are not really hot in terms of what
+For example, 一房一厅 (One bedroom and one living room) users are actually talking about. For example for 萌物鉴定,
+becomes 一房一妻制 (One house one wife policy). The latter the frequency of 萌物鉴 has 13 frequency values equal to 0
+isanewlycreatedphrasedescribinganewsocialphenomenon. and 2 equal to 1. We treated these as invalid root trigrams as
+described in Section V.
+4A trigram having an obvious trend means it has a deviation from its
+The relatively low LCP value is because we sometimes
+standardtendency.Forexampleatrigraminvolvedinanewseventorahot
+topic. observe alternate results from the hot keywords provided by
+weibo.com.Forexample,forthehotword乔布斯情书(Alove
+TRIGRAMFREQUENCYOF谷歌开发者大会.
+letter from Steve Jobs), the result of the connector is 乔布斯
+26 27 28 29 30 31 01 02 03 04 05 06 07 08
+传 (Steve Jobs: A Biography). The reason for this is because 谷歌开 1 68 5 0 1 1 4 0 2 4 0 0 3 1
+乔布斯传(SteveJobs:ABiography)hashigherfrequencyand
+歌开发 1 68 4 0 1 1 0 0 2 4 0 0 0 0
+fluctuation than 乔布斯情书 (A love letter from Steve Jobs) 开发者49 127 43 46 44 65 50 49 227 129 38 39 65 63
+during the vector period. We only count them as UP but not 发者大15 56 5 4 13 10 6 11 166 84 14 11 21 14
+LCP. For further error analysis, please refer to Section VII. 者大会15 56 5 4 14 9 6 11 168 85 14 10 21 13
+We also used the 8-month data to concatenate those key-
+words and the LCP score was 0 with the UP score less than
+0.40. The low LCP and UP score combinationofmultiplephrases.(e.g.Both友谊地久天
+长 (Our friendship will forever last) and 友谊天长地久
+C. LCP and UP for known words
+(Our friendship will last forever) are correct, the result
+To test our hypothesis that fixed words or phrases are not becomes 友谊地久天长地久 (Our friendship will last
+influenced by current events as heavily, we collected all 853 forever last). )
+Chinese 4-character idioms listed on Wiktionary [11]. The If the target phrases are composed of multiple words
+Connector was executed for two periods, one is about a 3- and they have different patterns during the experiment
+month period (23 July 2011 to 12 September 2011), the other period. For example, the trigram trend of 谷歌开发者
+is an 8-month period (23 July 2011 to 22 March 2011). The 大会 (Google’s developer conference), one of the hot
+results are listed in Table II. keywords in our experiment in Section VI-C, are shown
+The LCP value needs to be put into context because there in Table III. Trigrams 谷歌开 and 歌开发 only have one
+are two reasons why it is not as high as the precision of peak on 27 October 2011. 开发者, 发者大, and 者大
+commonnaturallanguageprocessingtasksusingconventional 会 have two peaks on 27 October and 3 November 2011
+approaches and the UP score in the same experiment. First, respectively. Connector returns 谷歌开发 (Google de-
+some 4-character idioms have common first root trigram. For velop)incorrectly.Wehypothesizethattherewasanother
+example, 一面之交, 一面之识, 一面之词, 一面之雅, and 一 开发者大会(Developerconference)heldon3November
+面之缘,havethesameroot一面之,soConnectoronlyreturns 2011.
+theonewiththemostfrequentresult:一面之缘.Forthiscase,
+These three challenges will be the subject of future work.
+we only count 一面之缘 as “matches with Wiktionary,” the
+other four are not counted in LCP, but are counted in UP. VII. DISCUSSION
+Secondly, the words listed in Wiktionary may not necessarily
+One of the questions this document focuses on is: does the
+be the common usage of the word. For example, people
+frequent creation and use of new, unknown words exacerbate
+frequently use 一见如故, as Connector gives, instead of 一见
+the existing problems that natural language processing tasks
+如旧, which is listed in Wiktionary5.
+havewithwordsegmentation,ordoesitprovideanopportunity
+Though Table II shows that the 8-month period experiment
+where the temporal variance in these new words can be
+(columns 2 and 4) gives more words that matching the
+leveragedtodoabetterjobofthenaturallanguageprocessing
+Wiktionary lexicon or are judged correct by a human than
+task. In this section, we first use an example to show how
+the 3-month period (column 3 and 5) does, the LCP and UP
+a trigram which is not a word can actually help with an
+values are relatively stable. For those 4-character idioms, they
+information retrieval task. Then, we discuss why we use
+areusuallyusedwhen peoplewanttoexpressastrongfeeling
+trigrams.
+andareseldominvolvedinpronouncedtrends.Therearemore
+invalid root trigrams in a 3-month period than in an 8-month A. From trends to stories
+periodexperiment,becausesometrigramsdonotappearoften To understand what Chinese net users talk about on social
+enough. media, [we selected 12,891 trigrams which had a chage rate
+greater than 100 in one day] from 23 July 2011 to 22 March
+D. Error Analysis
+2012 and tried to concatenate them using an 11 day period (5
+Accordingtoourmanualerroranalysis,thetopthreeerrors days before and 5 days after the increasing date). On average,
+are the following: about 56 trigrams6 had rates higher than 100 everyday.
+When test words or phrases contain stop words ( e.g. Interestingly, we found that the Connector sometimes can
+• 的(of), 是(is)) and high frequency common three charac- tellusthestoryoftheeventandwhatcausedalargeincrement
+infrequencyonthatday.Hereisanexamplefromourresults:
+ter words or phrases ( e.g. 会不会 (will)).
+If there are multiple phrases to describe the same thing, 100100\_20110804\_万为开:d: gram=万为开,
+oratthetimeoftheexperimentperiodtherearemultiple
+(Wan made a TV program about the first immigrants)
+memes which contain the same trigrams, then the whole
+phrase tends to be lengthened, and the results can be a
+612,891/229 = 56.3, where 229 is the number of days we collect the
+5Thewholedatasetandresultscanbefoundontheauthors’website. datasuccessfully
+LCPANDUPBASEDON4-CHARACTERIDIOMSFROMWIKTIONARY.
+Valid Root Trigrams Match with wiktionary Correct (human)1 LCP UP
+Data period 8 months 3 months 8 months 3 months 8 months 3 months 8 months 3 months 8 months 3 months
+Freq>99 160 122 123 97 6 3 0.77 0.80 0.93 0.95
+Freq>29 344 279 257 214 12 6 0.75 0.77 0.94 0.94
+Freq>4 515 484 342 333 23 19 0.66 0.69 0.94 0.95
+Total 832 832 364 361 58 56 0.43 0.43 0.92 0.90
+1 In addition to Matching with Wiktionary.
+(The statue was splashed ...)
+万为开拓团纪念碑被泼红漆, Traditional Trend Analysis: Our Method:
+(The statue was splashed with red oil paint)
+万为开拓团纪念碑被5人砸, Known Words / Terms Trends of N-grams
+(The statue was smashed)
+Trends of Words or Terms Analysis
+(The first immigrant people)
+万为开 is a trigram which has no meaning in Chinese. We Analysis Known / Unknown Words
+(topics, memes, keywords, etc.) (topics, memes, keywords, etc.)
+caught this particular trigram out of the 323 million trigrams
+inourdatabasebecauseitappeared100timesmorefrequently
+thanaverageon4August2011.Afterwefedthistrigraminto Fig.3. ChangeofOrder.
+Connector and set the connection time from 5 days before
+to 5 days afterward, we found the phrase: 万为开拓团拍电
+视 (Wan made a TV program about the first immigrants). It of trigrams.
+is still not clear enough to tell us why making a TV program B. Why trigrams?
+createdatrend.However,ifyoureadthecandidateresults,the
+As we mentioned in Section III, there can be trends for
+whole story becomes clear. It tells us that 5 men smashed and
+bigrams, trigrams quadgrams, and so forth. Here we discuss
+splashedredoilpaintonthestatueof“TheFirstImmigrants.”
+why we focus on trigrams. By combining individual bigrams,
+In this event, there are many trigram words, such as 纪念
+trigrams, and the subject of this document which is longer
+碑 (statues), 开拓团 (immigrants), 红油漆 (red oil paint) and
+wordsandphrasesconnectedviatrigrams,thenwecananalyse
+so on. However, the trigram which had the most significant
+the trends for words or phrases of any length.
+was, 万为开, a meaningless trigram. In general, these three Referring back to the example in Section III, 中华人民
+characters did not appear together before this event. The 共和国 can also be successfully concatenated using bigrams.
+sudden frequency increase of this trigram from 0 helps our
+However,weonlyinvestigatedthefeasibilityofusingtrigrams
+system notice this trigram, which lead us to notice this event.
+in this document. We choose trigrams instead of bigrams or
+Other trigrams did not increase in rate as much as 万为开
+quadgrams as a tradeoff of efficiency for accuracy.
+because of this event. This may be because they already exist
+Monogramshavetemporalcorrelationinformation,butcan-
+andthusitisdifficultforthemtohaveaprecipitousincreasein
+not give us order information of the phrase. For bigrams, the
+oneday.Whatourpreliminaryresultsregardingtrendanalysis bigram trends of 中华人民共和国 are plotted in Figure 4.
+suggest is that the new emergence of the trend of new words
+TogetherwithFigure2,wecanseethatthistrendinformation
+can actually be more conspicuous than known words.
+reflectswhatweanalyzedinFigure1.Wecanalsoseethatthe
+Fromthisexample,wecanseethatbyre-thinkingtheorder trigramsinformationismoreefficientthanbigramsintermsof
+of operations, a natural language processing task can leverage serving as “glue” to hold the larger word together. The reason
+the frequent creation and use of new words, as shown in for this is because 70% of Chinese words are bigrams [12].
+Figure 3. Trigrams are a good way to remove the noise of the sub-bi-
+Traditional methods need to have a lexicon containing words in the long word, for example, remove the noise of 人
+known words or terms to do analysis. After analyzing the 民 from 中华人民共和国.
+trend, they can infer the topics, memes, hot keywords, etc., Next,whynotlongergrams?Largergramsarecomputation-
+foronlyalready-knownwordsandterms.However,inChinese ally expensive. As of 22 March 2012, our dataset has a total
+social meida, the unknown words that net users use are an of 36,674 monograms, 16,353,985 bigrams, and 323,862,767
+important part of understanding what is being discussed. Our trigrams in our database. Figure 5 is the daily increment of
+approach is to consider the trends of trigrams first, where distinct monograms, bigrams and trigrams7. We can see that
+we do not need to know the words and the meaning of the
+words. After analyzing trends, we can get the topics, memes, 7The sudden drop around 26 August 2011 (before day 50) is caused by
+a system failure for three days around that time. The increase around 12
+and keywords for both known words and unknown words and
+November 2011 is due to several changes which increased the performance
+build larger words and phrases from the temporal correlation ofCollector.
+0 10 20 30
+ecnerruccO
+HuaRen RenMin
+Fig.4. Bigramtrendsfor中华人民共和国onWeibo.
+the distinct grams are constantly growing, though the growth
+rate is decreasing slightly. For trigrams, it is notable that
+there are more than 800 thousand new trigrams added to our
+database every day.
+0 50 100 150 200
+followersarenotstrongdeterminantsforthecreationoftrends.
+Specific to China, Wei [19] discusses new media research pa-
+pers published in Chinese-language scholarly journals. Wang
+et al. [20] studies Chinese-language scientist bloggers.
+The only two English-language analyses of Weibo that we
+are aware of are Yu et al. [21] and Bamman et al. [22]. Yu
+et al. [21] conclude, “People tend to use Sina Weibo to share
+jokes, images and videos and a significantly large percentage
+of posts are retweets. The trends that are formed are almost
+entirely due to the repeated retweets of such media content.”
+Leskovecetal.[15]presentaframeworkfortrackingtrends
+on a short time-scale, i.e., tracking “memes.” They analyzed
+information flow between traditional media and blogs during
+the 2008 U.S. Presidential election. They found that memes,
+such as “lipstickon a pig,” started in thetraditional media but
+moved to blogs within hours. In their mathematical model of
+memes,onlyimitationandrecencyareneededtoqualitatively
+reproduce the observed dynamics of the news cycle.
+Unknown word extraction in Chinese is a very challenging
+problem. Goh [2] presents an approach based on tagging
+characters and then applying support vector machines and
+maximum entropy models to the appropriate features. Lu
+et al. [24] propose the use of ant colony optimization for
+unknown word extraction. Cortez and da Silva [25] have
+developedanunsupervisedapproachtoinformationextraction
+by text segmentation. Search engines also must deal with
+unknown words, which has been the subject of considerable
+research [26], [27], [26], [28], [29].
+Thereareseveralnotableentropy-basedapproachestoword
+trigram segmentation. Kempe [30] describes a technique for segment-
+monogram ing a corpus into words without information about the lan-
+guageorcorpus,andnolexiconorgrammarinformation.This
+techniqueworkswithcorporacontaining“clearlyperceptible”
+separators such as new lines and spaces. Jin and Tanaka-Ishii
+[14] propose an unsupervised word segmentation algorithm
+that is based on the entropy of successive characters at word
+boundaries. Zhang et al. [31] propose a method that is based
+on a maximum entropy model. Zhikov et al. [32] utilize the
+Fig.5. Distinctn-gramsincreaserate. local predictability of adjacent character sequences, which is
+analogous to entropy.
+VIII. RELATEDWORK IX. CONCLUSIONS
+With regard to natural language processing and social me- WeproposeapointillismapproachforChinesesocialmedia
+dia, our work is distinguished from related work mainly in naturallanguageprocessing.Timeisanimportantaspectofthe
+that related work has not addressed two challenges specific to pointillism approach. Language is viewed as a time sequence
+Internetonlinecorpora:thefrequentuseofneologismsandthe of points that represent the grams. The pointillism approach
+usage of time sequences in the corpus for extra information. allows us look at a corpus in a different dimension and from
+Naturallanguageprocessingcanbeaverypowerfultoolfor a different perspective. In the pointillism approach, trigrams
+understanding social aspects of content through data mining. serve as an intermedium to extract trend information.
+Chao and Xu [16] show some interesting demographics of Our results show that when words and topics do have a
+hate groups on a blog platform. Kwak et al. [17] study the meme-liketrend,theycanbereconstructedfromonlytrigrams.
+dynamics of Twitter and find that re-tweeting causes very For example, for 4-character idioms that appear at least 99
+fast diffusion of information. Asur et al. [18] model the times in one day in our data, unconstrained precision is
+formation,persistence,anddecayoftrends,andshowevidence 0.93.ForlongerwordsandphrasescollectedfromWiktionary
+that, surprisingly, factors such as user activity and number of (including neologisms), unconstrained precision is 0.87. We
+consider these results to be very promising, because they [17] H. Kwak, C. Lee, H. Park, and S. Moon, “What is twitter, a
+suggestthatitisfeasibleforamachinetoreconstructcomplex social network or a news media?” in Proceedings of the 19th
+international conference on World wide web, ser. WWW ’10. New
+idioms, phrases, and neologisms with good precision without
+York, NY, USA: ACM, 2010, pp. 591–600. [Online]. Available:
+period of frequency of trigrams can be used to connect fixed [18] G. S. C. W. Sitaram Asur, Bernardo A. Huberman, “Trends in social
+media:Persistenceanddecay.”
+words, while shorter periods which include the trend can be
+[19] R. Wei, “The state of new media technology research in china:
+used to connect phrases, memes and, even find the overall a review and critique,” Asian Journal of Communication, vol. 19,
+1080/01292980802603991
+typify social media in challenging languages such as Chinese
+[20] X. Wang, T. Jiang, and F. Ma, “Blog-supported scientific
+may in fact be accessible to machines. communication: An exploratory analysis based on social hyperlinks in
+The way we can extract hot words without any aid of achineseblogcommunity,”J.Inf.Sci.,vol.36,pp.690–704,December
+dictionaryandgrammar,isnotonlyusefulinlanguageswhich
+[21] B.A.H.LouisYu,SitaramAsur,“Whattrendsinchinesesocialmedia.”
+do not delimit the words by space, but also help seach query [22] N. S. David Bamman, Brendan O’Connor, “Censorship and deletion
+segmentations, dynamic ranking pages, search engine index, practices in chinese social media,” First Monday, vol. 17, no. 3-5,
+etc.. for Indo-European languages.
+ojs/index.php/fm/article/view/3943/3169
+[23] V. S. X. Z. Cheng Chen, Kui Wu, “Battling the internet water army:
+Detectionofhiddenpaidposters.”

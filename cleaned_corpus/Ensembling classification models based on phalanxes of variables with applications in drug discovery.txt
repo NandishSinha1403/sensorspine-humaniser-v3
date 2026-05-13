@@ -1,0 +1,854 @@
+4v5084.3031:viXra
+TheAnnalsofAppliedStatistics
+2015,Vol.9,No.1,69–93
+(cid:13)c InstituteofMathematicalStatistics,2015
+ENSEMBLING CLASSIFICATION MODELS BASED ON
+PHALANXES OF VARIABLES WITH APPLICATIONS IN
+DRUG DISCOVERY
+By Jabed H. Tomal∗,†, William J. Welch‡ and Ruben H. Zamar‡
+University of Dhaka∗, University of Toronto† and University of British
+Statistical detection of arare class of objects in atwo-class clas-
+sification problem can pose several challenges. Because the class of
+interest is rare in thetraining data, thereis relatively little informa-
+tion in the known class response labels for model building. At the
+same time the available explanatory variables are often moderately
+high dimensional. In the four assays of our drug-discovery applica-
+tion,compoundsareactiveornotagainstaspecificbiologicaltarget,
+suchaslungcancertumorcells,andactivecompoundsarerare.Sev-
+eral sets of chemical descriptor variables from computational chem-
+istry are available to classify the active versus inactive class; each
+canhaveuptothousandsofvariablescharacterizingmolecularstruc-
+ture of the compounds. The statistical challenge is to make use of
+the richness of theexplanatory variables in the presence of scant re-
+sponseinformation. Ouralgorithm dividestheexplanatory variables
+into subsets adaptively and passes each subset to a base classifier.
+Thevariousbaseclassifiersarethenensembledtoproduceonemodel
+to rank new objects by their estimated probabilities of belonging to
+the rare class of interest. The essence of the algorithm is to choose
+thesubsetssuchthatvariablesinthesamegroupworkwelltogether;
+we call such groups phalanxes.
+1. Introduction. Our goal is detection of rare chemical compounds that
+are active against a given biological target, such as lung cancer cells or the
+HIV virus. Statistical detection of rare events in a highly unbalanced two-
+class situation occurs in a variety of other applications. Detection of credit
+card fraud [Bolton and Hand (2002)], spam email [Hastie, Tibshirani and
+Friedman (2009)], terrorism threats and finding relevant documents in a
+Google search are all examples of this problem.
+Received May 2014.
+1Research funded by NSERCof Canada.
+Key words and phrases. Clustering,modelselection,quantitativestructureactivityre-
+lationship, random forest, ranking, rare class.
+This is an electronic reprint of the original article published by the
+Institute of Mathematical Statistics in The Annals of Applied Statistics,
+2015,Vol. 9, No. 1, 69–93. This reprint differs from the original in pagination and
+typographic detail.
+2 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+In drug discovery, rare active compounds are sought in huge chemical
+libraries.Ourgoalistodevelopaquantitative structureactivity relationship
+(QSAR)modelrelatingtheprobabilityofactivity tovariablescharacterizing
+chemicalstructureforuseinrankingalargenumberofcandidatecompounds
+and produce a shortlist rich in active compounds.
+For improved analysis of four such drug-discovery problems relating to
+fourassays, weproposeanew classification methodology. Theresponsevari-
+ableineach studyisthe 0/1 compoundactivity statusagainst aspecificbio-
+logical target. For each problem five descriptor sets of explanatory variables
+are available to build a classifier of activity. The variables in the descrip-
+tor sets characterize the chemical/molecular structures of the compounds
+in different ways. Some have thousands of variables. In contrast, the assay
+dataarerelatively uninformative.Whilethetrainingdatahave thousandsof
+compounds,very few are active: thefraction of actives varies fromabout1%
+to 8% for the four assays. Thus, this paper aims to exploit the riches of up
+to thousands of explanatory variables in the descriptor sets in the presence
+of limited response information caused by imbalance.
+Recursive partitioning [Hawkins and Kass (1982)] and classification trees
+[Breiman et al. (1984)] have been successful for modeling drug-discovery
+data. Rusinko et al. (1999) were able to apply recursive partitioning to large
+structure-activity data sets with thousands to millions of molecular descrip-
+tors by making recursive partitioning scale well computationally.
+Ensemble methods that combine several classifiers to produce one model
+are widely viewed as even more competitive for drug-discovery data. The
+methodofrandomforests[RF,Breiman(2001)],anensembleofclassification
+trees, has attracted particular attention. Svetnik et al. (2003), Chen, Liaw
+and Breiman (2004) and Polishchuk et al. (2009), for example, all showed
+RF is a relatively accurate method for classifying chemical compounds in
+QSAR studies. Bruce et al. (2007) compared several machine learning tools
+for mining drug discovery data, including support vector machines and en-
+sembles based on classification trees: bagging [Breiman (1996a)], boosting
+[Freund and Schapire (1996)] and RF. The authors demonstrated that en-
+sembles provide better predictive performances than nonensemble methods.
+Hughes-Oliver et al. (2012) carried out a comprehensive comparison of 12
+classifiers, including RF, to rank the compounds in several highly unbal-
+anced two-class assay data sets in QSAR studies. Repeatedly, RF emerged
+as one of the best ranking procedures. As we shall see, even RF, which is
+one of the most competitive existing methods, may only find a minority of
+the active compounds. There is much room for improvement.
+Ensemble methods such as bagging and RF create a number of models to
+average by repeatedly perturbingthe data. RF also randomly selects the set
+of explanatory variables considered at each iteration as a constituent tree
+is built. In principle, however, like bagging, it has all variables available for
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 3
+each tree in the ensemble. In contrast, the method we introduce ensembles
+classifiers built with distinct subsets of variables. The algorithm identifies a
+number of such subsets, where the variables in a subset work well together
+in the same model. We call such subsets phalanxes.
+This notion of phalanxes exploits the richness of the dimensionality of
+the explanatory variables in the following way. Each phalanx is a relatively
+low-dimensional subset of variables, so each variable has an opportunity to
+play a role in its model fit. In this way, variables in different models can
+contribute to the overall classification model, without competing with each
+other in the sense that one variable deselects another. Our phalanx-forming
+algorithm can also be thought of as a special type of clustering of variables,
+where “similarity” between a pair of variables or a pair of groups is working
+well together in the same model, and “dissimilarity” means working well
+when separated in different models, which are ultimately ensembled.
+Natural subsets of variables are sometimes suggested by subject matter
+knowledge. For example, in a single nucleotide polymorphism (SNP) geno-
+typing application, Podder et al. (2006) used pairs of variables suggested a
+priori by the different chemical procedures employed in the genotyping plat-
+form. In the group LASSO and its variants [Yuan and Lin (2006), Meier,
+van de Geer and Bu¨hlmann (2008)], given groups are evaluated by their
+ability to work together with other groups, but in a single model. Most re-
+lated to the proposed method is ensembles over classifiers based on single
+variables, pairs of variables, etc., as used in the thesis of Wang (2005), but
+again groups were not formed in a data-adaptive way.
+In principle, any given base classification method can be used to model
+the class response variable as a function of the explanatory variables in a
+phalanxandtoguidethedata-adaptive groupingintophalanxes.WeuseRF
+here because of its documented competitive performance for drug-discovery
+data. Thus, our ultimate classifier is an ensemble across random forests,
+itself an ensemble method,where each random forest only uses the variables
+in one phalanx.
+The remainder of the article is organized as follows. Section 2 describes
+the four assay data sets and the five descriptor sets, and Section 3 defines
+the assessment metrics to assess classification performance in the context
+of ranking for this application. Section 4 describes the algorithm for pha-
+lanx formation, leading to the final ensemble, which we call an ensemble of
+phalanxesclassifier.Section5presentsperformanceresultsandcomparisons.
+Comparisons aremadewith RFand regularized randomforests [RRF,Deng
+and Runger (2013)], and with methods specifically designed for imbalanced
+drug-discovery data. For more than a few tens of explanatory variables, the
+proposed method needs to form initial groups, and results are also provided
+for an application-specific approach to grouping versus more general, data-
+adaptive ways. Section 5 also explores the statistical diversity of ensembles
+4 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+Four assays from the Molecular Libraries Screening Center Network
+Compounds Proportion
+Assay Biological target (active) active
+AID 348 Gaucher’s disease 4946 (48) 0.0097
+AID 362 Tissue-damaging leukocytes 4279 (60) 0.0140
+AID 364 Cytotoxicity 3311 (50) 0.0151
+AID 371 Lung tumorcells 3312 (278) 0.0839
+of phalanxes and the implications for finding chemically diverse active com-
+pounds in the application. Finally, Section 6 draws some conclusions.
+2. Data sets and variables. We analyze 20 data sets from four different
+assays in the Molecular Libraries Screening Center Network. The response
+For each assay the response variable is y, where y =0,1 denotes inac-
+tivity and activity, respectively, of a compound against a specific biological
+target. Table 1 summarizes the four assays. Further information about AID
+assay.cgi?aid=348, and similarly for the other three assays.
+These four assays were investigated by Hughes-Oliver et al. (2012), and
+all are imbalanced with a sparse proportion of active compounds. For three
+of the assays the proportion of actives is around 0.01; these three have only
+48–60 active compoundseach, posingdifficulties for any statistical modeling
+method. For example, a classification tree would soon run short of active-
+class objects and tend to build a shallow tree, only using a few important
+variables. If there are many important variables, some must be omitted in
+the path to any one terminal node.
+The assays cover a range of drug-discovery applications. AID 348 screens
+for inhibitors of mutant forms of beta-glucocerebrosidase, implicated in
+Gaucher’s disease.AID362isawhole-cell assayforanotherinhibitorofpep-
+tide binding, associated with tissue-damaging chronic inflammation. Multi-
+ple mechanisms of activity [Young and Hawkins (1998)] are possible even
+with the specific biological targets of AID 348 and 362 and even more likely
+fortheothertwoassays,AID364andAID371.Theyarewhole-celllive/dead
+assays. Multiple mechanisms of activity, from multiple chemical structures,
+call for correspondingly broad statistical modeling strategies such as the
+ensemble method proposed herein. In our approach, constituent statistical
+models use distinct sets of explanatory variables.
+The principle underlying QSAR modeling in drug discovery is that activ-
+ity (toxicity/drug potency) of a chemical compound is related to its molec-
+ular structure, which can be characterized by chemical descriptors. These
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 5
+Five descriptor sets generated by PowerMV and the number of nonconstant variables for
+each of the four assays
+Variablesfor assay
+Descriptor set variables AID348 AID362 AID364 AID371
+Atom pairs (AP) 546 367 360 380 382
+Burden numbers(BN) 24 24 24 24 24
+Carhart atom pairs (CAP) 4662 1795 1319 1585 1498
+Fragment pairs (FP) 735 570 563 580 580
+Pharmacophores (PH) 147 122 112 120 119
+explanatory variables or covariates are numeric variables that describe the
+structure or shape of molecules.
+We consider five sets of descriptors for each of the four assays, to give a
+totalof4×5=20datasets.Thedescriptorsetsarethefollowing:atompairs
+(AP); Burden numbers (BN) [Burden (1989), Pearlman and Smith (1999)];
+Carhart atom pairs (CAP) [Carhart, Smith and Venkataraghavan (1985)];
+fragment pairs (FP); and pharmacophores fingerprints (PH). The Burden
+numbers are continuous descriptors, and theother four are bit strings where
+each bit is set to “1” when a certain feature is present and “0” when it is
+not. See Liu, Feng and Young (2005) and Hughes-Oliver et al. (2012) for
+further explanation of the molecular properties captured by the descriptor
+sets.
+Table 2 summarizes the five descriptor sets, as generated by PowerMV
+[Liu, Feng and Young (2005)]. PowerMV computes a total of 546, 24, 4662,
+735 and147 descriptorvariables forAP,BN, CAP,FPandPH,respectively.
+For the molecules in any given assay (see Table 1), some of the descriptors
+may be constant (e.g., a chemical feature is always absent). Such constant
+variables are removed, giving the numbers of nonconstant variables in Ta-
+ble 2.
+The bit-string descriptors have hundreds to thousands of variables, with
+CAP having the most (1319–1795). The continuous BN descriptors have
+the lowest dimensionality, with 24 variables for all assays. They are also
+rich, however, in the sense that continuous variables possess good resolution
+compared to binary variables.
+3. Performance measures. We describe assessment metrics specific to
+evaluatingrankingprocedureswhenthegoalistodetectthefewinstancesof
+therareclass hiddeninalargesetof objects,as infindingactive compounds
+inalargechemicallibrary.Thesemetricsareusedinsteadofmisclassification
+error, a standard criterion for classification performance in general, but one
+6 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+that is inappropriate for highly unbalanced classes [Zhu, Su and Chipman
+(2006)].
+For a given classifier, ranking of the compounds in a test set is based on
+their estimated probabilities of activity, πˆ. The compound with the largest
+πˆ is ranked first, etc. The goal is to rank the actives in the test set at the
+top of the list. The performance measures relate to where the actives are in
+the ranked list.
+Let N be the total number of compounds in a test set, and let M ≤N be
+the number of actives among them. Suppose the ranked list is cut off at n
+compounds; for example, resources only allow follow-up of n leads from the
+list. Let 0≤H(n)≤M be the number of actives or “hits” in the shortlist of
+size n. Performance is measured by graphing H(n) or by computing one or
+more numerical functionals of it.
+3.1. Hit curve. The hit curve is a plot of H(n) versus n or, equivalently,
+a plot of H(n)/M (proportion of actives found) versus p(n)=n/N (pro-
+portion of test compounds considered). The hit curve shows the ranking
+performance at all possible shortlist cutoff-points, n. Classifier 1 with hit
+curve H (n) is uniformly superior to classifier 2 with hit curve H (n) if
+H (n)≥H (n) for 1≤n≤N, with strict inequality for at least one value of
+n.
+For example, Figure 1 shows hit curves for three ensemble classifiers: RF
+appliedtoalltheavailablevariables,RRF,andensembleofphalanxes(EPX,
+describedin Section 4). Thethreeclassifiers areapplied here to theAID 348
+assay and the BN descriptors. The plots show n up to 300, because actives
+are sought early in a ranked list. Note that EPX dominates the other two
+ensembles: its hit curve is uniformly above the other two. There is no clear
+winner between RRF and RF, because their hit curves cross.
+In the results of Section 5 we compare numerous hit curves, and it is
+convenient to have a numerical criterion to summarize a hit curve. Two
+such criteria are outlined next.
+3.2. Averageprecision. Theaverageprecision(AveP)givesasinglenum-
+bersummaryforahitcurve.Supposeweshortlistthetop n≤N compounds
+and H(n) of them are active. Then
+is the hit rate or precision for the top n ranked compounds. Naturally, we
+wanth(n)tobeaslargeaspossibleateveryn.Let1≤t <t <···<t ≤N
+be the positions of the M active compounds in the ranked list. AveP is
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 7
+Fig.1. Hitcurvesfromthreeclassifiers,RF,RRF,andEPX,fortheAID348assayand
+BNdescriptors.ThenumbersinthelegendarevaluesofAveP,definedbelowinSection3.2.
+defined as the average of the hit rates at the points on the hit curve where
+actives are found:
+AveP reaches the maximum value 1 when all of the actives are ranked be-
+fore all the inactives. When there are tied πˆ values, and hence ties in the
+ranked list of compounds, the expected value of AveP is computed under
+random ordering of the compounds within each group of ties [Wang (2005),
+Chapter 3].
+The AveP values for RF, RRF and EPX in Figure 1 are 0.103, 0.080
+and 0.152, respectively. EPX is a clear winner by the AveP measure, which
+makes senseas its hitcurve dominates theother two. By theAveP criterion,
+RF is preferable to RRF.
+We use AveP not only to evaluate classifiers but also to choose the pha-
+lanxes in our algorithm (Section 4).
+3.3. Initial enhancement. Initial enhancement (IE), defined by Kearsley
+et al. (1996), is the precision at one specific shortlist length, n, normalized
+by the proportion of actives in the entire collection of compounds:
+IE= .
+8 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+Because IE is just a rescaling of the precision at n, both measures would
+lead to the same conclusions, but IE is often given in QSAR studies to
+measuretheimprovementrelativetotheexpectationunderrandomranking.
+Naturally, IE values (much) larger than 1 are desired. A drawback of IE
+is that it depends on the particular shortlist size, n. Moreover, IE does
+not distinguish whether the actives are ranked at the beginning or end of
+the shortlist. Therefore, while we report IE performance results, the AveP
+criterion is used to choose phalanxes in Section 4.
+Following Hughes-Oliver et al. (2012), we use n=300 throughout to cal-
+culate IE. The IE values for RF, RRF and EPX in Figure 1 are 7.15, 6.18
+and 9.27, respectively. Again EPX is the winner, and RF is the runner-up.
+3.4. Balanced 10-fold cross-validation (CV). The assay data summa-
+rized in Table 1 are used for training classifiers and testing them. Because
+actives aresparse,throughoutweusebalanced10-foldcross-validation toas-
+sess performance. Thus, we randomly divide the data into 10 approximately
+equalsizedgroups,eachcontainingapproximately 1/10 oftheactives.When
+a group serves as a test set, and the remaining nine groups are the training
+data for a classifier, a πˆ value is obtained for every compound in the test
+set. After all 10 groups have served as a test set, πˆ values are available for
+all compounds and can be ranked to give a hit curve, as in Figure 1, or to
+compute AveP or IE.
+4. Phalanx-formation algorithm.
+4.1. Phalanxes of variables. We borrow the term phalanx from the mil-
+itary formation used by Alexander The Great and his father Philip II of
+Macedon to deploy infantry soldiers in the battlefield. For psychological mo-
+tivation, phalanxes were organized as groupsof friendsandfamily members.
+As a result, the strength of a phalanx would depend upon the individual
+strengths of its soldiers and the emotional bonds between them. A pha-
+lanx was an autonomous fighting unit but could be ensembled with other
+phalanxes to form a formidable military machine.
+The analogy with classification is that the proposed algorithm selects
+a group of variables in a statistical phalanx such that they form a strong
+classifierwhenputtogetherinasinglemodel.Inotherwords,thevariablesin
+a phalanx work better together in a model than when separated in different
+models. At the same time, the algorithm pays attention to the performance
+of the overall strength of the final ensemble of models.
+4.2. Phalanx formation. Even if the optimal number of phalanxes is
+known, dividing the variables into phalanxes is a combinatorial problem.
+With the higher-dimensional descriptor variables in Table 2, exhaustive
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 9
+Fig.2. Algorithmforphalanxformation.Dvariablesarepartitionedintodinitialgroups,
+screened down to s groups, combined into c candidate phalanxes, and then screened down
+to p phalanxes in the final ensemble (D≥d≥s≥c≥p).
+search is infeasible, and the algorithm performs a greedy (look one iteration
+ahead) optimization instead. The amalgamation of variables into phalanxes
+resembles hierarchical clustering, but variables are clustered, not observa-
+tions.
+As shown in Figure 2, there are four main steps in the algorithm to group
+the original D variables into p final phalanxes:
+1. Initial grouping. The original D variables are partitioned into d≤D
+initial groups.
+2. Screening. The d initial groups are screened down to s≤d groups.
+3. Hierarchical merging into phalanxes. The s screened groups are amal-
+gamated hierarchically into c≤s candidate phalanxes.
+4. Screening. The c candidate phalanxes are screened down to p≤c final
+phalanxes.
+Attermination, p baseclassifiers aretrained,oneforeach phalanxof vari-
+ables. They form an ensemble of models: the πˆ values from the p classifiers
+are averaged to give one value of πˆ for each compound.
+WeuseRFasthebaseclassifierfortheensembleofphalanxesthroughout,
+including phalanx formation. There are two reasons. As already mentioned,
+RF is known to be a competitive method for drug-discovery data, so it
+10 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+will provide strong base classifiers for our ensemble. Second, duringphalanx
+formationitsout-of-bag(OOB)estimatedclassprobabilitiesprovideasgood
+an assessment of performance as cross-validation [Breiman (1996b, 2001),
+Tibshirani (1996), Wolpert and Macready (1999)]. Thus, the computational
+expense of multiple fits in cross-validation is avoided. To further reduce
+computation, for phalanx formation the number of trees grown is reduced
+from the default of 500 to 150.
+Allstepsinphalanxformationareguidedbyachosenassessmentmeasure,
+a.WeuseAvePfora,butthefinalensemblesarealsoevaluatedusingIE,and
+the algorithm trivially generalizes to other criteria. (The algorithm assumes
+a is to be maximized, but the changes for a smaller-the-better criterion are
+straightforward.)
+The four steps of the algorithm are now described in greater detail;
+1. Initial grouping. This optional step has two motivations. First, the di-
+mensionality of the AP, CAP, FP and PH descriptors in Table 2 makes the
+later hierarchical-merging step too computationally expensive, even with
+the greedy implementation. At each iteration the algorithm considers amal-
+gamating all pairs of groups, and the computational complexity (see Sec-
+tion 4.4) is still quadratic in the number of groups, too demanding for all
+buttheBNdescriptors.Second,thefourhigher-dimensionalsetshavebinary
+variables, and a single binary variable can only give two possible πˆ values.
+Consequently, the initial classifiers are all extremely weak. In contrast, an
+initial group of k>1 binary variables can generate up to 2k possible ranks.
+Guidance is available to group the AP, CAP, FP or PH descriptors from
+thevariablenames.ForFP,forexample,therearesevenvariablesrelatingto
+the presence of two aromatic rings: AR 01 AR,AR 02 AR,...,AR 07 AR.
+Here, AR 01 AR represents two phenyl (aromatic) rings separated by one
+bond, etc. These seven variables form one of the initial groups, similarly
+the other groups. We have empirically verified that grouping by the vari-
+able names provides better final classification accuracy than forming initial
+groups at random. A data-adaptive alternative for grouping is presented in
+Section 5.3.
+Inthisway,theD originalvariablesaregroupedintod≤D initialgroups,
+denoted by g ,g ,...,g . For the BN descriptors, this step is omitted: the
+initial groups are the individual variables, that is, d=D=24.
+2. Screening of initial groups. We screenoutweak initial groupstoreduce
+computational burden and noise.
+To survive this step, a group must be strong in the sense of a comparison
+with the distribution of the assessment criterion, a, under random ranking.
+Tocomputethis referencedistribution,werandomlypermutethe0/1 values
+of the response variable y relative to the descriptor values and obtain the
+corresponding value of a. Repeating for many random permutations results
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 11
+in an empirical distribution of a (we use 1000 repeats throughout), from
+whichwetaketheαquantile,denotedbya (weuseα=0.95forallreported
+results). The algorithm also makes use of a , the median of the empirical
+distribution.
+An initial group is deemed to bestrong if the base classifier usingits vari-
+ables is competitive with a . There are actually three tests, and a group g
+survives theinitial screeningif it passes atleast oneof them.Thethreetests
+consider the performance of g by itself, or when its variables are combined
+with those in any other group g , or when it forms an ensemble with any
+other group.
+Thus, we need to define the following performance measures. Denote by
+πˆ(g ) the estimated probabilities of activity from the base classifier using
+only the variables in g , and let a =a(πˆ(g )) be the assessment measure.
+Similarly, denote by πˆ(g ∪g ) the estimated probabilities of activity when
+the variables in g and g (i6=j) are all available to the base classifier to fit
+a single model, and let
+be the resulting performance measure. Finally, consider the performance of
+an ensemble of two models based on g and g , respectively. Probability
+averaging of their two sets of estimated probabilities gives (πˆ(g )+πˆ(g ))/2
+for ranking. The resulting assessment measure is
+Based on these various uses of g and the corresponding assessment mea-
+sures, g is deemed to bestrong and survives the initial screening if it passes
+at least one of the following tests:
+• g is strong alone:
+(4.3) a ≥a .
+• g improves the strength of another group g when g and g are used
+together in a single model:
+(4.4) a +a −a ≥a for at least one j6=i.
+0.5 ij j α
+Therationaleisthata −a istheimprovementfromaddingthevariables
+in g to those in g in a single model, an improvement that has to be
+competitive with a −a .
+• g improves the strength of another group g when g and g are in an
+ensemble of two models:
+(4.5) a +a −a ≥a for at least one j6=i.
+0.5 ij j α
+12 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+Afterremovingweakinitialgroups,thelistofsurvivinggroupsisrelabeled
+as {G ,G ,...,G } for the next step.
+3. Hierarchical merging into phalanxes. Thisstep to merge G ,G ,...,G
+into phalanxes of variables is the heart of the algorithm. It resembles hierar-
+chical clustering, butmerges groups of variables, not groups of observations.
+Each iteration merges the pair of groups G and G that minimizes
+where a and a are defined in (4.2) and (4.1). Values of the ratio less
+than 1 indicate that G and G perform better in a single model than when
+ensembled in separate models. After each merge, the number of groups, s,
+is reduced by 1, and one of the new groups is the union of two of the old
+groups. The algorithm continues until m ≥1 for all i,j, suggesting that
+merging reduces performance and the groups should be ensembled.
+The following example illustrates. For simplicity, consider only s = 3
+initial groups (actually individual variables) from the BN descriptors and
+assay AID 348. The three groups are G = WBN GC L 1.00, G =
+WBN EN H 0.50 and G =WBN LP H 1.00. The AveP values when pairs
+of groups are used together in a single model are a =0.052, a =0.037
+and a =0.054. When pairs of groups are ensembled, the AveP values are
+a =0.069, a =0.050 and a =0.031. Thus,the correspondingm ratios
+12 13 23 ij
+are 1.31, 1.36 and 0.57. As the variables G and G give the smallest m
+and it is less than 1, we merge G and G into a new group and there are
+now s=2 groups. At the next step it turns out that m =1.18 and the
+two new groups should not be merged. Thus, the algorithm terminates with
+two candidate groupsor phalanxes,oneof which contains two of theoriginal
+variables.
+Ingeneral,thecfinalgroupsarecandidatephalanxes,PX ,PX ,...,PX .
+4. Screening out weak phalanxes. A candidate phalanx is kept in the en-
+semble if it is individually strong as defined in (4.3) or it is strong in an
+ensemble with another phalanx as defined in (4.5). There is no need to
+check condition (4.4), as there was an exhaustive search for merging groups
+in the previous step.
+The p surviving phalanxes from this second stage of screening form the
+army or ensemble, PX ,...,PX , for ranking.
+4.3. Ensemble of phalanxes. We fit p RF classifiers, one for each of the p
+phalanxes of variables, and obtain probabilities of activity from them. Here,
+500 trees are grown for each random forest, the default. For any test point,
+the p probabilities of activity from the ensemble of phalanxes (EPX) are
+averaged to give the final probabilities for ranking.
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 13
+4.4. Computational complexity. We now show that the computational
+complexityofphalanxformationisO(d2)fitsoftheunderlyingbaseclassifier
+in the worst case. Recall d is the number of initial groups, or the number of
+variables if there is no grouping.
+Thescreeningphasefirstinvolves d fits,one for each group.Then,models
+are fit for all the unions of all possible pairs of groups, that is, d(d−1)/2
+fits. Hence, screening involves a total of d(d+1)/2 fits. In the worst case,
+no groups are removed by screening.
+For the first merger of the phalanx formation stage, no new fits are re-
+quired: the performance measures for individual groups and pairs of groups
+to evaluate (4.1) are already available from the screening stage. If the algo-
+rithm continues, two groups are merged to create a new one. At the second
+iteration, one fit needs to be made for the new group just formed as well as
+another d−2 fits using the union of variables from the new group and one
+of the other d−2 groups, that is, a total of d−1 fits. Note that we do not
+need to refit models for all possible pairs of groups. In the next iteration,
+with one fewer group, there are d−2 fits, etc. In the worst case, phalanx
+formation continues until there is only one phalanx remaining, for a total of
+Thus, between screening and phalanx formation, there are at most d2
+fits. The computational burden caused by the dimensionality of four of
+the five descriptor sets is greatly reduced by forming initial groups with
+d≪D. Moreover, the computations are embarrassingly parallel: The many
+fits necessary at any iteration can be made independently of each other.
+Thus,parallelcomputationisstraightforwardusingtheRpackagesforeach,
+iterators, doSNOW and doMPI.
+5. Results.
+5.1. Comparison with random forests. We consider 20 data sets: there
+arefourassaysandeachhasfivepossibledescriptorsets.Foreachdatasetan
+EPXclassifierisconstructed,asdescribedinSection4;thisisrepeatedthree
+timesusingdifferentrandomseeds.TheresultsfromEPXarecomparedwith
+RF and RRF, constructed using the defaults in their respective R packages,
+randomForest[LiawandWiener(2002)]andRRF[DengandRunger(2013)].
+We give detailed results for AID 348. Summary results will also be given for
+the other three assays (AID 362, AID 364 and AID 371).
+ThelastfivecolumnsofTable3summarizethestepsintheEPXalgorithm
+of Section 4 for AID 348. For example, the descriptor set AP has a total of
+367 variables arranged into 75 initial groups, of which 22 survive screening
+in the first EPX run. The 22 groups are ultimately merged into 4 candidate
+phalanxes, of which 2 survive screening. Thus, the final EPX classifier is an
+ensemble of 2 phalanxes. Two further runs of EPX with different random
+14 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+Number of variables, initial groups, screened groups, candidate phalanxes and screened
+phalanxes for the AID 348 assay and five descriptor sets. There are three runs of the
+EPX algorithm
+Groups Phalanxes
+Descriptor
+set Run Variables Initial Screened Candidate Screened
+AP 1 367 75 22 4 2
+BN 1 24 24 24 8 8
+CAP 1 1795 455 398 13 10
+3 352 17 12
+FP 1 570 101 24 6 4
+PH 1 120 21 5 1 1
+seeds result in armies of 5 and 4 phalanxes, respectively. (The impact of the
+variation in the number of phalanxes is reported later in this section.)
+Table 3 shows that many of the initial groups are screened out from the
+four descriptor sets based on binary variables: AP, CAP, FP, and PH. For
+example, 71–75% of AP’s initial groups are dropped. For the other binary
+descriptor sets, 13–72%, 76–78% and 76% of the initial groups are screened
+out. In contrast, all of the continuous BN variables are always used.
+TheAvePperformancemeasuresarereportedinTable4forEPX,RFand
+RRF. (The description of two further methods, SRF and WRF appearing
+in Table 4, is taken up in Section 5.2.) All results are based on balanced 10-
+fold cross-validation. Because of randomness in cross-validation, especially
+with suchsmallfrequencies ofactive-class compounds,cross-validation is re-
+peated 16 times for different random,balanced datasplits (16 times because
+we initially had 16 processors conveniently available for parallel processing).
+Table 4 therefore reports mean AveP across the 16 cross-validations. For
+the binary descriptor sets AP, CAP, FP and PH—where there are many
+descriptor variables and screening is presumably important—RRF outper-
+forms RF. But for BN, RF outperforms RRF. Mean AveP is always largest
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 15
+AveP averaged over 16 replications of balanced 10-fold cross-validation for EPX, RF,
+RRF, SRF and WRF applied to the AID 348 assay and five descriptor sets (DS). The
+last four columns show the number of times EPX has larger AveP among the 16 repeats
+of cross-validation relative to RF, RRF, SRF and WRF
+Mean AveP EPX beats
+DS Run EPX RF RRF SRF WRF RF RRF SRF WRF
+AP 1 0.182 0.063 0.081 0.052 0.058 16/16 16/16 16/16 16/16
+2 0.194 16/16 16/16 16/16 16/16
+3 0.146 16/16 16/16 16/16 16/16
+BN 1 0.143 0.090 0.078 0.075 0.075 16/16 16/16 16/16 16/16
+2 0.153 16/16 16/16 16/16 16/16
+3 0.132 16/16 16/16 16/16 16/16
+CAP 1 0.201 0.068 0.090 0.095 0.088 16/16 16/16 16/16 16/16
+2 0.184 16/16 16/16 16/16 16/16
+3 0.155 16/16 16/16 15/16 16/16
+FP 1 0.157 0.077 0.098 0.091 0.099 16/16 16/16 16/16 16/16
+2 0.130 16/16 16/16 15/16 16/16
+3 0.157 16/16 16/16 16/16 16/16
+PH 1 0.108 0.070 0.080 0.082 0.060 16/16 16/16 15/16 16/16
+2 0.108 16/16 16/16 15/16 16/16
+3 0.108 16/16 16/16 15/16 16/16
+for EPX, however. The advantage of EPX is greatest for CAP, the set with
+the largest number of descriptors.
+Columns 8 and 9 in Table 4 show that EPX consistently beats RF and
+RRF in all 16 repeats of cross-validation across all descriptor sets.
+Figure 3 shows box-plots for the 16 values of AveP over the 16 cross-
+validations.Thethreebox-plotsforEPXcorrespondtothethreeruns—with
+differentrandomseeds—inourcross-validation experiment.Despite exhibit-
+ingsomerun-to-runvariability, EPXconsistentlyoutperformsRFandRRF.
+We could stabilize the algorithm by using RF with a larger number of trees
+at the phalanx-formation stage, but this would increase the computational
+burden of the algorithm.
+To visualize the performance gains of EPX, the hit curves in Figure 1
+(for descriptor set BN) and Figure 4 (for the other descriptor sets) are
+from the first balanced 10-fold cross-validation. In all cases the hit curve for
+EPX starts rising very quickly and dominates the curves for the other two
+methods. In other words, EPX is more successful here in detecting actives
+early in a list of ranked compounds.
+AlthoughwehaveformedarmiesofphalanxesbyoptimizingAveP,Table5
+shows they also have good performance in terms of the metric IE. Mean IE
+16 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+Fig. 3. Box-plots of AveP for the AID 348 assay and five descriptor sets from 16 repli-
+cations of balanced cross-validation for RF (light gray), RRF (gray) and 3 armies of pha-
+lanxes (dark gray).
+averaged over the 16 replications of balanced cross-validation is consistently
+larger for EPX.
+EPXalso exhibitsstrongperformancewhensimilarstudies areperformed
+fortheotherthreeassays,AID362,AID364andAID371. Summaryperfor-
+mancemeasuresaregiveninTables6,7and8,respectively.Fortheseassays,
+the performances of EPX and RF are comparable for the smallest set of bi-
+nary descriptors, PH, but EPX dominates for CAP, the largest descriptor
+set and the one that overall provides the best results.
+5.2. Methods for imbalanced data. Akey propertyofthedataforallfour
+assays is that active compoundsare rare (Table 1), suggesting that methods
+specific to imbalanced data might provide a more relevant benchmark for
+comparison than off-the-shelf RF.
+Chawla et al. (2002) proposed the synthetic minority over-sampling tech-
+nique (SMOTE) and applied it to an assay from the National Cancer In-
+stitute’s yeast anti-cancer drug screen. The method artificially generates
+new examples of the minority class objects using their nearest neighbors. In
+addition, the majority class is under-sampled, leading to a balanced data
+set. Whereas these authors combined SMOTE with a single classification
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 17
+(a) Atom pairs (AP) (b) Carhart atom pairs (CAP)
+(c) Fragment pairs (FP) (d) Pharmacophores (PH)
+Fig. 4. Hit curves from RF (dashed line), RRF (dotted line) and EPX (solid line) for
+the AID 348 assay. Results are given for four descriptor sets: (a) AP; (b) CAP; (c) FP;
+and (d) PH. The numbers in parentheses in the legends are the values of AveP.
+tree (C4.5), we combine it with RF, widely recognized as more powerful for
+drug-discovery data. The R function SMOTE in the package DMwR with de-
+fault settings adjusts the AID 348 data, for instance, in the following way.
+The original 48 active compounds are augmented with 48×2=96 synthetic
+samples.Furthermore,theinactive compoundsarerandomlyunder-sampled
+to leave 96×2=192 cases. Hence, the SMOTE data have a more balanced
+144 active compoundsand 192 inactive compounds.Theresults for SMOTE
+18 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+IE for RF, RRF and EPX averaged over 16 balanced
+10-fold cross-validations for the AID 348 assay and five
+descriptor sets
+Ensemble AP BN CAP FP PH
+RF 5.19 6.62 7.16 7.07 5.53
+RRF 5.80 6.25 6.83 7.28 5.78
+EPX 6.27 8.80 8.20 8.40 6.44
+with RF, called SRF in Tables 4 and 6–8, show that overall SRF performs
+about the same as RF here, and sometimes worse. EPX still dominates.
+The method of weighted random forests [WRF, Chen, Liaw and Breiman
+(2004)] was partially motivated by QSAR applications with imbalanced
+data. It assigns large and small weights to the minority and majority class
+compounds, respectively. Because of a known bug with weighting in the R
+package randomForest, we increased the weight of active compounds by
+duplicating them. For example, to make the AID 348 assay data balanced,
+the 48 active compounds were repeated 102 times to have approximately as
+AveP averaged over 16 replications of balanced 10-fold cross-validation for EPX, RF,
+RRF, SRF and WRF applied to the AID 362 assay and five descriptor sets (DS). The
+last four columns show the number of times EPX has better AveP than RF, RRF, SRF
+and WRF over the 16 replications
+Mean AveP EPX beats
+DS Run EPX RF RRF SRF WRF RF RRF SRF WRF
+AP 1 0.300 0.280 0.256 0.159 0.203 16/16 16/16 16/16 16/16
+2 0.306 15/16 16/16 16/16 16/16
+3 0.295 13/16 15/16 16/16 16/16
+BN 1 0.261 0.242 0.238 0.129 0.274 16/16 16/16 16/16 02/16
+2 0.299 16/16 16/16 16/16 15/16
+3 0.285 16/16 16/16 16/16 14/16
+CAP 1 0.363 0.267 0.171 0.178 0.197 16/16 16/16 16/16 16/16
+2 0.355 16/16 16/16 16/16 16/16
+3 0.368 16/16 16/16 16/16 16/16
+FP 1 0.315 0.266 0.174 0.196 0.188 16/16 16/16 16/16 16/16
+2 0.323 16/16 16/16 16/16 16/16
+3 0.306 16/16 16/16 16/16 16/16
+PH 1 0.227 0.216 0.168 0.167 0.142 14/16 16/16 16/16 16/16
+2 0.212 07/16 16/16 16/16 16/16
+3 0.218 09/16 16/16 16/16 16/16
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 19
+AveP averaged over 16 replications of balanced 10-fold cross-validation for EPX, RF,
+RRF, SRF and WRF applied to the AID 364 assay and five descriptor sets (DS). The
+last four columns show the number of times EPX has better AveP than RF, RRF, SRF
+and WRF over the 16 replications
+Mean AveP EPX beats
+DS Run EPX RF RRF SRF WRF RF RRF SRF WRF
+AP 1 0.291 0.265 0.230 0.204 0.289 16/16 16/16 16/16 09/16
+2 0.292 16/16 16/16 16/16 09/16
+3 0.310 16/16 16/16 16/16 15/16
+BN 1 0.371 0.327 0.300 0.174 0.274 16/16 16/16 16/16 16/16
+2 0.365 16/16 16/16 16/16 16/16
+3 0.373 16/16 16/16 16/16 16/16
+CAP 1 0.379 0.334 0.252 0.244 0.269 16/16 16/16 16/16 16/16
+2 0.390 16/16 16/16 16/16 16/16
+3 0.390 16/16 16/16 16/16 16/16
+FP 1 0.318 0.305 0.261 0.257 0.202 15/16 16/16 16/16 16/16
+2 0.320 16/16 16/16 16/16 16/16
+3 0.317 14/16 16/16 16/16 16/16
+PH 1 0.278 0.275 0.219 0.185 0.081 11/16 16/16 16/16 16/16
+2 0.276 09/16 16/16 16/16 16/16
+3 0.282 14/16 16/16 16/16 16/16
+many cases as the 4898 inactive compounds. The results for WRF in Ta-
+bles 4 and 6–8 again show little practical improvement versus RF. For AID
+362 and the BN descriptors, WRF performsbetter than RF and approaches
+the mean AveP of one of the EPX models, but CAP is the descriptor set of
+choice here, and WRF performs worse than RF for it.
+5.3. Initial groups. For thedrug-discovery application, theinitial groups
+presented to the phalanx formation algorithm consist of variables in a de-
+scriptor set with related names (Section 4.2). In other applications with-
+out logical groups of names, how should initial groups be formed? Here we
+demonstrate a data-adaptive method that does not use name information.
+The goal is to find a diverse set of phalanxes. For binary descriptors,
+the Jaccard dissimilarity index is appropriate and defined between binary
+variables x and x as
+d (x ,x )=1− .
+Here x ∩x is the number of observations where x and x both take the
+value 1, and x ∪x is the number of observations where x or x take the
+20 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+AveP averaged over 16 replications of balanced 10-fold cross-validation for EPX, RF,
+RRF, SRF and WRF applied to the AID 371 assay and five descriptor sets (DS). The
+last four columns show the number of times EPX has better AveP than RF, RRF, SRF
+and WRF over the 16 replications
+Mean AveP EPX beats
+DS Run EPX RF RRF SRF WRF RF RRF SRF WRF
+AP 1 0.327 0.315 0.281 0.311 0.313 16/16 16/16 16/16 16/16
+2 0.331 16/16 16/16 16/16 16/16
+3 0.328 16/16 16/16 16/16 15/16
+BN 1 0.342 0.335 0.333 0.289 0.322 16/16 16/16 16/16 16/16
+2 0.354 16/16 16/16 16/16 16/16
+3 0.338 13/16 13/16 16/16 16/16
+CAP 1 0.390 0.347 0.310 0.342 0.356 16/16 16/16 16/16 16/16
+2 0.384 16/16 16/16 16/16 16/16
+3 0.378 16/16 16/16 16/16 16/16
+FP 1 0.358 0.362 0.338 0.338 0.320 03/16 15/16 16/16 16/16
+2 0.358 04/16 14/16 16/16 16/16
+3 0.364 12/16 16/16 16/16 16/16
+PH 1 0.277 0.277 0.282 0.267 0.244 09/16 05/16 12/16 16/16
+2 0.284 15/16 10/16 14/16 16/16
+3 0.279 09/16 06/16 13/16 16/16
+value 1, and 0≤d (x ,x )≤1. We compute the Jaccard distances between
+variables via the vegdistfunction in package veganand hierarchically clus-
+ter the variables (not observations) using hclust in R with method ward.
+For consistency, the number of clusters equals the number of groups formed
+from the names. For example, the AP descriptors of AID 348 again have 75
+initial groups.
+Table 9 compares average AveP for EPX with initial groups based on
+the variables names versus initial groups from clustering. Results are given
+for assays AID 348 and AID 371 and the four binary descriptor sets. These
+two assays have the smallest and largest proportions of actives, respectively,
+and cover a range of performances of EPX relative to RF. The results show
+that neither method for generating initial groups is uniformly better. One
+difference of note is that for AID 348, EPX with clusters makes some im-
+provement with the CAP descriptors. As CAP and AP already performwell
+for AID 348, CAP with clusters emerges as the method of choice. Overall,
+the clustering method is a viable data-adaptive approach to forming initial
+groups here.
+5.4. Diversity. Breiman(2001)arguedthattheclassificationperformance
+of an ensemble method increases with the strengths of the underlying clas-
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 21
+AveP from EPX averaged over 16 replications of balanced 10-fold cross-validation, with
+initial groups formed from the variables’ names (Names) or clusters based on the Jaccard
+index (Clusters)
+Mean AveP of EPX
+AID 348 AID 371
+Descriptor
+set Run Names Clusters Names Clusters
+AP 1 0.182 0.200 0.327 0.339
+2 0.194 0.163 0.331 0.334
+3 0.146 0.121 0.328 0.336
+CAP 1 0.201 0.258 0.390 0.386
+2 0.184 0.275 0.384 0.388
+3 0.155 0.167 0.378 0.380
+FP 1 0.157 0.166 0.358 0.373
+2 0.130 0.170 0.358 0.364
+3 0.157 0.175 0.364 0.364
+PH 1 0.108 0.087 0.277 0.284
+2 0.108 0.102 0.284 0.276
+3 0.108 0.113 0.279 0.273
+sifiers being averaged and their diversity. We now illustrate that ensembles
+from phalanxes can have these desirable traits.
+Figure 5 depicts a diversity map [Hughes-Oliver et al. (2012)] of ranks
+from cross-validated probabilities for AID 364 and the BN descriptors. The
+ranks of the 50 active compounds are shown for the four underlying pha-
+lanxes (denoted PX-1 through PX-4) and their EPX ensemble in the first
+EPX run, and for random forests. This particular map relates to the first
+cross-validation. The 50 active compounds on the right axis of the figure are
+ordered according to the ranks from EPX. Ideally, they would have ranks
+1–50, depicted by black to mid-gray on the gray scale on the left of the
+figure. Lighter colors indicate a failure to rank well the active compounds.
+It is seen in Figure 5 that PX-1 through PX-4 assign different ranks, that
+is, they show a fair degree of diversity. This is beneficial, as averaging prob-
+abilities providing the same ranks is unlikely to improve on the underlying
+performances. If one phalanx misses an active compound (lighter gray on
+the rank scale in Figure 5), we see that other phalanxes might rank it well
+(darker gray on the rank scale).
+Moreover, the AveP values for PX-1 through PX-4 reported on the x-axis
+of Figure 5 range from 0.240 to 0.367. PX-2 by itself beats the 0.349 AveP
+value from RF using all 24 BN descriptor variables. Thus, PX-1 through
+PX-4 include one classifier that is strong relative to RF, and they constitute
+22 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+Fig. 5. Diversity map of ranks for the AID 364 assay and BN descriptors from the
+first run of EPX and the first cross-validation. The AveP values of PX-1 through PX-4,
+EPX and RFare given on the x-axis. The y-axis has the 50 active compounds, ordered by
+their ranks from EPX. A darker gray on the gray scale indicates a smaller rank (higher
+probability of activity).
+a diverse set for an ensemble. Hence, the AveP of 0.374 for EPX is also
+relatively high.
+AID364 ishighlighted inthisanalysis,becauseitisawhole-cell live/dead
+assay likely to have multiple mechanisms of activity from multiple chemical
+structures. We now explore how diversity of the four phalanxes formed from
+the BN descriptors translates into diversity of the active chemical structures
+identified by them.
+We focus attention on the structures differentiating EPX’s performance.
+Sorting the active compounds by their absolute difference in ranks from
+EPX versus RF leads to Table 10. The six largest discrepancies all favor
+EPX: there are no actives ranked substantially higher by RF than by EPX.
+The structures of these six compounds presented in Figure 6 have differ-
+ences in some sub-structures, particularly across phalanxes, which may be
+chemically significant. Identifying a variety of structures offers more leads
+for the next stages of drug development, where compounds are adjusted to
+increase efficacy, and compounds that are toxic and mutagenic in further
+screens have to be removed.
+The inactive compounds in the list of top 300 compounds identified by
+EPX also show some diversity. Clustering the 270 inactive compounds in
+the list, according to the 24 BN descriptors via hclust in R with method
+ward, leads to two distinct clusters according to the CH index computed
+by NbClust. Again, this is not surprising, as all the compounds in the top-
+ranked list, including the inactives, result from several phalanx models.
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 23
+Six active compounds where EPX and RF have the largest absolute difference in ranks
+for the AID 364 assay and BN descriptors. The actives are identified by PubChem’s
+compound identification (CID) number. Ranks are also given for the individual
+phalanxes; the best rank among them is in bold
+CID PX-1 PX-2 PX-3 PX-4 EPX RF
+657713 106 715 102 1082 133 943
+661140 2099 353 649 52 158 847
+657803 101 651 1833 744 241 1220
+4993 94 1003 2673 932 245 2040
+5389334 114 2737 1833 2376 364 2040
+661535 537 211 1511 2376 738 1417
+Furtherinspectionofthecompoundsclassified byEPXas active isreveal-
+ing. Compounds CID 661658 and CID 660076 are ranked 3 and 12 by EPX
+and have the similar structures shown in Figure 7. Compound CID 661658
+is active, whereas CID 660076 is not. A small difference in structure like
+this, that determines activity versus inactivity, may be helpful to a chemist
+in designing an even more potent structure.
+(a) CID 657803 (PX-1) (b) CID 4993 (PX-1) (c) CID 5389334 (PX-1)
+(d) CID 661535 (PX-2) (e) CID 657713 (PX-1and PX-3) (f) CID 661140 (PX-4)
+Fig.6. SixactivecompoundsrankedsubstantiallyhigherbyEPXthanRFforassayAID
+364 and the BN descriptors. For each compound, the phalanx(es) giving a high rank are
+indicated after the compound identification (CID).
+24 J. H. TOMAL, W. J. WELCH ANDR. H.ZAMAR
+(a) CID 661658 (active) (b) CID 660076 (inactive)
+Fig. 7. Compounds CID 661658 and CID 660076 are ranked 3 and 12, respectively, by
+EPX for assay AID 364 and the BN descriptors. They have similar structures, but CID
+661658 is active, while CID 660076 is not.
+6. Conclusions and discussion. The concept of phalanxes of variables
+was motivated by data sets with little information in the response variable
+relativetothedimensionalityoftheexplanatoryvariables.Scantinformation
+in the response variable arises in drug discovery because molecules in the
+biologically active class of interest are rare. Thus, it will be difficult to use
+more than a few of the explanatory variables in a single model, even if
+many of them are potentially useful. An ensemble of phalanxes uses distinct
+explanatory variables in each of several models, hence, many variables have
+a chance to contribute to classification performance.The phalanx-formation
+algorithm is guided by this aim. The best ranking performance, both in
+absolute terms and relative to RF and RRF, is seen for the CAP descriptor
+set, which has the most variables. Adapting RF for imbalanced data did
+not make it competitive with EPX here. Thus, we speculate that it is the
+sparsity of information, caused by imbalance, and not imbalance itself, that
+is the key factor in EPX’s performance.
+Often one of the phalanxes by itself will give a classifier that outperforms
+RF or RRF using all the variables. In this sense phalanx-formation provides
+an effective variable selection or regularization for QSAR studies [Goodarzi,
+Dejaegher and Vander Heyden (2012)]. But this is just a bonus. The EPX
+algorithm attempts to identify several such competitive subsets of variables
+in its various phalanxes. Averaging their models in an ensemble usually
+provides the greatest advantage.
+The proposed method is not a stand-alone classifier. It works on top of
+a base method. For the drug discovery problem the base classifier was RF,
+because that method was among the best known for such applications. The
+phalanx method divides up the variables and gives each subset of them to
+the RF method. It then combines the different results from the various RF
+models (one model per subset of variables) into one model. In that sense,
+the phalanx method sits on top of a base classifier like RF and improves it.
+ENSEMBLING BASED ON PHALANXESOFVARIABLES 25
+Thus, the method is potentially extensible to other applications with a
+richnessofexplanatoryvariablesbutotherstatisticalaimssuchasregression
+or survival analysis. The user needs to provide a competitive base statistical
+method for the problem and a metric for the quality of a model. Phalanx-
+formation to improve the base method would then be guided by the metric,
+closely following the algorithm in Section 4.
+Acknowledgments. We thank the reviewers for their insightful sugges-
+tions and comments, which clarified important aspects of the application
+and methodology. We also thank Stan Young for his help generating the
+descriptor sets and Tom Pfeifer for help with chemistry interpretation. The
+WestGrid computational facilities of Compute Canada are also gratefully
+acknowledged.

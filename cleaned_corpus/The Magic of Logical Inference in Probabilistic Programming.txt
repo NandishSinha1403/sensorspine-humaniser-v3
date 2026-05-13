@@ -1,0 +1,622 @@
+Under consideration for publication in Theory and Practice of Logic Programming 1
+The Magic of Logical Inference in Probabilistic
+Programming
+Bernd Gutmann, Ingo Thon, Angelika Kimmig, Maurice Bruynooghe and Luc De Raedt
+Department of Computer Science, Katholieke Universiteit Leuven,
+Celestijnenlaan 200A - bus 2402, 3001 Heverlee, Belgium
+{firstname.lastname}@cs.kuleuven.be
+submitted 1 January 2003; revised 1 January 2003; accepted 1 January 2003
+Today,manydifferentprobabilisticprogramminglanguagesexistandevenmoreinference
+mechanismsfortheselanguages.Still,mostlogicprogrammingbasedlanguagesuseback-
+ward reasoning based on SLD resolution for inference. While these methods are typically
+computationally efficient, they often can neither handle infinite and/or continuous distri-
+butions,norevidence.Toovercometheselimitations,weintroducedistributionalclauses,
+avariationandextensionofSato’sdistributionsemantics.Wealsocontributeanovelap-
+proximateinferencemethodthatintegratesforwardreasoningwithimportancesampling,
+a well-known technique for probabilistic inference. To achieve efficiency, we integrate two
+logicprogrammingtechniquestodirectforwardsampling.Magicsetsareusedtofocuson
+relevant parts of the program, while the integration of backward reasoning allows one to
+identify and avoid regions of the sample space that are inconsistent with the evidence.
+1 Introduction
+The advent of statistical relational learning (Getoor and Taskar 2007; De Raedt
+etal.2008)andprobabilisticprogramming(DeRaedtetal.2008)hasresultedina
+vast number of different languages and systems such as PRISM (Sato and Kameya
+2001), ICL (Poole 2008), ProbLog (De Raedt et al. 2007), Dyna (Eisner et al.
+2005), BLPs (Kersting and De Raedt 2008), CLP(BN) (Santos Costa et al. 2008),
+BLOG (Milch et al. 2005), Church (Goodman et al. 2008), IBAL (Pfeffer 2001),
+and MLNs (Richardson and Domingos 2006). While inference in these languages
+generallyinvolvesevaluatingtheprobabilitydistributiondefinedbythemodel,often
+conditioned on evidence in the form of known truth values for some atoms, this
+diversityofsystemshasledtoavarietyofinferenceapproaches.Languagessuchas
+IBAL, BLPs, MLNs and CLP(BN) combine knowledge-based model construction
+to generate a graphical model with standard inference techniques for such models.
+Some probabilistic programming languages, for instance BLOG and Church, use
+sampling for approximate inference in generative models, that is, they estimate
+probabilities from a large number of randomly generated program traces. Finally,
+probabilistic logic programming frameworks such as ICL, PRISM and ProbLog,
+combine SLD-resolution with probability calculations.
+So far, the second approach based on sampling has received little attention in
+1v2515.7011:viXra
+2 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt
+logic programming based systems. In this paper, we investigate the integration
+of sampling-based approaches into probabilistic logic programming frameworks to
+broaden the applicability of these. Particularly relevant in this regard are the abil-
+ity of Church and BLOG to sample from continuous distributions and to answer
+conditional queries of the form p(q|e) where e is the evidence. To accommodate
+(continuous and discrete) distributions, we introduce distributional clauses, which
+define random variables together with their associated distributions, conditional
+upon logical predicates. Random variables can be passed around in the logic pro-
+gram and the outcome of a random variable can be compared with other values by
+meansofspecialbuilt-ins.Toformallyestablishthesemanticsofthisnewconstruct,
+we show that these random variables define a basic distribution over facts (using
+the comparison built-ins) as required in Sato’s distribution semantics (Sato 1995),
+and thus induces a distribution over least Herbrand models of the program. This
+contrastswithpreviousinstancesofthedistributionsemanticsinthatwenolonger
+enumerate the probabilities of alternatives, but instead use arbitrary densities and
+distributions.
+From a logic programming perspective, BLOG (Milch et al. 2005) and related
+approaches perform forward reasoning, that is, the samples needed for probability
+estimation are generated starting from known facts and deriving additional facts,
+thusgeneratingapossibleworld.PRISMandrelatedapproachesfollowtheopposite
+approach of backward reasoning, where inference starts from a query and follows
+a chain of rules backwards to the basic facts, thus generating proofs. This differ-
+ence is one of the reasons for using sampling in the first approach: exact forward
+inference would require that all possible worlds be generated, which is infeasible in
+most cases. Based on this observation, we contribute a new inference method for
+probabilisticlogicprogrammingthatcombinessampling-basedinferencetechniques
+withforwardreasoning.Ontheprobabilisticside,theapproachusesrejectionsam-
+pling (Koller and Friedman 2009), a well-known sampling technique that rejects
+samples that are inconsistent with the evidence. On the logic programming side,
+we adapt the magic set technique (Bancilhon et al. 1986) towards the probabilistic
+setting,therebycombiningtheadvantagesofforwardandbackwardreasoning.Fur-
+thermore, the inference algorithm is improved along the lines of the SampleSearch
+algorithm(GogateandDechter2011),whichavoidschoicesleadingtoasamplethat
+cannotbeusedintheprobabilityestimationduetoinconsistencywiththeevidence.
+We realize this using a heuristic based on backward reasoning with limited proof
+length, the benefit of which is experimentally confirmed. This novel approach to
+inferencecreatesanumberofnewpossibilitiesforapplicationsofprobabilisticlogic
+programming systems, including continuous distributions and Bayesian inference.
+This paper is organized as follows: we start by reviewing the basic concepts in
+Section2.Section3introducesthenewlanguageanditssemantics,Section4anovel
+forward sampling algorithm for probabilistic logic programs. Before concluding, we
+evaluate our approach in Section 5.
+The Magic of Logical Inference in Probabilistic Programming 3
+2 Preliminaries
+2.1 Probabilistic Inference
+Adiscreteprobabilisticmodeldefinesaprobabilitydistributionp(·)overasetΩof
+basic outcomes, that is, value assignments to the model’s random variables. This
+distribution can then be used to evaluate a conditional probability distribution
+p(q|e)= p(q∧e), also called target distribution. Here, q is a query involving random
+variables, and e is the evidence, that is, a partial value assignment of the random
+variables1.Evaluatingthistargetdistributioniscalledprobabilisticinference(Koller
+and Friedman 2009). In probabilistic logic programming, random variables often
+correspond to ground atoms, and p(·) thus defines a distribution over truth value
+assignments, as we will see in more detail in Sec. 2.3 (but see also De Raedt et al.
+2008). Probabilistic inference then asks for the probability of a logical query being
+true given truth value assignments for a number of such ground atoms.
+In general, the probability p(·) of a query q is in the discrete case the sum over
+those outcomes ω ∈ Ω that are consistent with the query. In the continuous case,
+the sum is replaced by an (multidimensional) integral and the distribution p(·) by
+a (product of) densities F(·) That is,
+(cid:90) (cid:90)
+where 1 (ω) = 1 if ω |= q and 0 otherwise. As common (e.g. (Wasserman 2003))
+we will use for convenience the notation xdF(x) as unifying notation for both
+discrete and continuous distributions.
+AsΩis oftenverylargeoreveninfinite,exactinferencebased onthesummation
+in (1) quickly becomes infeasible, and inference has to resort to approximation
+techniques based on samples, that is, randomly drawn outcomes ω ∈ Ω. Given a
+large set of such samples {s ,...,s } drawn from p(·), the probability p(q) can be
+estimated as the fraction of samples where q is true. If samples are instead drawn
+from the target distribution p(·|e), the latter can directly be estimated as
+1 (cid:88)
+However, sampling from p(·|e) is often highly inefficient or infeasible in practice,
+as the evidence needs to be taken into account. For instance, if one would use
+the standard definition of conditional probability to generate samples from p(·), all
+samplesthatarenotconsistentwiththeevidencedonotcontributetotheestimate
+and would thus have to be discarded or, in sampling terminology, rejected.
+More advanced sampling methods therefore often resort to a so-called proposal
+distribution which allows for easier sampling. The error introduced by this sim-
+plification then needs to be accounted for when generating the estimate from the
+1 If e contains assignments to continuous variables, p(e) is zero. Hence, evidence on continuous
+valueshastobedefinedviaaprobabilitydensityfunction,alsocalledasensormodel.
+4 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt
+set of samples. An example for such a method is importance sampling, where each
+sample s has an associated weight w . Samples are drawn from an importance dis-
+tribution π(·|e),andweightsaredefinedasw = p(si|e).Thetruetargetdistribution
+can then be estimated as
+1 (cid:88)
+where W = w is a normalization constant. The simplest instance of this algo-
+rithmisrejectionsampling asalreadysketchedabove,wherethesamplesaredrawn
+from the prior distribution p(·) and weights are 1 for those samples consistent with
+the evidence, and 0 for the others. Especially for evidence with low probability,
+rejectionsamplingsuffersfromaveryhighrejectionrate,thatis,manysamplesare
+generated,butdonotcontributetothefinalestimate.Thisisknownastherejection
+problem. One way to address this problem is likelihood weighted sampling, which
+dynamically adapts the proposal distribution during sampling to avoid choosing
+values for random variables that cause the sample to become inconsistent with the
+evidence.Again,thisrequirescorrespondingmodificationsoftheassociatedweights
+in order to produce correct estimates.
+2.2 Logical Inference
+A(definite)clauseisanexpressionoftheformh :- b ,...,b ,wherehiscalledhead
+and b ,...,b is the body. A program consists of a set of clauses and its semantics
+isgivenbyitsleastHerbrandmodel.Thereareatleasttwowaysofusingadefinite
+clause in a logical derivation. First, there is backward chaining, which states that
+to prove a goal h with the clause it suffices to prove b ,...,b ; second, there is
+forward chaining, which starts from a set of known facts b ,...,b and the clause
+and concludes that h also holds (cf. (Nilsson and Mal(cid:32)iszyn´ski 1996)). Prolog em-
+ploysbackwardchaining(SLD-resolution)toanswerqueries.SLD-resolutionisvery
+efficientbothintermsoftimeandspace.However,similarsubgoalsmaybederived
+multipletimesifthequerycontainsrecursivecalls.Moreover,SLD-resolutionisnot
+guaranteedtoalwaysterminate(whensearchingdepth-first).Usingforwardreason-
+ing, on the other hand, one starts with what is known and employs the immediate
+consequenceoperatorT untilafixpointisreached.Thisfixpointisidenticaltothe
+least Herbrand model.
+Definition 1 (T operator). Let P be a logic program containing a set of definite
+clauses and ground(P) the set of all ground instances of these clauses. Starting
+from a set of ground facts S the T operator returns
+T (S)={h|h :- b ,...,b ∈ground(P) and {b ,...,b }⊆S}
+2.3 Distribution Semantics
+Sato’s distribution semantics (Sato 1995) extends logic programming to the prob-
+abilistic setting by choosing truth values of basic facts randomly. The core of this
+The Magic of Logical Inference in Probabilistic Programming 5
+semantics lies in splitting the logic program into a set F of facts and a set R of
+rules. Given a probability distribution P over the facts, the rules then allow one
+to extend P into a distribution over least Herbrand models of the logic program.
+Such a Herbrand model is called a possible world.
+More precisely, it is assumed that DB =F ∪R is ground and denumerable, and
+thatnoatominF unifieswiththeheadofaruleinR.Eachtruthvalueassignment
+toF givesrisetoauniqueleastHerbrandmodelofDB.Thus,aprobabilitydistribu-
+tionP overF candirectlybeextendedintoadistributionP overthesemodels.
+Furthermore, Sato shows that, given an enumeration f ,f ,... of facts in F, P
+can be constructed from a series of finite distributions P(n)(f = x ,...,f = x )
+provided that the series fulfills the so-called compatibility condition, that is,
+F 1 1 n n F 1 1 n+1 n+1
+3 Syntax and Semantics
+Sato’sdistributionsemantics,assummarizedinSec.2.3,providesthebasisformost
+probabilistic logic programming languages including PRISM (Sato and Kameya
+2001),ICL (Poole2008), CP-logic(Vennekenset al.2009)and ProbLog(DeRaedt
+et al. 2007). The precise way of defining the basic distribution P differs among
+languages, though the theoretical foundations are essentially the same. The most
+basic instance of the distribution semantics, employed by ProbLog, uses so-called
+probabilistic facts. Each ground instance of a probabilistic fact directly corresponds
+to an independent random variable that takes either the value “true” or “false”.
+Theseprobabilisticfactscanalsobeseenasbinaryswitches,cf.(Sato1995),which
+againcanbeextendedtomulti-aryswitchesorchoicesasusedbyPRISMandICL.
+Forswitches,atmostoneoftheprobabilisticfactsbelongingtotheswitchis“true”
+according to the specified distribution. Finally, in CP-logic, such choices are used
+in the head of rules leading to the so-called annotated disjunction.
+Hybrid ProbLog (Gutmann et al. 2010) extends the distribution semantics with
+continuous distributions. To allow for exact inference, Hybrid ProbLog imposes
+severe restrictions on the distributions and their further use in the program. Two
+sampledvalues,forinstance,cannotbecomparedagainsteachother.Onlycompar-
+isonsthatinvolveonesampledvalueandonenumberconstantareallowed.Sampled
+values may not be used in arithmetic expressions or as parameters for other distri-
+butions, for instance, it is not possible to sample a value and use it as the mean of
+a Gaussian distribution. It is also not possible to reason over an unknown number
+of objects as BLOG (Milch et al. 2005) does, though this is the case mainly for
+algorithmic reasons.
+Here, we alleviate these restrictions by defining the basic distribution P over
+probabilisticfactsbasedonbothdiscreteandcontinuousrandomvariables.Weuse
+a three-step approach to define this distribution. First, we introduce explicit ran-
+domvariablesandcorrespondingdistributionsovertheirdomains,bothdenotedby
+terms. Second, we use a mapping from these terms to terms denoting (sampled)
+outcomes, which, then, are used to define the basic distribution P on the level of
+6 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt
+probabilistic facts. For instance, assume that an urn contains an unknown number
+ofballswherethenumberisdrawnfromaPoissondistributionandwesaythatthis
+urncontainsmanyballsifitcontainsatleast10balls.Weintroducearandomvari-
+able number, and we define many :- dist gt((cid:39)(number),9). Here, (cid:39)(number) is the
+Herbrand term denoting the sampled value of number, and dist gt((cid:39)(number),9)
+is a probabilistic fact whose probability of being true is the expectation that this
+value is actually greater than 9. This probability then carries over to the derived
+atom many as well. We will elaborate on the details in the following.
+3.1 Syntax
+Inalogicprogram,followingSato,wedistinguishbetweenprobabilisticfacts,which
+are used to define the basic distribution, and rules, which are used to derive addi-
+tional atoms.2 Probabilistic facts are not allowed to unify with any rule head. The
+distribution over facts is based on random variables, whose distributions we define
+through so called distributional clauses.
+Definition 2 (Distributional clause). A distributional clause is a definite clause
+withanatomh∼D intheheadwhere∼isabinarypredicateusedininfixnotation.
+For each ground instance (h ∼ D :- b ,...,b )θ with θ being a substitution
+over the Herbrand universe of the logic program, the distributional clause de-
+fines a random variable hθ and an associated distribution Dθ. In fact, the dis-
+tribution is only defined when (b ,...,b )θ is true in the semantics of the logic
+program. These random variables are terms of the Herbrand universe and can
+be used as any other term in the logic program. Furthermore, a term (cid:39)(d) con-
+structed from the reserved functor (cid:39)/1 represents the outcome of the random vari-
+able d. These functors can be used inside calls to special predicates in dist rel =
+{dist eq/2,dist lt/2,dist leq/2,dist gt/2,dist geq/2}. We assume that there is a
+fact for each of the ground instances of these predicate calls. These facts are the
+probabilisticfacts ofSato’sdistributionsemantics.Notethatthesetofprobabilistic
+factsisenumerableastheHerbranduniverseoftheprogramisenumerable.Aterm
+(cid:39)(d)linkstherandomvariabledwithitsoutcome.Theprobabilisticfactscompare
+the outcome of a random variable with a constant or the outcome of another ran-
+dom variable and succeed or fail according to the probability distribution(s) of the
+random variable(s).
+Example 1 (Distributional clauses).
+nballs∼poisson(6). (3)
+color(B)∼ [0.7:b,0.3:g] :- between(1,(cid:39)(nballs),B). (4)
+diameter(B,MD)∼gamma(MD/20,20) :- between(1,(cid:39)(nballs),B),
+mean diameter((cid:39)(color(B)),MD). (5)
+2 Arulecanhaveanemptybody,inwhichcaseitrepresentsadeterministicfact.
+The Magic of Logical Inference in Probabilistic Programming 7
+The defined distributions depend on the following logical clauses:
+mean diameter(C,5) :- dist eq(C,b).
+mean diameter(C,10) :- dist eq(C,g).
+between(I,J,I) :- dist leq(I,J).
+between(I,J,K) :- dist lt(I,J), I1 is I+1,between(I1,J,K).
+Thedistributional clause (3) modelsthe numberof ballsas aPoisson distribution
+with mean 6. The distributional clause (4) models a discrete distribution for the
+random variable color(B). With probability 0.7 the ball is blue and green otherwise.
+Note that the distribution is defined only for the values B for which between(1,(cid:39)
+(nballs),B)succeeds.Executionofcallstothelattergiverisetocallstoprobabilistic
+factsthatareinstancesofdist leq(I,(cid:39)(nballs))anddist lt(I,(cid:39)(nballs)).Similarly,
+the distributional clause (5) defines a gamma distribution that is also conditionally
+defined. Note that the conditions in the distribution depend on calls of the form
+mean diameter((cid:39)(color(n)),MD)withnavaluereturnedbybetween/3.Execution
+of this call finally leads to calls dist eq((cid:39)(color(n)),b) and dist eq((cid:39)(color(n)),g).
+It looks feasible, to allow (cid:39)(d) terms everywhere and to have a simple pro-
+gram analysis insert the special predicates in the appropriate places by replacing
+< /2, > /2, ≤ /2, ≥ /2 predicates by dist rel/2 facts. Though extending unifica-
+tion is a bit harder: as long as a (cid:39)(h) term is unified with a free variable, standard
+unificationcanbeperformed;onlywhentheothertermisboundanextensionisre-
+quired.Inthispaper,weassumethatthespecialpredicatesdist eq/2,dist lt/2,
+dist leq/2, dist gt/2, and dist geq/2 are used whenever the outcome of a ran-
+dom variable need to be compared with another value and that it is safe to use
+standard unification whenever a (cid:39)(h) term is used in another predicate.
+For the basic distribution on facts to be well-defined, a program has to fulfill a
+set of validity criteria that have to be enforced by the programmer.
+Definition 3 (Valid program). A program P is called valid if:
+(V1) In the relation h ∼ D that holds in the least fixpoint of a program, there is
+a functional dependency from h to D, so there is a unique ground distribution D
+for each ground random variable h.
+(V2) Theprogramis distribution-stratified,thatis,thereexistsafunctionrank(·)
+that maps ground atoms to N and that satisfies the following properties: (1) for
+each ground instance of a distribution clause h ∼ D :- b ,...b holds rank(h ∼
+D >rank(b ) (for all i). (2) for each ground instance of another program clause:
+h :- b ,...b holds rank(h) ≥ rank(b ) (for all i). (3) for each ground atom b
+that contains (the name of) a random variable h, rank(b)≥rank(h∼D) (with
+h∼D the head of the distribution clause defining h).
+(V3) All ground probabilistic facts or, to be more precise, the corresponding indi-
+cator functions are Lebesgue-measurable.
+(V4) Each atom in the least fixpoint can be derived from a finite number of prob-
+abilistic facts (finite support condition (Sato 1995)).
+8 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt
+Together, (V1) and (V2) ensure that a single basic distribution P over the
+probabilistic facts can be obtained from the distributions of individual random
+variables defined in P. The requirement (V3) is crucial. It ensures that the series
+of distributions P(n) needed to construct this basic distribution is well-defined.
+Finally,thenumberoffactsoverwhichthebasicdistributionisdefinedneedstobe
+countable.Thisistrue,aswehaveafinitenumberofconstantsandfunctors:those
+appearing in the program.
+3.2 Distribution Semantics
+WenowdefinetheseriesofdistributionsP(n)wherewefixanenumerationf ,f ,...
+of probabilistic facts such that i < j =⇒ rank(f ) ≤ rank(f ) where rank(·) is
+a ranking function showing that the program is distribution-stratified. For each
+predicate rel/2∈dist rel, we define an indicator function as follows:
+1 if rel(X ,X ) is true
+I1 (X ,X )= 1 2 (6)
+0 if rel(X ,X ) is false
+Furthermore,wesetI0 (X ,X )=1.0−I1 (X ,X ).Wethenusetheexpected
+rel 1 2 rel 1 2
+value of the indicator function to define probability distributions P(n) over finite
+sets of ground facts f ,...,f . Let {rv ,...rv } be the set of random variables
+these n facts depend on, ordered such that if rank(rv ) < rank(rv ), then i < j
+(cf. (V2) in Definition 3). Furthermore, let f = rel (t ,t ), x ∈ {1,0}, and
+i i i1 i2 j
+θ−1 ={(cid:39)(rv )/V ,...,(cid:39)(rv )/V }. The latter replaces all evaluations of random
+variables on which the f depend by variables for integration.
+P(n)(f =x ,...,f =x )=E[Ix1 (t ,t ),...,Ixn (t ,t )] (7)
+F 1 1 n n rel1 11 12 reln n1 n2
+(cid:90) (cid:90)
+rel1 11 12 reln n1 n2 rv1 1 rvm m
+Example2(BasicDistribution). Letf ,f ,...=dist lt((cid:39)(b1),3),dist lt((cid:39)(b2),(cid:39)
+(b1)),.... The second distribution in the series then is
+dist lt dist lt
+(cid:90) (cid:90)
+= (Ix1 (V1,3),Ix2 (V2,V1))dD (V1)dD (V2)
+dist lt dist lt b1 b2
+By now we are able to prove the following proposition.
+Proposition 1. Let P be a valid program. P defines a probability measure P
+over the set of fixpoints of the T operator. Hence, P also defines for an arbitrary
+formula q over atoms in its Herbrand base the probability that q is true.
+Proof sketch. It suffices to show that the series of distributions P(n) over facts
+(cf. (7)) is of the form that is required in the distribution semantics, that is, these
+are well-defined probability distributions that satisfy the compatibility condition,
+cf.(2).Thisisadirectconsequenceofthedefinitionintermsofindicatorfunctions
+and the measurability of the underlying facts required for valid programs.
+The Magic of Logical Inference in Probabilistic Programming 9
+3.3 T Semantics
+In the following, we give a procedural view onto the semantics by extending the
+T operator of Definition 1 to deal with probabilistic facts dist rel(t ,t ). To do
+so, we introduce a function ReadTable(·) that keeps track of the sampled val-
+ues of random variables to evaluate probabilistic facts. This is required because
+interpretations of a program only contain such probabilistic facts, but not the un-
+derlyingoutcomesofrandomvariables.Givenaprobabilisticfactdist rel(t1,t2),
+ReadTable returns the truth value of the fact based on the values of the random
+variables h in the arguments, which are either retrieved from the table or sampled
+according to their definition h∼D as included in the interpretation and stored in
+case they are not yet available.
+Definition 4 (Stochastic T operator). Let P be a valid program and ground(P)
+the set of all ground instances of clauses in P. Starting from a set of ground facts
+S the ST operator returns
+(cid:110) (cid:12)
+ST (S):= h (cid:12) h :- b ,...,b ∈ground(P) and ∀ b : either b ∈S or
+P (cid:12) 1 n i i
+ReadTable(b )=true
+(cid:1)(cid:111)
+ReadTableensuresthatthebasicfactsaresampledfromtheirjointdistribution
+as defined in Sec. 3.2 during the construction of the standard fixpoint of the logic
+program. Thus, each fixpoint of the ST operator corresponds to a possible world
+whose probability is given by the distribution semantics.
+4 Forward sampling using Magic Sets and backward reasoning
+Inthissectionweintroduceournewmethodforprobabilisticforwardinference.To
+thisaim,wefirstextendthemagicsettransformationtodistributionalclauses.We
+then develop a rejection sampling scheme using this transformation. This scheme
+also incorporates backward reasoning to check for consistency with the evidence
+during sampling and thus to reduce the rejection rate.
+4.1 Probabilistic magic set transformation
+The disadvantage of forward reasoning in logic programming is that the search
+is not goal-driven, which might generate irrelevant atoms. The magic set trans-
+formation (Bancilhon et al. 1986; Nilsson and Ma(cid:32)liszyn´ski 1996) focuses forward
+reasoning in logic programs towards a goal to avoid the generation of uninteresting
+facts. It thus combines the advantages of both reasoning directions.
+Definition 5 (Magic Set Transformation). If P is a logic program, then we use
+Magic(P) to denote the smallest program such that if A :- A ,...,A ∈P then
+• A :- c(A ),A ,...,A ∈Magic(P) and
+• for each 1≤i≤n: c(A ) :- c(A ),A ,...,A ∈Magic(P)
+10 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt
+Themeaningoftheadditionalc/1atoms(c=call)isthatthey“switchon”clauses
+whentheyareneededtoproveaparticulargoal.Ifthecorrespondingswitchforthe
+head atom is not true, the body is not true and thus cannot be proven. The magic
+transformation is both sound and complete. Furthermore, if the SLD-tree of a goal
+isfinite,forwardreasoninginthetransformedprogramterminates.Thesameholds
+if forward reasoning on the original program terminates.
+Wenowextendthistransformationtodistributionalclauses.Theideaisthatthe
+distributional clause for a random variable h is activated when there is a call to a
+probabilistic fact dist rel(t ,t ) depending on h.
+Definition 6 (Probabilistic Magic Set Transformation). For program P, let P be
+P without distributional clauses. M(P) is the smallest program s.t. Magic(P ) ⊆
+M(P) and for each h∼D :- b ,...,b ∈P and rel∈{eq,lt,leq,gt,geq}:
+• h∼D :- (c(dist rel((cid:39)(h),X));c(dist rel(X,(cid:39)(h))),b ,...,b .∈M(P).
+• c(b ) :- (c(dist rel((cid:39)(h),X));c(dist rel(X,(cid:39)(h))),b ,...,b .∈M(P).
+Then PMagic(P) consists of:
+• aclausea p(t ,...,t ) :- c(p(t ,...,t )),p(t ,...,t )foreachbuilt-inpred-
+1 n 1 n 1 n
+icate (including dist rel/2 for rel∈{eq,lt,leq,gt,geq}) used in M(P).
+• aclauseh :- b(cid:48),...,b(cid:48) foreachclauseh :- b ,...,b ∈M(P)whereb(cid:48) =a b
+1 n 1 n i i
+if b uses a built-in predicate and else b(cid:48) =b .
+Note that every call to a built-in b is replaced by a call to a b; the latter pred-
+icate is defined by a clause that is activated when there is a call to the built-in
+(c(b)) and that effectively calls the built-in. The transformed program computes
+the distributions only for random variables whose value is relevant to the query.
+Thesedistributionsarethesameasthoseobtainedinaforwardcomputationofthe
+original program. Hence we can show:
+Lemma 1. Let P be a program and PMagic(P) its probabilistic magic set trans-
+formation extended with a seed c(q). The distribution over q defined by P and by
+PMagic(P) is the same.
+Proof sketch. Inbothprograms,thedistributionoverq isdeterminedbythedistri-
+butions of the atoms dist eq(t ,t ), dist leq(t ,t ), dist lt(t ,t ), dist geq(t ,t ),
+1 2 1 2 1 2 1 2
+and dist gt(t ,t ) onwhich q dependsin a forward computationof theprogram P.
+The magic set transformation ensures that these atoms are called in the forward
+executionofPMagic(P).InPMagic(P),acalltosuchanatomactivatesthedis-
+tributional clause for the involved random variable. As this distributional clause is
+alogicprogramclause,soundnessandcompletenessofthemagicsettransformation
+ensures that the distribution obtained for that random variable is the same as in
+P. Hence also the distribution over q is the same for both programs.
+4.2 Rejection sampling with heuristic lookahead
+AsdiscussedinSection2.1,sampling-basedapproachestoprobabilisticinferencees-
+timatetheconditionalprobabilityp(q|e)ofaqueryq givenevidenceebyrandomly
+The Magic of Logical Inference in Probabilistic Programming 11
+Algorithm 1 Main loop for sampling-based inference to calculate the conditional
+probability p(q|e) for query q, evidence e and program L.
+1: function Evaluate(L, q, e, Depth)
+3: n+ :=0 n− :=0
+4: while Not converged do
+5:
+(I,w):=STPMagic(L∗,L,e,Depth)
+6: if q ∈I then n+ :=n++w else n− :=n−+w
+Algorithm 2 Sampling one interpretation; used in Algorithm 1.
+1: function STPMagic(L∗,L,e,Depth)
+2: T pf :=∅, T dis :=∅, w :=1, I old :=∅, I new :=∅
+4: I old :=I new
+5: for all (h :- body) ∈L∗ do
+6: split body in B PF (prob. facts) and B L (the rest)
+7: for all grounding substitution θ such that B L θ ⊆I old do
+8: s:=true, w d :=1
+9: while s∧B PF (cid:54)=∅ do
+10: select and remove pf from B PF
+11: (b pf ,w pf ):=ReadTable(pfθ,I old ,T pf ,T dis ,L,e,Depth)
+12: s:=s∧b pf w d :=w d ·w pf
+13: if s then
+14: if hθ ∈e− then return (I new ,0) (cid:46) check negative evidence
+15: I new :=I new ∪{hθ} w :=w·w d
+16: until I new =I old ∨w =0 (cid:46) Fixpoint or impossible evidence
+17: if e+ ⊆I new then return (I new ,w) (cid:46) check positive evidence
+18: else return (I new ,0)
+generating a large number of samples or possible worlds (cf. Algorithm 1). The al-
+gorithm starts by preparing the program L for sampling by applying the PMagic
+transformation. In the following, we discuss our choice of subroutine STPMagic
+(cf. Algorithm 2) which realizes likelihood weighted sampling. It is used in Algo-
+rithm1,line5,togenerateindividualsamples.Ititeratesthestochasticconsequence
+operatorofDefinition4untileitherafixpointisreachedorthecurrentsampleisin-
+consistentwiththeevidence.Finally,ifthesampleisinconsistentwiththeevidence,
+it receives weight 0.
+Algorithm 3 details the procedure used in line 11 of Algorithm 2 to sample from
+a given distributional clause. The function ReadTable returns the truth value of
+the probabilistic fact, together with its weight. If the outcome is not yet tabled,
+it is computed. Note that false is returned when the outcome is not consistent
+withtheevidence.Involveddistributions,ifnotyettabled,aresampledinline5.In
+12 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt
+Algorithm 3 Evaluating a probabilistic fact pf; used in Algorithm 2. Com-
+putePF(pf,T ) computes the truth value and the probability of pf according
+to the information in T .
+1: function ReadTable(pf,I,T pf ,T dis ,L,e,Depth)
+2: if pf ∈/ T pf then
+3: for all random variable h occurring in pf where h∈/ T dis do
+4: if h∼D ∈/ I then return (false,0)
+5: if not Sample(h,D,T dis ,I,L,e,Depth) then return (false,0)
+6: (b,w):= ComputePF(pf,T dis )
+8: return (false,0) (cid:46) inconsistent with evidence
+9: extend T pf with (pf,b,w)
+10: return (b,w) as stored in T pf for pf
+11: procedure Sample(h,D, T dis , I, L, e, Depth)
+12: w h :=1, D(cid:48) :=D (cid:46) Initial weight, temp. distribution
+13: if D(cid:48) =[p 1 :a 1 ,...,p n :a n ] then (cid:46) finite distribution
+14: for p j :a j ∈D(cid:48) where dist eq(h,a j )∈e− do (cid:46) remove neg. evidence
+15: D(cid:48) :=Norm(D(cid:48)\{p j :a j }), w h :=w h ×(1−p j )
+16: if ∃v :dist eq((cid:39)(h),v)∈e+ and p:v∈D(cid:48) then
+17: D(cid:48) :=[1:v], w h :=w h ×p
+18: for p j :a j ∈D(cid:48) do (cid:46) remove choices that make e+ impossible
+19: if ∃b∈e+: not MaybeProof(b,Depth,I∪{dist eq(h,a j )},L) or
+20: ∃b∈e−: not MaybeFail(b,Depth,I∪{dist eq(h,a j )},L) then
+21: D(cid:48) :=Norm(D(cid:48)\{p j :a j }), w h :=w h ×(1−p j )
+22: if D(cid:48) =∅ return false
+23: Sample x according to D(cid:48), extend T dis with (h,x) and return true
+the infinite case, Sample simply returns the sampled value. In the finite case, it is
+directed towards generating samples that are consistent with the evidence. Firstly,
+all possible choices that are inconsistent with the negative evidence are removed.
+Secondly,whenthereispositiveevidenceforaparticularvalue,onlythatvalueisleft
+in the distribution. Thirdly, it is checked whether each left value is consistent with
+all other evidence. This consistency check is performed by a simple depth-bounded
+meta-interpreter.Forpositiveevidence,itattemptsatop-downproofoftheevidence
+atomintheoriginalprogramusingthefunctionMaybeProof.Subgoalsforwhich
+the depth-bound is reached, as well as probabilistic facts that are not yet tabled
+are assumed to succeed. If this results in a proof, the value is consistent, otherwise
+it is removed. Similarly for negative evidence: in MaybeFail, subgoals for which
+the depth-bound is reached, as well as probabilistic facts that are not yet tabled
+are assumed to fail. If this results in failure, the value is consistent, otherwise
+it is removed. The Depth parameter allows one to trade the computational cost
+associated with this consistency check for a reduced rejection rate.
+The Magic of Logical Inference in Probabilistic Programming 13
+Note that the modified distribution is normalized and the weight is adjusted in
+each of these three cases. The weight adjustment takes into account that removed
+elements cannot be sampled and is necessary as it can depend on the distributions
+sampled so far which elements are removed from the distribution sampled in Sam-
+ple(theclausebodiesofthedistributionclauseareinstantiatingthedistribution).
+5 Experiments
+We implemented our algorithm in YAP Prolog and set up experiments to answer
+the questions
+Q1 Does the lookahead-based sampling improve the performance?
+Q2 How do rejection sampling and likelihood weighting compare?
+To answer the first question, we used the distributional program in Figure 1,
+which models an urn containing a random number of balls. The number of balls
+is uniformly distributed between 1 and 10 and each ball is either red or green
+with equal probability. We draw 8 times a ball with replacement from the urn
+and observe its color. We also define the atom nogreen(D) to be true if and
+only if we did not draw any green ball in draw 1 to D. We evaluated the query
+P(dist eq((cid:39)(color((cid:39)(drawnball(1)))),red) |nogreen(D)) for D = 1,2,...,8.
+Notethattheevidenceimpliesthatthefirstdrawnballisred,hencethattheprob-
+ability of the query is 1; however, the number of steps required to proof that the
+evidence is inconsistent with drawing a green first ball increases with D, so the
+larger is D, the larger Depth is required to reach a 100% acceptance rate for the
+sample as illustrated in Figure 1. It is clear that by increasing the depth limit,
+each sample will take longer to be generated. Thus, the Depth parameter allows
+one to trade off convergence speed of the sampling and the time each sample needs
+to be generated. Depending on the program, the query, and the evidence there is
+an optimal depth for the lookahead.
+To answer Q2, we used the standard example for BLOG (Milch et al. 2005). An
+urn contains an unknown number of balls where every ball can be either green or
+blue with p = 0.5. When drawing a ball from the urn, we observe its color but do
+not know which ball it is. When we observe the color of a particular ball, there is a
+20%chancetoobservethewrongone,e.g.greeninsteadofblue.Wehavesomeprior
+belief over the number of balls in the urn. If 10 balls are drawn with replacement
+fromtheurnandwesaw10timesthecolorgreen,whatistheprobabilitythatthere
+arenballsintheurn?Weconsidertwodifferentpriordistributions:inthefirstcase,
+the number of balls is uniformly distributed between 1 and 8, in the second case,
+it is Poisson-distributed with mean λ=6.
+OnerunoftheexperimentcorrespondstosamplingthenumberN ofballsinthe
+urn, the color for each of the N balls, and for each of the ten draws both the ball
+drawn and whether or not the color is observed correctly in this draw. Once these
+valuesarefixed,thesequenceofcolorsobservedisdetermined.Thisimpliesthatfor
+afixednumberN ofballs,thereare2N·N10 possibleproofs.Incaseoftheuniform
+distribution, exact PRISM inference can be used to calculate the probability for
+14 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt
+numballs∼uniform([1,2,3,4,5,6,7,8,9,10]). 0.6
+ball(M) :- between(1,numballs,M). 0.5
+color(B)∼uniform([red,green]) :- ball(B). 0.3
+draw(N) :- between(1,8,N).
+1 2 3 4 5 6 7 8 9 10
+nogreen(0).
+ecnatpeccA
+Depth limit for MaybeProof
+nogreen(D) :- dist eq((cid:39)(color((cid:39)(drawnball(D)))),red), D2 is D−1, nogreen(D2).
+drawnball(D)∼uniform(L) :- draw(D),findall(B,ball(B),L).
+Fig. 1. The program modeling the urn (left); rate of accepted samples (right) for
+evaluatingthequeryP(dist eq((cid:39)(color((cid:39)(drawnball(1)))),red)|nogreen(D))
+for D =1,2,...,10 and for Depth=1,2,...,8 using Algorithm 1. The acceptance
+rate is calculated by generating 200 samples using our algorithm and counting the
+number of sample with weight larger than 0.
+1 2 3 4 5 6 7 8
+ytilibaborP
+Uniform Prior
+True Posterior 0.16
+Likelihood Weighting
+Rejection Sampling 0.14
+0 5 10 15 20
+Number of balls in urn
+ytilibaborP
+Poisson Prior
+True Posterior
+Likelihood Weighting
+Rejection Sampling
+Number of balls in urn
+Fig.2. Resultsofurnexperimentwithforwardreasoning.10ballswithreplacement
+were drawn and each time green was observed. Left: Uniform prior over # balls,
+right: Poisson prior (λ=6).
+each given number of balls, with a total runtime of 0.16 seconds for all eight cases.
+InthecaseofthePoissondistribution,thisisonlypossibleupto13balls,withmore
+balls,PRISMrunsoutofmemory.Forinferenceusingsampling,wegenerate20,000
+sampleswiththeuniformprior,and100,000withPoissonprior.Wereportaverage
+results over five repetitions. For these priors, PRISM generates 8,015 and 7,507
+samples per second respectively, ProbLog backward sampling 708 and 510, BLOG
+3,008 and 2,900, and our new forward sampling (with rejection sampling) 760 and
+731. The results using our algorithm for both rejection sampling and likelihood
+weightingwithDepth=0areshowninFigure2.Asthegraphsshow,thestandard
+deviation for rejection sampling is much larger than for likelihood weighting.
+The Magic of Logical Inference in Probabilistic Programming 15
+6 Conclusions and related work
+Wehavecontributedanovelconstructforprobabilisticlogicprogramming,thedis-
+tributional clauses, and defined its semantics. Distributional clauses allow one to
+representcontinuousvariablesandtoreasonaboutanunknownnumberofobjects.
+In this regard this construct is similar in spirit to languages such as BLOG and
+Church, but it is strongly embedded in a logic programming context. This embed-
+ding allowed us to propose also a novel inference method based on a combination
+ofimportancesamplingandforwardreasoning.Thiscontrastswiththemajorityof
+probabilistic logic programming languages which are based on backward reasoning
+(possibly enhanced with tabling (Sato and Kameya 2001; Mantadelis and Janssens
+2010)). Furthermore, only few of these techniques employ sampling, but see (Kim-
+mig et al. 2011) for a Monte Carlo approach using backward reasoning. Another
+key difference with the existing probabilistic logic programming approaches is that
+the described inference method can handle evidence. This is due to the magic set
+transformation that targets the generative process towards the query and evidence
+and instantiates only relevant random variables.
+P-log (Baral et al. 2009) is a probabilistic language based on Answer Set Prolog
+(ASP). It uses a standard ASP solver for inference and thus is based on forward
+reasoning, but without the use of sampling. Magic sets are also used in proba-
+bilistic Datalog (Fuhr 2000), as well as in Dyna, a probabilistic logic programming
+language (Eisner et al. 2005) based on rewrite rules that uses forward reasoning.
+However, neither of them uses sampling. Furthermore, Dyna and PRISM require
+thattheexclusive-explanationassumption.Thisassumptionstatesthatnotwodif-
+ferentproofsforthesamegoalcanbetruesimultaneously,thatis,theyhavetorely
+onatleastonebasicrandomvariablewithdifferentoutcome.Distributionalclauses
+(and the ProbLog language) do not impose such a restriction. Other related work
+includes MCMC-based sampling algorithms such as the approach for SLP (An-
+gelopoulos and Cussens 2003). Church’s inference algorithm is based on MCMC
+too, and also BLOG is able to employ MCMC. At least for BLOG it seems to be
+requiredtodefineadomain-specificproposaldistributionforfastconvergence.With
+regard to future work, it would be interesting to consider evidence on continuous
+distributionsasitiscurrentlyrestrictedtofinitedistribution.Programanalysisand
+transformation techniques to further optimize the program w.r.t. the evidence and
+query could be used to increase the sampling speed. Finally, the implementation
+could be optimized by memoizing some information from previous runs and then
+use it to more rapidly prune as well as sample.
+Acknowledgements
+AngelikaKimmigandBerndGutmannaresupportedbytheResearchFoundation-
+Flanders(FWO-Vlaanderen). This workis supportedbytheGOA project2008/08
+Probabilistic Logic Learning and by the European Community’s Seventh Frame-
+work Programme under grant agreement First-MM-248258.
+16 B. Gutmann, I. Thon, A. Kimmig, M. Bruynooghe, L. De Raedt

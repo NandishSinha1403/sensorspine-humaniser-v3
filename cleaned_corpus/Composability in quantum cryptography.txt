@@ -1,0 +1,720 @@
+]hp-tnauq[
+1v5122.6001:viXra
+Composability in Quantum Cryptography
+J¨orn Mu¨ller-Quade and Renato Renner
+Ifwecombinetwosecurecryptographicsystems,istheresultingsystemstillsecure? Answer-
+ing this question is highly non-trivial and has recently sparked a considerable research effort,
+in particular in the area of classical cryptography. A central insight was that the answer to
+the question is yes, but only within a well specified composability framework and for carefully
+chosen security definitions.
+In this article, we review several aspects of composability in the context of quantum cryp-
+tography. The first part is devoted to key distribution. We discuss the security criteria that
+a quantum key distribution protocol must fulfill to allow its safe use within a larger security
+application (e.g., for secure message transmission); and we demonstrate—by an explicit exam-
+ple—whatcangowrongifconventional(non-composable)securitydefinitionsareused. Finally,
+toillustratethepracticaluseofcomposability,weshowhowtogenerateacontinuouskeystream
+bysequentially composing roundsof a quantumkey distribution protocol.
+In a second part, we take a more general point of view, which is necessary for the study of
+cryptographic situations involving, for example, mutually distrustful parties. We explain the
+universal composability framework and state the composition theorem which guarantees that
+secure protocols can securely be composed to larger applications. A focus is set on the secure
+compositionofquantumprotocolsintounconditionallysecureclassical protocols. However,the
+resulting security definition is so strict that some tasks become impossible without additional
+security assumptions. Quantum bit commitment is impossible in the universal composability
+framework even with mere computational security. Similar problems arise in the quantum
+boundedstoragemodelandweobserveatrade-offbetweentheuniversalcomposabilityandthe
+useof theweakest possible security assumptions.
+1 Introduction
+Provable security, even for complex security applications, is desirable. However, giving one mono-
+lithic securityproofforalargercryptosystemiserrorprone,andamodulardesignisusuallyadvan-
+tageous. But this comes with a major difficulty, namely that security definitions are not generally
+closed under composition. Therefore, an application may be insecure even if the individual compo-
+nents itconsistsofaresecure. During the pastfew years,finding solutionstothis problemhasbeen
+a main focus of research in cryptography. This research effort has resulted in the development of
+frameworks in which security definitions are universally composable.
+Wereviewseveralaspectsofcomposabilityinthecontextofquantumcryptographyandstructure
+our exposition into two parts. Section 2 considers the security and composability of Quantum Key
+Distribution (QKD), which is the most prominent application of quantum cryptography. In a
+second part, starting with Section 3, we consider the problem of composability for general security
+applications.
+The reason for this organization of the paper is that for the usual treatment of QKD, one
+assumes a fixed adversary structure,i.e., Alice and Bob are alwayshonest (in particular, they trust
+each other), while only a third party with access to the communication channels is malicious. This
+avoids many of the problems that arise in the more general considerations outlined in Sections 3
+through 5, where arbitrary parties may be corrupted.
+2 Quantum Key Distribution (QKD)
+2.1 QKD in a Nutshell
+Quantum key distribution (QKD) is the artofdistributing a secretkey to twodistant parties, Alice
+and Bob, connected by an insecure quantum channel. Technically, a secret key is simply a random
+bitstringforwhichthereisacertainguaranteethatitsvalueisunknowntoanadversary,Eve. Such
+akeymaybeusedforavarietyofcryptographictasks. Themostprominentamongthemiscertainly
+the secure transmission of secret messages over an insecure channel. Here, the key typically serves
+as a one-time-pad for message encryption.
+In the past two decades, numerous QKD schemes have been proposed. Although they differ in
+manyaspects(suchastheirrealizabilitywithcurrenttechnology),theystillverymuchresemblethe
+originalprotocolsput forwardby BennettandBrassard[5](basedonideasby Wiesner [48])andby
+Ekert[16]. Wewillnotattemptheretogiveadescriptionoftheseprotocols. Infact,forthepurpose
+of this article, it is sufficient to take a rather abstract point of view, where the internal workings of
+the protocols are unimportant. (The reader interested in the concrete protocols is referred to the
+original articles [5, 16] as well as the recent review articles [38] and references therein.)
+The security of QKD basically relies on an intrinsic property of quantum mechanics, namely
+that it is generally impossible to copy the state of a system without disturbing the original.1 For
+cryptography,thismeansthatanyattemptofanattackerto“steal”appropriatelyencodedinforma-
+tion can in principle be detected. This also motivates the basic structure of QKD protocols: first,
+Alice and Bob send random signals over the quantum channel and then, in a second step, perform
+tests to check for disturbances in the signals, which may be a sign of an attack. Depending on this
+test, the protocol typically has one of two different outcomes. Either the disturbances are found to
+be too large, in which case the protocol aborts with the declaration that no key can be generated.
+Otherwise, if there are no (or only small) disturbances, Alice and Bob use the randomness in the
+distributed signals to generate a key.2
+AlthoughQKDisoftensaidtobeunconditionallysecure,therearestillafewassumptionsneeded
+to prove security of the generated keys. The first (usually implicit in the literature) is that Alice
+and Bob are honest, meaning that they both follow their respective part of the protocol.3 Second,
+it is assumedthat Alice and Bobcan exchange classicalmessages authentically, i.e., it is impossible
+for an adversaryto alter the classical messages exchangedbetween Alice and Bob. In practice, this
+is usually achieved by invoking an authentication scheme (see, e.g., [46]) which, however, requires
+Alice and Bob to share a short initial key. Because of this latter assumption, QKD is sometimes
+called key growing rather than key distribution.
+After this brief introduction, we are now ready to have a closer look at the notion of security
+used in the context of QKD. We introduce an explicit definition (Section 2.2) and then show its
+composability (Section 2.3). As an example, we discuss the problem of generating a continuous
+key stream by sequentially composing many rounds of a QKD protocol (Section 2.4). We then
+conclude the part on QKD with an example that pinpoints the problems arising when employing
+a non-composable security definition, which incidentally has been widely used in the literature
+(Section 2.5).
+2.2 Security Criteria
+To define security, we first need to have a clearer picture of what a QKD protocol is supposed
+to do. We start with a list of the properties we expect an ideal protocol to have and then, in a
+second step, define security of real protocols by their indistinguishability from the ideal case. In
+accordance with the terminology used in the context of multi-party computation, we call these
+properties secrecy, correctness, and robustness (see also [22]). We denote by S and S the final
+outputs of the protocol on Alice and Bob’s side, respectively. Following the discussion above, the
+1More precisely, it is impossible to build a physical device that takes as input an unknown quantum state and
+outputs twocopiesofit. Thisimpossibilityisalsoknownasnon-cloning theorem. ForQKD,itisimportanttohave
+aquantitative versionofthisstatement, sometimescalledinformation-disturbance trade-off.
+2Moregenerally, aprotocol maygenerate keys whoselength depends on anestimate ofthe maximum amount of
+informationthatanadversarymayhavegainedbyaneavesdropping attack.
+3Dropping this assumption leads to the additional problem of generating randomness by mutually mistrustful
+parties,whichisknownascoin flipping [7].
+protocol may either generate keys, in which case S and S are two identical random bitstrings of
+a certain fixed length ℓ, or it may abort, in which case we set S =⊥ and S =⊥.4 Furthermore,
+we denote by E the entire (quantum) system controlled by an adversary. In particular, E contains
+all the information that the adversary acquires during the run of the protocol.
+We consider here the strongest type of security, namely security against general attacks. This
+means that an adversary may arbitrarily tamper with the signals exchanged between Alice and
+Bob over the quantum channel.5 In addition, she may eavesdrop (but not alter) the classical
+communication. We also introduce the notion of a passive adversary, who does not disturb the
+quantum communication. Formally, this simply means that the behavior of the quantum channel
+is described by a fixed noise model. For QKD based on qubit-systems, for instance, the standard is
+to consider channels that introduce random bit- and phase-flips (with a given probability).
+Perfect Security. We now say that a QKD scheme is perfectly secure if the following holds for
+any attack.
+Correctness: The outputs of the protocol on Alice and Bob’s side are identical (i.e., S =S ).
+Secrecy: If the protocol produces a key S (i.e., if S 6=⊥) then S is uniformly distributed and
+independent of the state of the system E held by the adversary.6
+Robustness: If the adversary is passive then a key is generated (i.e., S 6=⊥).7
+It is easy to see that none of these criteria can be dropped without making the task trivial. In
+fact,without the correctnessrequirement,aprotocolmayjustproduce uncorrelatedrandomnesson
+Alice and Bob’s side. Similarly, without the robustness requirement, a protocol may always output
+S =S =⊥.
+Approximate Security. Unfortunately, it is (provably) impossible to design a QKD protocol
+that is perfectly secure according to the above definition. One thus typically considers a relaxation
+where the requirement is that the behavior of the scheme is similar (but not necessarily equal)
+to an idealized scheme which is perfectly secure. This can be made precise using the notion of
+indistinguishability.
+More specifically, one considers a hypothetical device, called distinguisher, which interacts with
+eithertherealprotocol,inthefollowingdenotedPreal,oranidealprotocol,Pideal,andthenoutputs
+aguessbit B. Thedistinguishermayhaveaccesstoallregularinputsandoutputsoftheprotocol(in
+our case,we only have outputs, namely S and S ) as well as to the system E normally controlled
+by the adversary. We say that Preal and Pideal are ε-indistinguishable for ε ≥ 0 if, for any such
+distinguisher,
+Here Pr[B = 1|Preal] and Pr[B = 1|Pideal] denote the probabilities that the distinguisher’s output
+B equals 1 when interacting with Preal and Pideal, respectively.
+The notion of ε-indistinguishability naturally leads to the following definition of ε-security.
+Definition 1. A QKD protocol Preal is ε-secure if it is ε-indistinguishable from a (hypothetical)
+protocol Pideal which is perfectly secure, i.e., Pideal satisfies the correctness, the secrecy, and the
+robustness criteria above.
+4Alternatively, thelengthℓofthegenerated keymaybedeterminedduringtherunoftheprotocol, withℓ=0if
+the protocol aborts (see, e.g., [3]). For practical applications, however, itisusuallymoreconvenient toworkwitha
+fixedkeylength.
+5One sometimes restricts the security analysis to more restricted types of attacks. An example are collective
+attacks [6],whereitisassumedthattheadversaryactsoneachofthesignalssentthroughthechannelindependently
+andidentically. Thisisusefulbecause,formostprotocols,securityagainstcollectiveattacks impliessecurityagainst
+generalattacks [33,34].
+6Becauseofthecorrectness property, itissufficienttorequiresecrecyforeitherSA orSB.
+7Notethatthispropertyisalwaysrelativetoagivennoisemodelofthequantum channel.
+Intuitively, the parameter ε can be understood as the maximum failure probability of the proto-
+col Preal, i.e., the maximum probability that Preal deviates from the behavior of the ideal protocol
+Pideal.8 Forpracticalconsiderations,isoftenusefultoquantifythe correctness,secrecy,androbust-
+ness of a protocol separately. The following definition is an obvious generalization of the above.
+Definition 2. A QKD protocol is ε-correct, ε-secret, or ε-robust if it is ε-indistinguishable from a
+perfectly correct, secure, or robust scheme, respectively.
+Remark3. Onecanshowthat,ifaprotocolisε -correct,ε -secret,andε -robustthenitisε-secure,
+The requirements on the different parameters are generally quite diverse. Typically, a relatively
+large value ε for the robustness (e.g., ε = 0.1) can be tolerated, because the protocol may just
+be repeated in case it does not generate a key. In contrast, the parameter ε for the secrecy can
+be interpreted as the (maximum) probability by which an adversary may get secret information
+without being detected, which one typically wants to keep small (e.g., ε =10−10).
+It is easy to see that ε-correctness is equivalent to the requirement that the outputs S and S
+produced by the protocol on Alice and Bob’s side differ only with small probability,
+Similarly, for ε-robustness, the requirement is that
+holds whenever the adversary is passive. The situation is a bit more subtle (and more interesting)
+for the secrecy criterion, which can be made more concrete as follows.
+LetS :={0,1}ℓbethekeyspace,i.e.,theoutputS takesvaluesinthesetS∪{⊥}. Furthermore,
+for any fixed value s ∈ S ∪{⊥} of S , let the state of the system E be denoted by ρs. The joint
+state of S and E can then be represented as a cq-state9
+s∈S X ∪{⊥}
+where p is the probability that S =s and where {|si} is a family of orthonormalvectors.
+It is easy to see that, for any attack, the state resulting from the run of a perfectly secure scheme
+has the form
+SAE ⊥ |S| E ⊥ E
+where p ∈ [0,1] and where ρ′ and ρ′′ are density operators. With these definitions, we arrive at
+a reformulation of ε-secrecy in terms of the trace distance [35, 3].10
+Lemma 4. A QKD protocol is ε-secret if and only if, for any attack, the cq-state ρ describing
+the joint state of the protocol output S and the system E held by the adversary satisfies
+2 SAE SAE 1
+(cid:13) (cid:13)
+(cid:13) (cid:13)
+for some state ρperfect of the form (4).
+Insecurityproofs,correctnessandsecrecyareusuallyestablishedbyseparatearguments. While
+thecorrectnessparameterε isessentiallydeterminedbythequalityoftheerrorcorrection procedure
+used to reconcile the raw keys, the secrecy ε rests upon various other elements of the protocol. In
+the simplest case, ε is a function of the accuracy of the estimation procedure, which measures the
+disturbances of the transmitted signals, as well as of the parameters of the privacy amplification
+step, which is used to transform the (partially secret) raw key into a final secret key satisfying (5).
+8Thisintuitioncanbemadepreciseinapurelyclassicalcontext [27].
+9The state of a bipartite system is called classical-quantum (cq) if the first subsystem is purely classical (in the
+sensethatitsstates areperfectlydistinguishable.)
+10Lemma4isanimmediateconsequence ofthewellknownone-to-onerelationbetween theindistinguishabilityof
+twoquantum states andtheirtracedistance.
+Preal Pideal
+Areal Areal
+Figure 1: Indistinguishability. The combination of the original distinguisher D with Areal gives
+a new distinguisher D′ for Preal and Pideal.
+2.3 Composing QKD with Other Cryptographic Primitives
+Since a secret random string is of little interest by itself, QKD is almost never used as a stand-
+alone application. Instead, one typically is interested in higher cryptographic tasks such as secure
+messagetransmission. QKDthen justservesasa mechanismto providethe key materialneededby
+the application. In addition, QKD often is built on top of other cryptographic primitives such as
+authenticationschemes,whosetaskistomakesuretheadversarycannotaltertheclassicalmessages
+sent over the insecure channel. Hence, composability of the underlying security definitions is vital
+in the context of QKD.
+What Does Composability Mean? To geta moreprecise understanding ofthe notionofcom-
+posabilityinthecontextofQKD,weconsiderasituationwherethekeyproducedbyaQKDprotocol
+PrealislaterusedinanapplicationAreal,e.g.,anencryptionscheme. AssumethattheprotocolPreal
+is ε -secure, and let the application Areal be ε -secure, i.e., ε -indistinguishable from an idealized
+application Aideal. The claim then is that the composite system, denoted Areal ◦Preal, where the
+application Areal is fed with the key produced by Preal, is ε-secure, for ε=ε +ε .
+TheclaimbecomesevensimplerinthespecialcasewhereAreal isbasedonone-time-padencryp-
+tion. When being fed with a perfectly secretkey,one-time-padencryptionis indistinguishable from
+aperfectencryptionprocedure,whichsimplyproducesaciphertextthatisstatisticallyindependent
+of the message. We thus have ε = 0. Hence, according to the above claim, when one-time-pad
+encryption is combined with an ε -secure QKD protocol Preal, the resulting scheme is ε -secure.
+That is, it produces ciphertexts which are ε -indistinguishable from uniform randomness.
+Why Is Our Definition Composable? Roughly speaking, the security parameters ε and ε
+can be understood as the maximum failure probabilities of Preal and Areal, respectively (see the
+paragraph after Definition 1). Hence, according to the union bound, if one combines Preal and
+Areal, the totalfailure probabilitycannotbe largerthanε=ε +ε . This alreadygivesanintuitive
+understanding why the combined scheme Areal◦Preal is ε-secure, as claimed above.
+Wewillnowgiveaslightlymorerigorousargumentforthisclaim. Assumebycontradictionthat
+the composite system Areal◦Preal is not ε-indistinguishable from Aideal◦Pideal, i.e., there exists a
+distinguisher D whose output B satisfies
+(cf. (1)). Assume now that we use the same distinguisher D to distinguish Areal ◦ Preal from
+Areal ◦ Pideal, where the latter denotes the composite scheme consisting of the real application
+fed with a key produced by a perfect QKD scheme. Because Areal is identical in both cases, we
+can alternatively treat Areal as part of a (more complex) distinguisher D′ which now interacts
+with either Preal or Pideal (see Fig. 1). Because, by assumption, Preal is ε -secure and, hence,
+ε -indistinguishable from Pideal, we find
+Pr[B =1|Areal◦Preal]−Pr[B =1|Areal◦Pideal]≤ε . (7)
+S0 ◮ P S1 ◮ ℓ 1 bits ◮ P S2 ◮ ℓ 2 bits ◮ ··· ℓ i−1 bits ◮ P Si ◮ ℓ i bits ◮ ···
+ℓ bits ℓ bits ℓ bits
+continuous keystream
+Figure2: Generation of a continuous key stream by sequential composition of rounds of
+a QKD protocol. The scheme starts with an initial key pair S0 =(S0,S0). In each round i, the
+QKD protocol P generates a fresh pair Si = (Si ,Si ) of keys of length ℓ+ℓ , using ℓ bits of
+i A B i i−1
+existingkeymaterialforauthentication. ℓbitsofthefreshkeyareaddedtothekeystream,whereas
+ℓ bits are passed to the next round for authentication.
+Similarly, because Areal is ε-indistinguishable from Aideal, we find
+Pr[B =1|Areal◦Pideal]−Pr[B =1|Aideal◦Pideal]≤ε . (8)
+Combining (7) and (8) contradicts (6) and, hence, concludes our proof of composability.
+2.4 Example Application: Generating a Continuous Key Stream
+As already mentioned, composability of the keys produced by a QKD scheme is crucial because
+these are typically used in further applications. Here, we consider their use for authentication in
+subsequentrounds ofa QKDprotocol. The method describedbelow canbe employedto generatea
+continuous stream of key material. This may be of interest for various practical applications, such
+as the encryption of a continuous stream of data.
+DescriptionoftheScheme. Wearelookingatthe(realistic)situationwherethecommunication
+channels connecting Alice and Bob may be completely insecure, so that not even authenticity is
+guaranteed. Instead, we assume that Alice and Bob hold an initial key pair (S0,S0) of length ℓ
+whichis ε -secure. They then repeatthe followingforany i∈N (seeFig.2). AQKDprotocolP is
+invoked, which uses the first ℓ bits of the key pair (Si−1,Si−1) for authentication. The protocol
+generates a new (longer) key pair (Si ,Si ) of length ℓ +ℓ, of which the first ℓ bits are stored for
+use in the next round, while the last ℓ bits form part of the output stream.
+Security Analysis. In the following, we are going to analyze the security of the key stream.
+Because of composability, this is conceptually very easy—we simply need to add up the security
+parameters. If the protocol P executed in each round i is ε -secure then the security ε of the final
+stream is always bounded by
+ε≤ ε . (9)
+In order to get a reasonable value for ε, we need to make sure that the parameters ε are suffi-
+cientlysmall. However,makingε smallgenerallycomesatthecostofincreasingthecommunication
+complexity of the protocol as well as the length ℓ of the initial key used for authentication. As
+a rough estimate of the performance of a typical QKD protocol, we use here a bound of the form
+wheren denotesthenumberofquantumsignalsexchangedduringtheprotocolandwhereγ,ρ,and
+ν are positive constants.11 The first term corresponds to the security of the protocol if used with
+anauthentic classicalchannel. Note that the exponentcritically depends onthe lengthℓ +ℓ ofthe
+key that is generated. The second term is due to the imperfectness of the authentication scheme.
+11Valuesofρ=10−2 andγ=ν=10−3 mayberealisticfortextbookprotocolssuchasBB84withsinglephotons.
+Wereferto[39,8]foramoredetailednumericalanalysisoftheperformanceofQKDprotocols.
+To make sure that (9) converges,it is necessary to increase the number n of exchanged signals
+in each round of the protocol. For the purpose of illustration,12 we set
+for some constants n∈N and c>0. Inserting this into (10) results in a bound on ε such that the
+sum over i is a geometric series. Hence, by appropriately choosing the constants ℓ, n, and c, the
+security parameter ε of the key stream can be made arbitrarily small.
+2.5 An Explicit Attack Exploiting Non-Composability
+The necessity of composable security definitions has only been realized recently. In fact, most of
+the original security proofs proposed in the literature were relative to a security criterion that is
+not composable. The main purpose of this section is to illustrate what can go wrong if such a
+non-composable security definition is used.
+Measuring Secrecy. AswehaveseeninSection2.2,thecorrectnessandtherobustnessproperty
+areratherunproblematic. Inparticular,bothofthemcanbeexpressedastheconditionthatcertain
+probabilities are small (cf. (2) and (3)). This is different for the secrecy property. Intuitively, a key
+S is secret if an adversary has only little information about it, in the sense of (5). There are,
+however,a varietyofalternativeinformationmeasures,andthis is indeed the sourceof the problem
+we are going to describe now.
+Onesuchinformationmeasureis the accessible information, denoted I (·:·). It is particularly
+suitable to quantify the information a quantum system (in our case the system E held by the
+adversary)givesaboutaclassical value(thekeyS ). Theaccessibleinformationisdefinedinterms
+of the Shannon mutual information, I(·:·),
+I (S :E):=maxI(S :Z) ,
+where the maximum is taken over all random variables Z that can be obtained by measuring the
+quantum system E.
+Recall that, according to Lemma 4, the key S generated by a QKD protocol is ε-secret if and
+2 SAE |S| E 1
+(cid:13) Xs (cid:13)
+(cid:13) (cid:13)
+holds for some ρ′ . (We assume here for simplicity that the protocol always outputs a key, i.e.,
+p = 0.) Since a measurement cannot increase the trace distance, this immediately gives a bound
+on the distance between the joint distribution P of the key S and the outcome Z of any
+measurement applied to E, and a distribution of the form P ×P′ where P denotes a uniform
+distribution over the key space,
+2 SAZ U Z 1
+For small values of ε, Fano’s inequality implies that I(S :Z) and, hence, the accessible information
+I (S : E), is small, too.13 In other words, the secrecy criterion (11) is at least as strong as a
+criterion based on the accessible information.
+The converse, however, is not true. To illustrate this, we construct an explicit example quan-
+tum state ρ for which the accessible information is (arbitrarily) small, whereas the key S is
+insecurewhenbeing usedforone-time padencryption. The state ρ thus necessarilyviolatesthe
+(composable) secrecy criterion (11). From this, we conclude that small accessible information does
+not imply secrecy in the sense of Definition 2.
+12Theexampleshouldbeunderstoodasaproofofprinciple. Wehavenotattempted tooptimizeparameters.
+13More precisely, (11) implies Iacc(SA :E)≤2nε+4h(ε) where n is the key length and h is the binary entropy.
+(Sinceεisusuallychosenexponentiallysmallinn,thesameistruefortheterm2nε.)
+Construction of the Example. Our example consists of a uniformly distributed (n + 1)-bit
+key S = (S ,...,S ) and an n-qubit system E. Furthermore, we consider an n-tuple of bits
+R=(R ,...,R ) whose sum modulo 2 equals S ,
+but which are otherwise completely random. Then, for any fixed S = s = (s ,...,s ,s ) and
+R=r =(r ,...,r ) satisfying (13), we define the state |φs,ri of E by
+where |r i , for any i=1,...,n, denotes the state of a qubit encoding the classical bit r in either
+some specified standard basis {|0i,|1i} (if s = 0) or the corresponding diagonal basis (if s = 1),
+(cid:0) (cid:1) (cid:0) (cid:1)
+In particular, the density operator ρs describing the state of E conditioned on S = s (but ran-
+domized over R) is given by
+(r1 X,...,rn)
+Wenowmoveontotheproofoftheclaimsmadeabove. First,weshowthattheaccessibleinfor-
+mation I (S :E) is small. This implies that (12) holds for some small ε (see, e.g., Lemma 12.6.1
+of [12]). Second, we describe an attack againsta scheme where the key S is used for one-time-pad
+encryption. The attack allows the adversary to learn one bit of the message with certainty. This,
+in particular, implies that the (composable) secrecy criterion (11) cannot hold for any non-trivial
+value of ε.
+Small Accessible Information. We do not attempt here to give a rigorous proof of the above
+claim but rather describe the intuition for it. For the details of the argument we refer to [23].
+In order to prove that I (S : E) is small, we need to argue that any outcome Z of a mea-
+surement applied to E has only negligible correlation with S . To simplify this task, we split
+S =(S ,...,S ) into two parts and make use of the chain rule for the mutual information,
+A 1 n n+1 1 n
+Note that the state of each qubit of E is an encoding of a random bit R , where only the basis
+depends on S . The overall state of E conditioned on (S ,...,S ) is thus fully mixed and, hence,
+independent of the value of (S ,...,S ). This immediately implies I(S ···S :Z)=0 and it thus
+remains to be shown that I(S :Z|S ···S ) is small.
+For this, let us first assume that the measurement giving Z consists of n independent measure-
+ments applied to the individual qubits of E. Each of them would then result in an estimate for
+the value of a bit R , for i = 1,...,n. However, since each bit R is encoded in a random basis
+determined by S , and since the bit S is unknown at the time of the measurement, the maximum
+probability p of obtaining the correct outcome R is bounded away from 1, i.e., p<1.
+Now, recall that the key bit S is equal to the sum modulo 2 of the random bits R ,...R .
+Hence, using the measurement strategy described above, the correct value of S can only be
+obtained if all the individual measurements are successful. The probability that this happens can
+be shownto be exponentially small n.14 We thus conclude that the correlationbetween the key bit
+S and the measurement outcome Z is small.
+14Moreprecisely,givenZ,theprobabilityofcorrectlyguessingSn+1 isnotlargerthantheprobabilityofguessing
+anindependent randombit,except withprobabilityexponentiallysmallinn.
+This argument can be generalized to arbitrary measurement strategies [23]. It turns out that
+the above individual strategy is essentially optimal, i.e., I(S : Z|S ···S ) is small for any
+measurement. In fact, a quantitative analysis15 (for a slightly modified example) gives I(S ,Z)<
+and, hence, I acc (S A
+.
+The Attack. Let us now have a look at what happens if we use the key S = (S ,...,S )
+for one-time-pad encryption. By definition, for any message M = (M ,...,M ), the ciphertext
+C = (C ,...,C ) is given by C = M ⊕S . In the following, we assume that the adversary has
+1 n+1 i i i
+full access to C.
+Tounderstandtherelevanceoftheexample,itisimportanttorealizethatwecan,ingeneral,not
+assumethatthemessageM isuniformlydistributed.16 Tothecontrary,almostanyrealisticmessage
+will consist of biased bits or bits that are (partially) known to an adversary. In fact, the history of
+cryptographyisfullofexampleswherepriorknowledgeaboutthestructureofthemessageshasbeen
+exploited for attacks. For our specific attack, we consider the extreme case where the adversary
+already knows the first n message bits (M ,...,M ) but tries to get information about the bit
+M . (For example,the firstn bits may containstandardizedheader informationwhile the actual
+message starts with the (n+1)th bit.
+Given the first n bits of both the message and the ciphertext, the adversary can obviously
+determine the first n key bits S ,...,S by S =M ⊕C . This by itself would not be problematic
+because, after all, the very nature of a one-time-pad is that it is only used once. However, the
+adversarymaynowuseherknowledgeofS ,...,S toextractfurtherinformationfromthequantum
+system E. More precisely, because by constructionthe bits S ,...,S determine the basis in which
+thevaluesR areencodedinE,theadversarycanapplyameasurementwhichproducestheoutcomes
+R ,...,R . From this, she may determine the (n+1)th key bit S = R ⊕···⊕R and, in
+1 n n+1 1 n
+particular, the message bit M =S ⊕C with certainty.
+n+1 n+1 n+1
+Discussion. Our example shows that the accessible information is an inappropriate measure for
+quantifying secrecy: Even tough the accessible information I (S ,E) that an adversary has on
+the key S is small, the key S cannot safely be used for tasks such as one-time-pad encryption.
+The example also answers a question raised by Ben-Or et al. in [3]. They have shown that a
+QKD protocol which generates an n-bit key S is ε-secure whenever
+An immediate implication of our argument above is that this result is essentially tight. In other
+words, in order to get (composable) security from a bound on I (S : E), this bound must be
+exponentiallysmallinthekeysize. Unfortunately,however,thiscriterionisnotmetbymostknown
+security proofs that refer to the accessible information (see [23] for references).
+In order to prove security of a given QKD scheme, it is thus more advisable to directly derive a
+bound on the trace distance in (11) (rather than on the accessible information). Such a bound can
+in principle be obtained by a modification of the well-known argument by Shor and Preskill [40],
+which however only applies to specific types of protocols. A more generic approach is to use the
+factthatprivacyamplificationbasedonsuitablychosenhashfunctions(e.g.,two-universalhashing)
+directly produces keys that satisfy (11), provided the input to the hash function (the raw key) has
+sufficiently high entropy [35] (see [14, 42] for specific examples of such hash functions).
+3 Composability of General Secure Applications
+In the following sections, which constitute the second part of the article, we consider security defi-
+nitions for general cryptographic tasks and the problem of composing secure protocols to complex
+security applications.
+15For technical reasons, the argument of[23] isbased onanextended construction wherethe bitsRi areencoded
+withrespecttothree(ratherthantwo)differentmutuallyunbiasedbases.
+16It is possible to design encryption schemes whose security is based on the additional assumption that the dis-
+tribution of the messages is highly random from the adversary’s point of view [36] (this is also known as entropic
+security). Interestingly, theseschemes onlyrequireashortkey.
+We will describe a quantum model of security [43, 4, 45] which gives strong composability guar-
+antees. Thecompositiontheorem(seeSubsection5.1)statesthataprotocolsecureinthismodelcan
+be used in an arbitraryapplication without lowering the overallsecurity. Furthermore an arbitrary
+number of protocolsprovensecure in this model can be used concurrently andremain secure in the
+model. We will have to neglect many details (already [9] has 128 pages and describes the classical
+case). Ourtreatmentwillbeonamoreintuitiveandabstractlevel. Fordetailspleasesee[43,4,45].
+Onecouldarguethatthistopicneednotbediscussedinanarticleaboutquantumcryptography
+as the most important building blocks of general applications, i.e. protocols like coin flipping, bit
+commitment,oroblivious transfer,caninquantumcryptographynotbeachievedwithunconditional
+security [1, 28, 25]. However,there still are enough interesting applications for quantum cryptogra-
+phy. Even if some tasks are impossible to achieve in principle it is possible to achieve them relative
+to security assumptions which are independent of the computational assumptions of classical cryp-
+tography [37, 13]. Furthermore, many of the assumptions possible, like the adversarybeing able to
+storeonlya limitedamountofqubits orthe adversarybeing unable to maintaincoherencyforlarge
+quantum states are very reasonable.
+In addition a quantum model of security is not only useful to analyze or prove the security of
+quantum protocols, but it can also be used to investigate the security of classical protocols against
+quantum adversaries. It was in the context of composability that the question was answered if
+quantum attacks on classical protocols give more power to the adversary than a mere speed up of
+computations [45] (see Subsection 5.2).
+4 Defining Security
+Keyexchangeandsecuremessagetransmissionisoneofthemostimportantprerequisitesofgeneral
+security applications, however, general applications can require further security properties. As
+examples consider secure authentication, digital signatures, online banking, or remote voting. One
+of the big differences of such applications to key exchange is that the protocols participants are
+mutually mistrusting. Secure function evaluation [49, 17] is a generalization of such cryptographic
+applications: InasecurefunctionevaluationasetofplayersP ,...,P wishestoevaluateafunction
+f oninputsx ,...,x theyholdrespectivelysuchthatcorruptedplayerscannotchangetheoutcome
+ofthe computation(other than choosinga different input) andcorruptedplayersdo not learnmore
+about the input of honest players than can be derived from their own input and the output of the
+function evaluation. These two properties of secure function evaluation are called correctness and
+privacy. However, it turned out that these two properties alone do not cover what one intuitively
+requires from a secure computation. Additional properties were added, like the independence of
+inputs which demands that it should notbe possible for a corruptedplayer to choose his owninput
+dependentonthesecretinputs ofhonestparties. Itiseasytoseethatthepropertyofindependence
+ofinputsisnotlogicallyimpliedbyprivacyorcorrectnessifonedoesnotdemandthateachprotocol
+participantknows itsinputfromthestart. Therearemoresecuritypropertieswhicharenotimplied
+by privacy and correctness: robustness requires that no corrupted player may abort the protocol,
+fairness demands that even if an abort cannot be prevented it should not be possible for the
+adversary to learn more about the result of the computation than the honest players, and zero
+knowledge is the property that a realprotocoltranscriptcouldalso havebeen generatedby a single
+machine without knowledge of any secret involved in the protocol. Defining security via a list of
+securitypropertiesbecame knownasthelist approach, however,researchersgotthe impressionthat
+one might never know if the list of security properties is complete.
+4.1 The Simulation Paradigm
+A new security definition was needed. It should be convincing and (as general applications are to
+beconsidered)independentofthe specificgoalstheattackermighthave. Thefirststeptowardsthis
+new definition was the discovery of zero knowledge proofs [18] where the simulation paradigm was
+introduced.
+Instead of considering different security properties the new notion was based on indistinguisha-
+bility. Intuitively speaking, a real protocol is compared to an ideal protocol where a trusted party
+collectedthe inputs fromthe protocolparticipants,computes the outputanddistributesthe output
+totheparticipants. Iftherealprotocolandtheidealprotocolhaveanindistinguishableinputoutput
+behavior the real protocol is said to be at least as secure as the ideal protocol. Such a definition of
+security defines security of a real protocol relative to an idealization. The level of security reached
+thus also depends on the specification of the ideal protocol.
+Inthecaseofquantumkeydistributionwehavealreadyseenasecuritydefinitionwhichcompares
+a real key exchange with an ideal situation, however, unlike to the general case it was possible to
+reduce this security notion to the fulfillment of separate security properties (see Section 2.2).
+In the real model the protocol is attacked by a real attacker which may corrupt protocol par-
+ticipants, pools all their data, and lets the corrupted participants deviate from the protocol in an
+arbitrary way. In the ideal protocol there is a an ideal attacker (also called simulator) which must
+be able to provide an output indistinguishable from the output of the real attacker while having
+access only to the inputs and outputs ofthe corruptedplayers. As the idealattackerdoes notlearn
+any real protocol messages or secrets which cannot be derived from the input and output of the
+corruptedplayerstheindistinguishabilityguaranteesthattherealprotocoldoesnotleakanysecrets
+to the real attacker.
+However,therearecertain”attacks”whichcannotbeprevented,e.g. anadversarycouldreplace
+hisinputbyadifferentvalue. Theseinevitableattacksarenotconsideredtoviolatethesecurityand
+hence wemustbe abletomodelthese attacksinthe idealprotocolaswell. Theseinevitable attacks
+willbecarriedoutbythesimulator,too. Theidealattackermaycorruptprotocolparticipantsinthe
+ideal model, but all the ideal attacker can do is to replace local inputs or to replace local outputs.
+Ifthe realattackermaycorruptmorethanaminorityofthe protocolparticipantsthen theattacker
+can always abort the computation and we have to give this ability to the ideal adversary as well.
+Stating the exact definition here goes beyond the scope of this article (it can be found in [17]),
+especially because this notion of security does not yet allow for composition as we will illustrate
+below.
+Note that this definition of security requiresthe ideal attacker(simulator)to providehis output
+only after termination of the protocol, i.e., in retrospect and thus with the benefit of hindsight.
+This gives a certain ”advantage” to the ideal attacker without which a simulation would become
+impossibleinmostcases. Theabilitytoprovideasimulationofarealprotocolwithoutanyadvantage
+over a real attacker would in many cases imply the complete insecurity of the real protocol as the
+real attacker could use the program of the simulator to cheat in the real execution of the protocol.
+What is important in this context is that this advantage of the simulator should not invalidate the
+”idealness” of the ideal model.
+This simulation in retrospect does not violate the ”idealness”, because the result of an ideal
+protocol is not altered by this (the protocol remains correct) and no secrets of honest participants
+are leaked. However, as we will see in Subsection 4.3, this ability of simulating in retrospect does
+not play well with composition or with protocols which accept inputs not only at the start, but
+also at later times (protocols realizing so called reactive functionalities which are a generalization
+of secure function evaluation).
+4.2 A Motivating Example: Secure Composition as a Problem
+Below we will give two examples illustrating what can happen when protocols are composed. The
+first is a classical example from classical cryptography where a message from one subprotocol of a
+largerapplicationisfedintoanothersubprotocolandthe overallapplicationbecomesinsecure. The
+second example shows that quantum information can be used in different subprotocols such that
+entanglement spans over different subprotocols.
+4.2.1 Malleability—a Classical Example
+A very simple example of this kind is an (simplified) auction protocol. We assume a trusted auc-
+tioneer in possession of a RSA public key (n,e). For an auction the auctioneer accepts bids which
+are encrypted with his public key. After receiving all the bids the auctioneer decrypts the cipher
+texts with his secret key d and publishes the highest bid together with the winner of the auction.
+The RSA encryption keeps eavesdroppers from learning bids of competitors. This seems to imply
+that the bids of the dishonest participants must be chosen independently of the bids of the honest
+participants. However, astonishingly this is not necessarily the case: Given an honest Alice, a dis-
+honest Bob and let all encryptions be done by ”textbook RSA17”. If now Alice bids the amount m
+then she sends c=me mod n to the auctioneer. Bob can, after learning this ciphertext c compute
+2e∗c mod n which equals an encryption of 2∗m with the public key (n,e).
+SowithoutknowingtheamountofAlice’sbidBobisabletocomputeaciphertextwhichencrypts
+a higher bid and so he will win the auction. This security weakness is calledmalleability [15] and it
+is not per se a weakness of textbook RSA, but becomes a problem when textbook RSA is used in
+certain larger applications.
+4.2.2 Quantum Superpositions can Span over several Subprotocols
+Quantum bit commitment, i.e. the cryptographic equivalent to a sealed envelope, has been shown
+to be impossible with unconditional security. However, it is tempting to try to circumvent this
+impossibilitytheoremofMayers[28]andLo/Chau[25]byaclevercompositionofpossiblequantum
+protocols. One could try to build up a secure bit commitment from weaker primitives like cheat
+sensitive commitments [19]. However, the impossibility theorem rules this out and therefore shows
+that composing quantum protocols can be counter intuitive. One cannot treat the subprotocols as
+being ”atomic”andquantumsuperpositionsbeing limitedto occuronlywithinthe subprotocols. It
+is possible to keep all quantum information in the different subprotocols in one large superposition
+and the attack of Mayers and Lo/Chau does exactly that.
+4.3 Types of Protocol Composition
+Two kinds of protocol composition can be distinguished:
+Simple Composition for which an example was given in the previous subsection. In simple
+composition a single instance of a cryptographic primitive is replaced by a real subprotocol. Now
+messages from the surrounding protocol which may depend on secrets of uncorrupted parties can
+be injected into the subprotocol or vice versa: a corrupted player can use messages from within
+a subprotocol outside of this subprotocol. This access to protocol messages which may depend on
+secretsofuncorruptedpartiesgiveanenormousstrengthtotheadversarynotpresentinstandalone
+models of security. In the quantum world it is additionally possible to entangle messages used in
+different protocols.
+In the case of Concurrent Composition many instances of the same protocol with correlated
+inputs are run concurrently. Apart from the problems of simple composition, that messages from
+one protocol could be fed into another [30], an additional problem occurs if one allows more than
+a constant number of protocol instances to be run concurrently. Even though each single instance
+of the protocol is secure in the sense of simulatability it could be that the multiple rounds of the
+different protocol instances are interleaved in a way that messages in one instance of the protocol
+affectmessagesinotherprotocolsandnopolynomialtimesimulationstrategytoobtainaconsistent
+simulation for all protocols is known.
+So in a notion of security allowing for secure composition the simulator should work even if the
+protocolisruninanarbitraryapplicationcontext. This impliesthatthe simulationcannotbe done
+in retrospect as the real adversary could feed information into surrounding protocols at any time.
+This requirement of a straight line simulator is very strict, however, according to [24] it is close to
+theminimalrequirementifonewantstocombinetherequirementsofstandalonesimulatabilityand
+the notion of security being preserved if run in arbitrary applications.
+5 The Universal Composability Framework
+The basic idea of the Universal Composability (UC) framework and why this notion of security
+allows for secure composition is that the stand alone simulatability definition of security from [17]
+is enriched by an additional machine, an environment machine which interacts with the proto-
+col and the attacker while it can emulate arbitrary surrounding protocols.18 Starting from this
+17This refersto the originallypublished versionof RSA whereaciphertext c fora message mis deterministically
+computedviac=me modnanddecryptionisdoneviam=cd modn.
+18InSection2.3thisenvironmentwasonlyimplicit,becausetheinteractionwithotherprotocolsissimplerthanin
+thegeneralcase: keydistributionhasnoinputandguarantees nosecurityifoneofthepartiesiscorrupted.
+classical universal composability framework [9] and independently discovered concept of reactive
+simulatability[31,2]twoquantummodelsofsecurityweredefinedin[43,4]. Bothmodelsfollowthe
+same motivation, but differ in details which are not of importance in this overview.
+The model of [43] is described in three steps. First the machines and their network is defined,
+nextthe behaviorofthe machinesis defined accordingto their rolesin a protocol,then the security
+definitionisgivenbasedontheindistinguishabilityoftwoprotocols(therealandtheidealprotocol).
+In our overview many details have to be omitted. For details consult [43, 45].
+Machines and Networks. Quantum machines have internal states which may be quantum and
+the state transition operator is a trace preserving superoperator on the Hilbert space spanned by
+the tensor product of the possible internal states, the possible inputs and the possible outputs of
+the machine. The machines are connected by an asynchronous quantum network, i.e., (quantum)
+messages between machines may be blocked or delayed. Only one machine may be active at any
+time and the scheduling is message driven, i.e., a machine sending away a message is switching to
+a waiting state while the receiving machine is activated19.
+The scheduling is classical, i.e., machines are not active and inactive in superposition nor are
+messages sent and not sent in superposition. This makes the model usable, but it excludes the
+possibility of certain protocols detecting a traffic analysis [29, 41].
+Protocol, Adversary, and Environment. Apartfromtheprotocolparticipantswhicharespec-
+ifiedbythe protocoltherearetwomoremachinestakingpartinthe protocolexecution. The adver-
+sary A (or S in the ideal model) is the machine coordinating all corrupted participants analogous
+to the stand-alone model in Section 4.1. The environment machine Z chooses the inputs20, sees
+the output, and may communicate with the adversary at any time. The environment machine can
+emulate arbitrary surrounding protocols and can hence detect vulnerabilities which would result
+from protocol composition.
+The Security Definition. We demand the environment machine to produce a classical output
+and we say that a protocol π implements an ideal protocol F with perfect security if for every
+adversary A there exists an ideal adversary S such that for every environment machine Z the
+distribution of the outputs of Z when interacting with A and π equals the distribution of the
+outputs ofZ wheninteractingwithS andF. Aprotocolπ realizesF with statistical security ifthe
+output distribution ofZ wheninteracting with A andπ is statistically indistinguishable21 fromthe
+output distribution of Z when interacting with F and S.
+Quantum cryptography usually aims at achieving statistical security where the adversary may
+be limited only by the laws of quantum mechanics. It does, however, make sense to also define
+computational security in the quantum setting, because quantum cryptography can realize tasks
+with computational security which are believed to be impossible classically22.
+Amachineissaidtobequantumpolynomialtimeifitcanbeinvokedonlyapolynomialnumberof
+timesinthesecurityparameterkandtheinputoutputbehaviorofthemachinecanbesimulatedbya
+quantumTuringmachineinpolynomialtimeink. Ifnowallprotocolparticipants,theadversaryand
+the environment machine are quantum polynomial machines then we say that a protocol π realizes
+F with quantum computational security if for all A there exists a S such that for all Z the output
+distribution of Z when interacting with A and π is indistinguishable in quantum polynomial time
+fromthe output distributionofZ wheninteracting withF andS. I.e. ifwe denote by out the
+randomvariable of the output of Z in the realprotocoland by out the corresponding random
+variableforthe idealmodelthenwedemandthatforeveryquantumpolynomialmachineD itholds
+that |P(D(out ) → 1)−P(D(out ) → 1)| is negligible in the security parameter (where a
+π,A,Z F,S,Z
+function ǫ is called negligible if it is asymptotically smaller than any 1/kn for every constant n).
+19Onedistinguishedmachine,calledmaster scheduler,willbeinvokedifthisruledoesnotapply.
+20Incaseofareactivefunctionalityinputscanalsodependonpreviousoutputs oronprotocol messages.
+21Inthecaseofkeydistributionthisamountstoapproximatesecuritywithεnegligible,i.e. asymptoticallysmaller
+thanany1/kn.
+22E.g. realizingoblivioustransferfromaonewayfunction[50,21].
+5.1 The Composition Theorem
+TheUCframeworkprovidesaverystrictnotionofsecurityandforaprotocolρsecurelyrealizingan
+ideal protocol F in the UC framework strong composition guarantees can be obtained. We denote
+byπF thataprotocolπinvokesaprotocolF asasubprotocolandbyπρthatF hasbeenreplacedby
+aprotocolρ. We writeπ ≥ρtodenotethattheprotocolπ securelyrealizesρintheUC framework.
+Now the (simple) composition theorem (see [43, 45]) states that if ρ ≥ F then πρ securely realizes
+πF. Especially if πF securely realizes a functionality G then also πρ realizes G.
+If we denote by ρ∗ the concurrent composition of (polynomially many) instances of ρ and by
+F∗ the concurrent composition of (polynomially many) instances of F. Then the (concurrent)
+composition theorem guarantees that if ρ≥F it also holds that ρ∗ ≥F∗.
+Combiningsimpleandconcurrentcompositionweobtainthecompositiontheoremwherealarger
+applicationπmayusemultipleinstancesofasubprotocol: Givenaprotocolρwhichsecurelyrealizes
+a protocolF in the UC framework,then a protocol
+realizesπF∗
+in the UC framework.
+The UC framework is to a certain extent a minimal requirement for the composition theorem.
+In the classical case it was shown in [24] that a security notion comparable to the UC framework
+naturally arises if one demands stand alone simulatability (see Section 4.1) and the existence of a
+composition theorem.
+5.2 Information Theoretical Security and Quantum Adversaries
+One very interesting result proven in the quantum universal composability framework regards the
+securityofclassicalprotocolswithrespecttoaquantumadversary. Givenaprotocolwhichisproven
+to be statistically secureagainsta classic adversary. Does it remainsecureunder quantum attacks?
+Is the speed-up of quantum computing the only threat to classical protocols or could a quantum
+attackertogetherwithaquantumenvironmentuseentangledquantuminformationtobreakclassical
+protocols?
+In [45] it was shown that whenever a protocol ρ realizes some ideal protocol F with respect to
+statistical security in the UC framework, then ρ securely realizes F in the quantum composability
+setting.
+This result is very useful. Quantum Key Distribution (QKD) is composable (cf. Section 2.3)
+andfromQKDonecanobtaincomposablesecurecommunication[32]. Hencesecurechannelsbased
+on quantum cryptography can be used instead of idealized secure channels in many cryptographic
+settings, such as secure multiparty computations in presence of an honest majority [11].
+5.3 Impossibility of Bit Commitment
+Additionally to the impossibility of unconditionally secure bit commitment in quantum cryptog-
+raphy [28, 25] a new impossibility result is introduced by the UC framework: Without additional
+security assumptions bit commitment cannot be realized with computational security [10]. This
+result generalizes to many more cryptographic tasks like coin flipping or oblivious transfer and it
+also holds in the quantum case.
+The reasonfor this impossibility result is that the simulator may no more act in retrospect and
+without additional assumptions every simulation strategy for S could be turned into a cheating
+strategy for the adversary A in the real protocol.
+Theadditionalassumptionsusedtoallowforacomputationallysecurebitcommitmentcanbea
+trustedauthorityprovidingrandomnesstothe protocolparticipantsbeforethe startofthe protocol
+(the Common Reference String (CRS)) [10], a trusted authority setting up a trusted public key
+infrastructure,orthe availabilityoftamperproofhardware. Whatisworsesuchset-up assumptions
+are needed in quantum cryptography, too. The impossibility result of [10] directly carries over to
+the quantum case thus in the UC frameworkquantum cryptographicprotocols cannoteven achieve
+a computationally secure bit commitment without additional security assumptions.
+Soformanycryptographictaskswheretheprotocolparticipantsaremutuallymistrustingonehas
+atrade-offbetweenthestrengthofthecomposabilityguaranteesandthestrengthoftheassumptions
+needed to achieve these tasks. For certain applications the threats introduced by the additional
+assumptions (e.g. the trusted authorities) weigh heavier than the threats introduced by improper
+compositionof protocolsandit seems that for this case there is no security notionwhich is without
+a compromise.
+Aswewillseeinthenextsubsectiontheaboveimpossibilityresultalsoaffectsthecomposability
+of protocols in the bounded quantum storage model [13]. To allow for simulatable security in the
+bounded quantumstoragemodelthe memory restrictionshaveto be differentin the realand inthe
+ideal model, which results in difficulties when applying the composition theorem multiple times.
+5.4 Composability in the Bounded Quantum Memory Model
+Eventhoughmanyinterestingcryptographictasksarenotrealizablefromscratchthesetaskscanbe
+realizedunderveryreasonablesecurityassumptions,e.g. thattheadversaryislimitedinperforming
+large coherent operations [37] or that the adversary has a quantum memory which is bounded in
+size [13]. It was shown that the protocols in the bounded quantum storage model do compose
+sequentially [47], however, the protocols as stated do not allow general composition. With an
+example we will illustrate that this seems to be a general problem. To have a useful composition
+theoremweneedthattheatleastassecureas relation(≥)istransitive,becauseotherwisewecannot
+repeatedly apply the composition theorem in the modular design of a cryptographic protocol. To
+be able to conclude from π ≥ρ and ρ≥F that π securely realizes F we need that the simulator in
+the protocol ρ should be admitted as a real adversary for ρ if this protocol is to be compared with
+F. In [20] it is shown that it is possible to achieve oblivious transfer (and hence bit commitment)
+if the real adversary is restricted to have no quantum memory at all. However, the simulator for
+this protocol needs quantum memory for the simulation. So if we restrict the simulator to have no
+quantum memory oblivious transfer is not realizable any more and having different restrictions for
+the real attacker and the simulator results in ≥ not being transitive. A way aroundthis problem is
+to generalizethe notion ofat least as secure as to one that explicitly involvesthe memory bound of
+the adversary as a parameter, as proposed in [44].
+6 Conclusions
+This work reviewed composable security in quantum cryptography. In the first part of the paper
+the focus was on quantum key distribution (QKD), the most prominent application of quantum
+cryptography. We discussed the requirements that a composable security definition must fulfill and
+illustratedthe importanceoftheserequirementsbyanattackwhichexploitsatypicalweaknessofa
+non-composable(butwidelyused)definitionforsecrecy. Toshowtheutilityofcomposablesecurity,
+we constructed a scheme to generate a continuous key stream by sequentially composing rounds of
+a quantum key distribution protocol.
+The second partof the worktook a more generalpoint ofview, which is necessaryfor the study
+ofsecurityapplicationsinvolvinggeneraltasksaswellasmutuallydistrustfulparties. We explained
+the universalcomposability frameworkandstated its compositiontheoremwhich givesstrongcom-
+posability guarantees. Of special interest was the secure composition of quantum protocols into
+unconditionally secure classical protocols. This shows that every unconditionally secure protocol
+possibleinthe securechannelmodelisalsopossiblewithQKDanddoesnotevenneedanewproof.
+However,there are open problems left. A drawbackof the universalcomposability frameworkis
+that some tasks become impossible there without adding new security assumptions. E.g., quantum
+bit commitment is impossible in the universal composability framework even with mere compu-
+tational security or with respect to an attacker in the bounded quantum storage model. Hence
+we observe a trade-off between the strong guarantees provided by universal composability and the
+possibility of using fewer security assumptions. Addressing this trade-off remains an open problem.
+A concrete approach may be to consider additional (weak) setup assumptions, e.g., a Common
+Reference String as used in the classical model [10].
+Another open questionregardsa weakness inherentto mostexisting security proofs in quantum
+cryptography. Theseproofstypicallyrelyonaspecificmodelforthehardwaretheschemeisbuilton
+(e.g.,thephotonsourcesanddetectorsusedforopticalQKD).Obviously,thesecurityclaimsderived
+for such a model generally only apply to implementations that strictly match the model. This,
+however,isalmostneverthecaseinpractice. Indeed,explicitattacksexploitingthedeviationofthe
+implementationfromthe theoreticalmodelhavebeen demonstratedrecently(see, e.g., [51,26]). It
+would thus be desirable to have a (composable) framework that allows a more flexible modeling of
+the underlying hardware devices.
+Acknowledgments We would like to thank Gilles Brassard for helpful comments on an earlier
+version of the manuscript.

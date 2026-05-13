@@ -1,0 +1,711 @@
+A Comparative Analysis of Ensemble Classifiers:
+Case Studies in Genomics
+Sean Whalen and Gaurav Pandey
+Department of Genetics and Genomic Sciences
+Icahn Institute for Genomics and Multiscale Biology
+Icahn School of Medicine at Mount Sinai, New York, USA
+{sean.whalen,gaurav.pandey}@mssm.edu
+Abstract—Thecombinationofmultipleclassifiersusingensem- the predictions of a wide variety of heterogeneous base clas-
+ble methods is increasingly important for making progress in a sifiers such as support vector machines, neural networks, and
+varietyofdifficultpredictionproblems.Wepresentacomparative
+decision trees. Two popular heterogeneous ensemble methods
+analysis of several ensemble methods through two case studies
+include a form of meta-learning called stacking [16], [17] as
+in genomics, namely the prediction of genetic interactions and
+protein functions, to demonstrate their efficacy on real-world well as ensemble selection [18], [19]. Stacking constructs a
+datasetsanddrawusefulconclusionsabouttheirbehavior.These higher-levelpredictivemodeloverthepredictionsofbaseclas-
+methodsincludesimpleaggregation,meta-learning,cluster-based sifiers, while ensemble selection uses an incremental strategy
+meta-learning, and ensemble selection using heterogeneous clas-
+to select base predictors for the ensemble while balancing
+sifiers trained on resampled data to improve the diversity of
+diversity and performance. Due to their ability to utilize
+theirpredictions.Wepresentadetailedanalysisofthesemethods
+across 4 genomics datasets and find the best of these methods heterogeneousbaseclassifiers,theseapproacheshavesuperior
+offer statistically significant improvements over the state of the performance across several application domains [6], [20].
+art in their respective domains. In addition, we establish a Computational genomics is one such domain where classi-
+novel connection between ensemble selection and meta-learning,
+fication problems are especially difficult. This is due in part
+demonstrating how both of these disparate methods establish a
+to incomplete knowledge of how the cellular phenomenon
+balance between ensemble diversity and performance.
+of interest is influenced by the variables and measurements
+IndexTerms—Bioinformatics;Genomics;Supervisedlearning;
+Ensemble methods; Stacking; Ensemble selection used for prediction, as well as a lack of consensus regarding
+the best classifier for specific problems. Even from a data
+perspective,thefrequentpresenceofextremeclassimbalance,
+I. INTRODUCTION
+missing values, heterogeneous data sources of different scale,
+Ensemblemethodscombiningtheoutputofindividualclas- overlapping feature distributions, and measurement noise fur-
+sifiers [1], [2] have been immensely successful in producing ther complicate classification. These difficulties suggest that
+accuratepredictionsformanycomplexclassificationtasks[3]– heterogeneousensemblesconstructedfromalargeanddiverse
+[9]. The success of these methods is attributed to their ability setofbaseclassifiers,eachcontributingtothefinalpredictions,
+to both consolidate accurate predictions and correct errors are ideally suited for this domain. Thus, in this paper we
+across many diverse base classifiers [10]. Diversity is key use real-world genomic datasets (detailed in Section II-A) to
+to ensemble performance: If there is complete consensus the analyze and compare the performance of ensemble methods
+ensemble cannot outperform the best base classifier, yet an for two important problems in this area: 1) prediction of pro-
+ensemble lacking any consensus is unlikely to perform well tein functions [21], and 2) predicting genetic interactions [9],
+due to weak base classifiers. Successful ensemble methods both using high-throughput genomic datasets. Constructing
+establish a balance between the diversity and accuracy of the accurate predictive models for these problems is notoriously
+ensemble[11],[12].However,itremainslargelyunknownhow difficultfortheabovereasons,andevensmallimprovementsin
+different ensemble methods achieve this balance to extract predictiveaccuracyhavethepotentialforlargecontributionsto
+the maximum information from the available pool of base biomedical knowledge. Indeed, such improvements uncovered
+classifiers [11], [13]. A better understanding of how different the functions of mitochondrial proteins [22] and several other
+ensemble methods utilize diversity to increase accuracy using criticalproteinfamilies.Similarly,thecomputationaldiscovery
+complexdatasetsisneeded,whichweattempttoaddresswith ofgeneticinteractionsbetweenthehumangenesEGFR-IFIH1
+this paper. and FKBP9L-MOSC2 potentially enables novel therapies for
+Popularmethodslikebagging[14]andboosting[15]gener- glioblastoma [23], the most aggressive type of brain tumor in
+atediversitybysamplingfromorassigningweightstotraining humans.
+examples but generally utilize a single type of base classifier Working with important problems in computational ge-
+tobuildtheensemble.However,suchhomogeneousensembles nomics, we present a comparative analysis of several methods
+may not be the best choice for problems where the ideal base used to construct ensembles from large and diverse sets of
+classifier is unclear. One may instead build an ensemble from base classifiers. Several aspects of heterogeneous ensemble
+1v7405.9031:viXra
+TABLEI TABLEII
+DETAILSOFGENETICINTERACTION(GI)ANDPROTEINFUNCTION(PF) FEATUREMATRIXOFGENETICINTERACTIONSWHEREnROWS
+DATASETSINCLUDINGTHENUMBEROFFEATURES,NUMBEROF REPRESENTPAIRSOFGENESMEASUREDBYFEATURESF1...FmHAVING
+EXAMPLESINTHEMINORITY(POSITIVE)ANDMAJORITY(NEGATIVE) LABEL1IFTHEYAREKNOWNTOINTERACT,0IFTHEYDONOT,AND?IF
+CLASSES,ANDTOTALNUMBEROFEXAMPLES. THEIRINTERACTIONHASNOTBEENESTABLISHED.
+Problem Features Positives Negatives Total GenePair F1 F2 ··· Fm Interaction?
+GI 152 9,994 125,509 135,503 Pair1 0.5 0.1 ··· 0.7 1
+PF1 300 382 3,597 3,979 Pair2 0.2 0.7 ··· 0.8 0
+. .
+.
+. .
+.
+. .
+.
+... . .
+.
+. .
+.
+Pairn 0.3 0.9 ··· 0.1 ?
+construction that have not previously been addressed are
+functionsofroughly4,000baker’syeast(S.cerevisiae)genes.
+examined in detail including a novel connection between
+The three most abundant functional labels from the list of
+ensemble selection and meta-learning, the optimization of
+Gene Ontology Biological Process terms compiled by Myers
+the diversity/accuracy tradeoff made by these disparate ap-
+et al. [26] are used in our evaluation. The three corresponding
+proaches,andtheroleofcalibrationintheirperformance.This
+prediction problems are referred to as PF1, PF2, and PF3
+analysisshedslightonhowvariantsofsimplegreedyensemble
+respectively and are suitable targets for classification case
+selection achieve enhanced performance, why meta-learning
+studies due to their difficulty. These datasets are publicly
+often out-performs ensemble selection, and several directions
+available from Pandey et al. [27].
+for future work. The insights obtained from the performance
+andbehaviorofensemblemethodsforthesecomplexdomain- 2) Genetic Interaction Prediction: Genetic interactions
+driven classification problems should have wide applicability (GIs) are a category of cellular interactions that are inferred
+across diverse applications of ensemble learning. by comparing the effect of the simultaneous knockout of two
+We begin by detailing our datasets, experimental method- genes with the effect of knocking them out individually [28].
+ology, and the ensemble methods studied (namely ensemble The knowledge of these interactions is critical for under-
+selection and stacking) in Section II. This is followed by a standingcellularpathways[29],evolution[30],andnumerous
+discussionoftheirperformanceintermsofstandardevaluation other biological processes. Despite their utility, a general
+metrics in Section III. We next examine how the roles of paucity of GI data exists for several organisms important
+diversity and accuracy are balanced in ensemble selection and for biomedical research. To address this problem, Pandey
+establishaconnectionwithstackingbyexaminingtheweights et al. [9] used ensemble classification methods to predict
+assigned to base classifiers by both methods (Section IV-A). GIs between genes from S. cerevisiae (baker’s yeast) using
+InSectionIV-B,wediscusstheimpactofclassifiercalibration functionalrelationshipsbetweengenepairssuchascorrelation
+on heterogeneous ensemble performance, an important issue between expression profiles, extent of co-evolution, and the
+that has only recently received attention [24]. We conclude presence or absence of physical interactions between their
+and indicate directions for future work in Section V. corresponding proteins. We use the data from this study to
+assess the efficacy of heterogeneous ensemble methods for
+II. MATERIALSANDMETHODS predicting GIs from a set of 152 features (see Table II for
+A. Problem Definitions and Datasets anillustration)andmeasuretheimprovementofourensemble
+methods over this state-of-the-art.
+For this study we focus on two important problems in
+computational genomics: The prediction of protein functions,
+B. Experimental Setup
+and the prediction of genetic interactions. Below we describe
+these problems and the datasets used to assess the efficacy of A total of 27 heterogeneous classifier types are trained
+various ensemble methods. A summary of these datasets is using the statistical language R [31] in combination with its
+given in Table I. various machine learning packages, as well as the RWeka
+1) Protein Function Prediction: A key goal in molecular interface [32] to the data mining software Weka [33] (see
+biology is to infer the cellular functions of proteins. To keep Table III). Among these are classifiers based on boosting and
+pace with the rapid identification of proteins due to advances baggingwhicharethemselvesatypeofensemblemethod,but
+ingenomesequencingtechnology,alargenumberofcomputa- whose performance can be further improved by inclusion in a
+tionalapproacheshavebeendevelopedtopredictvarioustypes heterogeneous ensemble. Classifiers are trained using 10-fold
+of protein functions. These approaches use various genomic cross-validation where each training split is resampled with
+datasets to characterize the cellular functions of proteins or replacement 10 times then balanced using undersampling of
+their corresponding genes [21]. Protein function prediction is the majority class. The latter is a standard and essential step
+essentially a classification problem using features defined for to prevent learning decision boundaries biased to the majority
+eachgeneoritsresultingproteintopredictwhethertheprotein class in the presence of extreme class imbalance such as ours
+performs a certain function (1) or not (0). We use the gene (see Table I). In addition, a 5-fold nested cross-validation is
+expression compendium of Hughes et al. [25] to predict the performed on each training split to create a validation set for
+across rows to produce an aggregate prediction for each
+INDIVIDUALPERFORMANCEOF27BASECLASSIFIERSONGENETIC
+INTERACTIONANDPROTEINFUNCTIONDATASETSEVALUATEDUSINGA instance.
+COMBINATIONOFR[31],CARET[34],ANDTHERWEKAINTERFACE[32]
+2) Meta-Learning: Meta-learningisageneraltechniquefor
+TOWEKA[33].DETAILSOFEACHCLASSIFIERAREOMITTEDFOR
+BREVITY.RPACKAGESINCLUDEACITATIONDESCRIBINGTHEMETHOD. improvingtheperformanceofmultipleclassifiersbyusingthe
+FORALLOTHERS,SEETHEWEKADOCUMENTATION.FORBOOSTING meta information they provide. A common approach to meta-
+METHODSWITHSELECTABLEBASELEARNERS,THEDEFAULT(NORMALLY
+learning is stacked generalization (stacking) [17] that trains a
+ADECISIONSTUMP)ISUSED.
+higher-level (level 1) classifier onthe outputs of base (level 0)
+Performance classifiers.
+Classifier GI PF1 PF2 PF3 Using the standard formulation of Ting and Witten [41],
+we perform meta-learning using stacking with a level 1 lo-
+glmboost[35] 0.72 0.65 0.71 0.72 gistic regression classifier trained on the probabilistic outputs
+glmnet[36] 0.73 0.63 0.71 0.73 of multiple heterogeneous level 0 classifiers. Though other
+Logistic 0.73 0.61 0.66 0.71
+classifiers may be used, a simple logistic regression meta-
+MultilayerPerceptron 0.74 0.64 0.71 0.74
+multinom[37] 0.73 0.61 0.67 0.71 classifier helps avoid overfitting which typically results in
+RBFClassifier 0.73 0.62 0.69 0.74 superior performance [41]. In addition, its coefficients have
+RBFNetwork 0.56 0.51 0.52 0.58
+an intuitive interpretation as the weighted importance of each
+SGD 0.73 0.63 0.70 0.73
+SimpleLogistic 0.73 0.65 0.72 0.73 level 0 classifier [6].
+SMO 0.73 0.64 0.70 0.73
+The layer 1 classifier is trained on a validation set created
+SPegasos 0.66 0.52 0.56 0.56
+VotedPerceptron 0.65 0.62 0.70 0.71 bythenestedcross-validationofaparticulartrainingsplitand
+evaluated against the corresponding test split to prevent the
+AdaBoostM1 0.71 0.65 0.67 0.73 leakingoflabelinformation.Overallperformanceisevaluated
+ADTree 0.73 0.64 0.67 0.75 as described in Section II-B.
+gbm[38] 0.77 0.68 0.72 0.78
+J48 0.75 0.60 0.65 0.71 In addition to stacking across all classifier outputs, we
+LADTree 0.74 0.64 0.69 0.75 also evaluate stacking using only the aggregate output of
+LMT 0.76 0.62 0.71 0.75
+each resampled (bagged) base classifier. For example, the
+LogitBoost 0.73 0.65 0.69 0.75
+MultiBoostAB 0.70 0.63 0.66 0.70 outputs of all 10 SVM classifiers are averaged and used as
+RandomTree 0.71 0.57 0.60 0.63 a single level 0 input to the meta learner. Intuitively this
+rf[39] 0.79 0.67 0.72 0.76
+combines classifier outputs that have similar performance and
+Rule-Based calibration,whichallowsstackingtofocusonweightsbetween
+JRip 0.76 0.63 0.67 0.70
+(instead of within) classifier types.
+PART 0.76 0.59 0.65 0.73
+3) Cluster-Based Meta-Learning: A variant on traditional
+IBk 0.70 0.61 0.66 0.70 stacking is to first cluster classifiers with similar predictions,
+pam[40] 0.71 0.62 0.66 0.64 then learn a separate level 1 classifier for each cluster [6].
+VFI 0.64 0.55 0.56 0.63
+Alternately, classifiers within a cluster can first be combined
+by taking their mean (for example) and then learning a
+level 1 classifier on these per-cluster averaged outputs. This
+the corresponding test split. This validation set is used for the
+is a generalization of the aggregation approach described
+meta-learning and ensemble selection techniques described in
+in Section II-C2 but using a distance measure instead of
+Section II-C. The final result is a pool of 270 classifiers.
+restrictingeachclustertobaggedhomogeneousclassifiers.We
+Performance is measured by combining the predictions
+use hierarchical clustering with 1−|ρ| (where ρ is Pearson’s
+made on each test split resulting from cross-validation into
+correlation) as a distance measure. We found little difference
+a single set and calculating the area under the Receiver Oper-
+between alternate distance measures based on Pearson and
+ating Characteristic curve (AUC). The performance of the 27
+Spearman correlation and so present results using only this
+base classifiers for each dataset is given in Table III, where
+formulation.
+the bagged predictions for each base classifier are averaged
+For simplicity, we refer to the method of stacking within
+beforecalculatingtheAUC.Thesenumbersbecomeimportant
+clustersandtakingthemeanoflevel1outputsasintra-cluster
+inlaterdiscussionssinceensemblemethodsinvolveatradeoff
+stacking. Its complement, inter-cluster stacking, averages the
+between the diversity of predictions and the performance of
+outputsofclassifierswithinaclusterthenperformsstackingon
+base classifiers constituting the ensemble.
+theaveragedlevel0outputs.Theintuitionforbothapproaches
+C. Ensemble Methods is to group classifiers with similar (but ideally non-identical)
+1) Simple Aggregation: The predictions of each base clas- predictions together and learn how to best resolve their dis-
+sifier become columns in a matrix where rows are instances agreements via weighting. Thus the diversity of classifier
+andtheentryatrowi,columnj istheprobabilityofinstancei predictions within a cluster is important, and the effectiveness
+belonging to the positive class as as predicted by classifier j. of this method is tied to a distance measure that can utilize
+We evaluate ensembles using AUC by applying the mean both accuracy and diversity.
+4) Ensemble Selection: Ensemble selection is the pro- counting how often each classifier produces the correct label
+cess of choosing a subset of all available classifiers that in relation to the other:
+perform well together, since including every classifier may
+D correct (1) D incorrect (0)
+decrease performance. Testing all possible classifier com-
+D correct (1) N11 N10
+binations quickly becomes infeasible for ensembles of any i
+D wrong (0) N01 N00
+practical size and so heuristics are used to approximate the i
+optimal subset. The performance of the ensemble can only The pairwise Q statistic is then defined as:
+improve upon that of the best base classifier if the ensem-
+ble has a sufficient pool of accurate and diverse classifiers,
+N11N00−N01N10
+and so successful selection methods must balance these two i,k N11N00+N01N10
+requirements.
+This produces values tending towards 1 when D and D
+We establish a baseline for this approach by performing
+correctly classify the same instances, 0 when they do not,
+simple greedy ensemble selection, sorting base classifiers by
+and −1 when they are negatively correlated. We evaluated
+their individual performance and iteratively adding the best
+additional diversity measures such as Cohen’s κ-statistic [43]
+unselectedclassifiertotheensemble.Thisapproachdisregards
+but found little practical difference between the measures (in
+how well the classifier actually complements the performance
+agreement with Kuncheva et al. [11]) and focus on Q for
+of the ensemble.
+its simplicity. Multicore performance and diversity measures
+Improving on this approach, Caruana et al.’s ensemble
+are implemented in C++ using the Rcpp package [44]. This
+selection(CES)[18],[19]beginswithanemptyensembleand
+proves essential for their practical use with large ensembles
+iteratively adds new predictors that maximize its performance
+and nested cross validation.
+accordingtoachosenmetric(here,AUC).Ateachiteration,a
+We adjust raw Q values using the transformation 1−|Q|
+number of candidate classifiers are randomly selected and the
+so that 0 represents no diversity and 1 represents maximum
+performance of the current ensemble including the candidate
+diversity for graphical clarity.
+is evaluated. The candidate resulting in the best ensemble
+performance is selected and the process repeats until a maxi-
+III. ENSEMBLEPERFORMANCE
+mum ensemble size is reached. The evaluation of candidates
+according to their performance with the ensemble, instead of Performance of the methods described in Section II-C is
+in isolation, improves the performance of CES over simple summarized in Table IV. Overall, aggregated stacking is the
+greedy selection. best performer and edges out CES for all our datasets. The
+Additional improvements over simple greedy selection in- use of clustering in combination with stacking also performs
+clude 1) initializing the ensemble with the top n base clas- wellforcertainclustersizesk.Intra-clusterstackingperforms
+sifiers, and 2) allowing classifiers to be added multiple times. best with cluster sizes 2, 14, 20, and 15 for GI, PF1, PF2,
+The latter is particularly important as without replacement, and PF3, respectively. Inter-cluster stacking is optimal for
+the best classifiers are added early and ensemble performance sizes 24, 33, 33, and 36 on the same datasets. Due to the
+then decreases as poor predictors are forced into the ensem- size of the GI dataset, only 10% of the validation set is
+ble. Replacement gives more weight to the best performing usedfornon-aggregatestackingandclusterstackingmethods.
+predictors while still allowing for diversity. We use an initial Performancelevelsoffbeyond10%andsothisapproachdoes
+ensemblesizeofn=2toreducetheeffectofmultiplebagged not significantly penalize these methods. This step was not
+versionsofasinglehighperformanceclassifierdominatingthe necessary for the other methods and datasets.
+selectionprocess,and(forcompleteness)evaluateallcandidate Ensembleselectionalsoperformswell,thoughweanticipate
+classifiers instead of sampling. issues of calibration (detailed in Section IV-B) could have a
+Ensemble predictions are combined using a cumulative negative impact since the mean is used to aggregate ensemble
+moving average to speed the evaluation of ensemble perfor- predictions. Greedy selection achieves best performance for
+manceforeachcandidatepredictor.Selectionisperformedon ensemble sizes of 10, 14, 45, and 38 for GI, PF1, PF2, and
+the validation set produced by nested cross-validation and the PF3, respectively. CES is optimal for sizes 70, 43, 34, and 56
+resulting ensemble evaluated as described in Section II-B. for the same datasets. Though the best performing ensembles
+for both selection methods are close in performance, simple
+D. Diversity Measures
+greedyselectionismuchworsefornon-optimalensemblesizes
+The diversity of predictions made by members of an en- thanCESanditsperformancetypicallydegradesafterthebest
+semble determines the ensemble’s ability to outperform the few base classifiers are selected (see Section IV-A). Thus, on
+best individual, a long-accepted property which we explore in average CES is the superior selection method.
+the following sections. We measure diversity using Yule’s Q- In agreement with Altman et al. [6], we find the mean
+statistic[42]byfirstcreatingpredictedlabelsfromthresholded is the highest performing simple aggregation method for
+classifier probabilities, yielding a 1 for values greater than 0.5 combining ensemble predictions. However, because we are
+and 0 otherwise. Given the predicted labels produced by each using heterogeneous classifiers that may have uncalibrated
+pairofclassifiersD andD ,wegenerateacontingencytable outputs, the mean combines predictions made with different
+scales or notions of probability. This explains its poor perfor-
+TABLEIV mancecomparedtothebestbaseclassifierinaheterogeneous
+AUCOFENSEMBLELEARNINGMETHODSFORPROTEINFUNCTIONAND
+ensemble and emphasizes the need for ensemble selection or
+GENETICINTERACTIONDATASETS.METHODSINCLUDEMEAN
+AGGREGATION,GREEDYENSEMBLESELECTION,SELECTIONWITH weightingviastacking totakefulladvantage oftheensemble.
+REPLACEMENT(CES),STACKINGWITHLOGISTICREGRESSION, We discuss the issue of calibration in Section IV-B.
+AGGREGATEDSTACKING(AVERAGINGRESAMPLEDHOMOGENEOUSBASE
+Thus,weobserveconsistentperformancetrendsacrossthese
+CLASSIFIERSBEFORESTACKING),STACKINGWITHINCLUSTERSTHEN
+AVERAGING(INTRA),ANDAVERAGINGWITHINCLUSTERSTHEN methods. However, to draw meaningful conclusions it is criti-
+STACKING(INTRA).THEBESTPERFORMINGBASECLASSIFIER(RANDOM caltodetermineiftheperformancedifferencesarestatistically
+FORESTFORTHEGIDATASETANDGBMFORPFS)ISGIVENFOR
+significant. For this we employ the standard methodology
+REFERENCE.STARREDVALUESAREGENERATEDFROMASUBSAMPLEOF
+THEVALIDATIONSETDUETOITSSIZE;SEETEXTFORDETAIL. givenbyDemsˇar[45]totestforstatisticallysignificantperfor-
+mance differences between multiple methods across multiple
+Performance
+datasets. The Friedman test [46] first determines if there
+Method GI PF1 PF2 PF3 are statistically significant differences between any pair of
+BestBaseClassifier 0.79 0.68 0.72 0.78 methods over all datasets, followed by a post-hoc Nemenyi
+MeanAggregation 0.763 0.669 0.732 0.773 test [47] to calculate a p-value for each pair of methods. This
+GreedySelection 0.792 0.684 0.734 0.779
+is the non-parametric equivalent of ANOVA combined with a
+CES 0.802 0.686 0.741 0.785
+Stacking(Aggregated) 0.812 0.687 0.742 0.788 Tukey HSD post-hoc test where the assumption of normally
+Stacking(All) 0.809∗ 0.684 0.726 0.773 distributed values is removed by using rank transformations.
+Intra-ClusterStacking 0.799∗ 0.684 0.725 0.775
+Inter-ClusterStacking 0.786∗ 0.683 0.735 0.783 As many of the assumptions of parametric tests are violated
+bymachinelearningalgorithms,theFriedman/Nemenyitestis
+preferred despite reduced statistical power [45].
+Using the Freidman/Nemeyi approach with a cutoff
+of α=0.05, the pairwise comparison between our ensemble
+PAIRWISEPERFORMANCECOMPARISONOFMULTIPLENON-ENSEMBLE and non-ensemble methods is shown in Table V. For brevity,
+ANDENSEMBLEMETHODSACROSSDATASETS.ONLYPAIRSWITH only methods with statistically significant performance differ-
+STATISTICALLYSIGNIFICANTDIFFERENCES,DETERMINEDBY
+ences are shown. The ranked performance of each method
+FRIEDMAN/NEMENYITESTSATα=0.05,ARESHOWN.
+across all datasets is shown in Table VI. Methods sharing a
+MethodA MethodB p-value label in the group column have statistically indistinguishable
+BestBaseClassifier CES 0.001902 performance based on their summed rankings. This table
+BestBaseClassifier Stacking(Aggregated) 0.000136 shows that aggregated stacking and CES have the best perfor-
+CES Inter-ClusterStacking 0.037740
+mance,whileCESandpuregreedyselectionhavesimilarper-
+CES Intra-ClusterStacking 0.014612
+CES MeanAggregation 0.000300 formance. However, aggregated stacking and greedy selection
+CES Stacking(All) 0.029952 donotshareagroupastheirsummedranksaretoodistantand
+GreedySelection MeanAggregation 0.029952
+thus have a significant performance difference. The remaining
+GreedySelection Stacking(Aggregated) 0.005364
+Inter-ClusterStacking MeanAggregation 0.047336 approaches including non-aggregated stacking are statistically
+Inter-ClusterStacking Stacking(Aggregated) 0.003206 similar to mean aggregation and motivates our inclusion of
+Intra-ClusterStacking Stacking(Aggregated) 0.001124
+cluster-basedstacking,whoseperformancemayimprovegiven
+MeanAggregation Stacking(Aggregated) 0.000022
+Stacking(Aggregated) Stacking(All) 0.002472 a more suitable distance metric. These rankings statistically
+reinforce the general trends presented earlier in Table IV.
+We note that nested cross-validation, relative to a single
+validation set, improves the performance of both stacking and
+TABLEVI CES by increasing the amount of meta data available as well
+GROUPEDPERFORMANCECOMPARISONOFMULTIPLENON-ENSEMBLE as the bagging that occurs as a result. Both effects reduce
+ANDENSEMBLEMETHODSACROSSDATASETS.METHODSSHARINGA
+overfittingbutperformanceisstilltypicallybetterwithsmaller
+GROUPLETTERHAVESTATISTICALLYSIMILARPERFORMANCE,
+DETERMINEDBYFRIEDMAN/NEMENYITESTSATα=0.05.AGGREGATED ensembles. More nested folds increase the quality of the meta
+STACKINGANDCESDEMONSTRATETHEBESTPERFORMANCE,WHILE dataandthusaffectstheperformanceofthesemethodsaswell,
+GREEDYSELECTIONISSIMILARTOCES(BUTNOTSTACKING).
+thoughcomputationtimeincreasessubstantiallyandmotivates
+Group Method RankSum our selection of k =5 nested folds.
+Finally, we emphasize that each method we evaluate out-
+a Stacking(Aggregated) 32
+ab CES 27 performs the previous state of the art AUC of 0.741 for
+bc GreedySelection 18 GI prediction [9]. In particular, stacked aggregation results
+c Inter-ClusterStacking 17
+in the prediction of 988 additional genetic interactions at
+cd Stacking(All) 16.5
+cd Intra-ClusterStacking 15 a 10% false discovery rate. In addition, these heterogeneous
+cd BestBaseClassifier 11 ensemble methods out-perform random forests and gradient
+d MeanAggregation 7.5
+boostedregressionmodelswhicharethemselveshomogeneous
+ensembles. This demonstrates the value of heterogeneous
+0.00 0.25 0.50 0.75 1.00
+Pairwise Diversity (1 − |Q|)
+ecnamrofreP
+0.00 0.25 0.50 0.75
+Pairwise Diversity (1 − |Q|)
+ecnamrofreP
+0 20 40 60
+Fig.1. Performanceasafunctionofdiversityforallpairwisecombinations
+of27baseclassifiersontheGI(topfigure)andPF3(bottomfigure)datasets.
+More diverse combinations typically result in less performance except for
+high-performanceclassifierssuchasrandomforestsandgeneralizedboosted
+regression models, whose points are shown in red if they are part of a pair.
+RawQvaluesareadjustedsothatlargervaluesimplymorediversity.
+ensembles for improving predictive performance.
+IV. ENSEMBLECHARACTERISTICS
+A. The Role of Diversity
+The relationship between ensemble diversity and perfor-
+mance has immediate impact on practitioners of ensemble
+methods, yet has not formally been proven despite extensive
+study[11],[13].ForbrevityweanalyzethistradeoffusingGI
+andPF3asrepresentativedatasets,thoughthetrendsobserved
+generalize to PF1 and PF2.
+Figure 1 presents a high-level view of the relationship
+between performance and diversity, plotting the diversity of
+pairwise classifiers against their performance as an ensemble
+by taking the mean of their predictions. This figure shows the
+Ensemble Performance (AUC)
+.76 .77 .78 .79
+0 20 40 60
+Ensemble Performance (AUC)
+.76 .77 .78
+Fig. 2. Ensemble diversity and performance as a function of iteration
+number for both greedy selection (bottom curve) and CES (top curve) on
+the GI and PF3 datasets. For GI (top figure), greedy selection fails to
+improvediversityandperformancedecreaseswithensemblesize,whileCES
+successfully balances diversity and performance (shown by a shift in color
+fromredtoyellowasheightincreases)andreachesanequilibriumovertime.
+ForPF3(bottomfigure),greedyselectionmanagestoimprovediversityaround
+iteration 30 but accuracy decreases, demonstrating that diverse predictions
+alonearenotenoughforaccurateensembles.
+complicated relationship between diversity and performance
+that holds for each of our datasets: Two highly diverse
+classifiers are more likely to perform poorly due to lower
+prediction consensus. There are exceptions, and these tend
+to include well-performing base classifiers such as random
+forests and gradient boosted regression models (shown in red
+inFigure1)whichachievehighAUContheirownandstandto
+gain from a diverse partner. Diversity works in tension with
+performance, and while improving performance depends on
+diversity, the wrong kind of diversity limits performance of
+the ensemble [48].
+Figure 2 demonstrates this tradeoff by plotting ensemble
+diversityandperformanceasafunctionoftheiterationnumber
+of the simple greedy selection and CES methods detailed in
+TABLEVII TABLEVIII
+THEMOST-WEIGHTEDCLASSIFIERSPRODUCEDBYSTACKINGWITH CANDIDATECLASSIFIERSSORTEDBYMEANPAIRWISEDIVERSITYAND
+LOGISTICREGRESSION(WEIGHTm)ANDCES(WEIGHTc)FORTHEPF3 PERFORMANCE.THEMOSTHEAVILYWEIGHTEDCLASSIFIERSFORBOTH
+DATASET,ALONGWITHTHEIRAVERAGEPAIRWISEDIVERSITYAND CESANDSTACKINGARESHOWNINBOLD.THISTREND,WHICHHOLDS
+PERFORMANCE. ACROSSDATASETS,SHOWSTHEPAIRINGOFHIGH-PERFORMANCE
+LOW-DIVERSITYCLASSIFIERSWITHTHEIRCOMPLEMENTS,
+Classifier Weightm Weightc Div. AUC DEMONSTRATINGHOWSEEMINGLYDISPARATEAPPROACHESCREATEA
+BALANCEOFDIVERSITYANDPERFORMANCE.
+rf 0.25 0.21 0.39 0.71
+gbm 0.20 0.27 0.42 0.72
+Classifier Diversity AUC
+RBFClassifier - 0.05 0.45 0.71
+MultilayerPerceptron 0.09 - 0.46 0.70 rf 0.386 0.712
+SGD 0.09 0.04 0.47 0.69 gbm 0.419 0.720
+VFI 0.11 0.11 0.71 0.66 glmnet 0.450 0.694
+IBk 0.09 0.13 0.72 0.68 glmboost 0.452 0.680
+RBFClassifier 0.453 0.713
+SimpleLogistic 0.459 0.689
+MultilayerPerceptron 0.459 0.706
+SMO 0.462 0.695
+Section II for the GI (top figure) and PF3 (bottom figure)
+SGD 0.470 0.693
+datasets. These figures reveal how CES (top curve) success- LMT 0.472 0.692
+fully exploits the tradeoff between diversity and performance pam 0.525 0.673
+LogitBoost 0.528 0.691
+while a purely greedy approach (bottom curve) actually de-
+ADTree 0.539 0.682
+creasesinperformanceoveriterationsafterthebestindividual VotedPerceptron 0.540 0.694
+base classifiers are added. This is shown via coloring, where multinom 0.553 0.677
+LADTree 0.568 0.678
+CES shifts from red to yellow (better performance) as its
+Logistic 0.574 0.669
+diversity increases while greedy selection grows darker red AdaBoostM1 0.584 0.684
+(worse performance) as its diversity only slightly increases. PART 0.615 0.652
+MultiBoostAB 0.615 0.679
+Note that while greedy selection increases ensemble diversity
+J48 0.632 0.645
+around iteration 30 for PF3, overall performance continues to JRip 0.687 0.627
+decrease. This demonstrates that diversity must be balanced VFI 0.713 0.662
+IBk 0.720 0.682
+with accuracy to create well-performing ensembles.
+RBFNetwork 0.778 0.653
+ToillustrateusingthePF3panelofFigure2,thefirstclassi- RandomTree 0.863 0.602
+SPegasos 0.980 0.634
+fierschosenbyCES(inorder)arerf.1,rf.7,gbm.2,RBFClas-
+sifier.0, MultilayerPerceptron.9, and gbm.3 where numbers
+indicatebaggedversionsofabaseclassifier.RBFClassifier.0is
+alowperformance,highdiversityclassifierwhiletheothersare pute Weightc as the normalized counts of classifiers included
+the opposite (see Table III for a summary of base classifiers). in the ensemble, resulting in greater weight for classifiers
+This ensemble shows how CES tends to repeatedly select selected multiple times. These weights for PF3 are shown in
+base classifiers that improve performance, then selects a more Table VII.
+diverse and typically worse performing classifier. Here the Nearly the same classifiers receive the most weight under
+former are different bagged versions of a random forest while both approaches (though logistic regression coefficients were
+the latter is RBFClassifier.0. This manifests in the left part notrestrictedtopositivevaluessowecannotdirectlycompare
+of the upper curve where diversity is low and then jumps to weights between methods). However, the general trend of
+its first peak. After this, a random forest is added again to the relative weights is clear and explains the oscillations
+balance performance and diversity drops until the next peak. seen in Figure 2: High performance, low diversity classifiers
+This process is repeated while the algorithm approaches a are repeatedly paired with higher diversity, lower performing
+weighted equilibrium of high performing, low diversity and classifiers. A more complete picture of selection emerges by
+low performing, high diversity classifiers. examiningthefulllistofcandidatebaseclassifiers(TableVIII)
+This agrees with recent observations that diversity enforces with the most weighted ensemble classifiers shown in bold.
+akindofregularizationforensembles[13],[49]:Performance The highest performing, lowest diversity GBM and RF classi-
+stops increasing when there is no more diversity to extract fiersappearatthetopofthelistwhileVFIandIBkarenearthe
+from the pool of possible classifiers. We see this in the PF3 bottom.ThoughtherearemorediverseclassifiersthanVFIand
+panelofFigure2asperformancereachesitspeak,wheresmall IBk, they were not selected due to their lower performance.
+oscillations in diversity represent re-balancing the weights to This example illustrates how diversity and performance are
+maintain performance past the optimal ensemble size. balanced during selection, and also gives new insight into
+Since ensemble selection and stacking are top performers the nature of stacking due to the convergent weights of these
+and can both be interpreted as learning to weight different seemingly different approaches. A metric incorporating both
+base classifiers, we next compare the most heavily weighted measures should increase the performance of hybrid methods
+classifiers selected by CES (Weightc) with the coefficients of such as cluster-based stacking, which we plan to investigate
+alevel1logisticregressionmeta-learner(Weightm).Wecom- in future work.
+Base Classifiers Ensembles (CES) Ensembles (Greedy)
+0.7875 0.76
+0.1 0.2 0.3 0.140 0.145 0.150 0.155 0.15 0.16 0.17 0.18
+Brier Score
+ecnamrofreP
+Fig.3. PerformanceasafunctionofcalibrationasmeasuredbytheBrierscore[50]forbaseclassifiers(left),ensemblesforeachiterationofCES(middle),
+andensemblesforeachstrictlygreedyiteration(right).Iterationsforgreedyselectionmovefromtheupperlefttothelowerright,whileCESstartsinthelower
+rightandmovestotheupperleft.Thisshowsbetter-calibrated(lowerBrierscore)classifiersandensembleshavehigheraverageperformanceandillustrates
+theiterativeperformancedifferencesbetweenthemethods.StackingwithlogisticregressionproducesoutputswithapproximatelyhalfthebestBrierscoreof
+CES,explainingthedifferenceinfinalclassifierweightsleadingtothesuperiorperformanceofstacking.
+B. The Role of Calibration mean. Several methods exist for evaluating the calibration of
+Akeyfactorintheperformancedifferencebetweenstacking probabilistic classifiers. One such method, the Brier score,
+and CES is illustrated by stacking’s selection of Multilayer- assesses how close (on average) a classifier’s probabilistic
+Perceptron instead of RBFClassifier for PF3. This difference output is to the correct binary label [50]:
+in the relative weighting of classifiers, or the exchange of one N
+1 (cid:88)
+classifier for another in the final ensemble, persists across our BS = N (f i −o i )2 (2)
+datasets. We suggest this is due to the ability of the layer 1 i=1
+classifier to learn a function on the probabilistic outputs of over all instances i. This is simply the mean squared error
+base classifiers and compensate for potential differences in evaluated in the context of probabilistic binary classification.
+calibration, resulting in the superior performance of stacking. Lower scores indicate better calibration.
+A binary classifier is said to be well-calibrated if it is cor- Figure 3 plots the Brier scores for each base classifier
+rectppercentofthetimeforpredictionsofconfidencep[24]. against its performance for the GI dataset as well as the
+However,accuracyandcalibrationarerelatedbutnotthesame: ensemble Brier scores for each iteration of CES and greedy
+A binary classifier that flips a fair coin for a balanced dataset selection. This shows that classifiers and ensembles with
+will be calibrated but not accurate. Relatedly, many well- calibrated outputs generally perform better. Note in particular
+performing classifiers do not produce calibrated probabilities. the calibration and performance of simple greedy selection,
+Measures such as AUC are not sensitive to calibration for with initial iterations in the upper left of the panel showing
+baseclassifiers,andtheeffectsofcalibrationonheterogeneous high performing well-calibrated base classifiers chosen for
+ensemble learning have only recently been studied [24]. This the ensemble, but moving to the lower right as sub-optimal
+section further investigates this relationship. classifiersareforcedintotheensemble.Incontrast,CESstarts
+To illustrate a practical example of calibration, consider a with points in the lower right and moves to the upper left
+support vector machine. An uncalibrated SVM outputs the as both ensemble calibration and performance improve each
+distance of an instance from a hyperplane to generate a iteration. The upper left of the CES plot suggests the benefit
+probability. This is not a true posterior probability of an of additional classifiers outweighs a loss in calibration during
+instance belonging to a class, but is commonly converted to its final iterations.
+such using Platt’s method [51]. In fact, this is analogous to Stacking produces a layer 1 classifier with approximately
+fitting a layer 1 logistic regression to the uncalibrated SVM halftheBrierscore(0.083)ofCESorthebestbaseclassifiers.
+outputs with a slight modification to avoid overfitting. This Since this approach learns a function over probabilities it is
+approach is not restricted to SVMs and additional methods able to adjust to the different scales used by potentially ill-
+suchasisotonicregressionarecommonlyusedforbothbinary calibrated classifiers in a heterogeneous ensemble. This ex-
+and multi-class problems [52]. plains the difference in the final weights assigned by stacking
+Regardless of the base classifier, a lack of calibration may and CES to the base classifiers in Table VII: Though the
+effect the performance of ensemble selection methods such as relativeweightsaremostlythesame,logisticregressionisable
+CES since the predictions of many heterogeneous classifiers tocorrectforthelackofcalibrationacrossclassifiersandbetter
+are combined using simple aggregation methods such as the incorporate the predictions of MultilayerPerceptron whereas
+CES cannot. In this case, a calibrated MultilayerPerceptron directions for future work including formalizing the effects of
+serves to improve performance of the ensemble and thus calibrationonheterogeneousensembleperformance,modifica-
+stacking outperforms CES. tionstoCESwhichexplicitlyincorporatediversity[49],andan
+In summary, this section demonstrates the tradeoff between optimization-based formulation of the diversity/performance
+performance and diversity made by CES and examines its tradeoff for improving cluster-based stacking methods.
+connection with stacking. There is significant overlap in the
+relativeweightsofthemostimportantbaseclassifiersselected
+VI. ACKNOWLEDGEMENTS
+by both methods. From this set of classifiers, stacking often We thank the Genomics Institute at Mount Sinai for their
+assigns more weight to a particular classifier as compared to generous financial and technical support.
+CESandthisresultholdsacrossourdatasets.Weattributethe
+superior performance of stacking to this difference, originat- REFERENCES
+ing from its ability to accommodate differences in classifier
+[1] L.Rokach,“Ensemble-BasedClassifiers,”ArtificialIntelligenceReview,
+calibration that are likely to occur in large heterogeneous vol.33,no.1-2,pp.1–39,2009.
+ensembles. This claim is substantiated by its significantly [2] G. Seni and J. Elder, Ensemble Methods in Data Mining: Improving
+AccuracyThroughCombiningPredictions. Morgan&Claypool,2010.
+lower Brier score compared to CES as well as the correlation
+[3] J.Shotton,A.Fitzgibbon,M.Cook,T.Sharp,M.Finocchio,R.Moore,
+between ensemble calibration and performance. This suggests A. Kipman, and A. Blake, “Real-Time Human Pose Recognition in
+the potential for improving ensemble methods by accommo- Parts from Single Depth Images,” in Proceedings of the 2011 IEEE
+Conference on Computer Vision and Pattern Recognition, 2011, pp.
+dating differences in calibration.
+1297–1304.
+[4] D.Kim,“ForecastingTimeSerieswithGeneticFuzzyPredictorEnsem-
+V. CONCLUSIONSANDFUTUREWORK
+ble,”IEEETransactionsonFuzzySystems,vol.5,no.4,pp.523–535,
+1997.
+Theaimofensembletechniquesistocombinediverseclas-
+[5] P. Yang, Y. H. Yang, B. B. Zhou, and A. Y. Zomaya, “A Review of
+sifiers in an intelligent way such that the predictive accuracy Ensemble Methods in Bioinformatics,” Current Bioinformatics, vol. 5,
+of the ensemble is greater than that of the best base classifier. no.4,pp.296–308,2010.
+[6] A. Altmann, M. Rosen-Zvi, M. Prosperi, E. Aharoni, H. Neuvirth,
+Since enumerating the space of all classifier combinations
+E.Schu¨lter,J.Bu¨ch,D.Struck,Y.Peres,F.Incardona,A.So¨nnerborg,
+quickly becomes infeasible for even relatively small ensemble R.Kaiser,M.Zazzi,andT.Lengauer,“ComparisonofClassifierFusion
+sizes, other methods for finding well performing ensembles MethodsforPredictingResponsetoAntiHIV-1Therapy,”PLoSONE,
+vol.3,no.10,p.e3470,2008.
+have been widely studied and applied in the last decade.
+[7] M. Liu, D. Zhang, and D. Shen, “Ensemble Sparse Classification of
+In this paper we apply a variety of ensemble approaches Alzheimer’sDisease,”Neuroimage,vol.60,no.2,pp.1106–1116,2012.
+to two difficult problems in computational genomics: The [8] A. Khan, A. Majid, and T.-S. Choi, “Predicting Protein Subcellular
+Location: Exploiting Amino Acid Based Sequence of Feature Spaces
+prediction of genetic interactions and the prediction of pro-
+and Fusion of Diverse Classifiers,” Amino Acids, vol. 38, no. 1, pp.
+tein functions. These problems are notoriously difficult for 347–350,2010.
+their extreme class imbalance, prevalence of missing values, [9] G. Pandey, B. Zhang, A. N. Chang, C. L. Myers, J. Zhu, V. Kumar,
+integration of heterogeneous data sources of different scale, and E. E. Schadt, “An Integrative Multi-Network and Multi-Classifier
+ApproachtoPredictGeneticInteractions,”PLoSComputationalBiology,
+and overlap between feature distributions of the majority and
+vol.6,no.9,p.e1000928,2010.
+minority classes. These issues are amplified by the inherent [10] K. Tumer and J. Ghosh, “Error Correlation and Error Reduction in
+complexity of the underlying biological mechanisms and in- Ensemble Classifiers,” Connection Science, vol. 8, no. 3-4, pp. 385–
+404,1996.
+complete domain knowledge.
+[11] L. I. Kuncheva and C. J. Whitaker, “Measures of Diversity in Classi-
+We find that stacking and ensemble selection approaches fier Ensembles and Their Relationship with the Ensemble Accuracy,”
+offer statistically significant improvements over the previous MachineLearning,vol.51,no.2,pp.181–207,2003.
+[12] T. G. Dietterich, “An Experimental Comparison of Three Methods for
+state-of-the-art for GI prediction [9] and moderate improve-
+Constructing Ensembles of Decision Trees: Bagging, Boosting, and
+ments over tuned random forest classifiers which are par- Randomization,”MachineLearning,vol.40,no.2,pp.139–157,2000.
+ticularly effective in this domain [5]. Here, even small im- [13] E. K. Tang, P. N. Suganthan, and X. Yao, “An Analysis of Diversity
+Measures,”MachineLearning,vol.65,no.1,pp.247–271,2006.
+provements in accuracy can contribute directly to biomedical
+[14] L. Breiman, “Bagging Predictors,” Machine Learning, vol. 24, no. 2,
+knowledge after wet-lab verification: These include 988 addi- pp.123–140,1996.
+tional genetic interactions predicted by aggregated stacking at [15] R. E. Schapire and Y. Freund, Boosting: Foundations and Algorithms.
+MITPress,2012.
+a10%falsediscoveryrate.Wealsouncoveranovelconnection
+[16] C. J. Merz, “Using Correspondence Analysis to Combine Classifiers,”
+between stacking and Caruana et al.’s ensemble selection MachineLearning,vol.36,no.1-2,pp.33–58,1999.
+method (CES) [18], [19], demonstrating how these two dis- [17] D.H.Wolpert,“StackedGeneralization,”NeuralNetworks,vol.5,no.2,
+pp.241–259,1992.
+paratemethodsconvergetonearlythesamefinalbaseclassifier
+[18] R. Caruana, A. Niculescu-Mizil, G. Crew, and A. Ksikes, “Ensemble
+weights by balancing diversity and performance in different Selection from Libraries of Models,” in Proceedings of the 21st Inter-
+ways.Weexplainhowvariationsintheseweightsarerelatedto nationalConferenceonMachineLearning,2004,pp.18–26.
+[19] R. Caruana, A. Munson, and A. Niculescu-Mizil, “Getting the Most
+the calibration of base classifiers in the ensemble, and finally
+Out of Ensemble Selection,” in Proceedings of the 6th International
+describe how stacking improves accuracy by accounting for ConferenceonDataMining,2006,pp.828–833.
+differencesincalibration.Thisconnectionalsoshowshowthe [20] A.Niculescu-Mizil,C.Perlich,G.Swirszcz,V.Sindhwani,andY.Liu,
+“Winning the KDD Cup Orange Challenge with Ensemble Selection,”
+utilization of diversity is an emergent, not explicit, property
+Journal of Machine Learning Research Proceedings Track, vol. 7, pp.
+of how CES maximizes ensemble performance and suggests 23–24,2009.
+[21] G. Pandey, V. Kumar, and M. Steinbach, “Computational Approaches [46] M.Friedman,“TheUseofRankstoAvoidtheAssumptionofNormality
+for Protein Function Prediction: A Survey,” University of Minnesota, ImplicitintheAnalysisofVariance,”JournaloftheAmericanStatistical
+Tech.Rep.,2006. Association,vol.32,no.200,pp.675–701,1937.
+[22] D. C. Hess, C. L. Myers, C. Huttenhower, M. A. Hibbs, A. P. Hayes, [47] P.B.Nemenyi,“Distribution-FreeMultipleComparisons,”Ph.D.disser-
+J.Paw,J.J.Clore,R.M.Mendoza,B.S.Luis,C.Nislow,G.Giaever, tation,PrincetonUniversity,1963.
+M. Costanzo, O. G. Troyanskaya, and A. A. Caudy, “Computationally [48] G.BrownandL.I.Kuncheva,““Good”and“Bad”DiversityinMajority
+Driven, Quantitative Experiments Discover Genes Required for Mito- VoteEnsembles,”inProceedingsofthe9thInternationalConferenceon
+chondrialBiogenesis,”PLoSGenetics,vol.5,no.3,p.e1000407,2009. MultipleClassifierSystems,2010,pp.124–133.
+[23] E.Szczurek,N.Misra,andM.Vingron,“SyntheticSicknessorLethality [49] N. Li, Y. Yu, and Z.-H. Zhou, “Diversity Regularized Ensemble Prun-
+Points at Candidate Combination Therapy Targets in Glioblastoma,” ing,” in Proceedings of the 2012 European Conference on Machine
+InternationalJournalofCancer,2013. LearningandKnowledgeDiscoveryinDatabases,2012,pp.330–345.
+[24] A. Bella, C. Ferri, J. Herna´ndez-Orallo, and M. J. Ram´ırez-Quintana, [50] G.W.Brier,“VerificationofForecastsExpressedinTermsofProbabil-
+“On the Effect of Calibration in Classifier Combination,” Applied ity,”MonthlyWeatherReview,vol.78,no.1,pp.1–3,1950.
+Intelligence,pp.1–20,2012. [51] J. C. Platt, “Probabilistic Outputs for Support Vector Machines and
+[25] T.R.Hughes,M.J.Marton,A.R.Jones,C.J.Roberts,R.Stoughton, Comparisons to Regularized Likelihood Methods,” Advances in Large
+C.D.Armour,H.A.Bennett,E.Coffey,H.Dai,Y.D.He,M.J.Kidd, MarginClassifiers,vol.10,no.3,pp.61–74,1999.
+A. M. King, M. R. Meyer, D. Slade, P. Y. Lum, S. B. Stepaniants, [52] B.ZadroznyandC.Elkan,“TransformingClassifierScoresIntoAccu-
+D.D.Shoemaker,D.Gachotte,K.Chakraburtty,J.Simon,M.Bard,and rate Multiclass Probability Estimates,” in Proceedings of the 8th ACM
+S.H.Friend,“FunctionalDiscoveryviaaCompendiumofExpression International Conference on Knowledge Discovery and Data Mining,
+Profiles,”Cell,vol.102,no.1,pp.109–126,2000. 2002,pp.694–699.
+[26] C. L. Myers, D. R. Barrett, M. A. Hibbs, C. Huttenhower, and O. G.
+Troyanskaya, “Finding Function: Evaluation Methods for Functional
+GenomicData,”BMCGenomics,vol.7,no.187,2006.
+[27] G. Pandey, C. L. Myers, and V. Kumar, “Incorporating Functional
+Inter-RelationshipsIntoProteinFunctionPredictionAlgorithms,”BMC
+Bioinformatics,vol.10,no.142,2009.
+[28] J.L.Hartman,B.Garvik,andL.Hartwell,“PrinciplesfortheBuffering
+ofGeneticVariation,”Science,vol.291,no.5506,pp.1001–1004,2001.
+[29] T. Horn, T. Sandmann, B. Fischer, E. Axelsson, W. Huber, and
+M. Boutros, “Mapping of Signaling Networks Through Synthetic Ge-
+neticInteractionAnalysisbyRNAi,”NatureMethods,vol.8,no.4,pp.
+341–346,2011.
+[30] B. VanderSluis, J. Bellay, G. Musso, M. Costanzo, B. Papp, F. J.
+Vizeacoumar, A. Baryshnikova, B. J. Andrews, C. Boone, and C. L.
+Myers, “Genetic Interactions Reveal the Evolutionary Trajectories of
+DuplicateGenes,”MolecularSystemsBiology,vol.6,no.1,2010.
+[31] R Core Team, “R: A Language and Environment for Statistical Com-
+puting,”2012.
+[32] K.Hornik,C.Buchta,andA.Zeileis,“Open-SourceMachineLearning:
+RMeetsWeka,”ComputationalStatistics,vol.24,no.2,pp.225–232,
+2009.
+[33] M.Hall,E.Frank,G.Holmes,B.Pfahringer,P.Reutemann,andI.H.
+Witten, “The WEKA Data Mining Software: An Update,” SIGKDD
+Explorations,vol.11,no.1,pp.10–18,2009.
+[34] M.Kuhn,“BuildingPredictiveModelsinRUsingthecaretPackage,”
+JournalofStatisticalSoftware,vol.28,no.5,pp.1–26,2008.
+[35] T.Hothorn,P.Bu¨hlmann,T.Kneib,M.Schmid,andB.Hofner,“Model-
+Based Boosting 2.0,” Journal of Machine Learning Research, vol. 11,
+no.Aug,pp.2109–2113,2010.
+[36] J. H. Friedman, T. Hastie, and R. J. Tibshirani, “Regularization Paths
+for Generalized Linear Models via Coordinate Descent,” Journal of
+StatisticalSoftware,vol.33,no.1,pp.1–22,2010.
+[37] W. N. Venables and B. D. Ripley, Modern Applied Statistics with S,
+4thed. Springer,2002.
+[38] G.Ridgeway,“gbm:GeneralizedBoostedRegressionModels,”2013.
+[39] A.LiawandM.Wiener,“ClassificationandRegressionbyrandomFor-
+est,”RNews,vol.2,no.3,pp.18–22,2002.
+[40] T.Hastie,R.J.Tibshirani,B.Narasimhan,andG.Chu,“Diagnosisof
+Multiple Cancer Types by Shrunken Centroids of Gene Expression,”
+ProceedingsoftheNationalAcademyofSciencesoftheUnitedStates
+ofAmerica,vol.99,no.10,pp.6567–6572,2002.
+[41] K.M.TingandI.H.Witten,“IssuesinStackedGeneralization,”Journal
+ofArtificialIntelligenceResearch,vol.10,no.1,pp.271–289,1999.
+[42] G. U. Yule, “On the Association of Attributes in Statistics: With
+IllustrationsfromtheMaterialoftheChildhoodSociety,”Philosophical
+Transactions of the Royal Society of London, Series A, vol. 194, pp.
+257–319,1900.
+[43] J.Cohen,“ACoefficientofAgreementforNominalScales,”Educational
+andPsychologicalMeasurement,vol.20,no.1,pp.37–46,1960.
+[44] D.EddelbuettelandR.Franc¸ois,“Rcpp:SeamlessRandC++Integra-
+tion,”JournalofStatisticalSoftware,vol.40,no.8,pp.1–18,2011.
+[45] J. Demsˇar, “Statistical Comparisons of Classifiers over Multiple Data
+Sets,”JournalofMachineLearningResearch,vol.7,no.Jan,pp.1–30,
+2006.

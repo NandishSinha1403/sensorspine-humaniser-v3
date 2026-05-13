@@ -1,0 +1,574 @@
+Modular Acquisition and Stimulation System for
+Timestamp-driven Neuroscience Experiments
+Paulo Matias, Rafael T. Guariento,
+Lirio O. B. de Almeida, and Jan F. W. Slaets
+Sa˜o Carlos Institute of Physics
+University of Sa˜o Paulo
+Sa˜o Carlos, SP, Brazil
+{matias,guariento,lirio,jan}@ifsc.usp.br
+Abstract. Dedicatedsystemsarefundamentalforneuroscienceexperi-
+mentalprotocolsthatrequiretimingdeterminismandsynchronousstim-
+uli generation. We developed a data acquisition and stimuli generator
+system for neuroscience research, optimized for recording timestamps
+fromupto6spikingneuronsandentirelyspecifiedinahigh-levelHard-
+wareDescriptionLanguage(HDL).Despitethelogiccomplexitypenalty
+of synthesizing from such a language, it was possible to implement our
+designinalow-costsmallreconfigurabledevice.Underamodularframe-
+work, we explored two different memory arbitration schemes for our
+system, evaluating both their logic element usage and resilience to in-
+put activity bursts. One of them was designed with a decoupled and
+latency insensitive approach, allowing for easier code reuse, while the
+other adopted a centralized scheme, constructed specifically for our ap-
+plication. The usage of a high-level HDL allowed straightforward and
+stepwisecodemodificationstotransformonearchitectureintotheother.
+The achieved modularity is very useful for rapidly prototyping novel
+electronic instrumentation systems tailored to scientific research.
+Keywords: Spiking Neurons, Data Acquisition, Precise Timing, Re-
+source Arbitration, Latency Insensitive, Modular Design.
+1 Introduction
+Neurons usually behave by emitting stereotyped pulses of electric depolariza-
+tion through their membranes, creating temporally localized spikes. It is a com-
+mon belief that spiking neurons follow an all-or-none principle, similar to the
+processing of digital signals, by encoding information only through spike tim-
+ing [1]. Although each individual cell always produces the same waveform, the
+most widespread experimental approach employs Analog to Digital Convert-
+ers (ADCs) integrated on commercial acquisition systems to capture complete
+waveforms. This procedure is required when the researcher desires to analyze
+a large population of neurons recording only from a few electrodes, applying
+then a neuron classification technique known as spike sorting to discriminate
+PreprintsubmittedtoARC2015.
+Thefinalpublicationisavailableatlink.springer.com.
+]MQ.oib-q[
+1v81710.4051:viXra
+individual waveforms [2]. However, because of the lack of readily available spe-
+cialized acquisition hardware, many works adopt the same recording technique
+eventhoughtheyonlyneedtoidentifytheoccurrenceofspikesfromoneneuron
+per electrode [3,4,5,6]. The resulting data files are large and spikes need to be
+detected by software, demanding a considerable amount of time.
+In this paper we present the design of a low-cost alternative hardware solu-
+tion based on a dedicated Complex Programmable Logic Device (CPLD). We
+have chosen CPLDs instead of Field Programmable Gate Arrays (FPGAs) to
+demonstrate the flexibility of our approach, as CPLDs are usually limited to a
+small number of logic gates, and lack common FPGA features such as Block
+RAMs and Phase Locked Loops (PLLs). We implemented the logic circuits on
+theCPLDadoptingamodulardesign,whichaimstofacilitatefuturerefinement
+and customization for specific applications. The complete source code imple-
+mented in the Bluespec SystemVerilog (BSV) [7] language is available at [8].
+BSV designs targeted at small reconfigurable devices, such as ours, are rare
+inliterature,sincemanyworksshowthatBSVusuallyproducesahigherlogicel-
+ement(LE)countthanRegister-TransferLevel(RTL)languages[9,10,11].How-
+ever, some research [12] argues that microarchitectural choices have greater im-
+pact on the LE usage than the specification’s abstraction level, although there
+is a lack of studies in glue logic sized architectures with significant modularity
+and complexity. This paper showcases such a system, and also explores the im-
+pact of latency insensitive module decoupling [13], by comparing two distinct
+implementations of a resource arbitration scheme. Similar work evaluating syn-
+thesis results exists [14], but we also test the consequences on system resilience
+to extreme conditions, many times above our application requirements.
+The acquisition input is provided to our digital logic by an analog front-end
+systemwhichgeneratesanasynchronousTTL-compatiblesignalpulseattheoc-
+currenceofeachvalidspike.Ourentirecircuitwasdesignedtobecompatibleand
+easily inserted into a previous experimental setup [15] devised for studying neu-
+ral codification in Chrysomya megacephala’s visual system, but it is sufficiently
+generic to be suitable for a wide range of neuroscience experiments.
+Main contributions of this work:
+– Developsaportable,low-costandprecisedataacquisitionsystemforneuro-
+science and neuroethology experiments.
+– Appliestheseldomusedconceptofrecordingdigitalevents(insteadofADC-
+converted data) to increase the precision of neural spike timing.
+– Employs the BSV language in a small and resource constrained system.
+– Showcasesarchitecturerefactoringfromadecoupledtoacentralizedscheme.
+Paper organization: Thenextsectiondescribesthebasicspecificationsofour
+design and its overall architecture. Section 3 discusses the system implementa-
+tion, focusing on points common both to dynamic and static arbiter versions.
+Sections 3.1 and 3.2 delve into specific aspects of each one of the implementa-
+tions. Section 4 presents synthesis, experimental and simulation results. Finally,
+we conclude in Section 5.
+2 Overall system architecture
+Our system offers 6 TTL-level pulse timestamp acquisition inputs, 4 analog
+16-bit resolution outputs for stimuli generation and a Join Test Action Group
+(JTAG) host computer interface. It is composed by a MAX II Micro Kit (EPM-
+2210F324C3 CPLD), a 74HC4050 buffer for input overvoltage protection, a
+MAX5134 Digital-to-Analog Converter (DAC) and a IDT71256 20ns 32K×8-
+bit SRAM. We have divided the project in following functional subunits:
+Synchronizer:Receivesasynchronousinputpulsesandregisters32-bittimes-
+tampsfromahardwarecounter,eachonepairedtoaflagindicatingwhichinput
+channels fired since last counted. In most neural systems, 1 µs is believed to be
+enough resolution for studying fine details of information coding [16].
+FIFO SRAM: Provides an interface for using the external SRAM memory
+as a pair of First-In First-Out (FIFO) queues of 16 KiB each. One of them
+buffers data acquired from inputs, and the other buffers stimuli received from a
+computer. Our FIFO modules are compatible with the BSV standard library.
+JTAG interface: Provides communication with a host computer. We have
+wrapped Altera JTAG-UART libraries into a ready-to-use BSV module. By us-
+ing this protocol, the same communication module is portable to any CPLD or
+FPGA manufactured by the same vendor. As programmable devices are config-
+ured via JTAG, the bus is readily available through USB adapters embedded in
+almost every evaluation board. However, this approach introduces a significant
+protocol overhead by encapsulating UART emulation inside JTAG-USB, limit-
+ingthedataratetoabout1Mbit/s.Also,clientsoftwareneedstoexplicitlypoll
+the device, because the interface is not interrupt nor event driven. This results
+in software determinism becoming a bottleneck depending on hardware buffer
+size and desired data rate. Nevertheless, these limitations do not impair this
+particular application.
+3 BSV module architecture
+Bluespec SystemVerilog is a strongly typed high-level hardware description lan-
+guage (HDL) with functional paradigm features. A BSV design is organized in
+modules and rules. Modules provide interfaces, composed by a set of methods
+which can be used to access or modify their internal state. State changes (side-
+effects)areclearlyseparatedfromread-onlyoperationsbythemeansofamonad
+[17] called Action, thus any expression which modifies state has an action type.
+Modules can be statically elaborated several times, allowing to represent com-
+plexcircuitstructures.Rulesareentitieswhichdescribetheconnectionsbetween
+modules and ultimately define hardware dynamics. They are formed by a set of
+actions and a boolean predicate, which defines an explicit condition needed to
+allow execution of the actions (rule firing). During a single clock cycle, a rule is
+guaranteedtoentirelycompleteitsexecutionornottofireatall,propertyknown
+as transaction atomicity. Rule firing can also be affected by implicit conditions,
+which can be attributed to any BSV expression. The BSV compiler propagates
+an implicit condition back to the predicate of the rule which actually executes
+the action or queries the value of the corresponding expression. Implicit condi-
+tionsareusuallyattributedtomethodboundaries,servingasaneffectivewayto
+specify module contracts. When synthesizing, the compiler defines an execution
+order for rules, allowing a hardware scheduler to be generated according to the
+Term Rewriting Systems (TRS) formalism [18].
+Synchronizer SER
+inSyncs syncedIn timestamp
+acqIn wwirireessmmkkAAssyynnccPPuulslseeSSyynncc Bits#(NumInputs) 32 bits
+dacLoad timestampUpdate
+blendChannelFlags
+channelFlags0 1 0 0 0 1 1 0
+FIFO SRAMsram uartOutFifo out
+mkSRAMSplit uartInFifo
+SRAM wires srvA cli fifo uart JTAG
+DAC DES unfunnel mkSRAMFIFO tx mkAlteraJtagUart
+dac load mkUnfunnel rx
+DAC wires req dacHandleReq out in
+mkDAC fifo uartHandleCmd
+Fig.1.BlockdiagramoftheBSVmodulesandrules.Thegrayshadedareasrepresent
+internal logic, while white structures depict I/O interfaces. Modules are portrayed
+as quadrilaterals. The names inside them are module names, and those outside are
+instance names. Small rectangles on their side are interfaces. Ellipses designate rules.
+Thosewhichonlyperformconnectionsareomittedandrepresenteddirectlybyarrows.
+Figure 1 illustrates our main module. The fundamental difference between
+arbitrationapproachesresidesonSRAMFIFOinternalsandonhowcommunication
+with the SRAM occurs. In the dynamic approach this is done by a client-server
+interface mediated by FIFOs, whereas in the static one an extra central module
+exists which assigns a specific operation to the SRAMFIFOs on each cycle.
+Acquisition data flow: Asynchronous pulses arriving from acquisition in-
+puts are synchronized to the system clock by the AsyncPulseSync modules,
+resultinginthesyncedInsignal.TheblendChannelFlagsruleaccumulatesone
+bit for each input channel in the channelFlags register, if a pulse occurred on
+syncedInsincethelastcollectedtimestamp.ThetimestampUpdateruleatomi-
+cally increments the timestamp register, sends the channelFlags value and the
+current timestamp to the funnel, and resets channelFlags to zero. The funnel
+emits one byte of its input per cycle to the uartOutFifo. Finally, data coming
+fromdataOutFifocanbereadinthehostcomputerafterbeingcollectedbythe
+JTAG-UART transmitting (tx) interface.
+Stimulus generation data flow: Begins at the JTAG-UART receiving
+(rx) interface. The uartHandleCmd rule identifies if the byte received from the
+computer represents a start command or a DAC conversion request. A start
+command sets a boolean register (omitted from the figure) which unblocks the
+predicateof dacLoad,timestampUpdateandblendChannelFlagsrules.ADAC
+conversionrequestsendsthecurrentbyteandthenexttwobytestouartInFifo.
+After coming out of the FIFO, the bytes feed the unfunnel block, merging three
+bytestogether.ThedacHandleReqcontrolstherequestflowtotheDACmodule.
+The dacLoad rule fires when the first input channel receives a pulse, unblocking
+the dacHandleReq rule and causing a synchronous update on all DAC outputs.
+This input channel is used to synchronize analog outputs to the desired stimuli
+clock, e.g. the display controller in a visual stimulation system.
+BSV has an implicit condition mechanism which eases the specification of a
+provably correct system. We only needed to add error handling to four places of
+our design. The first one is related to tx path FIFO overflow and is put in the
+timestampUpdate rule, ensuring that the timestamp is always incremented at
+each update period. The second check is accomplished in the dacLoad rule, and
+verifies if a FIFO underrun has occurred in the rx path, by certifying that the
+DAC is ready to receive a new command and that all DAC registers were filled
+since the last load. The final two are not directly related to system functional
+correctness, but to good debugging practices. The third one checks if bytes re-
+ceivedfromJTAG-UARTcorrespondtovalidcommands.Thelastoneverifiesif
+DAC requests are still valid after leaving uartInFifo, aiming to detect any oc-
+currencesofdatacorruptionduringcommunicationwiththeSRAMchip.When
+anyoftheseerrorconditionoccurs,wealerttheuserbyblinkingLEDsuntilthe
+system is reset.
+Next, we describe characteristics of the common system sub-modules.
+SER/DES: Serializer and deserializer modules are implemented using shift
+registers. Our design is generic and type parametrized, making it reusable with
+any input or output data types. A code excerpt illustrating these concepts is
+shown in Figure 2.
+DAC: In order to rapidly prototype the control of a Serial Peripheral In-
+terface (SPI) and DAC linearity calibration procedures, we employed a stan-
+dardBSVlibrarycalledStmtFSM,whichconsistsofaDomainSpecificLanguage
+(DSL) for specifying Finite State Machines (FSMs). The FSMs could be eas-
+ily composed and exposed in the form of a simple external module interface.
+DAC register update requests supported by the MAX5134 DAC contain three
+bytes,onespecifyingthetargetchannelsandtwobytesofdata.PartoftheFSM
+implementation is illustrated in Figure 3.
+SRAMFIFO: This module is also type parametrized. It exposes a fifo
+subinterface mimicking BSV standard library’s mkLFIFO, and a cli subinter-
+face which can be connected to a SRAM or SRAMSplit server interface. Usage
+of Ephemeral History Registers (EHRs) [19] greatly simplified the design in or-
+// Defines an interface for generic types a and b
+interface Funnel#(type a, type b);
+// ...
+endinterface
+function Funnel#(a,b)
+toFunnel(FIFOF#(a) infifo, FIFOF#(b) outfifo);
+return (interface Funnel;
+method Bool notFull = infifo.notFull;
+// ...
+endinterface);
+endfunction
+m odule mkFunnel(Funnel#(a,b))
+// ...
+rule firstCycle(stage == 0);
+// Shifts the input value from infifo
+shiftReg <= truncateLSB(inval << nB);
+outfifo.enq(unpack(truncateLSB(inval)));
+updateStage(); infifo.deq();
+rule(stage != 0);
+outfifo.enq(unpack(truncateLSB(shiftReg)));
+shiftReg <= shiftReg << nB;
+updateStage();
+// Returns an in/out interface from the infifo/outfifo
+return toFunnel(infifo, outfifo);
+Fig.2. Code excerpt from the serializer shift register implementation, illustrating
+parametrized data types and abstract manipulation of interfaces by compile-time re-
+solved functions (toFunnel).
+Stmt shiftRegSenderStmt = seq
+while(!shiftRegDone) seq
+// Send each bit of shiftReg to DAC ...
+rnCS[0] <= 1; delay(2);
+// Instantiates the state machine from specified instructions
+FSM shiftRegSender <- mkFSM(shiftRegSenderStmt);
+function Action send(Bit#(24) cmd);
+shiftReg <= {cmd, 1'b1}; rnCS[1] <= 0;
+shiftRegSender.start;
+endfunction
+// Calibrate DAC
+Stmt dacCalibrationStmt = seq
+delay(waitVoltageStab); send(commandBits_1);
+shiftRegSender.waitTillDone;
+delay(dacCalibCycles); send(commandBits_2);
+// ....
+interface Put req;
+method Action put(DACReq r) if (rdy);
+match{.mask, .sample} = r;
+// Send command for writing sample
+send({4'b0001, mask, sample});
+endinterface
+Fig.3. Code illustrating usage of the Finite State Machine (FSM) Domain Specific
+Language (DSL). FSMs can be specified as a series of statements (Stmt) in a DSL
+whichresemblesanimperativesoftwarelanguage.ThemkFSMmoduletransformsthese
+statements into a hardware implementation. We have implemented a send function
+which is used both to compose different FSMs together and to start a FSM from an
+externally accessible method.
+der to achieve the same scheduling specifications as mkLFIFO. EHRs provide a
+register-like interface on which same-cycle accesses can be ordered according to
+the logical execution order of rules or methods. Head and tail position pointers
+to locations inside the SRAM are held in EHRs. The SRAMFIFO stores one unit
+of data (in the case of this design, one byte) in a local cache FIFO implemented
+using flip-flop registers, whose output is connected directly to SRAMFIFO’s one.
+When the cache FIFO goes empty, we dispatch a read request to the SRAM,
+aimingtomaintainthecachefilledmostofthetime.Whennewdataisenqueued
+to the SRAMFIFO and no space is available in the cache FIFO, a write request is
+sent to the SRAM.
+3.1 Dynamic arbiter
+Inthisdesign,theSRAMcontroller(Figure4)isdecoupledfromtheSRAMSplit
+module(Figure5).Thefirstdispatchesrequestsintheorderastheyarereceived
+in reqfifo, using an internal cycle register to keep track of its state during a
+single request. The latter arbitrates the access of two other modules to a single
+SRAM controller. Requests received from both modules are placed into a pair
+of FIFOs. A set of mutually exclusive rules then controls the priority of each
+request. Two of them are generated by the getPrioritizeValid function, one
+of which is fired when a single request FIFO is not empty. However when both
+FIFOscontaindata,theprioritize current turnruleisfired,prioritizingthe
+Least Recently Used (LRU) FIFO. The turn register holds the state needed to
+infer the LRU FIFO.
+mkSRAM reqfifo
+enq first fifo_to_wires
+ifc addr SRAM_ADDR[*]
+request zbuf
+ifc cycle Bit#(1) mkTriState data SRAM_DATA[*]
+nwe SRAM_NWE
+deq mkLFIFOF enq cycle_machine
+Fig.4. In the dynamic arbiter based design, the SRAM controller is decoupled from
+the SRAMSplit module. Its state over the two cycles of operation is determined by an
+internal cycle register, handled by the cycle machine rule. The fifo to wires rule
+controls the tri-state buffer and drives the outputs.
+Arbitration also needs to take place in the SRAMFIFO module, because meth-
+ods for enqueuing and dequeuing data are designed not to conflict, in order to
+simplifymodulereuse.Whenbothmethodsarecalledduringthesamecycle,we
+check if the queue’s head and tail pointers are equal to each other. This means
+that the dequeue method has requested to read the same address which the
+reqfifo[.]
+ssrrvv[B.] rreeqquueesstt p p u u t t mkLFIFOF g g e e t t [0] [1]
+rreessppoonnssee
+getPrioritizeValid(.) Bit#(1)
+deq mkLFIFOF enq
+prioritize_current_turn
+mkSRAMSplit wires
+Fig.5. SRAMSplit provides two SRAM server interfaces and arbitrates their access to
+a single SRAM controller. Requests coming to both servers are held into FIFOs until
+beingsenttothecontroller.Asetofthreemutuallyexclusiverulesarbitratetheaccess
+basedonnot-emptyFIFOflagsandonaturnregister.ApendingFIFOpreservesthe
+requester identification, allowing responses to be served back in the right order.
+interface Client cli;
+interface Get request;
+method ActionValue#(SRAMReq#(Bit#(addr_sz), tdata)) get;
+// Obey the scheduled request order rule compute_req_turn(deq_requested_mem || enq_requested_mem);
+MemOp turn; // Read or Write enum if(deq_requested_mem && enq_requested_mem) begin
+case (req_turn.first) matches if(head[2] == tail[2]) begin
+Read: action turn = Read; req_turn.deq; endaction // conflict: deq has read from head[2]-1 and enq has written to tail[2]-1
+ReadThenWrite: action // enforce memory order compatible with method order:
+turn = turn_stage == 1'b0 ? Read : Write; // deq < enq implies read < write
+if(turn_stage == 1'b1) req_turn.deq; req_turn.enq(ReadThenWrite);
+turn_stage <= ~turn_stage; end else begin
+endaction req_turn.enq(last_op[0] == Read ? WriteThenRead : ReadThenWrite); // LRU
+// Write and WriteThenRead implementations here ... end
+endcase end else if(deq_requested_mem && !enq_requested_mem) begin
+last_op[1] <= turn; req_turn.enq(Read);
+// Forward request to SRAMSplit end else if(!deq_requested_mem && enq_requested_mem) begin
+if (turn == Read) begin req_turn.enq(Write);
+req_read.deq; return tagged Read req_read.first; end
+end else /* Write request here ... */ endrule
+endinterface
+interface Put response; /* ... */ endinterface
+endinterface
+Fig.6. Excerpts from the dynamic arbitrated SRAMFIFO implementation. All of our
+modules follow a client/server pattern, demanding the treatment of simultaneous re-
+quests for full decoupling. The compute req turn rule (right panel) chooses the turn
+accordingtowhichrequestswereissuedatthecurrentcycle.Wheneverpossible,aLeast
+Recently Used (LRU) scheme is adopted (highlighted in the code). The request.get
+method of the client interface (left panel) queries this information from the req turn
+FIFO,updateslast opandforwardsthecorrectrequestbyreturningit.Thelast op
+is an example of an Ephemeral History Register (EHR) — references to it must be
+appendedwithanindex(shownassubscripttextinthecode)whichdefinesthelogical
+execution order of register read and write operations.
+enqueue method asked to write. In this case, we enforce requests to be sent to
+SRAM in the same order as the logical execution order chosen when designing
+the methods (dequeue before enqueue, and thus read before write). Otherwise,
+we follow a LRU approach based on the value of a register which holds the type
+of the last memory operation issued by the SRAMFIFO module (Figure 6).
+3.2 Static arbiter
+Starting from the code of the dynamic version, we incrementally added new
+conditionstomethodpredicates,testingthesystemafterthechanges.Asimplicit
+conditions which control the data flow of FIFOs are still present in the logic at
+thisdevelopmentstage,designererrorstendtopreventrulesfromfiring,stopping
+data flow and making the system hang instead of producing incorrect results.
+Fig. 7. Timing diagram of SRAMFIFO
+reqenqresp reqdeqresp
+transactionsgovernedbythestaticar-
+biter. Arrows identify in which cycles
+0 1 2 3 4 5 6 7 0 1 thememoryrequestsandresponsesoc-
+cur.Whiterectanglesrepresentactions
+on uartInFifo, while black rectangles
+reqdeqresp reqenqresp
+depict operations on uartOutFifo.
+Weaddedthesepredicateconditionsbasedonamanuallydevisedarbitration
+schedule,showninFigure7.Thisscheduleallowsfortheexecutionofanenqueue
+and a dequeue operation on both uartInFifo and uartOutFifo during the
+course of 8 clock cycles. A central arbiter, which consists of a counter reset
+every8cycles,wasimplementedjustbelowthetoplevelmodule.Booleanvalues
+derived from this counter, signaling if each operation could occur during each
+cycle, were routed from the top level module to the inner SRAM controller,
+SRAMSplit and SRAMFIFOs (Figure 8). After the predicates were changed, some
+FIFOs could be removed, reducing the number of LEs needed to implement the
+design.
+SRAM controller: The cycle register (compare with Figure 4) was re-
+moved and replaced by the least significant bit of the central arbiter counter.
+Memory requests became allowed only when this bit is zero, which happens in
+cycles numbered 0, 2, 4 and 6 (Figure 7).
+SRAMSplit:Requeststooneofthearbitratedserversbecameallowedonly
+during the correct cycle, as defined by the timing diagram — requests coming
+from uartInFifo at cycles numbered 0 and 2, and those from uartOutFifo at
+cycles 4 and 6. Both reqfifos could then be removed from the design without
+affecting its behavior. The order of responses could also be inferred from the
+diagram (cycles 3, 5, 7 and 1), allowing us to remove the pending FIFO. After
+all changes, the module became just an abstraction which synthesizes purely to
+wires (compare with Figure 5).
+// We limit the rules and actions to occur on the right
+// cycle by inserting predicate conditions
+// Central Arbiter definition module mkSRAM#(Bit#(1) turn) (SRAM#(taddr, tdata))
+// Just a cyclic counter // ...
+interface CentralArbiter#(numeric type arbitrated_units); rule cycle_machine(turn == 0)
+interface ReadOnly#(Bit#(TLog#(arbitrated_units))) turn; /* ... */ // Notice the cycle dependent predicate
+endinterface endrule
+interface Server ifc; interface Put request;
+module mkCentralArbiter(CentralArbiter#(n)); method Action put(SRAMReq#(taddr, tdata) req)
+Reg#(Bit#(TLog#(n))) turnCounter <- mkRegU; if (turn == 0); // Method implicit condition
+rule incrementTurn; // ...
+let maxCount = fromInteger(valueOf(n) - 1); endmethod
+turnCounter <= (turnCounter == maxCount) ? 0 : (turnCounter + 1); endinterface; /* ... */ endinterface;
+endrule endmodule
+interface ReadOnly turn = regToReadOnly(turnCounter);
+endmodule // We also attributed implicit conditions to specific
+// actions which depend on the correct cycle
+// On the top module, we pass the arbiter turn as argument to the modules module mkSRAMFIFO#(Bool turnRead, Bool turnWrite)
+CentralArbiter#(8) arb <- mkCentralArbiter; (SRAMFIFO#(addr_sz, tdata))
+SRAMSplit#(AddrSize, Byte) sram // ...
+rb.turn == 5, arb.turn == 7); m e
+.
+..
+od Action enq(tdata x) if (not_ring_full[1]);
+<- mkSRAMFIFO(arb.turn == 2, arb.turn == 0); when(turnWrite, action // when adds implicit conditions
+SRAMFIFO#(FifoAddrSize, Byte) uartOutFifo // ... // to an action expression
+<- mkSRAMFIFO(arb.turn == 4, arb.turn == 6); endaction);
+Fig.8.Excerptsfromthestaticarbiterimplementation.TheCentralArbitermodule,
+whichconsistsofasimplecycliccounter,isinstantiatedinsidethetop-levelmodule.Its
+turn method describes the current cycle according to the schedule of Figure 7. Some
+bitsofthecyclecounter,orBooleanconditionsinvolvingitscurrentstate,areroutedto
+innermodules,wheretheyareappendedtopredicatesoraddedasimplicitconditions.
+SRAMFIFO: Dequeues and enqueues became allowed only during the des-
+ignated cycles (2 and 4 for dequeues, 0 and 6 for enqueues). This allowed to
+remove memory request output FIFOs, which were replaced by wires.
+4.1 Synthesis
+Synthesis results are shown in Table 1. On the device actually adopted in our
+project (EPM2210F324C3), the dynamic arbitrated circuit occupies 200 more
+LEs than the static arbiter design. This corresponds to 9% of the LEs available
+intheCPLD.Almostahalfofthehardwareresourcesarestillfreeandcouldbe
+exploitedtoimplementnewfeatures.Wehavealsosynthesizedbotharchitectures
+on a smaller device (EPM1270F256C3) in order to demonstrate the design can
+meet the requirements even when reaching the limits of the CPLD substrate.
+The Quartus II Fitter clearly undertook more effort during synthesis on this
+device,asbothcircuitswereimplementedoccupyinglessLEsthanonthebigger
+CPLD.Nonetheless,theattainableclockfrequencywasnotsignificantlyreduced
+by this area optimization, remaining above 50 MHz.
+4.2 Experimental validation
+Workbenchvalidationconsistedinconnectingindependentsquare-waveperiodic
+signal generators into each input of the system for 8 hours and then analyzing
+Table 1. Synthesis results for both arbiter designs (Altera Quartus II 14.0)
+EPM2210F324C3 EPM1270F256C3
+Design Logic Maximum clock Logic Maximum clock
+Arbiter elements frequency elements frequency
+Static 1017 (46%) 54.57 MHz 970 (76%) 54.36 MHz
+Dynamic 1217 (55%) 54.07 MHz 1168 (92%) 53.49 MHz
+1999 2000 2001
+secnerruccoforebmuN
+161 162 163 164 165
+1362 1363 1364 1365
+secnerruccoforebmuN
+1383 1384 1385 1386 1402 1403 1404
+Fig.9. Histograms displaying the number of occurrences of each time interval ∆t
+measured between two consecutive pulses. Each one of the six inputs channels was
+connected to an independent periodic signal source. No missed nor spurious events
+could be observed even after eight hours of acquisition.
+the acquired data to look for spurious or missing detections. Figure 9 shows
+histograms of the time interval (∆t) between two consecutive recorded pulses
+for all input channels. Histograms shown in the first line correspond to periodic
+pulsesgeneratedbyan1-channelHewlett-Packard33120Aanda2-channelSony-
+Tektronix AFG320 function generator. The three remaining channels were fed
+withsignalsgeneratedbyfree-runningastableoscillatorsmadeusingtheNE555
+timer integrated circuit.
+The first input channel was programmed to synchronize DAC conversions,
+thuswehavefeditwith500Hz(frameratefrequencyadoptedbytheVSImG[15]
+visual stimulation system). The second and third channels were supplied with
+close but incommensurable frequencies (6.2 kHz and 6.1 kHz). The remaining
+channels were fed by similar frequencies, produced by three identical NE555
+circuits, differing only within component nominal tolerances.
+Experimentswithbotharchitectures(dynamicandstaticarbiter)resultedin
+almost identical histograms, thus the figure only portrays the results for one of
+them(dynamicarbiter).Thehistogramsshowthatduring8hoursofacquisition
+no pulses were missed, and no spurious events were registered, otherwise the
+abscissaofthegraphwouldreachdoubleorhalfthevalueofthebaselineperiod,
+respectively. The maximum deviation from the adjusted periods was within the
+acceptablegenerator’sthermaldrift.Asexpected,NE555oscillatorsarelesssta-
+ble and produce more jitter than the commercial function generators, resulting
+in sparser histograms.
+We emphasize that input event periods employed during this test were well
+below the minimum intervals between spikes (refractory period) attainable by
+a typical neuron. For example, in Chrysomya megacephala’s H1 neuron this
+minimum interval is 2 ms [20].
+4.3 Arbiter resilience evaluation
+Besides the dynamic arbiter design advantages related to code reusability, in-
+herent to its latency insensitive and decoupled characteristics, it is also more
+resilient to failures. In order to prove this, we needed to increase the timestamp
+resolution above its original specification of 1 µs. In fact, any update rate be-
+low1/40oftheclockfrequency(50MHz)canalwaysbecorrectlyscheduled,asit
+leaves room for at least 5 rounds of 4 memory operations, each one taking 2 cy-
+cles (see Figure 7), sufficient to carry the 5-byte (channelFlags, timestamp)
+tuple in and out of the FIFOs. Thus, to be able to observe failures related to
+differences in SRAM arbitration schemes, we increased the timestamp counter
+update rate from 1/50 to 1/20 of the clock frequency.
+InordertokeepcontroloverparameterssuchasUARTtransmissionrate,we
+simulatedthesysteminsteadofevaluatingitwithworkbenchinstruments.Both
+architectures were simulated under exactly the same parameters and inputs.
+InputswerefedwithtrainsofpulsesgeneratedaccordingtoaPoissonprocess,a
+stochasticmodelthatoccasionallyproducesactivitybursts,althoughitpossesses
+a parameterized mean rate. It has also been adopted in some statistical models
+of spiking neurons [1]. The first channel, however, was modeled as an oscillation
+whosefrequencyvariesaccordingtoanarrowGaussiandistribution,whichbetter
+reproduces the behavior of the stimuli reference clock.
+We limited UART transmission to 1 byte per 6 cycles, aiming to observe the
+systeminaregimeinwhichitwouldeventuallyacquiremoredatathanitcould
+transmit. UART reception was constrained to 1 byte per 10 cycles, allowing 3-
+byte chunks of stimuli data to be provided to the system at double the speed
+required by the first-channel reference clock, whose mean frequency was chosen
+at 1/60 of the system clock.
+Varying the rate parameter of the Poisson processes, we measured the total
+mean input event rate to which the system was exposed, i.e. the number of
+input events divided by the number of cycles of simulation, relating it to the
+meantimebetweenfailures(MTBF)innumberofcycles.Failuresweredetected
+0.015 0.020 0.025 0.030 0.035 0.040 0.045 0.050 0.055
+Meaninputeventrate(dividedbyclockfrequency)
+)selcyc(seruliafneewtebemitnaeM
+Dynamicarbiter
+Staticarbiter
+regimetransition
+Fig.10. Mean time between failures (MTBF) obtained by simulation, with designs
+configuredforanincreasedtimestampresolutionof1/20ofthesystemclock,andsubject
+to large mean input event rates. The dynamic arbiter is consistently more resilient,
+and presented two operating regimes: in regime A, failures are caused by overflow of
+uartOutFifo, while in regime B, memory write requests occur at a high rate and
+eventually cannot be scheduled on time, overflowing funnel. As the static arbiter
+schedules enqueuing operations at a fixed rate of 1 byte per 8 cycles (slower than
+the simulated UART transmission rate), regime C is only due to funnel overflow.
+if any of the four error conditions discussed in Section 3 were triggered. In this
+experiment they happened only due to overflows in the tx path.
+Figure 10 shows these results and demonstrates that besides supporting a
+mean firing rate greater than the static arbiter without missing events, the dy-
+namic arbiter takes longer to fail when the frequency approaches its limits. At
+an input rate of 1/20, the maximum meaningful frequency at the adopted time-
+stamp resolution, the dynamic arbiter fails after circa 103 cycles, whereas the
+static arbiter withstands for only 102 cycles.
+Under the simulation parameters, the static arbiter is not able to fill uart-
+OutFifo’s SRAM-contained ring with more than 1 byte. This happens because
+the FIFO enqueuing rate is limited to a maximum of 1 byte per 8 cycles by the
+central arbiter schedule (see Figure 7), while the simulated UART can reach a
+transmissionrateof1byteper6cycles,sufficienttokeeptheFIFOalmostempty.
+Theobservedfailureswereduetooverflowofthefunnel:theuartOutFifonever
+even came close to a full state. Therefore, the failure process may be viewed as
+nearly stationary at a time scale greater than 102 cycles. Indeed, the measured
+data set (Figure 10–C) does not change significantly if we reset the circuit state
+a couple of times during the course of simulation.
+Ontheotherhand,thedynamicarbiterisabletosurpassanoperatingregime
+(Figure10–B)wherefailuresoccurbecauseof funneloverflow,reachinganother
+regimeatlowerfrequencies(Figure10–A)wherethesystemdoesnotabortuntil
+uartOutFifo is full. The dashed curve is proportional to (f −f )−1, where f
+is the mean input frequency (abscissa) and f is a limit frequency (in this
+experiment, f ≈ 0.0282) such that 5f is less than the effective UART
+transmission rate, implying the circuit is not expected to ever fail for f ≤f .
+5 Conclusions
+Thesystemdescribedinthispaper(sourcecodeat[8])canbeappliedtoneuro-
+science research both on in vivo or in vitro experiments requiring deterministic
+timingandsynchronousstimuligeneration,suchasthestudyofneuralcodingon
+thevisualsystemofflies[21].Itcanalsobeappliedtoexperimentsinneuroethol-
+ogy, for example on the analysis of electrocommunication signals produced by
+pulse-type electric fish [22,23,24,25]. The employed digital pulse timestamping
+technique allows to achieve a measurement precision in the order of 1 µs, much
+higher than most ADC-based acquisition systems. Even though our project was
+programmed to a small reconfigurable device, almost a half of LEs were left free
+and can be filled to implement future experiments with real-time feedback [26].
+We have also shown that Bluespec SystemVerilog (BSV) can be effectively
+used even in projects involving small devices, and have presented an approach
+to refactor a decoupled and latency insensitive logic into a statically arbitrated
+one,whichcouldbeusefulwhenadesignerneedstoquicklylowerasystem’sLE
+usage — however, keeping dynamic arbitration can compensate the LE cost if
+thesystemneedstoberesilienttoactivitybursts.Thedesignedcodeismodular
+andreusabletoimplementsimilarsystems,e.g.wehaveaworkingprototypefor
+closed-loopexperimentsimplementedonanEP4CGX150DF31C7FPGA,which
+occupies 5728 LEs (4% of the device) and interfaces with a real-time operating
+system (RTOS) through PCI Express [27].
+Acknowledgments. AuthorsweresupportedbygrantsfromCAPESandFAPESP.
+Maxim Integrated provided free analog IC samples. Altera Corp and Bluespec Inc
+supplied free software licenses through their university programs.

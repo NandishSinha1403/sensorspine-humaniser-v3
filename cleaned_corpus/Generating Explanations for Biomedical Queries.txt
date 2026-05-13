@@ -1,0 +1,1470 @@
+UnderconsiderationforpublicationinTheoryandPracticeofLogicProgramming 1
+Generating Explanations for Biomedical Queries
+ESRAERDEM,UMUTOZTOK
+SabancıUniversity,Orhanlı,Tuzla,I˙stanbul34956,Turkey
+(e-mail:{esraerdem,uoztok}@sabanciuniv.edu)
+submitted25October2012;revised17July2013;accepted19August2013
+We introduce novel mathematical models and algorithms to generate (shortest or k different) ex-
+planationsforbiomedicalqueries,usinganswersetprogramming.Weimplementthesealgorithms
+and integrate them in BIOQUERY-ASP. We illustrate the usefulness of these methods with some
+complex biomedical queries related to drug discovery, over the biomedical knowledge resources
+PHARMGKB,DRUGBANK,BIOGRID,CTD,SIDER,DISEASEONTOLOGYandORPHADATA.
+KEYWORDS:answersetprogramming,explanationgeneration,queryanswering,biomedicalqueries
+1 Introduction
+Recent advances in health and life sciences have led to generation of a large amount of
+biomedical data, represented in various biomedical databases or ontologies. That these
+databasesandontologiesarerepresentedindifferentformatsandconstructed/maintained
+independentlyfromeachotheratdifferentlocations,havebroughtaboutmanychallenges
+for answering complex biomedical queries that require integration of knowledge repre-
+sented in these ontologies and databases. One of the challenges for the users is to be
+able to represent such a biomedical query in a natural language, and get its answers in
+an understandable form. Another challenge is to extract relevant knowledge from differ-
+entknowledgeresources,andintegratethemappropriatelyusingalsodefinitions,suchas,
+chains of gene-gene interactions, cliques of genes based on gene-gene relations, or simi-
+larity/diversityofgenes/drugs.Furthermore,onceananswerisfoundforacomplexquery,
+theexpertsmayneedfurtherexplanationsabouttheanswer.
+Table1displaysalistofcomplexbiomedicalqueriesthatareimportantfromthepointof
+viewofdrugdiscovery.Inthequeries,drug-druginteractionspresentnegativeinteractions
+among drugs, and gene-gene interactions present both negative and positive interactions
+among genes. Consider, for instance the query Q6. New molecule synthesis by changing
+substitutes of parent compound may lead to different biochemical and physiological ef-
+fects; and each trial may lead to different indications. Such studies are important for fast
+inventionsofnewmolecules.Forexample,whiledevelopingthedrugLovastatin(amem-
+berofthedrugclassofHmg-coareductaseinhibitors,usedforloweringcholesterol)from
+Aspergillusterreus(asortoffungus)in1979,scientistsatMerckderivedanewmolecule
+namedSimvastatinthatalsobelongstothesamedrugcategory(ahypolipidemicdrugused
+1v7926.9031:viXra
+2 EsraErdem,UmutOztok
+Table1:Alistofcomplexbiomedicalqueries.
+Q1 WhatarethedrugsthattreatthediseaseAsthmaandthattargetthegeneADRB1?
+Q2 What are the side effects of the drugs that treat the disease Asthma and that target the
+geneADRB1?
+Q3 What are the genes that are targeted by the drug Epinephrine and that interact with the
+geneDLG4?
+Q4 What are the genes that interact with at least 3 genes and that are targeted by the
+drugEpinephrine?
+Q5 WhatarethedrugsthattreatthediseaseAsthmaorthatreactwiththedrugEpinephrine?
+Q6 What are the genes that are targeted by all the drugs that belong to the category Hmg-coa
+reductaseinhibitors?
+Q7 Whatarethecliquesof5genes,thatcontainthegeneDLG4?
+Q8 WhatarethegenesthatarerelatedtothegeneADRB1viaagene-geneinteractionchainof
+lengthatmost3?
+Q9 Whatarethe3mostsimilargenesthataretargetedbythedrugEpinephrine?
+Q10 What are the genes that are related to the gene DLG4 via a gene-gene interaction chain of
+length at most 3 and that are targeted by the drugs that belong to the category Hmg-coa
+reductaseinhibitors?
+Q11 WhatarethedrugsthattreatthediseaseDepressionandthatdonottargetthegeneACYP1?
+Q12 WhatarethesymptomsofdiseasesthataretreatedbythedrugTriadimefon?
+Q13 Whatarethe3mostsimilardrugsthattargetthegeneDLG4?
+Q14 Whatarethe3closestdrugstothedrugEpinephrine?
+tocontrolelevatedcholesterol)targetingthesamegene.Therefore,identifyinggenestar-
+geted by a group of drugs automatically by means of queries like Q6 may be useful for
+experts.
+Once an answer to a query is found, the experts may ask for an explanation to have a
+betterunderstanding.Forinstance,ananswerforthequeryQ3inTable1is“ADRB1”.A
+shortestexplanationforthisanswerisasfollows:
+ThedrugEpinephrinetargetsthegeneADRB1accordingtoCTD.
+ThegeneDLG4interactswiththegeneADRB1accordingtoBIOGRID.
+AnanswerforthequeryQ8is“CASK”.Ashortestexplanationforthisanswerisasfol-
+lows:
+ThedistanceofthegeneCASKfromthestartgeneis2.
+ThegeneCASKinteractswiththegeneDLG4accordingtoBIOGRID.
+ThedistanceofthegeneDLG4fromthestartgeneis1.
+ThegeneDLG4interactswiththegeneADRB1accordingtoBIOGRID.
+ADRB1isthestartgene.
+(Statementswithmoreindentationsprovideexplanationsforstatementswithlessindenta-
+Toaddressthefirsttwochallengesdescribedabove(i.e.,representingcomplexqueriesin
+naturallanguageandfindinganswerstoqueriesefficiently),novelmethodsandasoftware
+system,calledBIOQUERY-ASP(Erdemetal.2011)(Figure1),havebeendevelopedusing
+AnswerSetProgramming(ASP)(MarekandTruszczyn´ski1999;Niemelä1999;Lifschitz
+2002;Baral2003;Lifschitz2008;Brewkaetal.2011):
+GeneratingExplanationsforBiomedicalQueries 3
+Erdem and Yeniterzi (Erdem and Yeniterzi 2009) developed a controlled natural
+language, BIOQUERY-CNL,forexpressingbiomedicalqueriesrelatedtodrugdis-
+covery. For instance, queries Q1–Q10 in Table 1 are in this language. Recently,
+thislanguagehasbeenextended(called BIOQUERY-CNL*)tocoverqueriesQ11–
+Q13(Oztok2012).Somealgorithmshavebeenintroducedtotranslateagivenquery
+inBIOQUERY-CNL(resp.BIOQUERY-CNL*)toaprograminASPaswell.
+Bodenreideretal.(Bodenreideretal.2008)introducedmethodstoextractbiomedi-
+calinformationfromvariousknowledgeresourcesandintegratethembyarulelayer.
+Thisrulelayernotonlyintegratesthoseknowledgeresourcesbutalsoprovidesdef-
+initionsofauxiliaryconcepts.
+Erdemetal.(Erdemetal.2011)haveintroducedanalgorithmforqueryanswering
+byidentifyingtherelevantpartsoftherulelayerandtheknowledgeresourceswith
+respecttoagivenquery.
+Thedetailsofrepresentingbiomedicalqueriesinnaturallanguageandansweringthemus-
+ingASPareexplainedinacompanionarticle.Thefocusofthisarticleisthelastchallenge:
+generatingexplanationsforbiomedicalqueries.
+Mostoftheexistingbiomedicalqueryingsystems(e.g.,webservicesbuiltovertheavail-
+ableknowledgeresources)supportkeywordsearchbutnotcomplexquerieslikethequeries
+in Table 1. None of the existing systems can provide informative explanations about the
+answers,butpointtorelatedwebpagesoftheknowledgeresourcesavailableonline.
+Thecontributionsofthisarticlecanbesummarizedasfollows.
+We have formally defined “explanations” in ASP, utilizing properties of programs
+andgraphs.Wehavealsodefinedvariationsofexplanations,suchas“shortestexpla-
+nations”and“kdifferentexplanations”.
+Wehaveintroducednovelgenericalgorithmstogenerateexplanationsforbiomedi-
+calqueries.Thesealgorithmscancomputeshortestork differentexplanations.We
+haveanalyzedthetermination,soundness,andcomplexityofthosealgorithms.
+We have developed a computational tool, called EXPGEN-ASP, that implements
+theseexplanationgenerationalgorithms.
+We have showed the applicability of our methods to generate explanations for an-
+swersofcomplexbiomedicalqueriesrelatedtodrugdiscovery.
+WehaveembeddedEXPGEN-ASPintoBIOQUERY-ASPsothattheexpertscanob-
+tainexplanationsregardingtheanswersofbiomedicalqueries,inanaturallanguage.
+The rest of the article is organized as follows. In Section 2, we provide a summary
+of Answer Set Programming. Next, in Section 3, we give an overview of BIOQUERY-
+ASP,inparticular,theearlierworkdoneonansweringbiomedicalqueriesinASP.Then,
+in Sections 4–6, we provide some definitions and algorithms related to generating short-
+est or k different explanations for an answer, also in ASP. Next, Section 7 illustrates
+the usefulness of these algorithms on some complex queries over the biomedical knowl-
+edgeresourcesPHARMGKB(McDonaghetal.2011),1 DRUGBANK(Knoxetal.2010),2
+4 EsraErdem,UmutOztok
+User Interface Databases/Ontologies
+Query in BioQuery-CNL
+Query in ASP Rule Layer in ASP
+Query Answering
+Relevant Part of ASP Program
+Query in ASP
+Explanation Generation Related Webpages
+Explanation in ASP
+Explanation in Natural Language
+Fig.1:SystemoverviewofBIOQUERY-ASP.
+BIOGRID (Stark et al. 2006),3 CTD (Davis et al. 2011),4 SIDER (Kuhn et al. 2010),5
+DISEASE ONTOLOGY (Schrimletal.2012)6 and ORPHADATA.7 InSections8and9,we
+discuss how to present explanations to the user in a natural language, and embedding of
+thesealgorithmsinBIOQUERY-ASP.InSection10,weprovideadetailedanalysisofthe
+relatedworkon“justifications”(Pontellietal.2009)incomparisontoexplanations;andin
+Section11,webrieflydiscussotherrelatedwork.WeconcludeinSection12bysumma-
+rizingourcontributionsandpointingoutsomepossiblefuturework.Proofsareprovided
+intheonlineappendixofthepaper.
+GeneratingExplanationsforBiomedicalQueries 5
+2 AnswerSetProgramming
+Answer Set Programming (ASP) (Marek and Truszczyn´ski 1999; Niemelä 1999; Lifs-
+chitz2002;Baral2003;Lifschitz2008;Brewkaetal.2011)isaformofdeclarativepro-
+gramming paradigm oriented towards solving combinatorial search problems as well as
+knowledge-intensiveproblems.Theideaistorepresentaproblemasa“program”whose
+models (called “answer sets” (Gelfond and Lifschitz 1988; Gelfond and Lifschitz 1991))
+correspondtothesolutions.Theanswersetsforthegivenprogramcanthenbecomputed
+byspecialimplementedsystemscalledanswersetsolvers.ASPhasahigh-levelrepresenta-
+tionlanguagethatallowsrecursivedefinitions,aggregates,weightconstraints,optimization
+statements,anddefaultnegation.
+ASP also provides efficient solvers, such as CLASP (Gebser et al. 2007). Due to the
+continuousimprovementoftheASPsolversandhighlyexpressiverepresentationlanguage
+ofASPwhichissupportedbyastrongtheoreticalbackgroundthatresultsfromayearsof
+intensiveresearch,ASPhasbeenappliedfruitfullytoawiderangeofareas.Hereare,for
+instance,threeapplicationsofASPusedinindustry:
+DecisionSupportSystems:AnASP-basedsystemwasdevelopedtohelpflightcon-
+trollers of space shuttle solve some planning and diagnostic tasks (Nogueira et al.
+2001)(usedbyUnitedSpaceAlliance).
+Automated Product Configuration: A web-based commercial system uses an ASP-
+based product configuration technology (Tiihonen et al. 2003) (used by Variantum
+Oy).
+WorkforceManagement:AnASP-basedsystemisdevelopedtobuildteamsofem-
+ployeestohandleincomingshipsbytakingintoaccountavarietyofrequirements,
+e.g.,skills,fairness,regulations(Riccaetal.2012)(usedbyGioiaTauroseaport).
+Let us briefly explain the syntax and semantics of ASP programs and describe how a
+computationalproblemcanbesolvedinASP.
+2.1 Programs
+Syntax TheinputlanguageofASPprogramsarecomposedofthreesetsnamelyconstant
+symbols,predicatesymbols,andvariablesymbolswhereintersectionofconstantsymbols
+and variable symbols is empty. The basic elements of the ASP programs are atoms. An
+atom p((cid:126)t) is composed of a predicate symbol p and terms(cid:126)t = t ,...,t where each t
+(1 i k)iseitheraconstantoravariable.Aliteraliseitheranatomp((cid:126)t)oritsnegated
+formnotp((cid:126)t).
+AnASPprogramisafinitesetofrulesoftheform:
+A A ,...,A ,notA ,...,notA (1)
+wherem k 0andeachA isanatom;whereas,Aisanatomor .
+Foraruler oftheform(1),Aiscalledthehead oftheruleanddenotedbyH(r).The
+conjunctionoftheliteralsA ,...,A ,notA ,...,notA iscalledthebodyofr.The
+set A ,...,A ofatoms(calledthepositivepartofthebody)isdenotedbyB+(r),and
+theset A ,...,A ofatoms(calledthenegativepartofthebody)isdenotedbyB (r),
+andalltheatomsinthebodyaredenotedbyB(r)=B+(r) B (r).
+6 EsraErdem,UmutOztok
+WesaythatarulerisafactifB(r)= ,andweusuallyomitthe sign.Furthermore,
+wesaythatarulerisaconstraintiftheheadofris ,andweusuallyomitthe sign.
+Semantics (Answer Sets) Answer sets of a program are defined over ground programs.
+We call an atom, rule, or program ground, if it does not contain any variables. Given a
+program Π, the set represents all the constants in Π, and the set represents all
+the ground atoms that can be constructed from atoms in Π with constants in . Also,
+Ground(Π)denotesthesetofallthegroundruleswhichareobtainedbysubstitutingall
+variablesinruleswiththesetofallpossibleconstantsin .
+AsubsetI of iscalledaninterpretationforΠ.Agroundatompistruewithrespect
+to an interpretation I if p I; otherwise, it is false. Similarly, a set S of atoms is true
+(resp., false) with respect to I if each atom p S is true (resp., false) with respect to I.
+An interpretation I satisfies a ground rule r, if H(r) is true with respect to I whenever
+B+(r)istrueandB (r)isfalsewithrespecttoI.AninterpretationI iscalledamodelof
+aprogramΠifitsatisfiesalltherulesinΠ.
+ThereductΠI ofaprogramΠwithrespecttoaninterpretationI isdefinedasfollows:
+An interpretation I is an answer set for a program Π, if it is a subset-minimal model
+forΠI,andAS(Π)denotesthesetofalltheanswersetsofaprogramΠ.
+Forexample,considerthefollowingprogramΠ :
+p notq (2)
+andtakeaninterpretationI = p .ThereductΠI isasfollows:
+TheinterpretationI isamodelofthereduct(3).LetustakeastrictsubsetI ofI which
+is ∅ .Then,thereductΠI 1 (cid:48) isagainequalto(3);however,I (cid:48) doesnotsatisfy(3).Therefore,
+I = p isasubset-minimalmodel;henceananswersetofΠ .Notealsothat p isthe
+onlyanswersetofΠ.
+2.2 Generate-And-TestRepresentationMethodologywithSpecialASPConstructs
+The idea of ASP (Lifschitz 2008) is to represent a computational problem as a program
+whoseanswersetscorrespondtothesolutionsoftheproblem,andtofindtheanswersets
+forthatprogramusingananswersetsolver.
+WhenwerepresentaprobleminASP,twokindsofrulesplayanimportantrole:those
+that“generate”manyanswersetscorrespondingto“possiblesolutions”,andthosethatcan
+beusedto“eliminate”theanswersetsthatdonotcorrespondtosolutions.Therules
+areoftheformerkind:theygeneratetheanswersets p and q .Constraintsareofthe
+latterkind.Forinstance,addingtheconstraint
+GeneratingExplanationsforBiomedicalQueries 7
+toprogram(4)eliminatestheanswersetsfortheprogramthatcontainp.
+InASP,weusespecialconstructsoftheform
+A ,...,A c (5)
+(calledchoiceexpressions),andoftheform
+l A ,...,A u (6)
+(called cardinality expressions) where each A is an atom and l and u are nonnegative
+integersdenotingthe“lowerbound”andthe“upperbound”(Simonsetal.2002).Programs
+usingtheseconstructscanbeviewedasabbreviationsfornormalnestedprogramsdefined
+in(FerrarisandLifschitz2005).Expression(5)describessubsetsof A ,...,A .Such
+expressionscanbeusedinheadsofrulestogeneratemanyanswersets.Forinstance,the
+answersetsfortheprogram
+p,q,r c (7)
+are arbitrary subsets of p,q,r . Expression (6) describes the subsets of the set
+A ,...,A whose cardinalities are at least l and at most u. Such expressions can be
+usedinconstraintstoeliminatesomeanswersets.Forinstance,addingtheconstraint
+to program (7) eliminates the answer sets for (7) whose cardinalities are at least 2. We
+abbreviatetherules
+A ,...,A c Body
+not(l A ,...,A )
+not( A ,...,A u)
+l A ,...,A c u Body.
+InASP,therearealsospecialconstructsthatareusefulforoptimizationproblems.For
+instance,tocomputeanswersetsthatcontainthemaximumnumberofelementsfromthe
+set A ,...,A ,wecanusethefollowingoptimizationstatement.
+maximize A ,...,A
+(cid:104){ }(cid:105)
+2.3 PresentingProgramstoAnswerSetSolvers
+Oncewerepresentacomputationalproblemasaprogramwhoseanswersetscorrespond
+tothesolutionsoftheproblem,wecanuseananswersetsolvertocomputethesolutions
+oftheproblem.Topresentaprogramtoananswersetsolver,likeCLASP,weneedtomake
+somesyntacticmodifications.
+Recallthatanswersetsforaprogramaredefinedovergroundprograms.Thus,theinput
+of ASP solvers should be ground instantiations of the programs. For that, programs go
+througha“grounding”phaseinwhichvariablesintheprogram(ifexists)aresubstituted
+byconstants.ForCLASP,weusethe“grounder”GRINGO(Gebseretal.2011).
+AlthoughthesyntaxoftheinputlanguageofGRINGOissomewhatmorerestrictedthan
+theclassofprogramsdefinedabove,itprovidesanumberofusefulspecialconstructs.For
+8 EsraErdem,UmutOztok
+instance,theheadofarulecanbeanexpressionofoneoftheforms
+A ,...,A c
+l A ,...,A c
+A ,...,A c u
+l A ,...,A c u
+but the superscript c and the sign are dropped. The body can also contain cardinality
+expressionsbutthesign isdropped.IntheinputlanguageofGRINGO,:-standsfor ,
+andeachruleisfollowedbyaperiod.Forfacts isdropped.Forinstance,therule
+1 p,q,r c 1
+canbepresentedtoGRINGOasfollow:
+1{p,q,r}1.
+Variables in a program are represented by strings whose initial letters are capitalized.
+Theconstantsandpredicatesymbols,ontheotherhand,startwithalowercaseletter.For
+instance,theprogramΠ
+p not p (1 i n)
+canbepresentedtoGRINGOasfollows:
+index(1..n).
+p(I) :- not p(I+1), index(I).
+Here,theauxiliarypredicateindexisa“domainpredicate”usedtodescribetherangesof
+variables.Variablescanbealsoused“locally”todescribethelistofformulas.Forinstance,
+1 p ,...,p 1
+canbeexpressedinGRINGOasfollows
+index(1..n).
+1{p(I) : index(I)}1.
+3 AnsweringBiomedicalQueries
+WehaveearlierdevelopedthesoftwaresystemBIOQUERY-ASP(Erdemetal.2011)(see
+Figure1)toanswercomplexqueriesthatrequireappropriateintegrationofrelevantknowl-
+edgefromdifferentknowledgeresourcesandauxiliarydefinitionssuchaschainsofdrug-
+druginteractions,cliquesofgenesbasedongene-generelations,orsimilar/diversegenes.
+Asdepicted inFigure 1, BIOQUERY-ASP takes aquery inacontrolled naturallanguage
+andtransformsitintoASP.Meanwhile,itextractsknowledgefrombiomedicaldatabases
+andontologies,andintegratestheminASP.Afterwards,itcomputesananswertothegiven
+queryusinganASPsolver.
+Letusgiveanexampletoillustratethesestages;thedetailsofrepresentingbiomedical
+queriesinnaturallanguageandansweringthemusingASPareexplainedinacompanion
+articlethough.
+GeneratingExplanationsforBiomedicalQueries 9
+Firstofall,letusmentionthatknowledgerelatedtodrugdiscoveryisextractedfromthe
+biomedicaldatabases/ontologiesandrepresentedinASP.Ifthebiomedicalontologyisin
+RDF(S)/OWL then we can extract such knowledge using the ASP solver DLVHEX (Eiter
+et al. 2006) by making use of external predicates. For instance, consider as an external
+theory a Drug Ontology described in RDF. All triples from this theory can be exported
+usingtheexternalpredicate&rdf:
+triple_drug(X,Y,Z) :- &rdf["URI for Drug Ontology"](X,Y,Z).
+ThenthenamesofdrugscanbeextractedbyDLVHEXusingtherule:
+drug_name(A) :- triple_drug(_,"drugproperties:name",A).
+Someknowledgeresourcesareprovidedasrelationaldatabases,ormoreoftenasaset
+oftriples(probablyextractedfromontologiesinRDF).Insuchcases,weuseshortscripts
+totransformtherelationsintoASP.
+Torelatetheknowledgeextractedfromthebiomedicaldatabasesorontologiesandalso
+provideauxiliarydefinitions,arulelayerisconstructedinASP.Forinstance,drugstarget-
+inggenesaredescribedbytherelationdrug_genedefinedintherulelayerasfollows:
+drug_gene(D,G) :- drug_gene_pharmgkb(D,G).
+drug_gene(D,G) :- drug_gene_ctd(D,G).
+wheredrug_gene_pharmgkbanddrug_gene_ctdarerelationsforextractingknowl-
+edge from relevant knowledge resources. The auxiliary concept of reachability of a gene
+fromanothergenebymeansofachainofgene-geneinteractionsisdefinedintherulelayer
+aswell:
+gene_reachable_from(X,1) :- gene_gene(X,Y), start_gene(Y).
+gene_reachable_from(X,N+1) :- gene_gene(X,Z),
+gene_reachable_from(Z,N), 0 < N, N < L,
+max_chain_length(L).
+Now,consider,forinstance,thequeryQ11fromTable1.
+Q11 What are the drugs that treat the disease Depression and that do not target the
+geneACYP1?
+This type of queries might be important in terms of drug repurposing (Chong and Sulli-
+van2007)whichhasachievedanumberofsuccessesindrugdevelopment,includingthe
+famousexampleofPfizer’sViagra(Gower2009).
+ThisqueryisthentranslatedintothefollowingprograminthelanguageofGRINGO:
+what_be_drugs(DRG) :- cond1(DRG), cond2(DRG).
+cond1(DRG) :- drug_disease(DRG,"Depression").
+cond2(DRG) :- drug_name(DRG), not drug_gene(DRG,"ACYP1").
+answer_exists :- what_be_drugs(DRG).
+:- not answer_exists.
+10 EsraErdem,UmutOztok
+where cond1 and cond2 are invented relations, drug_name, drug_disease and
+drug_genearedefinedintherulelayer.
+OncethequeryandtherulelayerareinASP,thepartsoftherulelayerthatarerelevant
+tothegivenqueryareidentifiedbyanalgorithm(Erdemetal.2011).Forsomequeries,the
+relevantpartoftheprogramisalmost100timessmallerthanthewholeprogram(consid-
+eringthenumberofgroundrules).
+Then, given the query as an ASP program and the relevant knowledge as an ASP pro-
+gram,wecanfindanswerstothequerybycomputingananswersetfortheunionofthese
+twoprogramsusingCLASP.Forthequeryaboveananswercomputedinthiswayis“Flu-
+oxetine”.
+4 ExplaininganAnswerforaQuery
+Onceananswerisfoundforacomplexbiomedicalquery,theexpertsmayneedinformative
+explanationsabouttheanswer,asdiscussedintheintroduction.Withthismotivation,we
+studygeneratingexplanationsforcomplexbiomedicalqueries.Sincethequeries,knowl-
+edge extracted from databases and ontologies, and the rule layer are in ASP, our studies
+focusonexplanationgenerationwithinthecontextofASP.
+Beforeweintroduceourmethodstogenerateexplanationsforagivenquery,letusin-
+troducesomedefinitionsregardingexplanationsinASP.
+Let Π be the relevant part of a ground ASP program with respect to a given biomedi-
+cal query Q (also a ground ASP program), that contains rules describing the knowledge
+extractedfrombiomedicalontologiesanddatabases,theknowledgeintegratingthem,and
+the background knowledge. Rules in Π Q generally do not contain cardinality/choice
+expressionsinthehead;therefore,weassumethatinΠ Qonlybodiesofrulescontain
+cardinalityexpressions.LetX beananswersetforΠ Q.Letpbeanatomthatcharacter-
+izesananswertothequeryQ.Thegoalistofindan“explanation”astowhypiscomputed
+as an answer to the query Q, i.e., why is p in X? Before we introduce a definition of an
+explanation,weneedthefollowingnotationsanddefinitions.
+WesaythatasetX ofatomssatisfiesacardinalityexpressionC oftheform
+l A ,...,A u
+if the cardinality of X A ,...,A is within the lower bound l and upper bound u.
+AlsoX satisfiesasetSC ofcardinalityexpressions(denotedbyX =SC),ifX satisfies
+everyelementofSC.
+LetΠbeagroundASPprogram,r bearuleinΠ,pbeanatominΠ,andY andZ be
+twosetsofatoms.LetB (r)denotethesetofcardinalityexpressionsthatappearinthe
+bodyofr.WesaythatrsupportsanatompusingatomsinY butnotinZ (orwithrespect
+toY butZ),ifthefollowinghold:
+B+(r) Y Z,
+B (r) Y = ,
+WedenotethesetofrulesinΠthatsupportpwithrespecttoY butZ,byΠ (p).
+GeneratingExplanationsforBiomedicalQueries 11
+WenowintroducedefinitionsaboutexplanationsinASP.Wefirstdefineagenerictree
+whoseverticesarelabeledbyeitheratomsorrules.
+Definition1(Vertex-labeledtree)
+Avertex-labeledtree V,E,l,Π,X foraprogramΠandasetX ofatomsisatree V,E
+(cid:104) (cid:105) (cid:104) (cid:105)
+whoseverticesarelabeledbyafunctionlthatmapsV toΠ X.Inthistree,thevertices
+labeledbyanatom(resp.,arule)arecalledatomvertices(resp.,rulevertices).
+For a vertex-labeled tree T = V,E,l,Π,X and a vertex v in V, we introduce the
+(cid:104) (cid:105)
+followingnotations:
+anc (v)denotesthesetofatomswhicharelabelsofancestorsofv.
+des (v)denotesthesetofruleverticeswhicharedescendantsofv.
+child (v)denotesthesetofchildrenofv.
+sibling (v)denotesthesetofsiblingsofv.
+out (v)denotesthesetofout-goingedgesofv.
+deg (v)denotesthedegreeofvandequalsto out (v).
+Ifdeg (v)=0,thenvisaleaf vertex.
+leaf(T)denotesthesetofleavesofT.
+TherootofT istherootof V,E .
+• (cid:104) (cid:105)
+T isemptyif V,E = , .
+• (cid:104) (cid:105) (cid:104)∅ ∅(cid:105)
+We now define a specific class of vertex-labeled trees which contains all possible “ex-
+planations”foranatom.
+Definition2(And-orexplanationtree)
+LetΠbeagroundASPprogram,X beananswersetforΠ,pbeanatominX.Theand-or
+explanationtreeforpwithrespecttoΠandX isavertex-labeledtreeT = V,E,l,Π,X
+(cid:104) (cid:105)
+thatsatisfiesthefollowing:
+(i) fortherootv V ofthetree,l(v)=p;
+(ii) foreveryatomvertexv V,
+out E (v)=
+(v,v (cid:48) )
+(v,v (cid:48) )
+E, l(v (cid:48) )
+(iii) foreveryrulevertexv V,
+out E (v)= (v,v (cid:48) ) (v,v (cid:48) ) E, l(v (cid:48) ) B+(l(v)) ;
+(iv) eachleafvertexisarulevertex.
+Letusexplainconditions(i) (iv)inDefinition2indetail.
+(i) The root of the and-or explanation tree T is labeled by the atom p. Intuitively, T
+containsallpossibleexplanationsforp.
+(ii) For every atom vertex v V, there is an out-going edge (v,v ) to a rule vertex
+v V underthefollowingconditions:therulethatlabelsv supportstheatomthat
+(cid:48) (cid:48)
+labelsv,usingatomsinX butnotanyatomthatlabelsanancestorofv .Wewant
+toexcludetheatomslabelingancestorsofv toensurethattheheightoftheand-or
+explanationtreeisfinite(e.g.,otherwise,duetocyclicdependenciesthetreemaybe
+infinite).
+12 EsraErdem,UmutOztok
+(iii) Foreveryrulevertexv V,thereisanout-goingedge(v,v )toanatomvertexif
+theatomthatlabelsv isinthepositivebodyoftherulethatlabelsv.Inthisway,we
+makesurethateveryatominthepositivebodyoftherulethatlabelsv takespartin
+explainingtheheadoftherulethatlabelsv.
+(iv) Together with Conditions (ii) and (iii) above, this condition guarantees that the
+leaves of the and-or explanation tree are rule vertices that are labeled by facts in
+the reduct of the given ASP program Π with respect to the given answer set X.
+Intuitively,thisconditionexpressesthattheleavesareself-explanatory.
+LetΠbetheprogram
+andX = a,b,c,d .Theand-orexplanationtreeforawithrespecttoΠandX isshown
+inFigure2.Intuitively,theand-orexplanationtreeincludesallpossible“explanations”for
+anatom.Forinstance,accordingtoFigure2,theatomahastwoexplanations:
+Oneexplanationischaracterizedbytherulesthatlabeltheverticesintheleftsubtree
+oftheroot:aisinX becausetherule
+support a. Moreover, this rule can be “applied to generate a” because b and c, the
+atomsinitspositivebody,areinX.Further,bisinX becausetherule
+supportsb.Further,cisinX becausecissupportedbytherule
+whichisself-explanatory.
+Theotherexplanationischaracterizedbytherulesthatlabeltheverticesintheright
+subtreeoftheroot:aisinX becausetherule
+supports a. Further, this rule can be “applied to generate a” because d is in X. In
+addition,disinX becausedissupportedbytherule
+whichisself-explanatory.
+Proposition1
+Let Π be a ground ASP program and X be an answer set for Π. For every p in X, the
+and-orexplanationtreeforpwithrespecttoΠandX isnotempty.
+GeneratingExplanationsforBiomedicalQueries 13
+Fig.2:Theand-orexplanationtreeforExample1.
+Note that in the and-or explanation tree, atom vertices are the “or” vertices, and rule
+vertices are the “and” vertices. Then, we can obtain a subtree of the and-or explanation
+treethatcontainsanexplanation,byvisitingonlyonechildofeveryatomvertexandevery
+child of every rule vertex, starting from the root of the and-or explanation tree. Here is
+precisedefinitionofsuchasubtree,calledanexplanationtree.
+Definition3(Explanationtree)
+Let Π be a ground ASP program, X be an answer set for Π, p be an atom in X, and
+T = V,E,l,Π,X be the and-or explanation tree for p with respect to Π and X. An
+(cid:104) (cid:105)
+explanationtreeinT isavertex-labeledtreeT = V ,E ,l,Π,X suchthat
+(cid:48) (cid:48) (cid:48)
+(cid:104) (cid:105)
+(i) V ,E isasubtreeof V,E ;
+(cid:48) (cid:48)
+(cid:104) (cid:105) (cid:104) (cid:105)
+(ii) therootof V ,E istherootof V,E ;
+(cid:48) (cid:48)
+(cid:104) (cid:105) (cid:104) (cid:105)
+(iii) foreveryatomvertexv V ,deg (v )=1;
+(cid:48) ∈ (cid:48) E(cid:48) (cid:48)
+(iv) foreveryrulevertexv V ,out (v ) E .
+(cid:48) (cid:48) E (cid:48) (cid:48)
+LetT betheand-orexplanationtreeinFigure2.Then,Figure3illustratestheexplanation
+trees in T. These explanation trees characterize the two explanations for a explained in
+Example1.
+Afterhavingdefinedtheand-orexplanationtreeandanexplanationtreeforanatom,let
+usnowdefineanexplanationforanatom.
+Definition4(Explanation)
+Let Π be a ground ASP program, X be an answer set for Π, and p be an atom in X. A
+vertex-labeled tree V ,E ,l,Π,X is an explanation for p with respect to Π and X if
+(cid:48) (cid:48)
+(cid:104) (cid:105)
+there exists an explanation tree V,E,l,Π,X in the and-or explanation tree for p with
+(cid:104) (cid:105)
+respecttoΠandX suchthat
+(i) V = v visarulevertexinV ;
+(ii) E = (v ,v ) (v ,v),(v,v ) E, forsomeatomvertexv V .
+(cid:48) 1 2 1 2
+Intuitively, an explanation can be obtained from an explanation tree by “ignoring” its
+atomvertices.
+14 EsraErdem,UmutOztok
+Fig.3:ExplanationtreesforExample2.
+Let Π and X be defined as in Example 1. Then, Figure 4 depicts two explanations for a
+withrespecttoΠandX,describedinExample1.
+Fig.4:ExplanationsforExample3.
+Sofar,wehaveconsideredonlypositiveprogramsintheexamples.Ourdefinitionscan
+alsobeusedinprogramsthatcontainnegationandaggregatesinthebodiesofrules.
+LetΠbetheprogram
+a b,c,note
+a d,1 b,c 2
+andX = a,b,c,d .Theand-orexplanationtreeforawithrespecttoΠandX isshown
+inFigure5(a).Here,therulea d,notbisnotincludedinthetreeasbisinX,whereas
+the rule a b,c,not e is in the tree as e is not in X and, b and c are in X. Also, the
+rule a d,1 b,c 2 is in the tree as d is in X and the cardinality expression
+1 b,c 2issatisfiedbyX.AnexplanationforawithrespecttoΠandX isshown
+inFigure5(b).
+GeneratingExplanationsforBiomedicalQueries 15
+a b,c,note a d,1 b,c 2
+c a d,1 b,c 2
+Fig.5:(a)Theand-orexplanationtreeforaand(b)anexplanationfora.
+Note that our definition of an and-or explanation tree considers positive body parts of
+therulesonlytoprovideexplanations.Therefore,explanationtreesdonotprovidefurther
+explanations for negated literals (e.g., why an atom is not included in the answer set), or
+aggregates(e.g.,whyacardinalityconstraintissatisfied)asseenintheexampleabove.
+5 GeneratingShortestExplanations
+As can be seen in Figure 4, there might be more than one explanation for a given atom.
+Hence, it is not surprising that one may prefer some explanations to others. Consider
+biomedicalqueriesaboutchainsofgene-geneinteractionslikethequeryQ8inTable1.An-
+swersofsuchqueriesmaycontainchainsofgene-geneinteractionswithdifferentlengths.
+Forinstance,ananswerforthisqueryis“CASK”.Figure6showsanexplanationforthis
+answer.Here,“CASK”isrelatedto“ADRB1”viaagene-genechaininteractionoflength
+2 (the chain “CASK”–“DLG4”–“ADRB1”). Another explanation is partly shown in Fig-
+ure7.Now,“CASK”isrelatedto“ADRB1”viaagene-genechaininteractionoflength3
+(thechain“CASK”–“DLG1”–“DLG4”–“ADRB1”).Sincegene-geneinteractionsareim-
+portantfordrugdiscovery,itmaybemoredesirablefortheexpertstoreasonaboutchains
+withshortestlengths.
+With this motivation, we consider generating shortest explanations. Intuitively, an ex-
+planationS isshorterthananotherexplanationS ifthenumberofruleverticesinvolved
+in S is less than the number of rule vertices involved in S . Then we can define shortest
+explanationsasfollows.
+Definition5(Shortestexplanation)
+Let Π be a ground ASP program, X be an answer set for Π, p be an atom in X, and S
+be an explanation (with vertices V) for p with respect to Π and X. Then, S is a shortest
+explanationforpwithrespecttoΠandX ifthereexistsnoexplanationS (withvertices
+V )forpwithrespecttoΠandX suchthat V < V .
+(cid:48) (cid:48)
+16 EsraErdem,UmutOztok
+what_be_genes("CASK")←gene_reachable_from("CASK",2)
+gene_reachable_from("CASK",2)←
+gene_gene("CASK","DLG4"),
+gene_reachable_from("DLG4",1),...
+gene_reachable_from("DLG4",1)←
+gene_gene("CASK","DLG4")←
+gene_gene("DLG4","ADRB1"),
+gene_gene_biogrid("CASK","DLG4")
+start_gene("ADRB1")
+gene_gene_biogrid("CASK","DLG4") gene_gene("DLG4","ADRB1")← start_gene("ADRB1")
+dummy gene_gene_biogrid("DLG4","ADRB1") dummy
+gene_gene_biogrid("DLG4","ADRB1")
+Fig.6:AshortestexplanationforQ8.
+what_be_genes("CASK")←gene_reachable_from("CASK",3)
+gene_reachable_from("CASK",3)←
+gene_gene("CASK","DLG1"),
+gene_reachable_from("DLG1",2),...
+gene_reachable_from("DLG1",2)←
+gene_gene("CASK","DLG1")←
+gene_gene("DLG1","DLG4"),
+gene_gene_biogrid("CASK","DLG1")
+gene_reachable_from("DLG4",1),...
+. . gene_gene("DLG1","DLG4")←... gene_reachable_from("DLG4",1)←...
+.
+. .
+. .
+. .
+Fig.7:AnotherexplanationforQ8.
+LetΠandX bedefinedasinExample1.Then,Figure4(b)istheshortestexplanationfor
+awithrespecttoΠandX.
+To compute shortest explanations, we define a weight function that assigns weights to
+the vertices of the and-or explanation tree. Basically, the weight of an atom vertex (“or”
+GeneratingExplanationsforBiomedicalQueries 17
+vertex)isequaltotheminimumweightamongweightsofitschildrenandtheweightofa
+rulevertex(“and”vertex)isequaltosumofweightsofitschildrenplus1.Thentheidea
+is to extract a shortest explanation by propagating the weights of the leaves up and then
+traversingtheverticesthatcontributetotheweightoftheroot.Letusdefinetheweightof
+verticesintheand-orexplanationtree.
+Definition6(Weightfunction)
+Let Π be a ground ASP program, X be an answer set for Π, p be an atom in X, and
+T = V,E,l,Π,X be the and-or explanation tree for p with respect to Π and X. The
+(cid:104) (cid:105)
+weight function W for T maps vertices in V to a positive integer and it is defined as
+follows.
+min W (c) c child (v) ifvisanatomvertexinV;
+T 1+ W (c) otherwise.
+(cid:40) c
+childE(v) T
+Algorithm1:GeneratingShortestExplanations
+Input:Π:groundASPprogram,X :answersetforΠ,p:atominX.
+Output:ashortestexplanationforpw.r.tΠandX,oranemptyvertex-labeledtree.
+1 V,E,l,Π,X :=createTree(Π,X,p, );
+(cid:104) (cid:105) {}
+2 if V,E isnotemptythen
+(cid:104) (cid:105)
+3 v rootof V,E ;
+← (cid:104) (cid:105)
+4 calculateWeight(Π,X,V,l,v,E,W T );
+5 V (cid:48) ,E (cid:48) ,l,Π,X :=extractExp(Π,X,V,l,v,E,W T , ,min);
+(cid:104) (cid:105) ∅
+6 return V (cid:48) ,E (cid:48) ,l,Π,X ;
+(cid:104) (cid:105)
+8 return , ,l,Π,X ;
+(cid:104)∅ ∅ (cid:105)
+Using this weight function, we develop Algorithm 1 to generate shortest explanations.
+Letusdescribethisalgorithm.Algorithm1startsbycreatingtheand-orexplanationtreeT
+forpwithrespecttoΠandX (Line1);forthatitusesAlgorithm2.IfT isnotempty,then
+Algorithm1assignsweightstotheverticesofT (Line4),usingAlgorithm3.Asthefinal
+step,Algorithm1extractsashortestexplanationfromT (Line5),usingAlgorithm4.The
+ideaistotraverseanexplanationtreeofT,bythehelpoftheweightfunction,andconstruct
+anexplanation,whichwouldbeashortestone,bycontemplatingonlytheruleverticesin
+thetraversedexplanationtree.IfT isempty,Algorithm1returnsanemptyvertex-labeled
+tree.
+Algorithm 2 (with the call createTree(Π,X,p, )) creates the and-or explanation tree
+for p with respect to Π and X recursively. With a call createTree(Π,X,d,L), where L
+intuitivelydenotestheatomslabelingtheatomverticescreatedsofar,thealgorithmcon-
+siders two cases: d being an atom or a rule. In the former case, 1) the algorithm creates
+an atom vertex v for d, 2) it identifies the rules that support d, 3) for each such rule, it
+creates a vertex labeled tree (i.e., a subtree of the resulting and-or explanation tree), and
+4)itconnectsthesetreestotheatomvertexv.Inthelattercase,ifdisaruleinΠ,1)the
+algorithmcreatesarulevertexv ford,2)itidentifiestheatomsinthepositivepartofthe
+18 EsraErdem,UmutOztok
+Algorithm2:createTree
+Input:Π:groundASPprogram,X :answersetforΠ,d:anatominX orarulein
+Π,L:setofatomsinX.
+Output:Avertex-labeledtree.
+1 V := , E := ;
+2 ifd X Lthen
+3 v Createanatomvertexs.t.l(v)=d;
+4 L:=L d , V :=V v ;
+5 foreachr Π X,L (d)do
+6 V (cid:48) ,E (cid:48) ,l,Π,X :=createTree(Π,X,r,L);
+(cid:104) (cid:105)
+7 if V (cid:48) ,E (cid:48) = , then
+(cid:104) (cid:105)(cid:54) (cid:104)∅ ∅(cid:105)
+8 v (cid:48) rootof V (cid:48) ,E (cid:48) s.t.l(v (cid:48) )=r;
+← (cid:104) (cid:105)
+9 V :=V V (cid:48) , E :=E (v,v (cid:48) ) E (cid:48) ;
+10 ifE = then return , ,l,Π,X ;
+∅ (cid:104)∅ ∅ (cid:105)
+11 elseifd Πthen
+12 v Createarulevertexs.t.l(v)=d;
+13 foreacha B+(d)do
+14 V (cid:48) ,E (cid:48) ,l,Π,X :=createTree(Π,X,a,L);
+(cid:104) (cid:105)
+15 if V (cid:48) ,E (cid:48) = , then return , ,l,Π,X ;
+(cid:104) (cid:105) (cid:104)∅ ∅(cid:105) (cid:104)∅ ∅ (cid:105)
+16 v (cid:48) rootof V (cid:48) ,E (cid:48) s.t.l(v (cid:48) )=a;
+← (cid:104) (cid:105)
+17 V :=V V (cid:48) , E :=E (v,v (cid:48) ) E (cid:48) ;
+18 return V,E,l,Π,X ;
+(cid:104) (cid:105)
+rule,3)itcreatestheand-orexplanationtreeforeachsuchatom,and4)itconnectsthese
+treestotherulevertexv.
+Oncetheand-orexplanationtreeiscreated,Algorithm3assignsweightstoallvertices
+inthetreebypropagatingtheweightsoftheleaves(i.e.,1)uptotherootinabottom-up
+fashionusingtheweightfunctiondefinition(i.e.,Definition6).
+Afterthat,Algorithm1(withthecallextractExp(Π,X,V,l,v,E,W , ,min))extractsa
+shortestexplanationinatop-downfashionstartingfromtherootbyexaminingtheweights
+of the vertices. In particular, if a visited vertex v is an atom vertex then the algorithm
+proceeds with the child of v with the minimum weight; otherwise, it considers all the
+childrenofv.
+TheexecutionofAlgorithm1isalsoillustratedinFigure8.First,theand-orexplanation
+tree is generated, which has a generic structure as in Figure 8(a). Here, yellow vertices
+denote atom vertices and blue vertices denote rule vertices. Then, this tree is weighted
+as in Figure 8(b). Then, starting from the root, a subtree of the and-or explanation tree
+is traversed by visiting minimum weighted child of every atom vertex and every child
+of every rule vertex. This process is shown in Figure 8(c), where red vertices form the
+traversedsubtree.Fromthissubtree,anexplanationisextractedbyignoringatomvertices
+and keeping the parent-child relationship of the tree as it is. The resulting explanation is
+depictedinFigure8(d).
+GeneratingExplanationsforBiomedicalQueries 19
+Algorithm3:calculateWeight
+Input:Π:groundASPprogram,X :answersetforΠ,V :setofvertices,
+l:V Π X,v :vertexinV,E :setofedges,W :candidateweight
+function.
+Output:Weightofv.
+1 ifl(v) X then
+2 foreachc child E (v)do W T (c):=calculateWeight(Π,X,V,l,c,E,W T );
+3 W T (v):=min W T (c) c child E (v) ;
+4 elseifl(v) Πthen
+5 W T (v):=1;
+6 foreachc child E (v)do
+W (v):=W (v)+calculateWeight(Π,X,V,l,c,E,W );
+7 returnW T (v);
+Algorithm4:extractExp
+Input:Π:groundASPprogram,X :answersetforΠ,V
+:setofvertices,
+l:V Π X,v :vertexinV ,E :setofedges,W :weightfunctionofT,
+r :rulevertexinV or ,op:stringminormax.
+Output:Avertex-labeledtree V,E,l,Π,X .
+(cid:104) (cid:105)
+1 V := , E := ;
+2 ifl(v) X then
+3 c Pickopweightedchildofv;
+4 ifr = then E :=E (r,c)};
+5 V (cid:48) ,E (cid:48) ,l,Π,X :=extractExp(Π,X,V t ,l,c,E t ,W T ,r,op);
+(cid:104) (cid:105)
+6 V :=V V (cid:48) , E :=E E (cid:48) ;
+7 elseifl(v) Πthen
+8 V :=V v ;
+9 foreachc
+child Et (v)do
+10 V (cid:48) ,E (cid:48) ,l,Π,X :=extractExp(Π,X,V t ,l,c,E t ,W T ,v,op);
+(cid:104) (cid:105)
+11 V :=V V (cid:48) , E :=E E (cid:48) ;
+12 return V,E,l,Π,X ;
+(cid:104) (cid:105)
+Proposition2
+GivenagroundASPprogramΠ,ananswersetX forΠ,andanatompinX,Algorithm1
+terminates.
+Proposition3
+GivenagroundASPprogramΠ,ananswersetX forΠ,andanatompinX,Algorithm1
+eitherfindsashortestexplanationforpwithrespecttoΠandXorreturnsanemptyvertex-
+labeledtree.
+20 EsraErdem,UmutOztok
+R 1 R 2 3 R 1 2 R 2
+a 11 a 12 a 21 1 a 11 1 a 12 1 a 21
+R 3 R 4 R 5 R 6 2 R 3 1 R 4 1 R 5 1 R 6
+a 31 1 a 31
+3 R 1 2 R 2
+1 a 11 1 a 12 1 a 21
+2 R 3 1 R 4 1 R 5 1 R 6
+Fig.8:AgenericexecutionofAlgorithm1.
+Proposition4
+Given a ground ASP program Π, an answer set X for Π, and an atom p in X, the time
+complexityofAlgorithm1isO(Π X ).
+Wegeneratethecompleteand-orexplanationtreewhilefindingashortestexplanation.In
+fact,wecanfindashortestexplanationbycreatingapartialand-orexplanationtreeusinga
+branch-and-boundidea.Inparticular,theideaistocomputetheweightsofverticesduring
+thecreationoftheand-orexplanationtreeand,incasethereexistsabranchoftheand-or
+explanation tree that exceeds the weight of a vertex computed so far, to stop branching
+on unnecessary parts of the and-or explanation tree. Then, a shortest explanation can be
+extracted by the same method used previously, i.e., by traversing a subtree of the and-
+or explanation tree and ignoring the atom vertices in this subtree. For instance, consider
+Figure 8(b). Assume that we first create the right branch of the root. Since the weight of
+anatomvertexisequaltotheminimumweightamongitschildrenweights,weknowthat
+GeneratingExplanationsforBiomedicalQueries 21
+Algorithm5:GeneratingkDifferentExplanations
+Input:Π:groundASPprogram,X:answersetforΠ,p:atominX,k :apositive
+integer.Assumetherearendifferentexplanationsforpw.r.tΠandX.
+Output:min n,k differentexplanationsforpwithrespecttoΠandX.
+1 K := ,R 0 := ;
+2 V,E,l,Π,X :=createTree(Π,X,p, );
+(cid:104) (cid:105) {}
+3 v rootof V,E ;
+← (cid:104) (cid:105)
+4 fori=1,2,...kdo
+5 calculateDifference(Π,X,V,l,v,E,R i − 1 ,W T,Ri − 1 );
+6 ifW T,Ri 1 (v)=0then returnK;
+7 (cid:104) V (cid:48) ,E (cid:48) ,l,Π,X (cid:105) :=extractExp(Π,X,V,l,v,E,W T,Ri − 1 , ∅ ,max);
+8 K i V (cid:48) ,E (cid:48) ,l,Π,X ;
+←(cid:104) (cid:105)
+9 K :=K K i ;
+10 R i :=R i 1 v rulevertexv V (cid:48) ;
+− ∪{ | ∈ }
+11 returnK;
+theweightoftherootisatmost2.Now,wecheckwhetheritisnecessarytobranchonthe
+leftchildoftheroot.Notethattheweightofarulevertexisequalto1plusthesumofits
+childrenweights.AsR hastwochildren,itsweightisatleast3.Therefore,itisredundant
+tobranchontheleftchildoftheroot.Thisimprovementisnotimplementedandisafuture
+work.
+6 GeneratingkDifferentExplanations
+When there is more than one explanation for an answer of a query, it might be useful to
+providetheexpertswithseveralmoreexplanationsthataredifferentfromeachother.For
+instance,considerthequeryQ5inTable1.
+Q5 WhatarethedrugsthattreatthediseaseAsthmaorthatreactwiththedrugEpinephrine?
+An answer for this query is “Doxepin”. According to one explanation, “Doxepin” reacts
+with“Epinephrine”withrespecttoDRUGBANK.Atthispoint,theexpertmaynotbecon-
+vinced and ask for a different explanation. Another explanation for this answer is that
+“Doxepin”treats“Asthma”accordingtoCTD.Motivatedbythisexample,westudygen-
+eratingdifferentexplanations.
+We introduce an algorithm (Algorithm 5) to compute k different explanations for an
+atompinX withrespecttoΠandX.Forthat,wedefineadistancemeasure∆ between
+asetZof(previouslycomputed)explanations,andan(tobecomputed)explanationS.We
+considertheruleverticesR andR containedinZ andS,respectively.Then,wedefine
+thefunction∆ thatmeasuresthedistancebetweenZ andS asfollows:
+∆ (Z,S)= R R .
+Inthefollowing,wesometimesuseR andR insteadofZandSin∆ .Also,wedenote
+byRVertices(S)thesetofruleverticesofavertex-labeledtreeS.
+22 EsraErdem,UmutOztok
+Algorithm6:calculateDifference
+Input:Π:groundASPprogram,X :answersetforΠ,V :setofvertices,
+l:V Π X,v :vertexinV,E :setofedges,R:setofruleverticesinV,
+D :candidatedistancefunction.
+Output:distanceofv.
+1 ifl(v) X then
+2 foreachc child E (v)do
+3 D R (c):=calculateDifference(Π,X,V,l,c,E,R,D R );
+4 D R (v):=max D R (c) c child E (v) ;
+5 elseifl(v) Πthen
+6 ifv / Rthen D R (v):=1;
+7 else D R (v):=0;
+8 foreachc child E (v)do
+9 D R (v):=D R (v)+calculateDifference(Π,X,V,l,c,E,R,D R );
+10 returnD R (v);
+LetusnowexplainAlgorithm5.ItcomputesasetK ofk differentexplanationsitera-
+tively. Initially, K = . First, we compute the and-or explanation tree T (Line 2). Then,
+weenterintoaloopthatiteratesatmostk times(Line4).Ateachiterationi,anexplana-
+tionK thatismostdistantfromthepreviouslycomputedi 1explanationsisextracted
+fromT.Letusdenotetheruleverticesincludedinthepreviouslycomputedi 1expla-
+nationsbyR .Then,essentially,ateachiterationwepickanexplanationK suchthat
+∆ (R ,RVertices(K )) is maximum. To be able to find such a K , we need to define
+the“contribution”ofeachvertexvinT tothedistancemeasure∆ (R ,RVertices(K ))
+ifvisincludedinexplanationK :
+max W (v ) v child (v) ifvisanatomvertex;
+{ T,Ri − 1 (cid:48) | (cid:48) ∈ E }
+W (v ) ifvisarulevertexand
+v(cid:48)∈ child E(v) T,Ri − 1 (cid:48) v
+1+ W (v ) otherwise.
+v(cid:48)∈ child E(v) T,Ri
+1 (cid:48)
+Notethatthisfunct
+ionisdi(cid:80)fferentfromW
+.Intuitively,vcontributestothedistancemea-
+sureifitisnotincludedinR .ThecontributionsofverticesinT arecomputedbyAl-
+gorithm6(Line5)bypropagatingthecontributionsupinthespiritofAlgorithm3.Then,
+K isextractedfromweighted-T byusingAlgorithm4(Line7).
+The execution of Algorithm 5 is also illustrated in Figure 9. Similar to Algorithm 1,
+which generates shortest explanations, first the and-or explanation tree is created, which
+has a generic structure as shown in Figure 9(a). Recall that yellow vertices denote atom
+verticesandblueverticesdenoterulevertices.Forthesakeofexample,assumethatR =
+R ,R .Then,thegoalistogenerateanexplanationthatcontainsdifferentrulevertices
+from the rule vertices in R as much as possible. For that, the weights of vertices are as-
+signedaccordingtotheweightfunctionW asdepictedinFigure9(b).Here,theweight
+oftherootimpliesthatthereexistsanexplanationwhichcontains4differentrulevertices
+from the rule vertices in R and this explanation is the most different one. Then, starting
+GeneratingExplanationsforBiomedicalQueries 23
+R1 R2 4 R1 0 R2
+a11 a12 a21 2 a11 1 a12 0 a21
+R3 R4 R5 R6 2 R3 1 R4 1 R5 0 R6
+2 a11 1 a12 0 a21
+2 R3 1 R4 1 R5 0 R6
+Fig.9:AgenericexecutionofAlgorithm5.
+from the root, a subtree of the and-or explanation tree is traversed by visiting maximum
+weighted child of every atom vertex, and every child of every rule vertex. This subtree
+is shown in Figure 9(c) by red vertices. Finally, an explanation is extracted by ignoring
+theatomverticesandkeepingtheparent-childrelationshipasitis,fromthissubtree.This
+explanationisillustratedinFigure9(d).
+Proposition5
+Given a ground ASP program Π, an answer set X for Π, an atom p in X, and a positive
+integerk,Algorithm5terminates.
+Proposition6
+LetΠbeagroundASPprogram,X beananswersetforΠ,pbeanatominX,andk be
+a positive integer. Let n be the number of different explanations for p with respect to Π
+andX.Then,Algorithm5returnsmin n,k differentexplanationsforpwithrespecttoΠ
+andX.
+Furthermore,ateachiterationioftheloopinAlgorithm5thedistance∆ (R ,K )is
+maximized.
+24 EsraErdem,UmutOztok
+Proposition7
+Let Π be a ground ASP program, X be an answer set for Π, p be an atom in X, and k
+beapositiveinteger.LetnbethenumberofexplanationsforpwithrespecttoΠandX.
+Then, at the end of each iteration i (1 i min n,k ) of the loop in Algorithm 5,
+∆ (R ,RVertices(K )) is maximized, i.e., there is no other explanation K such that
+D i 1 i (cid:48)
+∆ (R ,RVertices(K ))<∆ (R ,RVertices(K )).
+D i 1 i D i 1 (cid:48)
+Thisresultleadsustosomeusefulconsequences.First,Algorithm5computes“longest”
+explanationsifk =1.Thefollowingcorollaryshowshowtocomputelongestexplanations.
+Corollary1
+LetΠbeagroundASPprogram,X beananswersetforΠ,pbeanatominX,andk =1.
+Then,Algorithm5computesalongestexplanationforpwithrespecttoΠandX.
+Next, we show that Algorithm 5 computes k different explanations such that for every i
+(1 i k)theith explanationisthemostdistantexplanationfromthepreviouslycom-
+putedi 1explanations.
+Corollary2
+LetΠbeagroundASPprogram,X beananswersetforΠ,pbeanatominX,andkbea
+positiveinteger.LetnbethenumberofexplanationsforpwithrespecttoΠandX.Then,
+Algorithm5computesmin { n,k } differentexplanationsK 1 ,...,K min n,k forpwithre-
+specttoΠandXsuchthatforeveryj(2 ≤ j ≤ min { n,k } )∆ D ( j z − = 1 1 R { Vert } ices(K z ),K j )
+ismaximized.
+ThefollowingpropositionshowsthatthetimecomplexityofAlgorithm5isexponential
+inthesizeofthegivenanswerset.
+Proposition8
+Given a ground ASP program Π, an answer set X for Π, an atom p in X and a positive
+integerk,thetimecomplexityofAlgorithm5isO(k Π X+1 ).
+×| | ×|B |
+7 ExperimentswithBiomedicalQueries
+OuralgorithmsforgeneratingexplanationsareapplicabletothequeriesQ1,Q2,Q3,Q4,
+Q5, Q8, Q10, Q11 and Q12 in Table 1. The ASP programs for the other queries involve
+choice expressions. For instance, the query Q7 asks for cliques of 5 genes. We use the
+followingruletogenerateapossiblesetof5genesthatmightformaclique.
+5{clique(GEN):gene_name(GEN)}5.
+OuralgorithmsapplytoASPprogramsthatcontainasingleatomintheheadsoftherules,
+andnegationandcardinalityexpressionsinthebodiesoftherules.Therefore,ourmethods
+arenotapplicabletothequerieswhicharepresentedbyASPprogramsthatincludechoice
+expressions.
+InTable2,wepresenttheresultsforgeneratingshortestexplanationsforthequeriesQ1,
+Q2,Q3,Q4,Q5,Q8,Q10,Q11andQ12.Inthistable,thesecondcolumndenotestheCPU
+timingstogenerateshortestexplanationsinseconds.Thethirdcolumnconsistsofthesizes
+GeneratingExplanationsforBiomedicalQueries 25
+Table 2: Experimental results for generating shortest explanations for some biomedical
+queries,usingAlgorithm1.
+Query CPUTime Explanation AnswerSet And-OrTree GRINGOcalls
+Size Size Size
+Q1 52.78s 5 1.964.429 16 0
+Q2 67.54s 7 2.087.219 233 1
+Q3 31.15s 6 1.567.652 15 0
+Q4 1245.83s 6 19.476.119 6690 4
+Q5 41.75s 3 1.465.817 16 0
+Q8 40.96s 14 1.060.288 28 4
+Q10 1601.37s 14 1.612.128 3419 193
+Q11 113.40s 6 2.158.684 5528 5
+Q12 327.22s 5 10.338.474 10 1
+of explanations, i.e., the number of rule vertices in an explanation. In the fourth column,
+the sizes of answer sets, i.e., the number of atoms in an answer set, are given. The fifth
+columnpresentsthesizesoftheand-orexplanationtrees,i.e.,thenumberofverticesinthe
+tree.
+Beforetellingwhatthelastcolumnpresents,letusclarifyanissueregardingthecom-
+putationofexplanations.Sinceanswersetscontainmillionsofatoms,therelevantground
+programsarealsohuge.Thus,firstgroundingtheprogramsandthengeneratingexplana-
+tions over those grounded programs is an overkill in terms of computational efficiency.
+To this end, we apply another method and do grounding when it is necessary. To bet-
+ter explain the idea, let us present our method by an example. At the beginning, we
+haveagroundatomforwhichwearelookingforshortestexplanations.Assumethatthis
+atom is what_be_genes("ADRB1"). Then, we find the rules whose heads are of the form
+what_be_genes(GN), and instantiate GN with “ADRB1”. For instance, assume that the
+followingruleexistsintheprogram:
+what_be_genes(GN) drug_gene(DRG,GN)
+Then,bysuchaninstantiation,weobtainthefollowinginstanceofthisrule:
+what_be_genes("ADRB1") drug_gene(DRG,"ADRB1")
+Next, if the rules that we obtain by instantiating their heads are not ground, we ground
+themusingthegrounder GRINGO consideringtheanswerset.Weapplythesamemethod
+fortheatomsthatarenowground,tofindtherelevantrulesandgroundthemifnecessary.
+This allows us to deal with a relevant subset of the rules while generating explanations.
+26 EsraErdem,UmutOztok
+Table 3: Experimental results for generating different explanations for some biomedical
+queries,usingAlgorithm5.
+Query CPUTime
+2different 4different Shortest
+Q1 53.73s - 52.78s
+Q2 66.88s 67.15s 67.54s
+Q3 31.22s - 31.15s
+Q4 1248.15s 1251.13s 1245.83s
+Q5 - - 41.75s
+Q8 - - 40.96s
+Q10 1600.49s 1602.16s 1601.37s
+Q11 113.25s 112.83s 113.40s
+Q12 - - 327.22s
+ThelastcolumnofTable2presentsthenumberoftimesGRINGOiscalledforsuchincre-
+mental grounding. For instance, for the queries Q1, Q3 and Q5, GRINGO is never called.
+However,GRINGOiscalled193timesduringthecomputationofashortestexplanationfor
+thequeryQ10.
+As seen from the results presented in Table 2, the computation time is not very much
+relatedtothesizeoftheexplanation.AsalsosuggestedbythecomplexityresultsofAlgo-
+rithm1(i.e.,O(Π X )),thecomputationtimeforgeneratingshortestexplanations
+greatlydependsonthesizesoftheanswersetandtheand-orexplanationtree.Forinstance,
+forthequeryQ4,theanswersetcontainsapproximately19millionatoms,thesizeofthe
+and-or explanation tree is 6690, and it takes 1245 CPU seconds to compute a shortest
+explanation, whereas for the query Q8, the answer set approximately contains 1 million
+atoms,theand-orexplanationtreehas28vertices,andittakes40CPUsecondstocompute
+ashortestexplanation.Also,thenumberoftimesGRINGOiscalledduringthecomputation
+affectsthecomputationtime.Forinstance,forthequeryQ10theanswersetapproximately
+contains1.6millionatoms,theand-orexplanationtreehas3419vertices,andittakes1600
+CPUsecondstocomputeashortestexplanation.
+Table 3 shows the computation times for generating different explanations for the an-
+swers of the same queries, if exists. As seen from these results, the time for computing
+2 and 4 different explanations is slightly different than the time for computing shortest
+explanations.
+GeneratingExplanationsforBiomedicalQueries 27
+8 PresentingExplanationsinaNaturalLanguage
+Anexplanationforananswerofabiomedicalquerymaynotbeeasytounderstand,since
+theusermaynotknowthesyntaxofASPrulesneitherthemeaningsofpredicates.Tothis
+end,itisbettertopresentexplanationstotheexpertsinanaturallanguage.
+Observe that leaves of an explanation denote facts extracted from the biomedical re-
+sources.Alsosomeinternalverticescontaininformativeexplanationssuchastheposition
+ofadruginachainofdrug-druginteractions.Therefore,thereisacorrespondingnatural
+languageexplanationforsomeverticesinthetree.Suchacorrespondencecanbestoredin
+apredicatelook-uptable,likeTable4.Givensuchalook-uptable,apre-orderdepth-first
+traversalofanexplanationandgeneratingnaturallanguageexpressionscorrespondingto
+verticesoftheexplanationleadtoanexplanationinnaturallanguage(Oztok2012).
+Forinstance,theexplanationinFigure6isexpressedinnaturallanguageasillustrated
+intheintroduction.
+9 ImplementationofExplanationGenerationAlgorithms
+Basedonthealgorithmsintroducedabove,wehavedevelopedacomputationaltoolcalled
+EXPGEN-ASP (Oztok2012),usingtheprogramminglanguageC++.GivenanASPpro-
+gram and its answer set, EXPGEN-ASP generates shortest explanations as well as k dif-
+ferentexplanations.
+TheinputofEXPGEN-ASPare
+anASPprogramΠ,
+ananswersetX forΠ,
+anatompinX,
+anoptionthatisusedtogenerateeitherashortestexplanationork differentexpla-
+Table4:Predicatelook-uptableusedwhileexpressingexplanationsinnaturallanguage.
+Predicate ExpressioninNaturalLanguage
+gene_gene_biogrid(x,y) ThegenexinteractswiththegeneyaccordingtoBIOGRID.
+drug_disease_ctd(x,y) ThediseaseyistreatedbythedrugxaccordingtoCTD.
+drug_gene_ctd(x,y) ThedrugxtargetsthegeneyaccordingtoCTD.
+gene_disease_ctd(x,y) ThediseaseyisrelatedtothegenexaccordingtoCTD.
+disease_symptom_do(x,y) ThediseasexhasthesymptomyaccordingtoDISEASEONTOLOGY.
+drug_category_drugbank(x,y) ThedrugxbelongstothecategoryyaccordingtoDRUGBANK.
+drug_drug_drugbank(x,y) ThedrugxreactswiththedrugyaccordingtoDRUGBANK.
+drug_sideeffect_sider(x,y) ThedrugxhasthesideeffectyaccordingtoSIDER.
+disease_gene_orphadata(x,y) ThediseasexisrelatedtothegeneyaccordingtoORPHADATA.
+drug_disease_pharmgkb(x,y) ThediseaseyistreatedbythedrugxaccordingtoPHARMGKB.
+drug_gene_pharmgkb(x,y) ThedrugxtargetsthegeneyaccordingtoPHARMGKB.
+disease_gene_pharmgkb(x,y) ThediseasexisrelatedtothegeneyaccordingtoPHARMGKB.
+start_drug(x) Thedrugxisthestartdrug.
+start_gene(x) Thegenexisthestartgene.
+drug_reachable_from(x,l) Thedistanceofthedrugxfromthestartdrugisl.
+gene_reachable_from(x,l) Thedistanceofthegenexfromthestartgeneisl.
+28 EsraErdem,UmutOztok
+apredicatelook-uptable,
+andtheoutputare
+ashortestexplanationforpwithrespecttoΠandXinanaturallanguage(ifshortest
+explanationoptionischosen),
+k different explanations for p with respect to Π and X in a natural language (if k
+differentexplanationsoptionischosen).
+Forgeneratingshortestexplanations(resp.,k differentexplanations), EXPGEN-ASP uti-
+lizesAlgorithm1(resp.,Algorithm5).
+Toprovideexpertswithfurtherinformativeexplanationsabouttheanswersofbiomedi-
+calqueries,wehaveembeddedEXPGEN-ASPintoBIOQUERY-ASPbyutilizingTable4
+asthepredicatelook-uptableofthesystem.Figure10showsasnapshotoftheexplanation
+generationmechanismofBIOQUERY-ASP.
+Fig.10:AsnapshotofBIOQUERY-ASPshowingitsexplanationgenerationfacility.
+GeneratingExplanationsforBiomedicalQueries 29
+10 RelatingExplanationstoJustifications
+The most similar work to ours is (Pontelli et al. 2009) that study the question “why is
+an atom p in an answer set X for an ASP program Π”. As an answer to this question,
+the authors of (Pontelli et al. 2009) finds a “justification”, which is a labeled graph that
+providesanexplanationforthetruthvaluesofatomswithrespecttoananswerset.
+LetΠbetheprogrampresentedinExample1:
+andX = a,b,c,d .Figure11isanofflinejustificationofa+ withrespecttoX and .
+Intuitively, a is in X since b and c are also in X and there is a rule in Π that supports a
+usingtheatomsbandc.Furthermore,bisinX sincecisinX andthereisaruleinΠthat
+supportsbusingtheatomc.Finally,cisinX asitisafactinΠ.
+Fig.11:AnofflinejustificationforExample6.
+Torelateofflinejustificationsandexplanations,weneedtointroducethefollowingdef-
+initionsandnotationsaboutjustificationsdefinedin(Pontellietal.2009).
+10.1 OfflineJustifications
+First,letusintroducenotationsrelatedtoASPprogramsusedin(Pontellietal.2009).The
+classofASPprogramsstudiedisnormalprograms,i.e.,programsthatconsistoftherules
+A A ,...,A ,notA ,...,notA
+wherem k 0andAandeachA isanatom.Therefore,theprogramsweconsiderare
+moregeneral.LetΠbeanormalASPprogram.Then, istheHerbrandbaseofΠ.An
+interpretationI foraprogramΠisdefinedasapair I+,I ,whereI+ I and
+(cid:104) (cid:105) ∪ ⊆ A
+I+ I = .Intuitively,I+ denotesthesetofatomsthataretrue,whileI denotesthe
+30 EsraErdem,UmutOztok
+setofatomsthatarefalse.I isacompleteinterpretationifI+ I = .ThereductΠI
+ofΠwithrespecttoI isdefinedas
+AcompleteinterpretationM foraprogramΠisananswersetforΠifM+isananswerset
+forΠM.Also,aliteraliseitheranatomoraformulaoftheformnotawhereaisanatom.
+ThesetofatomswhichappearasnegatedliteralsinΠisdenotedbyNANT(Π).Foran
+atoma,a+ denotesthattheatomaistrueanda denotesthata isfalse.Then,a+ and
+a arecalledtheannotatedversionsofa.Moreover,itisdefinedthatatom(a+)=aand
+atom(a )=a.ForasetS ofatoms,thefollowingsetsofannotatedatomsaredefined.
+Sp = a+ a S
+Sn = a a S
+Finally,thesetnotS isdefinedasnotS = nota a S .
+Apartfromtheanswersetsemantics,thereisanotherimportantsemanticsoflogicpro-
+grams,calledthewell-foundedsemantics(Gelderetal.1991).Sincethissemanticsisim-
+portant to build the notion of a justification, we now briefly describe the well-founded
+semantics.Weconsiderthedefinitionproposedin(AptandBol1994),insteadoftheorig-
+inal definition proposed in (Gelder et al. 1991), as the authors of (Pontelli et al. 2009)
+considered.
+Definition7(Immediateconsequence)
+Let Π be a normal ASP program, and S and V be two sets of atoms from . Then,
+theimmediateconsequenceofS withrespecttoΠandV,denotedbyT (S)istheset
+definedasfollows:
+Wedenotebylfp(T )theleastfixpointofT whenV isfixed.
+Definition8(Thewell-foundedmodel)
+LetΠbeanormalASPprogram,Π+ = r r Π, B (r)= .Thesequence K ,U
+{ | ∈ − ∅} (cid:104) i i (cid:105)i 0
+isdefinedasfollows:
+K =lfp(T ), U =lfp(T ),
+0 Π+ 0 Π,K0
+K =lfp(T ), U =lfp(T ).
+i Π,Ui 1 i Π,Ki
+Letj bethefirstindexofthecomputationsuchthat K ,U = K ,U .Then,the
+j j j+1 j+1
+(cid:104) (cid:105) (cid:104) (cid:105)
+well-foundedmodelofΠisWF = W+,W whereW+ =K andW = U .
+(cid:104) (cid:105) A \
+LetΠbetheprogram
+GeneratingExplanationsforBiomedicalQueries 31
+Then,thewell-foundedmodelofΠiscomputedasfollows:
+U = a,b,c,d ,
+U = a,b,c,d .
+Thus,WF = b,c , .
+We now provide definitions regarding the notion of an offline justification. First, we
+introducethebasicbuildingofanofflinejustification,alabeledgraphcalledase-graph.
+Definition9(e-graph)
+Let Π be a normal ASP program. An e-graph for Π is a labeled, directed graph (N,E),
+where N p n assume, , and E N N +, , which satisfies
+followingproperties:
+(i) theonlysinks(i.e.,nodeswithoutout-goingedges)inthegraphareassume, , ;
+(cid:62) ⊥
+(ii) foreveryb N p,(b,assume, ) / E and(b, , ) / E;
+(iii) foreveryb N n,(b,assume,+) / E and(b, ,+) / E;
+(iv) for every b N, if for some l assume, , and s +, , (b,l,s) E,
+then(b,l,s)istheonlyout-goingedgeoriginatingfromb.
+According to this definition, an edge of an e-graph connects two annotated atoms or an
+annotatedatomwithoneofthenodesin assume, , andismarkedbyalabelfrom
++, .Anedgeiscalledaspositive(resp.,negative)ifitislabeledby+(resp., ).Also,
+apathinane-graphiscalledaspositiveifithasonlypositiveedges,whereasitiscalled
+as negative if it has at least one negative edge. The existence of a positive path between
+twonodesv andv isdenotedby(v ,v ) E ,+.Intheofflinejustification, isused
+∈ (cid:62)
+toexplainfacts, toexplainatomswhichdonothavedefiningrules,andassumeisfor
+atomsforwhichexplanationsarenotneeded,i.e.,theyareassumedtobetrueorfalse.
+LetΠbetheprogrampresentedinExample1,andX = a,b,c,d .Then,Figure12is
+ane-graphforΠ.Intuitively,thetruestateofadependsonthetruestateofbandthefalse
+stateofc,wherebisassumedtobetrueandcisassumedtobefalse.
+assume assume
+Fig.12:Ane-graphforExample8.
+32 EsraErdem,UmutOztok
+In an e-graph, a set of elements that directly contributes to the truth value of an atom
+canbeobtainedthroughtheout-goingedgesofacorrespondingnode.Thissetisdefined
+asfollows.
+Definition10(support(b,G))
+LetΠbeanormalASPprogram,G=(N,E)beane-graphforΠandb N ( p n)
+beanodeinG.Then,support(b,G)isdefinedasfollows.
+support(b,G) = l ,ifforsomel assume, , ands +, ,(b,l,s)is
+support(b,G)= atom(c) (b,c,+) E notatom(c) (b,c, ) E ,other-
+wise.
+Let G be thee-graph in Figure 12.Then, support(a,G) = b,notc , support(b,G) =
+assume andsupport(c,G)= assume .
+Todefinethenotionofajustification,ane-graphshouldbeenrichedwithexplanations
+oftruthvaluesofatomsthatarederivedfromtherulesoftheprogram.Forthat,theconcept
+ofonestepjustificationofaliteralisdefinedasfollows.
+Definition11(LocalConsistentExplanation(LCE))
+Let Π be a normal ASP program, b be an atom, J be a possible interpretation for Π,
+U beasetofatoms,andS not assume, , beasetofliterals.
+S isanLCEofb+withrespectto(J,U),ifb J+and
+- S = assume or
+- S J+, c notc S J U,andthereisaruler Πsuchthat
+H(r)=bandB(r)=S.Incase,B(r)= ,S isdenotedbytheset .
+S isanLCEofb withrespectto(J,U),ifb J U and
+- S = assume or
+- S J U, c notc S J+, and S is a minimal set of literals
+suchthatforeveryruler ΠifH(r)=b,thenB+(r) S = orB (r)
+c notc S = .Incase,S = ,S isdenotedbytheset .
+ThesetofalltheLCEsofb+ withrespectto(J,U)isdenotedbyLCEp(b,J,U)andthe
+setofalltheLCEsofb withrespectto(J,U)isdenotedbyLCEn(b,J,U).
+Here,apossibleinterpretationJ denotesananswerset.ThesetU consistsofatomsthat
+areassumedtobefalse(whichwillbecalledasAssumptionsinthenotionofjustification
+later on). The need for U comes from the fact that the truth value of some atoms is first
+guessedwhilecomputinganswersets.Intuitively,ifanatomaistrue,anLCEconsistsof
+thebodyofarulewhichissatisfiedbyJ andhasainitshead;ifaisfalse,anLCEconsists
+ofasetofliteralsthatarefalseinJ andfalsifyallruleswhoseheadarea.
+GeneratingExplanationsforBiomedicalQueries 33
+Let Π and X be defined as in Example 8. Then, the LCEs of the atoms with respect to
+(X, )isasfollows.
+LCEp(a,X, ) = b,c , d , assume
+LCEp(b,X, ) = c , assume
+LCEp(c,X, ) = , assume
+LCEp(d,X, ) = , assume
+Accordingly,aclassofe-graphswhereedgesrepresentLCEsofthecorrespondingnodes
+aredefinedasfollows.
+Definition12((J,U)-basede-graph)
+LetΠbeanormalASPprogram,J beapossibleinterpretationforΠ,U beasetof
+atomsandbbeanelementin p n.A(J,U)-basede-graphG = (N,E)ofbisan
+e-graphsuchthat
+(i) everynodec N isreachablefromb,
+(ii) for every c N assume, , , support(c,G) is an LCE of c with respect to
+A(J,U)-basede-graph(N,E)issafeifforallb+ N,(b+,b+) / E ,+,i.e.,thereisno
+positivecycleinthegraph.
+We now introduce a special class of (J,U)-based e-graphs where only false elements
+canbeassumed.
+Definition13(Offlinee-graph)
+LetΠbeanormalASPprogram,J beapartialinterpretationforΠ,U beasetof
+atomsandbbeanelementin p n.Anofflinee-graphG = (N,E)ofbwithrespect
+toJ andU isa(J,U)-basede-graphofbthatsatisfiesfollowingproperties:
+(i) thereexistsnop+ N suchthat(p+,assume,+) E;
+(ii) (p ,assume, ) E ifandonlyifp U.
+(b,J,U)isthesetofallofflinee-graphsofbwithrespecttoJ andU.
+Here,therolesofJ andU arethesameastheirrolesinDefinition11.Observethattrue
+atoms cannot be assumed due to the first condition and only elements in the set U are
+assumedduetothesecondcondition.
+Wesaidearlierthatina(J,U)-basede-graphJ representsananswersetandU consists
+ofatomsthatareassumedtobefalse.Here,U ischosenbasedonsomecharacteristicsof
+J.Inparticular,wewantU tobeasetofatomssuchthatwhenitselementsareassumed
+tobefalse,thetruthvalueofotheratomsintheprogramcanbeuniquelydeterminedand
+leadstoJ.Wenowintroduceregardingdefinitionsformally.
+34 EsraErdem,UmutOztok
+Definition14(TentativeAssumptions)
+LetΠbeanormalASPprogram,M beananswersetforΠandWF Π =<WF Π +,WF Π− >
+be the well-founded model of Π. The tentative assumptions (M) of Π with respect
+toM aredefinedas
+LetΠbetheprogram:
+Then,X = a,b,c isananswersetforΠand a,b , isthewell-foundedmodelofΠ.
+Giventhat,
+WF Π−).
+Infact,tentativeassumptionsisasetofatomswhosesubsetsmight“potentially”formU.
+Weprovideadefinitionthatwouldallowonetoobtainaprogramfromagivenprogram
+ΠandasetV ofatomsbyassumingalltheatomsinV asfalse.
+Definition15(NegativeReduct)
+LetΠbeanormalASPprogram,M beananswersetforΠ,andU (M)beaset
+of tentative assumption atoms. The negative reduct NR(Π,U) of Π with respect to U is
+thesetofrulesdefinedas
+Finally,theconceptofassumptionscanbeintroducedformally.
+Definition16(Assumption)
+Let Π be a normal ASP program, M be an answer set for Π. An assumption of Π with
+respecttoM isasetU ofatomsthatsatisfiesthefollowingproperties:
+(i) U (M);
+(ii) thewell-foundedmodelofNR(Π,U)isequaltoM.
+Assumptions(Π,M)isthesetofallassumptionsofΠwithrespecttoM.
+LetΠandX bedefinedasinExample11.LetU = d .Then,NR(Π,U)is:
+and a,b,c , isthewell-foundedmodelofNR(Π,U).Thus,U isanassumptionofΠ
+withrespecttoX.
+Notethatassumptionsarenothingbutsubsetsoftentativeassumptionsthatwouldallowto
+obtaintheanswersetJ.
+Atlast,wearereadytodefinethenotionofofflinejustification.
+GeneratingExplanationsforBiomedicalQueries 35
+Definition17(OfflineJustification)
+Let Π be a normal ASP program, M be an answer set for Π, U be an assumption in
+Assumptions(Π,M)andbbeanannotatedatomin p n.Anofflinejustificationofb
+withrespecttoM andU isanelement(N,E)of (b,M,U)whichissafe.
+Accordingtothedefinition,ajustificationisa(J,U)-basede-graphwhereJ isananswer
+setandU isanassumption.Also,justificationsdonotallowthecreationofpositivecycles
+in the justification of true atoms. For instance, for Π and X defined as in Example 1,
+Figure11illustratesanofflinejustificationofa+withrespecttoX and .
+In (Pontelli et al. 2009), the authors prove the following proposition which shows that
+foreveryatomintheprogram,thereexistsanofflinejustification.
+Proposition9
+Let Π be a ground normal ASP program, X be an answer for Π. Then, for each atom a
+inΠ,thereisanofflinejustificationofwithrespecttoX andX −
+WF Π− whichdoesnot
+containnegativecycles.
+10.2 FromJustificationstoExplanations
+We relate a justification to an explanation. In particular, given an offline justification, we
+showthatonecanobtainanexplanationtreewhoseatomverticesareformedbyutilizing
+the “annotated atoms” of the justification and rule vertices are formed by utilizing the
+“support”ofannotatedatoms.Tocomputesuchexplanationtrees,wedevelopAlgorithm7.
+Letusnowexplainthealgorithmindetail.Algorithm7takesasinputagroundnormal
+ASP program Π , an answer set X for Π, an atom p in X, and a justification (V,E)
+of p+ with respect to X and some U Assumptions(Π,X). Our goal is to obtain an
+explanation tree in the and-or explanation tree for p with respect to Π and X from the
+justification (V,E). The algorithm starts by creating two sets V and E (Line 1). Here,
+(cid:48) (cid:48)
+V and E corresponds to the set of vertices and the set of edges of the explanation tree,
+(cid:48) (cid:48)
+respectively.ByCondition(ii)inDefinition3andCondition(i)inDefinition2,weknow
+thatthelabeloftherootofanexplanationtreeforpwithrespecttoΠandX isp.Thus,
+a vertex v with label p is defined (Line 2), and added into the queue Q (Line 3). Then,
+thealgorithmentersintoa“while”loopwhichexecutesuntilQbecomesempty.Atevery
+iteration of the loop, an element v from Q is first extracted (Line 5) and added into V
+(Line6).ThisimpliesthateveryelementaddedintoQisalsoaddedintoV .Forinstance,
+the vertex defined at Line 2 is the first vertex extracted from Q and also added into V ,
+which makes sense since we know that the root of an explanation tree is an atom vertex
+with label v. Then, according to the type of the extracted vertex, its out-going edges are
+defined.Letv beavertexextractedfromQatLine5insomeiterationoftheloop.Consider
+thefollowingtwocases.
+Case1 Assumethatv isanatomvertex.Then,thealgorithmdirectlygoestoLine13.By
+Condition (i) in Definition 3, we know that an explanation tree is a subtree of the
+and-or explanation tree. Hence, we need to define out-going edges of v by taking
+into account Condition (ii) in Definition 2, which implies that a child of v must
+36 EsraErdem,UmutOztok
+Algorithm7:JustificationtoExplanation
+Input:Π:groundnormalASPprogram,X :answersetforΠ,p:atominX,(V,E):
+justificationofp+w.r.tX andsomeU Assumptions(Π,X).
+Output:Avertex-labeledtree V
+,l,Π,X .
+(cid:104) (cid:105)
+1 V (cid:48) := , E (cid:48) := ;
+2 v Createavertexvs.t.l(v)=p;
+4 whileQ= do
+(cid:54) ∅
+5 v (cid:48) DequeueanelementfromQ;
+6 V (cid:48) :=V (cid:48) v (cid:48) ;
+7 ifl(v (cid:48) ) ∈ Πthen// v (cid:48) is a rule vertex
+8 foreacha B+(l(v (cid:48) ))do
+9 v (cid:48)(cid:48) Createavertexv (cid:48)(cid:48) s.t.l(v (cid:48)(cid:48) )=a;
+10 E (cid:48) :=E (cid:48) (v (cid:48) ,v (cid:48)(cid:48) ) // edge from rule vertex to atom vertex;
+11 Enqueuev (cid:48)(cid:48) toQ;
+12 elseifl(v (cid:48) ) ∈ X then// v (cid:48) is an atom vertex
+13 r Createarulers.t.H(r)=l(v (cid:48) )andB(r)=support(l(v (cid:48) )+,G);
+14 v (cid:48)(cid:48) Createavertexv (cid:48)(cid:48) s.t.l(v (cid:48)(cid:48) )=r;
+15 E (cid:48) :=E (cid:48) (v (cid:48) ,v (cid:48)(cid:48) ) // edge from atom vertex to rule vertex;
+16 Enqueuev (cid:48)(cid:48) toQ;
+17 return V (cid:48) ,E (cid:48) ,l,Π,X ;
+(cid:104) (cid:105)
+bearulevertexv suchthattherulethatlabelsv “supports”theatomthatlabels
+(cid:48)(cid:48) (cid:48)(cid:48)
+v . Thus, a rule r that supports the atom that labels v is created (Line 13). We
+(cid:48) (cid:48)
+ensure“supportedness”propertybyutilizingtheannotatedatomsinthegivenoffline
+justificationwhichsupportstheannotatedversionoftheatomthatlabelsv .Then,a
+vertexv withlabelriscreated(Line14),andacorrespondingchildofv isadded
+(cid:48)(cid:48) (cid:48)
+intoE (Line15).ByCondition(iii)inDefinition3,weknowthateveryatomvertex
+ofanexplanationtreehasasinglechild.Therefore,anotherchildofv isnotcreated.
+Then,beforefinishingtheiterationoftheloop,thechildv ofv isaddedintoQso
+(cid:48)(cid:48) (cid:48)
+thatitschildrencanbeformedinthenextiterationsoftheloop.
+Case2 Assume that v is a rule vertex. Then, the condition at Line 7 is satisfied and the
+algorithmgoestoLine8.Inthiscase,whileformingthechildrenofv ,weshould
+consider Condition (iii) in Definition 2, which implies that a child v of v must
+(cid:48)(cid:48) (cid:48)
+be an atom vertex such that the atom that labels v is in the positive body of the
+(cid:48)(cid:48)
+rulethatlabelsv .Also,byCondition(iv)inDefinition3,weshouldensurethatfor
+everyatomainthepositivebodyoftherulethatlabelsv ,thereexistsachildv of
+(cid:48) a
+v suchthattheatomthatlabelsv isequaltoa.Thus,theloopbetweenLines8–11
+(cid:48) a
+iteratesforeveryatomainthepositivebodyofthelabelofv andavertexv with
+(cid:48) (cid:48)(cid:48)
+label a is created (Line 9). Then, v becomes a child of v (Line 10). To form the
+(cid:48)(cid:48) (cid:48)
+childrenofv inthenextiterationsofthe“while”loop,thechildv ofv isadded
+(cid:48)(cid:48) (cid:48)(cid:48) (cid:48)
+intoQ(Line11).
+GeneratingExplanationsforBiomedicalQueries 37
+(cid:62) ←
+Fig.13:(a)Anofflinejustificationand(b)itscorrespondingexplanationtreeobtainedby
+usingAlgorithm7.
+WhenthealgorithmfinishesprocessingtheelementsofQ,i.e.,Qbecomesempty,the
+“while” loop terminates. Then, the algorithm returns a vertex-labeled tree (Line 17). We
+nowprovidethepropositionaboutthesoundnessofAlgorithm7.
+Proposition10
+Given a ground normal ASP program Π, an answer set X for Π, an atom p in X, an
+assumptionU inAssumption(Π,X),andanofflinejustificationG = (V,E)ofp+ with
+respecttoX andU,Algorithm7returnsanexplanationtree V ,E ,l,Π,X intheand-or
+(cid:48) (cid:48)
+(cid:104) (cid:105)
+explanationtreeforpwithrespecttoΠandX.
+Let Π and X be defined as in Example 8. Figure 13(a) is an offline justification of a+
+withrespecttoXand .Figure13(b)showsacorrespondingexplanationtreeintheand-or
+explanationtreeforawithrespecttoΠandX thatisobtainedbyusingAlgorithm7.
+10.3 FromExplanationstoJustifications
+We relate an explanation to a justification. In particular, given an explanation tree whose
+labelsofverticesareunique,weshowthatonecanobtainanofflinejustificationbyutilizing
+thelabelsofatomverticesoftheexplanationtree.Forthat,wedesignAlgorithm8.
+Letusnowdescribethealgorithmindetail.Algorithm8takesasinputagroundnormal
+ASP program Π, an answer set X for Π, an atom p in X, and an explanation tree T =
+V ,E ,l,Π,X intheand-orexplanationtreeforpwithrespecttoΠandX.Ourgoalis
+(cid:48) (cid:48)
+(cid:104) (cid:105)
+toobtainanofflinejustification(V,E)ofp+inΠX withrespecttoX and .Thereasonto
+obtaintheofflinejustificationinthereductofΠwithrespecttoX isthatourdefinitionof
+explanationisnotdefinedfortheatomsthatarenotintheanswerset.Algorithm8startsby
+creatingtwosetsV andE whichwillcorrespondtothesetofnodesandthesetofedges
+38 EsraErdem,UmutOztok
+Algorithm8:ExplanationtoJustification
+Input:Π:groundnormalASPprogram,X :answersetforΠ,p:atominX,
+V ,E ,l,Π,X :anexplanationtreeintheand-orexplanationtreeforpw.r.t
+(cid:48) (cid:48)
+(cid:104) (cid:105)
+ΠandX.
+Output:(V,E):justificationofp+w.r.tX and .
+1 V := , E := ;
+2 Q rootof V (cid:48) ,E (cid:48) ;
+← (cid:104) (cid:105)
+3 whileQ= do
+(cid:54) ∅
+4 v DequeueanelementfromQ;
+5 V :=V l(v)+ ;
+6 v (cid:48) childofvin V (cid:48) ,E (cid:48) ;
+← (cid:104) (cid:105)
+7 ifl(v (cid:48) )isafactinΠX then
+9 foreachv (cid:48)(cid:48)
+child E(cid:48) (v (cid:48) )do
+11 Enqueuev (cid:48)(cid:48) toQ;
+12 V :=V ;
+13 return(V,E);
+of the offline justification, respectively (Line 1). Then, the root of V ,E is added into
+(cid:48) (cid:48)
+(cid:104) (cid:105)
+thequeueQ(Line2)andweenterintoa“while”loopthatiteratesuntilQbecomesempty.
+At every iteration of the loop, first an element v is extracted from Q (Line 4) and l(v)+
+isaddedintoV (Line5).Then,weformtheout-goingedgesofl(v)+.DuetoCondition
+(iii)inDefinition3,everyatomvertexinanexplanationtreehasasinglechild,whichis
+arulevertexduetoCondition(i)inDefinition3andCondition(ii)inDefinition2.Then,
+weextractthechildv ofvatLine6andconsidertwocases.Notethatv isarulevertex.
+(cid:48) (cid:48)
+Case1 Assume that l(v ) is a fact in ΠX. Then, l(v ) satisfies the condition at Line 7 and
+(cid:48) (cid:48)
+we add (l(v)+, ,+) into E at Line 8. The key insight behind that is as follows.
+DuetoCondition(ii)inDefinition12,support(l(v)+,(V,E))mustbeanLCEof
+l(v)+. Due to Condition (i) in Definition 3 and Condition (ii) in Definition 2, the
+head of l(v ) is l(v). As l(v ) is a fact in ΠX, i.e., its body is empty in ΠX,
+(cid:48) (cid:48)
+{(cid:62)}
+becomes an LCE of l(v)+ with respect to (X, ), due to Definition 11. Thus, by
+adding(l(v)+, ,+)toE,support(l(v)+,(V,E))becomes .
+Case2 Assume that l(v ) is not a fact in ΠX. Then, for every child v of v , we add
+(cid:48) (cid:48)(cid:48) (cid:48)
+(l(v)+,l(v )+,+)intoE atLine10.Theintuitionbehindthisistomakesurethat
+(cid:48)(cid:48)
+support(l(v)+,(V,E))isanLCEofl(v)+.DuetoCondition(i)inDefinition3,an
+explanationtreeisasubtreeofthecorrespondingand-orexplanationtree.Then,due
+toCondition(ii)inDefinition2,foreveryatomvertexv inanexplanationtree,the
+atoms in the positive body of the rule that labels the child v of v are in the given
+answersetX.Thus,duetoDefinition11,adding(l(v)+,l(v )+,+)intoEforevery
+(cid:48)(cid:48)
+childv ofv ensuresthatsupport(l(v)+,(V,E))isanLCEofl(v)+ withrespect
+(cid:48)(cid:48) (cid:48)
+GeneratingExplanationsforBiomedicalQueries 39
+to (X, ). Also, we add v into V so that its children in V are formed in the next
+(cid:48)(cid:48)
+iterationsofthe“while”loop.
+Due to Line 8, there are incoming edges of . But, is not added into V inside the
+(cid:62) (cid:62)
+“while”loop.Thus,whenthe“while”loopterminates,beforereturning(V,E)atLine13,
+weadd intoV.
+Algorithm8createsanofflinejustificationofthegivenatominthereductofthegiven
+ASPprogramwithrespecttothegivenanswerset,providedthatlabelsoftheverticesof
+thegivenexplanationtreeareunique.
+Proposition11
+GivenagroundnormalASPprogramΠ,ananswersetX forΠ,anatompinX,andan
+explanationtree V ,E ,l,Π,X intheand-orexplanationtreeforpwithrespecttoΠand
+(cid:48) (cid:48)
+(cid:104) (cid:105)
+X suchthatforeveryv,v V ,l(v)=l(v )ifandonlyifv =v ,Algorithm8returnsan
+(cid:48) (cid:48) (cid:48) (cid:48)
+offlinejustificationofp+inΠX withrespecttoX and .
+LetΠbetheprogram:
+a b,c,notd
+and X = a,b,c . Figure 14(a) is an explanation tree T in the and-or explanation tree
+forawithrespecttoΠandX.Then,givenΠ,X,aandT,Algorithm8createsanoffline
+justificationofa+inΠX withrespecttoΠand asinFigure14(b).
+a b,c,notd a+
+← ← (cid:62) (cid:62)
+Fig.14:(a)Anexplanationtreeand(b)itscorrespondingofflinejustificationobtainedby
+usingAlgorithm8.
+11 OtherRelatedWork
+ThemostrecentworkrelatedtoexplanationgenerationinASPare(BrainandVos2005;
+Syrjanen 2006; Gebser et al. 2008; Pontelli et al. 2009; Oetsch et al. 2010; Oetsch et al.
+40 EsraErdem,UmutOztok
+2011),inthecontextofdebuggingASPprograms.Amongthose,(Syrjanen2006)studies
+whyaprogramdoesnothaveananswerset,and(Gebseretal.2008;Oetschetal.2010)
+studieswhyasetofatomsisnotananswerset.Aswestudytheproblemofexplainingthe
+reasonswhyatomsareintheanswerset,ourworkdiffersfromthosetwowork.
+In (Brain and Vos 2005), similar to our work, the question “why is an atom p in an
+answersetX foranASPprogramΠ”isstudied.Asananswertothisquestion,theauthors
+of(BrainandVos2005)providetheruleinΠthatsupportsX withrespecttoΠ;whereas
+we compute shortest or k different explanations (as a tree whose vertices are labeled by
+rules).
+Pontelli et al. (2009) also introduce the notion of an online justification that aims to
+justifythetruthvaluesofatomsduringthecomputationofananswerset.In(Oetschetal.
+2011), a framework where the users can construct interpretations through an interactive
+steppingprocessisintroduced.Asaresult,(Pontellietal.2009)and(Oetschetal.2011)
+can be used together to provide the users with justifications of the truth values of atoms
+duringtheconstructionofinterpretationsinteractivelythroughstepping.
+12 Conclusion
+We have formally defined explanations in the context of ASP. We have also introduced
+variationsofexplanations,suchas“shortestexplanations”and“kdifferentexplanations”.
+Wehaveproposedgenericalgorithmstogenerateexplanationsforbiomedicalqueries.
+In particular, we have presented algorithms to compute shortest or k different explana-
+tions. We have analyzed termination, soundness and complexity of these algorithms. In
+particular, the complexity of generating a shortest explanation for an answer (in an an-
+swer set X) is O(Π X ) where Π is the number of ASP rules representing the
+query, the knowledge extracted from biomedical resources and the rule layer, and
+is the number of atoms in Π. The complexity of generating k different explanations is
+O(k Π X+1 ).Forkdifferentexplanations,wehavedefinedadistancemeasure
+×| | ×|B |
+basedonthenumberofdifferentASPrulesbetweenexplanations.
+We have developed a computational tool EXPGEN-ASP which implements these al-
+gorithms.Wehaveembedded EXPGEN-ASP into BIOQUERY-ASP togenerateexplana-
+tionsregardingtheanswersofcomplexbiomedicalqueries.Wehaveproposedamethodto
+presentexplanationsinanaturallanguage.Noexistingbiomedicalqueryansweringsystem
+iscapableofgeneratingexplanations;ourmethodshavefulfilledthisneedinbiomedical
+queryanswering.
+We have illustrated the applicability of our methods to answer complex biomedical
+queriesoverlargebiomedicalknowledgeresourcesaboutdrugs,genes,anddiseases,such
+asPHARMGKB,DRUGBANK,BIOGRID,CTD,SIDER,DISEASEONTOLOGYandOR-
+PHADATA.Thetotalnumberofthefactsextractedfromtheseresourcestoanswerqueries
+isapproximately10.3million.
+Itisimportanttoemphasizeherethatourdefinitionsandmethodsforexplanationgen-
+eration are general, so they can be applied to other applications (e.g., debugging, query
+answeringinotherdomains).
+Onelineoffutureworkistogeneralizethenotionofanexplanationtoqueries(likeQ7)
+thatcontainchoiceexpressions.
+GeneratingExplanationsforBiomedicalQueries 41
+13 Acknowledgments
+WewouldliketothankYeldaErdem(SanovelPharmaceuticalInc.)forherhelpinidentify-
+ingbiomedicalqueriesrelevanttodrugdiscovery,andHalitErdogan(SabanciUniversity)
+forhishelpwithanearlierversionof BIOQUERY-ASP whichheimplementedaspartof
+hisMSthesisstudies.WewouldliketothankHansTompits(ViennaUniversityofTech-
+nology)forhisusefulcommentsabouttheworkpresentedinthepaper,andpointingout
+relevantreferencesinthecontextofdebuggingASPprograms.Wealsowouldliketothank
+anonymousreviewersfortheirusefulcommentsandsuggestionsonanearlierdraft.This
+workwaspartiallysupportedbyTUBITAKGrant108E229.

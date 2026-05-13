@@ -1,0 +1,1077 @@
+Leveraging Sociological Models
+for Predictive Analytics
+Richard Colbaugh Kristin Glass Travis Bauer
+Sandia National Laboratories New Mexico Tech Sandia National Laboratories
+Albuquerque, NM USA Socorro, NM USA Albuquerque, NM USA
+colbaugh@comcast.net kglass@icasa.nmt.edu tlbauer@sandia.gov
+Abstract—There is considerable interest in developing techniques es (e.g., social movements, cultural and financial markets, pro-
+for predicting human behavior, for instance to enable emerging test events, political elections, and economic activity). Alterna-
+contentious situations to be forecast or the nature of ongoing but tively, the papers [14-20] derive ML techniques for predicting
+“hidden” activities to be inferred. A promising approach to this the present, for instance enabling the existence of hidden links
+problem is to identify and collect appropriate empirical data and in social networks to be inferred, the sentiment of informal
+then apply machine learning methods to these data to generate communications to be estimated, and the spread of various
+the predictions. This paper shows the performance of such learn-
+health-related phenomena to be remotely monitored.
+ing algorithms often can be improved substantially by leveraging
+sociological models in their development and implementation. In Existing ML methods, although very useful, face at least
+particular, we demonstrate that sociologically-grounded learning two challenges. First, the prediction accuracy obtainable even
+algorithms outperform gold-standard methods in three im- with state-of-the-art algorithms is sometimes insufficient for
+portant and challenging tasks: 1.) inferring the (unobserved) the task at hand, such as when the predictions are to be used to
+nature of relationships in adversarial social networks, 2.) predict- inform high-consequence decisions (e.g., pertaining to national
+ing whether nascent social diffusion events will “go viral”, and 3.) security or human health). Second, applying ML techniques
+anticipating and defending future actions of opponents in adver- typically requires that significant quantities of data be collected
+sarial settings. Significantly, the new algorithms perform well
+and “labeled”. For example, deriving an ML scheme for esti-
+even when there is limited data available for their training and
+mating the sentiment polarity of blog posts usually involves
+execution.
+collecting, processing, and manually labeling hundreds of ex-
+ample posts expressing positive and negative sentiment [15].
+Keywords—predictive analysis, sociological models, social networks,
+Employing ML for forecasting ordinarily entails assembling
+empirical analysis, machine learning.
+extensive time series traces, implying that such methods may
+not be responsive enough to generate useful predictions about
+I. INTRODUCTION
+rapidly emerging events [13]. Additionally, realizing good per-
+There is great interest in developing techniques for accurately formance with standard ML usually necessitates frequent re-
+predicting human behavior. For example, forecasting the even- training to permit algorithms to adapt to evolving conditions,
+tual outcomes of social processes is a central concern in do- which limits usefulness in many domains (e.g., in adversarial
+mains ranging from popular culture to public policy to national settings in which opponents adapt their behaviors expressly to
+security [1]. The task of inferring the existence and nature of defeat learning algorithms [21]).
+activities which are presently underway but not directly ob-
+This paper proposes that the challenges of predicting hu-
+servable, sometimes referred to as “predicting the present” [2],
+man behavior using ML often can be overcome by leveraging
+is also of crucial importance in many applications. A promising
+sociological models in the development and implementation of
+approach to obtaining such predictions is to identify and collect
+the learning algorithms. This proposal is motivated by our re-
+empirical data which appropriately characterize the phenome-
+cent research showing that including sociologically-meaningful
+non of interest and then to analyze these data using machine
+measures of network dynamics as features in ML algorithms
+learning (ML) methods [3]. Roughly speaking, ML algorithms
+permits predictions regarding social dynamics which are sub-
+automatically “learn” relationships between observed variables
+stantially more accurate than those based on standard features
+from examples presented in the form of training data; the
+[22]. The present paper initiates a more systematic exploration
+learned relationships are then used to generate predictions in
+of the utility of combining ML with sociological models for
+new situations. ML’s capacity to learn from examples, scale to
+social prediction. In particular, we consider three important and
+large datasets, and adapt to new or changing conditions make
+challenging tasks: 1.) inferring the “signs” (i.e., friendly or an-
+this an attractive approach to predictive analysis.
+tagonistic) of relationship ties in social networks, 2.) predicting
+The work reported in [4-13] illustrates some of the ways whether a nascent social diffusion event of interest will ulti-
+ML can be used for forecasting, and in particular how these mately propagate widely or will instead quickly dissipate, and
+techniques can be applied to online (Web) data in order to pre- 3.) anticipating and countering the future actions of opponents
+dict the outcomes of a broad range of social dynamics process- in adversarial settings.
+The paper makes four primary contributions. First, we con- II. PREDICTING LINK-SIGNS
+sider the problem of predicting edge-signs in social networks,
+where positive/negative edges reflect friendly/antagonistic so- A. Problem Formulation
+cial ties, and derive a novel ML algorithm for edge-sign predic-
+Social networks may contain both positive and negative rela-
+tion which leverages structural balance theory [23-25]. The
+tionships – people form ties of friendship and support but also
+proposed algorithm outperforms a “gold-standard” method in
+of animosity or disapproval. These two types of social ties can
+empirical tests with two large-scale online social networks,
+be modeled by placing signs on the links or edges of the social
+with the boost in prediction accuracy being especially signifi-
+network, with 1 and 1 reflecting friendly and antagonistic
+cant in situations where only limited training data are available.
+relationships, respectively. We wish to study the problem of
+Interestingly, the inferred edge-signs are also shown to be use-
+predicting the signs of certain edges of interest by observing
+ful when predicting the way adversarial networks will fracture
+the signs and connectivity patterns of the neighboring edges.
+under stress. Second, we examine the problem of forecasting
+More specifically, for a directed social network G = (V, E)
+the ultimate reach of “complex contagion” events [26,27]. A s
+with signed edges, where V and E are the vertex and edge sets,
+predictability assessment of complex contagion dynamics indi-
+respectively, we consider the following edge-sign prediction
+cates that metrics which should be predictive of a contagion’s
+problem: given an edge (u,v)E of interest for which the edge-
+reach are fairly subtle measures of the network dynamics asso-
+sign is “hidden”, infer the sign of (u,v) using information con-
+ciated with very early diffusion activity. These results are used
+tained in the remainder of the network.
+to derive an ML algorithm for predicting which complex con-
+tagion events will ultimately “go viral” and which won’t, and it It is natural to suspect that structural balance theory (SBT)
+is demonstrated that the algorithm outperforms standard meth- may be useful for edge-sign prediction. Briefly, SBT posits that
+ods in an empirical investigation of online meme propagation if wV forms a triad with edge (u,v), then the sign of (u,v)
+[28]. Significantly, the new algorithm performs well even when should be such that the resulting signed triad possessing an odd
+only limited time series data are available for analysis, permit- number of positive edges; this encodes the common principle
+ting reliable predictions early in the contagion lifecycle. It is that “the friend of my friend is my friend”, “the friend of my
+also shown that the proposed algorithm enables effective early enemy is my enemy”, and so on [23,24]. Thus SBT suggests
+warning analysis for an important class of cyber threats. that knowledge of the signs of the edges connecting (u,v) to its
+neighbors may be useful in predicting the sign of (u,v).
+Third, we consider the problem of predicting the actions of
+opponents in adversarial settings [21], and combine ML with a
+B. Prediction Algorithm
+game-theoretic model [29,30] to a design predictive defense
+system which is capable of countering current and future ad- We approach the task of predicting the sign of a given edge (u,
+versary behaviors. An empirical study employing an extensive v) in the social network G as an ML classification problem.
+set of cyber attack data shows that the proposed predictive de- The first step is to define, for a given edge, a collection of fea-
+fense is much more effective than existing defense systems. For tures which may be predictive of the sign of that edge. To al-
+instance, compared with standard cyber defenses, the predictive low a comparison with the (gold-standard) prediction method
+method is better able to distinguish malicious attacks from le- given in [25], we adopt the same two sets of features used in
+gitimate behaviors, allows successful defense against complete- that study. For a given edge (u,v), the first set of features de-
+ly new attacks, and requires significantly less retraining to fined in [25] characterize the various triads to which (u,v) be-
+maintain good performance in evolving threat conditions. longs. Because triads are directed and signed, there are sixteen
+distinct types (e.g., the triad composed of positive edge (u,w)
+Finally, and more generally, the set of results presented in
+and negative edge (w,v), together with (u,v), is one type). Thus
+this paper suggests that incorporating even simple concepts and
+the first sixteen features for edge (u,v) are the counts of each of
+models from sociology can substantially improve the perfor-
+the various triad types to which (u,v) belongs. Including these
+mance of ML prediction algorithms. These “sociology-aware”
+features is directly motivated by SBT. For example, if (u,v)
+algorithms outperform gold-standard methods, particularly
+belongs to many triads with one positive and one negative
+when there is limited data available for training and implement-
+edge, it may be likely that the sign of (u,v) is negative, since
+ing the methods, and can be applied at no additional cost. Thus
+then these triads would possess an odd number of positive edg-
+this initial investigation provides compelling support for the
+es and therefore be “balanced”.
+proposal that sociological models can be usefully leveraged in
+the design and implementation of predictive analytics methods. The second set of features defined in [25] measure charac-
+teristics of the degrees of the endpoint vertices u and v of the
+We now present our results on inferring edge-signs (Section
+given edge (u,v). There are five of these features, quantifying
+II), forecasting contagion events (Section III), and designing
+the positive and negative out-degrees of u, the positive and
+proactive defenses (Section IV). For each application we begin
+negative in-degreed of v, and the total number of neighbors u
+by stating the prediction problem of interest and briefly review-
+and v have in common (interpreted in an undirected sense).
+ing the sociological model we use in its solution. We then de-
+Combining these five measures with the sixteen triad-related
+rive an ML prediction algorithm which is based, in part, on this features results in a feature vector x21 for each edge of in-
+sociological model, and evaluate the performance of the pro-
+terest (see [25] for a more thorough discussion of these features
+posed algorithm through an empirical case study. Additionally,
+and the motivation for selecting them). The feature vector x
+it is shown how these analysis algorithms can be applied to key
+associated with an edge (u,v) will form the basis for predicting
+security informatics challenges.
+the sign of that edge.
+We wish to learn a vector c21 such that the classifier ori- the polarity of both edges and features. Note that the quantity
+ent  sign(cTx) accurately estimates the sign of the edge whose c aug is introduced for notational convenience and is not directly
+features are encoded in vector x. Vector c is learned, in part, employed for classification. More specifically, in the proposed
+from labeled examples of positive and negative edges. Addi- methodology we learn c aug , and therefore c, by solving an opti-
+tionally, the proposed learning algorithm leverages the insights mization problem involving the labeled and unlabeled training
+of SBT. A simple way to incorporate SBT is to assemble sets data, and then use c to estimate the sign of any new edge of
+V and V of positive and negative features, that is, sets of fea- interest with the simple classifier orientsign(cTx). Assume for
+tures which according to SBT ought to be associated with posi- ease of notation that the edges and features are indexed so that
+tive and negative edges, respectively. The triads to which (u,v) the first n l elements of d est and |V l | elements of c correspond to
+belongs in which the other two edges are positive are predicted the labeled data.
+by SBT to “contribute” to (u,v) being positive; thus the four
+We wish to learn an augmented classifier c with the fol-
+features corresponding to triads with two positive labeled edges aug
+lowing three properties: 1.) if an edge is labeled, then the corre-
+are candidates for membership in V (there are four such fea-
+sponding entry of d should be close to this 1 label; 2.) if a
+tures because G is directed). Analogously, SBT posits that the est
+s feature is in the set V  VV, then the corresponding entry
+eight features indexing triads in which exactly one of the two l
+of c should be close to this 1 polarity; and 3.) if there is an
+edges that neighbor (u,v) is positive are candidates for mem-
+edge X of G that connects an edge x and a feature f and X
+bership in V. (Note that the remaining four triad features index ij b ij
+possesses significant weight, then the estimated polarities of x
+triads in which both of the edges neighboring (u,v) are nega-
+and f should be similar. These objectives are encoded in the
+tive, and as there is less empirical support for SBT in this case
+following optimization problem:
+[25] these features are not assigned to either V or V.)
+whi W ch e i s n c o a w p a d b e le ri v o e f l a e n v e M ra L gi n a g lg S o B rit T h m in f it o s r le e a d r g n e i - n s g ig p n r o p c r e e s d s i . c T tio h n e min cT Lc   n l (d  d )2 V l (c  w )2 (2)
+aug aug 1 est,i i 2 i i
+development begins by modeling the problem data as a bipar- c aug i1 i1
+tite graph G of edge-sign instances and features (see Figure 1).
+If there are n edges and 21 features, it can be seen that the adja- where L  D  A is the graph Laplacian matrix for G , with D
+cency matrix A for graph G b is given by the diagonal degree matrix for A (i.e., D ii   j A ij ), and  1 ,  2
+are nonnegative constants. Minimizing (2) enforces the three
+ 0 X properties we seek for c aug , with the second and third terms
+A  XT 0   (1) penalizing “errors” in the first two properties. To see that the
+first term enforces the third property, observe that this expres-
+sion is a sum of components of the form X (d  c)2. The
+where matrix Xn21 is constructed by stacking the feature constants  ,  are used to balance the relati i v j e e i s m t,i port j ance of
+vectors x i as rows, and each ‘0’ is a matrix of zeros. the three properties. The c aug which minimizes objective func-
+tion (2) can be obtained by solving the following set of linear
+equations:
+iinnssttaanncceess L 11  1 I nl L 12 L 13 L 14   1 d
+ 21 22 23 24c   (3)
+ L L L I L  aug w
+31 32 33 2 V 34 2
+ L 41 L 42 L 43 L 44  0 
+ffeeaattuurreess
+where the L are matrix blocks of L of appropriate dimension.
+We summarize this discussion by sketching an algorithm
+Figure 1. Cartoon of bipartite graph data model G, in which
+for learning the proposed edge-sign prediction (ESP) classifier:
+edge-instances (red vertices) are connected to the features (blue
+Algorithm ESP
+vertices) they contain, and link weights (black edges) reflect the
+magnitudes taken by the features in the associated instances. 1. Construct the set of equations (3).
+2. Solve equations (3) for c  [ d T cT ]T (for instance
+using the Conjugate Gradient method).
+Assume the initial problem data consists of a set of n edges,
+3. Estimate the sign of any new edge x of interest as: orient
+of which n l  n are labeled, and a set of labeled features V l   sign(cTx).
+VV, and suppose this label information is encoded as vec-
+tors dnl and w|Vl|, respectively. Let d n be the vector The utility of Algorithm ESP is now examined through a case
+of estimated signs for the edges in the dataset, and define the study involving edge-sign estimation for two social networks
+“augmented” classifier c  [d T cT]Tn21 that estimates extracted from the Wikipedia online encyclopedia.
+C. Wikipedia Case Study
+This case study examines the performance of Algorithm ESP
+for the problem of estimating the signs of the edges in two so-
+cial networks extracted from Wikipedia (WP), a collectively-
+authored online encyclopedia with an active user community.
+We consider the following WP social networks: 1.) the graph
+of 103,747 edges corresponding to votes cast by WP users in
+elections for promoting individuals to the role of ‘admin’ [25],
+and 2.) the graph of 740,397 edges characterizing editor inter-
+actions in WP [31]. In each network, the majority of the edges
+(80) are positive. Thus we follow [25] and create balanced
+datasets consisting of 20K positive and 20K negative edges for
+the “voting” network [25], and 50K positive and 50K negative
+edges for the “interaction” network [31].
+This study compares the edge-sign prediction accuracy of
+Algorithm ESP with that of the impressive gold-standard lo-
+Figure 3.Results for WP “interaction network” case study.
+gistic regression classifier given in [25]. The gold-standard
+The plot shows how edge-sign prediction accuracy (vertical
+algorithm is applied exactly as described in [25]. Algorithm axis) varies with the number of available labeled training
+ESP is implemented with parameter values 
+ 0.1 and 
+ instances (horizontal axis) for two classifiers: gold-standard
+0.5, and with the vector w constructed using the four “positive (red) and Algorithm ESP (blue).
+triad” features V and eight “negative triad” features V noted
+above. As a focus of the investigation is evaluating the extent
+to which good prediction performance can be achieved even D. Network Fracture Case Study
+when only a limited number of labeled edges are available for Recently it has been proposed that structural balance theory can
+training, we examine training sets which incorporate a range of be used to predict the way a network of entities (e.g., individu-
+numbers of labeled edges: n  0, 10, 20, 50, 100, 200. als, countries) will split if subjected to stress [32], a capability
+of relevance in many security applications. Briefly, [32] models
+Sample results from this study are depicted in Figures 2 and
+the polarity and intensity of relationships between the entities
+3. Each data point in the plots represents the average of ten
+of interest as a completely connected network with weighted
+trials. In each trial, the edges are randomly split into equal-size
+adjacency matrix ZZTnn, where matrix element z repre-
+training and testing sets, and a randomly selected subset of the ij
+sents the strength of the friendliness or unfriendliness between
+training edges of size n is “labeled” (i.e., the labels for these
+l entities i and j. Note that this network model is somewhat more
+edges are made available to the learning algorithms). It can be
+general than the one introduced above, in that each edge relat-
+seen that Algorithm ESP outperforms the gold-standard method
+ing two individuals possesses both a sign and an intensity.
+on both datasets, and that the improved accuracy obtained with
+the proposed “SBT-informed” algorithm is particularly signifi- SBT is a “static” theory, positing what a stable configura-
+cantly when the number of labeled training instances is small. tion of edge-signs in a social network should look like. Howev-
+er, underlying the theory is a dynamical idea of how unbal-
+anced network triads ought to resolve themselves to become
+balanced. A model which captures this underlying dynamics is
+given by the simple matrix differential equation [32]
+dZ/dt  Z2, Z(0)Z . (4)
+To see the connection between these dynamics and SBT, ob-
+serve that (4) specifies the following dynamics for entry z :
+dz /dt  z z .
+ij k ik kj
+Thus if triad {i,j,k} is such that z and z have the same sign,
+the participation of z in this triad will drive z in the positive
+direction, while if they have opposite signs then z will be driv-
+en in the negative direction. These dynamics therefore favor
+triads with an odd number of positive edge-signs, consistent
+with SBT [23].
+Figure 2. Results for WP “voting network” case study. The The paper [32] proves that, for generic initial conditions Z 0 ,
+plot shows how edge-sign prediction accuracy (vertical system (4) evolves to a balanced pattern of edge-signs in finite
+axis) varies with the number of available labeled training time; the balanced configuration is guaranteed to be composed
+instances (horizontal axis) for two classifiers: gold-standard of either all positive edges or two all-positive cliques connected
+(red) and Algorithm ESP (blue). entirely by negative edges. These configurations can be inter-
+preted as predictions of the way a social network described by
+Z 0 will fracture if subjected to sufficient stress. More precisely, III. EARLY WARNING FOR COMPLEX CONTAGIONS
+given a model Z for a signed social network, model (4) can be
+used as the basis for the following two-step procedure for pre- A. Problem Formulation
+dicting the way the network will fracture: 1.) integrate (4) for-
+There is significant interest in developing predictive capabili-
+ward in time until it reaches singularity Z (this singularity will
+s ties for social diffusion processes, for instance to permit early
+be reached in finite time), and 2.) interpret Z as defining a split
+s identification of emerging contentious situations or accurate
+of the network into two groups, where each group has all posi-
+forecasting of the eventual reach of potentially “viral” behav-
+tive intra-group edges and the inter-group edges are all nega-
+iors. This section considers the diffusion early warning prob-
+tive (and where one of the groups could be empty). See Figure
+lem: we suppose some sort of triggering event has taken place
+4 for an illustration of the dynamics of system (4).
+and wish to determine, as early as possible, whether this event
+Remarkably, [32] shows that predictions obtained in this will ultimately generate a large, self-sustaining reaction, in-
+manner are in excellent agreement with two real-world cases of volving the propagation of behavioral changes through a sub-
+group fracture for which there is empirical data: the division of stantial portion of a population, or will instead quickly dissi-
+countries into Allied and Axis powers in World War II [33], pate. Of particular interest is the propagation of behaviors that
+and the split of the well-studied Zachary Karate Club into two are costly or controversial, or about which there is uncertainty,
+smaller clubs [34]. However, the analysis presented in [32] as the diffusion of such activities often have significant societal
+requires that matrix Z be completely known, that is, that all of impact [13].
+the “initial” relationships z (0) between entities be measurable.
+ij Recent research has shown that such behaviors may spread
+Such comprehensive data are not always available in practical
+as complex contagions, requiring social affirmation or rein-
+applications.
+forcement from multiple sources in order to propagate [26,27].
+We have found that the requirement that relationship matrix Because the diffusion dynamics for complex contagions are
+Z be perfectly known can be relaxed through the use of Algo- different than those of “simple” contagions like disease epi-
+rithm ESP. More specifically, given a subset of the relationship demics, it is natural to suspect that developing effective early
+data, the remaining weighted edge-signs can be estimated using warning algorithms for complex contagions may require care-
+Algorithm ESP, and these estimates Z can be used in place of ful consideration of these more complex dynamics. In this sec-
+Z when initializing (4). We have tested this procedure using tion we explore this possibility by deriving an early warning
+the relationship network proposed in [33] for 17 key countries method for complex contagions which explicitly leverages a
+involved in World War II. This investigation demonstrates that mathematical model for these diffusion events. We adopt the
+accurate prediction of which countries would eventually join contagion model proposed in [27], implemented on a class of
+the Allied forces and which would become Axis members can social networks which possess realistic topologies, and analyze
+be made with less than 15% of the edge-signs known in ad- this model to identify features of the contagion that are likely to
+vance. For example, data for only the relationships maintained be predictive of diffusion reach. These features are then used as
+by Germany and the USSR is sufficient to enable correct pre- the basis for an ML algorithm which distinguishes complex
+diction of the ultimate alignment of all countries except Portu- contagions that will propagate widely from those which will
+gal (see Figure 4). Similar results hold for analysis of the split quickly dissipate.
+of the Zachary Karate Club [34].
+B. Predictability Assessment
+Here we briefly describe the results of applying the predictabil-
+ity assessment procedure presented in [1,13] to the task of iden-
+tifying measurables that should be predictive of complex con-
+tagion success. The discussion begins with short, intuitive re-
+views of our predictability assessment process and network
+diffusion modeling framework, and then summarizes the main
+results obtained via this theoretical analysis.
+Predictability. The basic idea behind the proposed approach to
+predictability analysis is simple and natural: we assess predict-
+ability by answering questions about the reachability of diffu-
+sion events. To obtain a mathematical formulation of this strat-
+egy, the behavior about which predictions are to be made is
+used to define the system state space subsets of interest (SSI),
+while the particular set of candidate measurables under consid-
+eration allows identification of the candidate starting set
+(CSS), that is, the set of states and system parameter values
+which represent initializations that are consistent with, and
+Figure 4. SBT dynamics. The evolution of model (4) initial-
+equivalent under, the presumed observational capability. As a
+ized at the (scaled) “propensity” matrix given in [33] (hori-
+simple example, consider an online market with two products,
+zontal axis is time and vertical axis is edge-weight).
+A and B, and suppose the system state variables consist of the
+current market share for A, ms(A), and the rate of change of
+this market share, r(A) (ms(B) and r(B) are not independent
+state variables because ms(A)  ms(B)  1 and r(A)  r(B)  0); discrete and continuous dynamics within a unified, computa-
+let the parameters be the advertising budgets for the products, tionally tractable framework offers an expressive, scalable
+b(A) and b(B). The producer of A might find it useful to define modeling environment that is amenable to formal mathematical
+the SSI to reflect market share dominance by A, that is, the analysis. In particular, S-HDS models can be used to efficiently
+subset of the two-dimensional state space where ms(A) exceeds represent and analyze social contagion on large-scale networks
+a specified threshold. If only market share and the advertising with the four topological properties listed above [13].
+budgets can be measured then the CSS is the one-dimensional
+subset of state-parameter space consisting of the initial magni-
+tudes for ms(A), b(A), and b(B), with r(A) unspecified.
+iiinnnpppuuutttsss
+dddiiissscccrrreeettteee
+Roughly speaking, the approach to predictability assess-
+sssyyysssttteeemmm
+ment proposed in [1,13] involves determining how probable it
+mmmooodddeee
+is to reach the SSI from a CSS and deciding if these reachabil- ooouuutttpppuuutttsss
+ity properties are compatible with the prediction goals. If a sys- cccooonnntttiiinnnuuuooouuusss
+sssyyysssttteeemmm
+tem’s reachability characteristics are compatible with the pre-
+iiinnnpppuuutttsss
+diction objectives the situation is deemed predictable (and oth-
+erwise it is unpredictable). This setup permits the identification
+of candidate predictive measurables: these are the measurable
+states and/or parameters which most strongly affect the predict-
+ability properties [1]. Continuing with the online market exam-
+ple, if trajectories with positive early market share rates r(A)
+are much more likely to yield market share dominance for A
+than are trajectories with negative early r(A), independent of
+the early values for ms(A), then the situation is unpredictable
+(because r(A) is not measured). Adding the capacity to measure iiiinnnntttteeeerrrr----ccccoooommmmmmmmuuuunnnniiiittttyyyy
+ddddyyyynnnnaaaammmmiiiiccccssss
+r(A) would then increase system predictability, and depending
+upon the task requirements this new measurement ability could iii
+result in a predictable situation. A quantitative, mathematically-
+rigorous presentation of this predictability assessment frame-
+work can be found in [1,13]. jjj
+Model. In complex contagion events, the probability of adopt-
+ing a controversial or unproven behavior or idea increases with
+the number of other adopting individuals, and not merely the
+number of exposures to the contagion (so that multiple interac-
+tions with the same adopting individual do not increase the
+likelihood of adoption, as it does in simple contagions) [26,27].
+Recently the authors of [27] proposed an empirically-grounded
+model for complex contagions in which individuals interact via iiinnntttrrraaa---cccooommmmmmuuunnniiitttyyy
+dddyyynnnaaammmiiicccsss
+a social network of arbitrary topology, and the probability that
+individual A adopts a given activity or idea is a function of the
+number of A’s adopting neighbors; the functional form of this
+Figure 5. Modeling complex contagion on networks with
+adoption “influence curve” is obtained empirically (see [27] for
+community structure via S-HDS. The cartoon at top left
+a detailed description of the model).
+depicts a network with three communities. The cartoon at
+The dynamics of contagion may depend upon the topologi- bottom illustrates contagion within a community k and
+between communities i and j. The schematic at top right
+cal structure of the underlying social network. This dependence
+shows the basic S-HDS feedback structure.
+suggests that, in order to identify the features of complex con-
+tagions which have predictive power, it is necessary to assess
+predictability using social network models with realistic topol-
+As an intuitive illustration of the way S-HDS enable effec-
+ogies. Therefore in this study we implement the complex con-
+tive, tractable representation of complex contagion phenomena,
+tagion model [27] with social networks that possess four topo-
+consider the task of modeling contagion on a network pos-
+logical properties which are ubiquitous in the real-world [13]:
+sessing community structure. As shown in Figure 5, the conta-
+right-skewed degree distribution, transitivity, community struc-
+gion proceeds in two ways: 1.) intra-community diffusion, in-
+ture, and core-periphery structure.
+volving frequent interactions between individuals within the
+It is shown in [1] that stochastic hybrid dynamical systems same community and the resulting gradual change in the con-
+(S-HDS) provide a useful mathematical formalism with which centrations of adopting (red) individuals, and 2.) inter-
+to represent social contagions on realistic networks (see Figure community diffusion, in which the “infection” jumps from one
+5). An S-HDS is a feedback interconnection of a discrete-state community to another, for instance because an adopting indi-
+stochastic process, such as a Markov chain, with a family of vidual encounters a new community. S-HDS models offer a
+continuous-state stochastic dynamical systems [1]. Combining natural framework for representing these dynamics, with the S-
+HDS continuous system modeling the intra-community dynam- degree two or higher; the removed vertices constitute the 1-
+ics (e.g., via stochastic differential equations), the discrete sys- shell. Continuing in the same way, all vertices with degree two
+tem capturing inter-community dynamics (e.g., using a Markov (or less) are recursively removed, creating the 2-shell. This
+chain), and the interplay between these dynamics being encod- process is repeated until all vertices have been assigned to a k-
+ed in the S-HDS feedback structure (e.g., the transition proba- shell, and the shell with the highest index, the k -shell, is
+bilities of the discrete system Markov chain may depend upon deemed to be the core of the network. This definition permits
+the state of the continuous system) [13]. us to state the second candidate predictive feature nominated
+via theoretical predictability assessment: early contagion activi-
+Results. We applied the predictability assessment methodology
+ty within the network k -shell should be a reliable predictor
+summarized above to a “realistic network” version of the com- max
+that the reach of the diffusion will be significant (see Figure 7).
+plex contagion model given in [27] (i.e., the model obtained by
+implementing the dynamics specified in [27] on a class of net-
+works possessing the four topological properties summarized
+above). The main finding of this study is that the predictability
+of the reach of complex contagions depends crucially upon the
+social network’s community and core-periphery structures.
+These findings are now summarized more quantitatively.
+We adopt a modularity-based definition for network com-
+munity structure [35], whereby a good partitioning of a net-
+work’s vertices into communities is one for which the number
+of edges between putative communities is smaller than would
+be expected in a random partitioning. To be concrete, a modu-
+larity-based partitioning of a network into two communities
+Figure 7.Early diffusion within the core is predictive. The
+maximizes the modularity Q  sT B s / 4m, where m is the total cartoon illustrates the predictive feature associated with k-
+number of edges in the network, the partition is specified with shell structure: contagions initiated with three “seed” indi-
+the elements of vector s by setting s  1 if vertex i belongs to viduals are much more likely to propagate widely if the
+community 1 and s
+ 1 if it belongs to community 2, and the seeds reside within the network’s core (left) rather than at
+its periphery (right).
+matrix B has elements B  A  kk / 2m, with A and k de-
+ij ij i j ij i
+noting the network adjacency matrix and degree of vertex i,
+respectively. Partitions of the network into more than two
+communities can be constructed recursively [35]. This defini- C. Prediction Algorithm
+tion enables the specification of the first candidate predictive Consider the problem of predicting, very early in the lifecycle
+feature nominated by our predictability assessment: early dis- of a complex contagion event, whether or not the contagion
+persion of a complex contagion process across network com- will propagate widely. We adopt an ML approach to this early
+munities should be a reliable predictor that the ultimate reach warning task: given a triggering incident, one or more infor-
+of the contagion will be significant (see Figure 6). mation sources which reflect the reaction to this trigger by a
+population of interest, and a specification for what constitutes
+an “alarming” reaction, the goal is to learn a classifier that ac-
+curately predicts, as early as possible, whether or not reaction
+to the event will eventually become alarming. The ML classifi-
+er used in this investigation is the Avatar ensembles of decision
+trees (A-EDT) algorithm [37]; qualitatively similar results were
+obtained in tests with other, less sophisticated classifiers [3].
+A key step in early warning analysis is determining which
+characteristics of the phenomenon of interest, if any, possess
+exploitable predictive power. Based on the results of the pre-
+ceding predictability assessment study, we consider three gen-
+eral classes of features: 1.) intrinsics-based features – measures
+Figure 6. Early dispersion across communities is predictive. of the inherent properties and attributes of the “object” being
+The cartoon illustrates the predictive feature associated with diffused, 2.) simple dynamics-based features – metrics which
+community structure: contagions initiated with five “seed” capturing simple properties of the diffusion dynamics (e.g., the
+individuals are much more likely to propagate widely if the
+rate at which the diffusion is propagating), 3.) network dynam-
+seeds are dispersed across multiple communities (left) rather
+ics-based features – measures that characterize the way the
+than concentrated within a single community (right).
+early diffusion is progressing relative to the network’s commu-
+nity and core-periphery structures. Precise definitions for the
+features in these classes are, of course, application dependent.
+We characterize network core-periphery structure in terms
+of the k-shell decomposition [36]. To partition a network into The proposed approach to early warning analysis is to iden-
+its k-shells, one first removes all vertices with degree one, re- tify and collect features from these classes for the event of in-
+peating this step if necessary until all remaining vertices have terest, input the feature values to the A-EDT classifier, and then
+run the classifier to generate a warning prediction (i.e., a fore- tagion, [27] shows that political memes appear to propagate in
+cast that the event is expected to become ‘alarming’ or remain this way. Our main source of data on meme dynamics is the
+procedure in general terms, and illustrative instantiations of the authors of [28]. Briefly, the archive [39] contains time series
+procedure are given in the discussions of the case studies. In data characterizing the online diffusion of ~70,000 memes dur-
+what follows it is assumed that social media data form the pri- ing the period between 1 August and 31 December 2008. We
+mary source of information concerning the event of interest are interested in using Algorithm EW to distinguish successful
+[38]. However, the analytic process is similar when alternative and unsuccessful political memes early in their lifecycle. More
+sources of data are employed [13]. precisely, the prediction task is to classify memes into two
+groups – those which will ultimately be successful (acquire
+Consider the following early warning algorithm:
+more than S posts) and those that will be unsuccessful (attract
+fewer than U posts) – very early in the meme lifecycle.
+Algorithm EW
+To support an empirical evaluation of the utility of Algo-
+Given: a triggering incident, a definition for what constitutes an
+rithm EW for this problem, we downloaded from [39] the time
+‘alarming’ reaction, and a set of social media sites (e.g., blogs)
+series data for slightly more than 70,000 memes. These data
+B which are relevant to the early warning task.
+contain, for each meme M, a sequence of pairs (t , URL ) , (t ,
+Initialization: train the A-EDT classifier on a set of events that URL ) , …, (t , URL ) , where t is the time of appearance of
+2 M T T M k
+are qualitatively similar to the triggering event of interest and the kth blog post or news article that contains at least one men-
+are labeled as ‘alarming’ or ‘not alarming’. tion of meme M, URL is the URL of the blog or news site on
+which that post/article was published, and T is the total number
+Procedure:
+of posts that mention meme M. From this set of time series we
+1. Assemble a lexicon of keywords L that pertain to the trig- randomly selected 100 “successful” political meme trajectories,
+gering event under study. defined as those corresponding to memes which attracted at
+2. Conduct a sequence of Web crawls and construct a time least 1000 posts during their lifetimes, and 100 “unsuccessful”
+series of blog graphs G (t). For each time period t, label political meme trajectories, defined as those whose memes
+each blog in G (t) as ‘active’ if it contains a post mention- acquired no more than 100 total posts.
+ing any of the keyword in L and ‘inactive’ otherwise.
+Two other forms of data were collected for this study: 1.) a
+3. Form the union G B =  t G B (t), partition G B into network large Web graph which includes websites (URLs) that appear
+communities and into k-shells, and map the partition ele- in the meme time series, and 2.) samples of the text surround-
+ment structure of G B back to each of the graphs G B (t). ing the memes in the posts which contain them. More specifi-
+4. For each graph G (t), compute the values for all features cally, we sampled the URLs appearing in the time series for our
+(intrinsics, simple dynamics, and network dynamics). set of 200 successful and unsuccessful memes and performed a
+Web crawl that employed these URLs as “seeds”. This proce-
+5. Apply the A-EDT classifier to the time series of features,
+dure generated a Web graph, denoted G , that consists of ap-
+i.e., the features obtained for the sequence of blog graphs B
+proximately 550,000 vertices (websites) and 1.4 million edges
+{G (t ), …, G (t )}, where t and t are the triggering event
+B 0 B p 0 p (hyperlinks), and includes essentially all of the websites which
+time and present time, respectively. Issue a warning alert if
+appear in the meme time series. To obtain samples of text sur-
+the classifier output is ‘alarming’.
+rounding memes in posts, we randomly selected ten posts for
+We now offer a few remarks concerning Algorithm EW. each meme and then extracted from each post the paragraph
+The keywords in Step 1 can be identified with the help of sub- which contains the first mention of the meme.
+ject matter experts and also through computational means (e.g.,
+Algorithm EW employs three types of features: intrinsics,
+via meme analysis [28]). Step 2 is by now standard, and a vari-
+simple dynamics-based, and network dynamics-based. We now
+ety of tools exist which can perform these tasks [38]. In Step 3,
+describe the instantiation of each of these feature classes for the
+the blog network can be partitioned into communities and k-
+meme problem. Consider first the intrinsics features, which for
+shells using modularity-based community extraction [35] and
+the meme application become language-based measures. Each
+standard k-shell decomposition [36], respectively. The particu-
+“document” of text surrounding a meme in its (sample) posts is
+lar choices of metrics for the intrinsics, simple dynamics, and
+represented by a simple “bag of words” feature vector x|V|,
+network dynamics features computed in Step 4 tend to be prob-
+where the entries of x are the frequencies with which the words
+lem specific, and typical examples are given in the case studies
+in the vocabulary V appear in the document. A language-based
+below. Finally, in Step 5 the feature values obtained in Step 4
+feature which might reasonably be expected to be predictive of
+serve as inputs to the A-EDT classifier, and the output of the
+meme propagation is the sentiment or emotion of documents
+classifier is used to decide whether an alert should be issued.
+containing the meme. A simple way to quantify a document’s
+sentiment/emotion is through the use of appropriate lexicons.
+D. Meme Case Study
+Let s|V| denote a lexicon vector, in which each entry of s is a
+The goal of this case study is to apply Algorithm EW to the
+numerical “score” quantifying the sentiment/emotion intensity
+task of predicting whether or not a given meme (i.e., short tex-
+of the corresponding word in vocabulary V. The aggregate sen-
+tual phrase which propagates relatively unchanged online) will
+timent/emotion score of document x can then be computed as
+“go viral”. Although it may seem that meme diffusion is not score(x)  sTx / sT1, where 1 is a vector of ones. Thus score(.)
+sufficiently costly or controversial to qualify as a complex con-
+estimates document sentiment or emotion as a weighted aver-
+age of the sentiment or emotion scores for the words compris- can be seen from Figure 8 that Algorithm EW outperforms the
+ing the document. (Note that if no sentiment or emotion infor- gold-standard method, especially in the important situation in
+mation is available for a particular word in V then the corre- which it is desired to form predictions soon after the meme is
+sponding entry of s is set to zero.) detected. Indeed, these results show that useful predictions can
+be obtained with Algorithm EW within the first twelve hours
+To characterize the emotion content of a document we use
+after a meme is detected (this corresponds to 0.5% of the aver-
+the Affective Norms for English Words (ANEW) lexicon [40],
+age meme lifespan). Interestingly, analysis of feature predictive
+while positive or negative sentiment is quantified via the “IBM
+power [3] shows that the most predictive features are, in de-
+lexicon” [41]. This approach generates four language features
+creasing order, 1.) community dispersion, 2.) #k-core blogs, 3.)
+for each meme: the happiness, arousal, dominance, and posi-
+#posts, and 4.) post rate, which supports the conclusions of the
+tive/negative sentiment of the sample text surrounding that
+complex contagion-based predictability assessment.
+meme. As a preliminary test, we computed the mean emotion
+and sentiment of text surrounding the 100 successful and 100
+unsuccessful memes in our dataset. On average the text sur-
+rounding successful memes is happier, more active, more dom-
+inant, and more positive than that surrounding unsuccessful
+memes (p0.0001), so it is at least plausible that the language
+features may possess some predictive power.
+Consider next two simple dynamics-based features, defined
+to capture basic characteristics of the early evolution of meme
+post volume: 1.) #posts() – the cumulative number of posts
+mentioning the given meme by time  (where  is small relative
+to the typical meme lifespan), and 2.) post rate() – a simple
+estimate of the rate of accumulation of these posts at time .
+Recall that predictability assessment suggests that both early
+dispersion of contagion activity across network communities
+and early contagion activity within the network core ought to
+be predictive of meme success. These insights motivate the
+definition of two network dynamics-based features for meme
+prediction: 1.) community dispersion() – the cumulative num- Figure 8. Results for meme early warning case study. The
+ber of network communities in the blog graph G that, by time plot shows how prediction accuracy (vertical axis) varies
+, contain at least one post which mentions the meme, and 2.) with the length of time that has elapsed between meme de-
+#k-core blogs() – the cumulative number of blogs in the k - tection and meme prediction (horizontal axis) for the two
+classifiers: gold-standard (red) and Algorithm EW (blue).
+shell of blog graph G that, by time , contain at least one post
+which mentions the meme.
+This case study compares the meme early warning accuracy E. Early Warning Case Study
+of Algorithm EW, as applied to meme prediction, with that of
+This case study explores the ability of Algorithm EW to pro-
+two other prediction methods: a language-based (LB) strategy
+vide reliable early warning for politically-motivated distributed
+and a standard-dynamics (SD) scheme. The LB predictor uses
+denial-of-service (DDoS) attacks, an important class of cyber
+the four language features noted above with the A-EDT classi-
+threats. In particular, we are interested in exploring the utility
+fier to try to distinguish successful and unsuccessful memes,
+of Algorithm EW when using social media as an information
+and achieves a prediction accuracy of 66.5% (ten-fold cross-
+source. Toward this end, we first identified a set of Internet
+validation). Since simply guessing ‘successful’ for all memes
+disruptions which included examples from three distinct classes
+gives an accuracy of 50%, it can be seen that the language
+of activity: 1.) successful DDoS attacks (the events for which
+intrinsics, when used alone, possess relatively limited predic-
+we seek early warning; 2.) natural events which disrupt Internet
+tive power.
+service (disturbances, like earthquakes, that impact the Internet
+Next we compare the predictive performance of the SD but for which it is known that no early warning signal exists in
+classifier with that of Algorithm EW. The SD predictor com- social media); 3.) quiet periods (periods during which there is
+bines the four language features with the two simple dynamics social media “chatter” concerning impending DDoS attacks but
+features, #posts() and post rate(), within the A-EDT classifi- no successful attacks occurred). Including events selected from
+er. Because this is representative of state-of-the-art prediction these three classes is intended to provide a fairly comprehen-
+schemes [e.g., 5-8], this approach is referred to as the gold- sive test, as these classes correspond to 1.) the domain of inter-
+standard algorithm. The application of Algorithm EW to meme est, 2.) a set of disruptions which impact the Internet but have
+prediction combines the language features with four network no social media warning signal, and 3.) a set of “non-events”
+dynamics measures: #posts(), post rate(), community disper- which do not impact the Internet but do possess putative social
+media warning signals.
+sion(), and #k-core blogs(). Sample results from this empiri-
+cal test are depicted in Figure 8. Each data point represents the We selected twenty events from these three classes:
+average accuracy over ten trials (ten-fold cross-validation). It
+Politically-motivated DDoS attacks:
+▪ Estonia event in April 2007; In this evaluation, Algorithm EW achieves perfect accura-
+cy, correctly identifying all ‘attack’ and ‘non-attack’ events. If
+▪ CNN/China incident in April 2008;
+the test is made more difficult, so that the blog data made
+▪ Israel/Palestine conflict event in January 2009; available to Algorithm EW for attack events is limited to a four
+▪ DDoS associated with Iranian elections in June 2009; week period that ends two weeks before the attack, the pro-
+posed approach still achieves 95% accuracy, An examination
+▪ WikiLeaks event in November 2010;
+of the predictive power of the four features used as inputs to the
+▪ Anonymous v. PayPal, etc. attack in December 2010; A-EDT classifier reveals that community dispersion is the most
+▪ Anonymous v. HBGary attack in February 2011. predictive measure.
+Natural disturbances:
+IV. PREDICTIVE DEFENSE
+▪ European power outage in November 2006;
+▪ Taiwan earthquake in December 2006; A. Problem Formulation
+▪ Hurricane Ike in September 2008; Coevolving adversarial dynamics are present in many applica-
+tion areas, including national security, public policy, business,
+▪ Mediterranean cable cut in January 2009;
+and economics. There is significant interest to develop proac-
+▪ Taiwan earthquake in March 2010; tive approaches to dealing with adversarial behavior, in which
+▪ Japan earthquake in March 2011. opponents’ future strategies are anticipated and these insights
+are incorporated into defense designs. Recent work suggests
+Quiet periods:
+that previous hostile actions and defender responses provide
+Seven periods, from 2005 through 2011, during which there predictive information about future attacker behavior because
+were discussions in social media of DDoS attacks on various of the coevolving relationship that exists between adversaries
+U.S. government agencies but no successful attacks occurred. [44,21]. However, little is known about how to systematically
+exploit this predictability to design effective countermeasures.
+We collected two forms of data for each of these twenty
+This section considers the following concrete instantiation of
+events: cyber data and social data. The cyber data consist of
+the proactive defense problem: given some (possibly limited)
+time series of routing updates which were issued by Internet
+history of attacker actions, design a predictive defense system
+routers during a one month period surrounding each event.
+which performs well against both current and future attacks.
+More precisely, these data are the Border Gateway Protocol
+(BGP) routing updates exchanged between gateway hosts in It is reasonable to expect that concepts and techniques from
+the Autonomous System network of the Internet. The data were game theory [29,30] might be useful in designing predictive
+downloaded from the publicly-accessible RIPE collection site defense systems, and indeed such approaches have been at-
+[42] using the process described in [43] (see [43] for additional tempted in different domains (see [21,45] for relevant back-
+details and background information on BGP routing dynamics). ground). These investigations, although useful, have not tended
+The temporal evolution of the volume of BGP routing updates to produce practically-implementable results. While there are
+(e.g., withdrawal messages) gives a coarse-grained measure of several challenges to successfully applying game-theoretic
+the timing and magnitude of large Internet disruptions and thus methods to adversarial dynamics of real-world scale and com-
+offers a simple and objective way to characterize the impact of plexity, we mention two that have been particularly daunting.
+each of the events in our collection. The social data consist of First, the space of possible attacker actions is typically very
+time series of social media mentions of cyber attack-related large in realistic environments. Because the complexity of
+keywords and memes detected during a one month period sur- game models usually increases exponentially with the number
+rounding each of the twenty events. These data were gathered of actions available to the players [29,45], this has made game
+using the procedure specified in Algorithm EW. models intractable in practice. And second, it has proved diffi-
+cult to develop models that capture evolving attacker behavior
+We apply Algorithm EW to the task of distinguishing the
+in any but the most idealized (and unrealistic) situations.
+seven DDoS attacks from the thirteen other events in the event
+set. For simplicity, in this case study we do not use any In this section we overcome these challenges by approach-
+intrinsics-based features (e.g., language metrics) in the A-EDT ing the task of developing game-based models for adversarial
+classifier, and instead rely upon the four dynamics-based fea- interactions from a sociological perspective [30]. More specifi-
+tures defined in the meme study. Because the event set in this cally, we develop a simple game model which explicitly lever-
+study includes only twenty incidents, we apply Algorithm EW ages empirical data directly within an ML framework, enabling
+with two-fold cross-validation. In the case of DDoS events, the adversary behavior to be predicted and countered in realistic
+blog data made available to Algorithm EW is limited to posts settings. Crucially, the proposed approach derives the optimal
+made during the five week period which ended one week be- defense for the predicted attacks, rather than attempting to ob-
+fore the attack. For the six natural disturbances, the blog data tain perfect predictions, and therefore enjoys robust perfor-
+includes all posts collected during the six week period immedi- mance in the presence of (inevitable) prediction errors. (See,
+ately prior to the event, while in the case of the seven non- for instance, [30] for an argument for the need to explicitly
+events, the blog data includes the posts gathered during a six connect game models with data if game theory is to impact the
+week interval which spans discussions of DDoS attacks on U.S. empirically-oriented science of sociology, and for suggestions
+government agencies. concerning some ways sociology might contribute to an empir-
+ical game theory.)
+We approach the task of countering adversarial behavior as imply that the values of the individual elements of x approach
+an ML classification problem, in which the objective is to dis- those of x monotonically.
+tinguish innocent and malicious activity. Each instance of ac-
+To permit convenient examination of the evolution of fea-
+tivity is represented as a feature vector x|F|, where entry x
+i ture vectors x and x during the 30 month period under study,
+of x is the value of feature i for this instance and F is the set of S NS
+the emails are first binned by quarter. Next, the average values
+instance features. In what follows, F is a set of “reduced” fea-
+for each of the 20 (reduced dimension) features are computed
+tures, obtained by projecting the original feature vectors into a
+for all Spam emails and all non-Spam emails (separately) for
+lower-dimensional space. While feature reduction is standard
+each quarter. Figure 9 illustrates the feature space dynamics of
+practice in ML [3], we show below that aggressive reduction
+Spam and non-Spam messages for one representative element
+allows us to efficiently manage the complexity of our game
+(F1) of this reduced feature space. As seen in the plot, the value
+models. Behavior instances x belong to one of two classes:
+of feature F1 for Spam approaches the value of this feature for
+positive/malicious and negative/innocent (generalizing to more
+non-Spam, and this increasing similarity is a consequence of
+than two behavior classes is straightforward [3]). The goal is to
+changes in the composition of Spam messages (the value of F1
+learn a vector w|F| such that classifier orient  sign(wTx)
+for non-Spam emails is essentially constant). The dynamics of
+accurately estimates the class of behavior x, returning 1 (1)
+the other feature values (not shown) are analogous.
+for malicious (innocent) activity.
+B. Predictability Assessment
+As indicated in Section III, it is useful to assess the predictabil-
+ity of a phenomenon before attempting to predict its evolution,
+for example to identify measurables which possess predictive
+power [1,13]. There has been limited theoretical work assessing
+predictability of adversarial dynamics, but existing studies sug-
+gest attack-defend coevolution often generates predictable dy-
+namics. For instance, although [46] finds that, in some repeated
+games, certain player strategies lead to chaotic dynamics, [22]
+shows a large range of player strategies in repeated two-player
+and multi-player games result in predictable adversarial behav-
+ior. Here we supplement this theoretical work by conducting an
+empirical investigation of predictability, and select as our case
+study a cyber security problem – Spam filtering – which pos-
+sesses attributes that are representative of many adversarial
+domains.
+To conduct this investigation, we first obtained a large col-
+lection of emails from various publicly-available sources for
+Figure 9.Spam/non-Spam evolution in feature space. The
+plot depicts evolution of feature F1 for Spam (red) and
+the period 1999-2006, and added to this corpus a set of Spam
+non-Spam (blue) during the ten quarters of the study.
+emails acquired from B. Guenter’s Spam trap for the same time
+period. Following standard practice, each email is modeled as a
+“bag of words” feature vector x|F|, where the entries of x are
+Observe that the Spam dynamics illustrated in Figure 9 re-
+the frequencies with which the words in vocabulary F appear in
+flect sensible adaptation on the part of Spammers: the features
+the message. The resulting dataset consists of ~128,000 emails
+of Spam email messages evolve to appear more like those of
+composed of more than 250,000 features. We extracted from
+non-Spam email and therefore to be more difficult to identify.
+this collection of Spam and non-Spam emails the set of mes-
+Additionally, this evolution is regular, with feature values for
+sages sent during the 30 month period between January 2001
+Spam approaching those for non-Spam in a nearly-monotonic
+and July 2003 (other periods exhibit very similar behavior).
+fashion. Thus this empirical analysis indicates that coevolving
+Finally, the dimension of the email feature space is reduced via
+Spammer-Spam filter dynamics possesses some degree of pre-
+singular value decomposition (SVD) analysis [3], yielding a
+dictability, and that the features employed in Spam analysis
+reduction in feature space dimension |F| of four orders of mag-
+may have predictive power; this result is in agreement with the
+nitude (from ~250K to 20).
+conclusions of the theoretical predictability analysis reported in
+We wish to examine, in an intuitive way, the predictability [22]. Moreover, because many of the characteristics of Spam-
+of Spammer adaptation, and propose two simple but reasonable Spam defense coevolution are also present in other adversarial
+criteria with which to empirically evaluate predictability: sen- systems, this result suggests these other systems may have ex-
+sibility and regularity (a more systematic and mathematically- ploitable levels of predictability as well.
+rigorous frameworks for defining and assessing predictability is
+derived in [1,13] and summarized in Section III). More specifi- C. Predictive Defense
+cally, and in the context of Spam, it would be sensible for
+The proposed approach to designing a predictive defense sys-
+Spammers to adapt their messages over time in such a way that
+tem which works well against both current and future attacks is
+Spam feature vectors x become more like feature vectors x
+S NS to combine ML with a simple game-based model for adversary
+of legitimate emails, and regularity in this adaptation might
+behavior. In order to apply game-theoretic methods, it is neces- Algorithm PD
+sary to overcome the complexity and model-realism challenges
+1. Collect historical data {y, x}n which reflects past be-
+mentioned above. We address problem complexity by model- i i i=1
+havior of the attacker and past legitimate behavior.
+ing adversary actions directly in an aggressively-reduced fea-
+ture space, so that the (effective) space of possible adversary 2. Optimize objective function (5) to obtain the predicted
+actions which must be considered is dramatically decreased. actions a|F| of the attacker and the optimal defense
+The difficulty of deriving realistic representations for attacker w|F| to counter this attack.
+behavior is overcome by recognizing that the actions of attack- 3. Estimate the status of any new activity x as either mali-
+ers can be modeled as attempts to transform data (i.e., feature cious (1) or innocent (1) via orient  sign(wTx).
+vectors x) in such a way that malicious and innocent activities
+are indistinguishable. (This is in contrast to trying to model the Observe that Step 2 of this algorithm can be interpreted as first
+attack instances “from scratch”). It is possible to model attacker predicting the attacker strategy through computation of attack
+actions as transformations of data because, within an empirical vector a, and then learning an appropriate countermeasure w by
+ML problem formulation, historical attack data are available in applying ML to the “transformed” data {y, xa}n .
+the form of training instances.
+D. Spam Case Study
+We model adversarial coevolution as a sequential game, in
+which attacker and defender iteratively optimize the following This case study examines the performance of Algorithm PD for
+objective function: the Spam filtering problem. We use the Spam/non-Spam email
+dataset introduced above, consisting of ~128,000 messages that
+   were sent during the period 1999-2006. The study compares
+min max a 3 w 3 lossy
+the effectiveness of Algorithm PD, implemented as a Spam
+w a  i  filter, with that of a well-tuned naïve Bayes (NB) Spam filter
+[21]. Because NB filters are widely used and work very well in
+In (5), the loss function represents the misclassification rate for
+the defense system, where {y, x}n denotes pairs of activity Spam applications, this filter is referred to as the gold-standard
+algorithm. We extract from our dataset the 1000 oldest legiti-
+instances x and labels y, and vector w parameterizes the de-
+mate emails and 1000 oldest Spam messages for use in training
+fense (recall that the defense attempts to distinguish malicious
+and innocent activity using the classifier orient  sign(wTx)). both Algorithm PD and the gold-standard algorithm. The email
+messages sent during the four year period immediately follow-
+The attacker attempts to circumvent the defense by transform-
+ing the data through vector a|F|, and the defender’s goal is to ing the date of the last training email are used as test data. More
+specifically, these emails are binned by quarter and then ran-
+counter this attack by appropriately specifying classifier vector
+domly sub-sampled to create balanced datasets of Spam and
+w|F|. The terms ||a||3 and ||w||3 define “regularizations”
+legitimate emails for each of the 16 quarters in the test period.
+imposed on attacker and defender actions, respectively, as dis-
+cussed below. Recall that Algorithm PD employs aggressive feature space
+dimension reduction to manage the complexity of the game-
+Observe that (5) models the attacker as acting to increase
+based modeling process. This dimension reduction is accom-
+the misclassification rate with vector a, subject to the need to
+plished here through SVD analysis, which reduces the dimen-
+limit the magnitude of this vector (large a is penalized via the
+sion |F| of feature vectors from ~250K to 20) [3]. (The orthog-
+term ||a||3). This model thus captures in a simple way the fact
+onal basis used for this reduction is derived by performing
+that the actions of the attacker are in reality always constrained
+SVD analysis using the 1000 non-Spam and 1000 Spam train-
+by the goals of the attack. For instance, in the case of Spam
+ing data.) We remark that good classification accuracy can be
+email attacks, the Spammer tries to manipulate message x in
+obtained with a wide range of (reduced) feature space dimen-
+such a way that it “looks like” legitimate email and evades the
+sions. For example, a Spam filter accuracy of ~97% is achieved
+Spam filter w. However, transformed message xa must still
+with the training data when using an NB classifier implemented
+communicate the desired information to the recipient or the
+with a feature space dimension ranging from |F|100,000 to |F|
+attacker’s goal will not be realized, and so the transformation
+5 (accuracy is estimated via two-fold cross-validation).
+vector a cannot be chosen arbitrarily.
+The gold-standard strategy is applied as described in [21].
+The defender attempts to reduce the misclassification rate
+Algorithm PD is implemented with parameter values   0.001
+with an optimal choice for vector w, and avoids “over-fitting”
+through regularization with the ||w||3 term [3]. Notice that the and   0.1, and with a sum-of-squares loss function. As dis-
+cussed above, motivations for developing predictive defenses
+formulation (5) permits the attacker’s goal to be modeled as
+include the capability to perform well against new attacks and
+counter to, but not exactly the opposite of, the defender’s goal,
+the possibility to maintain an effective defense without the
+and this is consistent with many real-world settings. Returning
+need for frequent retraining, which is ordinarily expensive and
+to the Spam example, the Spammer’s objective of delivering
+time-consuming. To explore these issues, in this case study we
+messages which induce profitable user responses is not the
+train Algorithm PD and the gold-standard algorithm once, us-
+inverse of an email service provider’s goal of achieving high
+ing the 1000 legitimate/1000 Spam dataset, and then apply the
+Spam recognition with a very low false-positive rate.
+filters without retraining on the first four years of emails that
+The preceding development can be summarized by stating follow these 2000 emails.
+the following predictive defense (PD) algorithm:
+Sample results from this study are depicted in Figure 10. from set F; the resulting classifier vectors are denoted w and
+Each data point in the plots represents the average accuracy {w , w }. (1) is then employed to compute the optimal attack
+over ten trials (two-fold cross-validation). It can be seen that against classifier vector w , denoted a , and to compute the
+the filter based upon Algorithm PD significantly outperforms optimal attack for the defense consisting of randomly alternat-
+the gold-standard method: the predictive defense experiences ing classifiers w and w , designated a .
+almost no degradation in filtering accuracy over the four years
+Applying this evaluation process to the 2000 email training
+of the study, while the gold-standard method suffers a substan-
+dataset described in Section IVD suggests randomized feature
+tial drop in accuracy during this period. These results suggest
+leaning may be an effective way to reduce the efficacy of ad-
+that the combination of ML and game theory-based adversary
+versary reverse engineering methods. We define F to be the set
+model offers an effective means of defending against new at-
+of 20 features with largest singular values, and build sets F1
+tacks. Additionally, the results indicate that predictive defense
+and F2 by randomly sampling F (with replacement) until each
+permits good performance to be realized with much less re-
+subset contains 10 features. The classification accuracy of w
+training than is usually required. F
+against nominal data (i.e., with a0) is superior to that provided
+by a classifier which randomly alternates between classifiers
+w and w , but the difference is modest – the accuracies are
+98.4% and 96.2%, respectively, for w and {w ,w } (two-fold
+cross-validation). Crucially, however, the randomized feature
+classifier is substantially more robust against attack data (i.e.,
+data for aa or aa ). Indeed, the accuracy of classifier w is
+only 66.1% against attack data, while the accuracy of random-
+ized feature classifier {w ,w } drops less than 10%, to 86.8%,
+in this setting (two-fold cross-validation). Figure 11 summariz-
+es these results.
+Figure 10. Results for Spam filtering case study. The plot
+shows how filter accuracy (vertical axis) varies with time
+(horizontal axis) for the gold-standard classifier (red) and
+Algorithm PD (blue).
+ooppttiimmaall rraannddoommiizzeedd ffeeaattuurree
+lleeaarrnniinngg lleeaarrnniinngg
+E. Randomized Feature Learning
+An important consideration when applying ML techniques in
+adversarial settings is the extent to which adversaries can “re- Figure 11. Results for randomized feature learning case
+verse-engineer” the learning algorithm and use these insights to study. Bar charts show Spam-non-Spam classification
+circumvent the classifier. One way to increase the difficulty of accuracy for classifiers w (left bars) and {w , w }
+the adversary’s reverse engineering task is to employ “random- (right bars) for nominal Spam (blue) and “attack” Spam
+ized feature” learning [47]. Here we explore in a preliminary (red) (two-fold cross-validation).
+way the following three-step implementation of this idea: 1.)
+divide the set of available features into randomly-selected, pos-
+sibly overlapping subsets; 2.) train one classifier for each sub- V. SUMMARY
+set of features; and 3.) alternate between classifiers in a random
+This paper proposes that predictive analysis techniques can be
+fashion during operation. The fact that good classifier perfor-
+improved by leveraging sociological models, and explores this
+mance is often obtainable with only a few features (see the
+possibility by considering three challenging prediction tasks:
+Spam example above) suggests the feasibility of employing
+1.) inferring the signs (friendly or antagonistic) of ties in social
+multiple small subsets of randomly-selected features in a classi-
+networks, 2.) predicting whether an emerging social diffusion
+fier.
+event will propagate widely or quickly dissipate, and 3.) antic-
+To test the effectiveness of this strategy, we use a variant of ipating and defending future actions of opponents in adversar-
+the optimization process specified in (1). More specifically, we ial settings. In each case, we derive a novel machine learning-
+first use training data {y, x}n to computed the classifier vec- based prediction algorithm which incorporates a sociological
+tor w in two ways: 1.) using the full set of (reduced-dimension) model in its development and show that the new algorithm
+features F, 2.) using two subsets of features randomly selected outperforms a “gold-standard” method in empirical tests. Tak-
+en together, the collection of results presented in this paper in Web forums”, ACM Transactions on Information Systems,
+indicate that incorporating simple models from sociology can Vol. 26, pp. 1-34, 2008.
+substantially improve the performance of prediction methods, [17] Lampos, V., T. De Bie, and N. Cristianini, “Flu detector –
+Tracking epidemics on Twitter, ECML PKDD 2010, Springer
+particularly in applications in which there is only limited data
+LNAI 6323, 2010.
+available for training and implementing the algorithms.
+[18] Christakis, N. and J. Fowler, “Social network sensors for early
+detection of contagious outbreaks”, PLoS ONE, Vol. 5, e12948,
+ACKNOWLEDGEMENTS 2010.
+[19] Ayers, J., K. Ribisi, and J. Brownstein, “Tracking the rise in
+This work was supported by the U.S. Department of Defense,
+popularity of electronic nicotine delivery systems using search
+The Boeing Company, and the Laboratory Directed Research query surveillance”, American J. Preventative Medicine, Vol.
+and Development Program at Sandia National Laboratories. 41, pp. 1-6, 2011.
+We thank Chip Willard of the U.S. Department of Defense, [20] Glass, K. and R. Colbaugh, “Estimating the sentiment of social
+Curtis Johnson of Sandia National Laboratories, and Anne Kao media content for security informatics applications”, Security
+Informatics, Vol. 1, No. 3, pp. 1-16, 2012.
+of Boeing for numerous helpful discussions on aspects of this
+research. [21] Colbaugh, R. and K. Glass, “Proactive defense for evolving
+cyber threats”, Proc. 2011 IEEE International Conference on
+Intelligence and Security Informatics, Beijing, China, July 2011.
+REFERENCES [22] Colbaugh, R., “Arctic ice, George Clooney, lipstick on a pig,
+and insomniac fruit flies: Combining kd and m&s for predictive
+[1] Colbaugh, R. and K. Glass, “Predictive analysis for social
+analysis”, Proc. ACM KDD ’11, San Diego, CA, August 2011.
+processes I: Multi-scale hybrid system modeling, and II:
+Predictability and warning analysis”, Proc. 2009 IEEE Multi- [23] Heider, F., “Attitude and cognitive organization”, J. Psychology,
+Conference on Systems and Control, Saint Petersburg, Russia, Vol. 21, pp. 107-112, 1946.
+July 2009. [24] Cartwright, D. and F. Harary, “Structural balance: A
+[2] Choi, H. and H. Varian, “Predicting the present with Google generalization of Heider’s theory”, Psychological Review, Vol.
+Trends”, SSRN Preprint, April 2009. 63, pp. 277-293, 1956.
+[3] Hastie, T., R. Tibshirani, and J. Friedman, The Elements of [25] Leskovec, J., D. Huttenlocher, and J. Kleinberg, “Predicting
+Statistical Learning, Second Edition, Springer, New York, 2009. positive and negative links in online social networks”, Proc
+WWW 2010, Raleigh, NC, April 2010.
+[4] Colbaugh, R., K. Glass, and P. Ormerod, “Predictability of
+‘unpredictable’ cultural markets”, 105th Annual Meeting of the [26] Centola, D., “The spread of behavior in an online social network
+American Sociological Association, Atlanta, GA, August 2010. experiment”, Science, Vol. 329, pp. 1194-1197, 2010.
+[5] Asur, S. and B. Huberman, “Predicting the future with social [27] Romero, D., B. Meeder, and J. Kleinberg, “Differences in the
+media”, Proc. IEEE/WIC/ACM International Conference on mechanics of information diffusion across topics: Idioms,
+Web Intelligence and Intelligent Agent Technology, Toronto, political hashtags, and complex contagion on Twitter”, Proc
+Ontario, Canada, September 2010. WWW 2011, Hyderabad, India, March 2011.
+[6] Goel, S., J. Hofman, S. Lahaie, D. Pennock, and D. Watts, [28] Leskovec, J., L. Backstrom, and J. Kleinberg, “Meme-tracking
+“Predicting consumer behavior with Web search”, Proc. and the dynamics of the news cycle”, Proc. ACM KDD ‘09,
+National Academy of Sciences USA, Vol. 107, pp. 17486-17490, Paris, France, June 2009.
+2010. [29] von Neumann, J. and O. Morgenstern, Theory of Games and
+[7] Lerman, K. and T. Hogg, “Using stochastic models to describe Economic Behavior, Princeton University Press, 1944.
+and predict social dynamics of Web users”, arXiv preprint, [30] Swedberg, R., “Sociology and game theory: Contemporary and
+October 2010. historic perspectives”, Theory and Society, Vol. 30, pp. 301-335,
+[8] Bollen, J., H. Mao, and X. Zeng, “Twitter mood predicts the 2001.
+stock market”, J. Computational Science, Vol. 2, pp. 1-8, 2011. [31] Maniu, S., B. Cautis, and T. Abdessalem, “Building a signed
+[9] Colbaugh, R. and K. Glass, “Detecting emerging topics and network from interactions in Wikipedia”, Proc. DBsocial ’11,
+trends via predictive analysis of ‘meme’ dynamics”, Proc. 2011 Athens, Greece, June 2011.
+AAAI Spring Symposium Series, Palo Alto, CA, March 2011. [32] Marvel, S., J. Kleinberg, R. Kleinberg, and S. Strogatz,
+[10] Lui, C., P. Metaxas, and E. Mustafaraj, “On the predictability of “Continuous-time model of structural balance”, Proc. National
+the U.S. elections through search volume activity”, Proc. IADIS Academy of Sciences USA, Vol. 108, pp. 1771-1776, 2011.
+e-Society Conference, Avila, Spain, March 2011. [33] Axelrod, R. and D. Bennett, “Landscape theory of aggregation”,
+[11] Guman, G., “Internet search behavior as economic forecasting British J. Political Science, Vol. 23, pp. 211-233, 1993.
+tool: The case of inflation expectations”, J. Economic and Social [34] Zachary, W., “Information flow model for conflict and fission”,
+Measurement, Vol. 36, pp. 119-167, 2011. J. Anthropological Research, Vol. 33, pp. 452-473, 1977.
+[12] Amodea, G., R. Blanco, and U. Brefeld, “Hybrid models for [35] Newman, M., “Modularity and community structure in
+future event prediction”, Proc. CIKM ’11, Glasgow, Scotland, networks”, Proc. National Academy of Sciences USA, Vol. 103,
+October 2011. pp. 8577-8582, 2006.
+[13] Colbaugh, R. and K. Glass, “Early warning analysis for social [36] Carmi, S., S. Havlin, S. Kirkpatrick, Y. Shavitt, and E. Shir, “A
+diffusion events”, Security Informatics, Vol. 2, 2012, in press. model of Internet topology using the k-shell decomposition”,
+[14] Clauset, A., C. Moore, and M. Newman, “Hierarchical structure Proc. National Academy of Sciences USA, Vol. 104, pp. 11150-
+and the prediction of missing links in networks”, Nature, Vol. 11154, 2007.
+[15] Pang, B. and L. Lee, “Opinion mining and sentiment analysis”, [38] Glass, K. and R. Colbaugh, “Web analytics for security
+Foundations and Trends in Information Retrieval, Vol. 2 , pp. 1- informatics”, Proc. IEEE European Intelligence and Security
+135, 2008. Informatics Conference, Athens, Greece, September 2011.
+multiple languages: Feature selection for opinion classification
+[40] Bradley, M. and P. Lang, “Affective norms for English words [44] Bozorgi, M., L. Saul, S. Savage, and G. Voelker, “Beyond
+(ANEW): Stimuli, instruction manual, and affective ratings”, heuristics: Learning to classify vulnerabilities and predict
+Technical Report C1, University of Florida, 1999. exploits”, Proc. ACM KDD ‘10, Washington DC, July 2010.
+[41] Ramakrishnan, G., A. Jadhav, A. Joshi, S. Chakrabarti, and P. [45] Colbaugh, R. and K. Glass, “Predictive defense against evolving
+Bhattacharyya, “Question answering via Bayesian inference on adversaries”, SAND Report, Sandia National Laboratories,
+lexical relations”, Proc. Annual Meeting of the Association for December 2011.
+Computational Linguistics, Sapporo, Japan, July 2003. [46] Sato, Y., E. Akiyama, and J.D. Farmer, “Chaos in learning a
+[43] Glass, K., R. Colbaugh, and M. Planck, “Automatically USA, Vol. 99, pp. 4748-4751, 2002.
+identifying the sources of large Internet events”, Proc. IEEE [47] Johnson, C., Personal communication, December 2011.
+International Conference on Intelligence and Security
+Informatics, Vancouver, Canada, May 2010.

@@ -1,0 +1,242 @@
+MXNet: A Flexible and Efficient Machine Learning
+Library for Heterogeneous Distributed Systems
+TianqiChen, MuLi∗, YutianLi, MinLin, NaiyanWang, MinjieWang,
+U.Washington CMU Stanford NUS TuSimple NYU
+TianjunXiao, BingXu, ChiyuanZhang, ZhengZhang
+Microsoft U.Alberta MIT NYUShanghai
+MXNet is a multi-language machine learning (ML) library to ease the develop-
+ment of ML algorithms, especially for deep neural networks. Embedded in the
+host language, it blends declarative symbolic expression with imperative tensor
+computation. Itoffersautodifferentiationtoderivegradients. MXNetiscompu-
+tationandmemoryefficientandrunsonvariousheterogeneoussystems,ranging
+frommobiledevicestodistributedGPUclusters.
+This paper describes both the API design and the system implementation of
+MXNet, and explains how embedding of both symbolic expression and tensor
+operation is handled in a unified fashion. Our preliminary experiments reveal
+promisingresultsonlargescaledeepneuralnetworkapplicationsusingmultiple
+GPUmachines.
+1 Introduction
+The scale and complexity of machine learning (ML) algorithms are becoming increasingly large.
+AlmostallrecentImageNetchallenge[12]winnersemployneuralnetworkswithverydeeplayers,
+requiringbillionsoffloating-pointoperationstoprocessonesinglesample.Theriseofstructuraland
+computationalcomplexityposesinterestingchallengestoMLsystemdesignandimplementation.
+MostMLsystemsembedadomain-specificlanguage(DSL)intoahostlanguage(e.g. Python,Lua,
+C++). Possible programming paradigms range from imperative, where the user specifies exactly
+“how” computation needs to be performed, and declarative, where the user specification focuses
+on“what”tobedone. ExamplesofimperativeprogrammingincludenumpyandMatlab, whereas
+packagessuchasCaffe,CXXNetprogramoverlayerdefinitionwhichabstractsawayandhidethe
+inner-workingofactualimplementation. Thedividinglinebetweenthetwocanbemuddyattimes.
+FrameworkssuchasTheanoandthemorerecentTensorflowcanalsobeviewedasamixtureofboth,
+theydeclareacomputationalgraph,yetthecomputationwithinthegraphisimperativelyspecified.
+Related to the issue of programming paradigms is how the computation is carried out. Execution
+can be concrete, where the result is returned right away on the same thread, or asynchronize or
+delayed,wherethestatementsaregatheredandtransformedintoadataflowgraphasanintermediate
+representationfirst,beforereleasedtoavailabledevices. Thesetwoexecutionmodelshavedifferent
+implications on how inherent parallelisms are discovered. Concrete execution is restrictive (e.g.
+parallelizedmatrixmultiplication),whereasasynchronize/delayedexecutionadditionallyidentified
+allparallelismwithinthescopeofaninstanceofdataflowgraphautomatically.
+The combination of the programming paradigm and execution model yields a large design space,
+some of which are more interesting (and valid) than others. In fact, our team has collectively ex-
+ploredanumberofthem,asdoestherestofthecommunity. Forexample,Minerva[14]combines
+imperativeprogrammingwithasynchronizeexecution.WhileTheanotakesandeclarativeapproach,
+∗Correspondingauthor(muli@cs.cmu.edu)
+1v47210.2151:viXra
+ImperativeProgram DeclarativeProgram
+Execute Eagerlycomputeandstorethe Returnacomputationgraph;binddatatob
+a=b+1 resultsonaasthesametypewithb. anddothecomputationlater.
+Conceptuallystraightforward,and Obtainthewholecomputationgraphbefore
+oftenworksseamlesswiththehost execution,beneficialforoptimizingthe
+language’sbuild-indatastructures, performanceandmemoryutilization. Also
+functions,debugger,andthird-party convenienttoimplementfunctionssuchas
+libraries. load,save,andvisualization.
+Table1: Comparetheimperativeanddeclarativefordomainspecificlanguages.
+System Core Binding Devices Distri- Imperative Declarative
+Lang Langs (beyondCPU) buted Program Program
+Caffe[7] C++ Python/Matlab GPU × ×
+Torch7[3] Lua - GPU/FPGA × ×
+Theano[1] Python - GPU × ×
+TensorFlow[11] C++ Python GPU/Mobile ×
+MXNet C++ Python/R/Julia/Go GPU/Mobile
+Table2: Comparetootherpopularopen-sourceMLlibraries
+enablingmoreglobalgraph-awareoptimization. SimilardisciplinewasadoptedinPurine2[10]. In-
+stead, CXXNet adopts declarative programming (over tensor abstraction) and concrete execution,
+similartoCaffe[7]. Table1givesmoreexamples.
+OurcombinedneweffortresultedinMXNet(or“mix-net”),intendingtoblendadvantagesofdiffer-
+ent approaches. Declarative programming offers clear boundary on the global computation graph,
+discoveringmoreoptimizationopportunity,whereasimperativeprogramsoffersmoreflexibility. In
+thecontextofdeeplearning,declarativeprogrammingisusefulinspecifyingthecomputationstruc-
+tureinneuralnetworkconfigurations,whileimperativeprogrammingaremorenaturalforparameter
+updatesandinteractivedebugging. Wealsotooktheefforttoembedintomultiplehostlanguages,
+includingC++,Python,R,GoandJulia.
+Despitethesupportofmultiplelanguagesandcombinationofdifferentprogrammingparadigm,we
+are able to fuse the execution to the same backend engine. The engine tracks data dependencies
+acrosscomputationgraphsandimperativeoperations,andschedulesthemefficientlyjointly.Weag-
+gressivelyreducememoryfootprint,performingin-placeupdateandmemoryspacereusewhenever
+possible. Finally, we designed a compact communication API so that a MXNet program runs on
+multiplemachineswithlittlechange.
+Comparing to other open-source ML systems, MXNet provides a superset programming interface
+toTorch7[3],Theano[1],Chainer[5]andCaffe[7],andsupportsmoresystemssuchasGPUclus-
+ters. BesidessupportingtheoptimizationfordeclarativeprogramsasTensorFlow[11]do,MXNet
+additionallyembedimperativetensoroperationstoprovidemoreflexibility. MXNetislightweight,
+e.g.thepredictioncodesfitintoasingle50KlinesC++sourcefilewithnootherdependency, and
+hasmorelanguagessupports. MoredetailedcomparisonsareshowninTable2.
+...
+2 ProgrammingInterface C/C++ Python R Julia
+Symbolic Expr
+2.1 Symbol: DeclarativeSymbolicExpressions Array Store
+MXNetusesmulti-outputsymbolicexpressions,Symbol,declare BLAS Dep Engine Comm
+thecomputationgraph. Symbolsarecompositedbyoperators,such ...
+CPU GPU Android iOS
+assimplematrixoperations(e.g.“+”),oracomplexneuralnetwork
+layer (e.g. convolution layer). An operator can take several input Figure1: MXNetOverview
+variables,producemorethanoneoutputvariables,andhaveinternal
+state variables. A variable can be either free, which we can bind with value later, or an output of
+anothersymbol. Figure2showstheconstructionofamulti-layerperceptionsymbolbychaininga
+variable,whichpresentstheinputdata,andseverallayeroperators.
+using MXNet >>> import mxnet as mx
+mlp = @mx.chain mx.Variable(:data) => >>> a = mx.nd.ones((2, 3),
+mx.FullyConnected(num_hidden=64) => ... mx.gpu())
+mx.Activation(act_type=:relu) => >>> print (a * 2).asnumpy()
+mx.FullyConnected(num_hidden=10) => [[ 2. 2. 2.]
+mx.Softmax() [ 2. 2. 2.]]
+Figure2: SymbolexpressionconstructioninJulia. Figure3: NDArrayinterfaceinPython
+Toevaluateasymbolweneedtobindthefreevariableswithdataanddeclaretherequiredoutputs.
+Besideevaluation(“forward”),asymbolsupportsautosymbolicdifferentiation(“backward”).Other
+functions,suchasload,save,memoryestimation,andvisualization,arealsoprovidedforsymbols.
+2.2 NDArray: ImperativeTensorComputation
+MXNetoffersNDArraywithimperativetensorcomputationtofillthegapbetweenthedeclarative
+symbolicexpressionandthehostlanguage. Figure3showsanexamplewhichdoesmatrix-constant
+multiplicationonGPUandthenprintstheresultsbynumpy.ndarray.
+NDArrayabstractionworksseamlesslywiththeexecutionsdeclaredbySymbol,wecanmixthe
+imperativetensorcomputationoftheformerwiththelatter. Forexample, givenasymbolicneural
+networkandtheweightupdatingfunction,e.g.w = w−ηg. Thenwecanimplementthegradient
+while(1) { net.foward_backward(); net.w -= eta * net.g };
+Theaboveisasefficientastheimplementationusingasinglebutoftenmuchmorecomplexsymbolic
+expression. The reason is that MXNet uses lazy evaluation of NDArray and the backend engine
+cancorrectlyresolvethedatadependencybetweenthetwo.
+2.3 KVStore: DataSynchronizationOverDevices
+The KVStore is a distributed key-value store for data synchronization over multiple devices. It
+supports two primitives: push a key-value pair from a device to the store, and pull the value on
+a key from the store. In addition, a user-defined updater can specify how to merge the pushed
+value. Finally,modeldivergenceiscontrolledviaconsistencymodel[8]. Currently,wesupportthe
+sequentialandeventualconsistency.
+Thefollowingexampleimplementsthedistributedgradientdescentbydataparallelization.
+while(1){ kv.pull(net.w); net.foward_backward(); kv.push(net.g); }
+wheretheweightupdatingfunctionisregisteredtotheKVStore,andeachworkerrepeatedlypulls
+thenewestweightfromthestoreandthenpushesoutthelocallycomputedgradient.
+Theabovemixedimplementationhasthesameperformancecomparingtoasingledeclarativepro-
+gram,becausetheactualdatapushandpullareexecutedbylazyevaluation,whicharescheduledby
+thebackendenginejustlikeothers.
+2.4 OtherModules
+MXNetshipswithtoolstopackarbitrarysizedexamplesintoasinglecompactfiletofacilitateboth
+sequentialandrandomseek. Dataiteratorsarealsoprovided. Datapre-fetchingandpre-processing
+aremulti-threaded,reducingoverheadsduetopossibleremotefilestorereadsand/orimagedecoding
+andtransformation.
+The training module implements the commonly used optimization algorithms, such as stochastic
+gradient descent. It trains a model on a given symbolic module and data iterators, optionally dis-
+tributedlyifanadditionalKVStoreisprovided.
+3 Implementation W b ∂b ∂W
+3.1 ComputationGraph
+fullc ∂ fullc
+A binded symbolic expression is presented as a computation
+relu ∂ relu
+graph for evaluation. Figure 4 shows a part of the graph of
+both forward and backward of the MLP symbol in Figure 2.
+Before evaluation, MXNet transforms the graph to optimize Figure 4: Computation graph for
+theefficiencyandallocatememorytointernalvariables. bothforwardandbackward.
+Graph Optimization. We explore the following straightforward optimizations. We note first that
+onlythesubgraphrequiredtoobtaintheoutputsspecifiedduringbindingisneeded. Forexample,
+in prediction only the forward graph is needed, while for extracting features from internal layers,
+thelastlayerscanbeskipped. Secondly,operatorscanbegroupedintoasingleone. Forexample,
+a × b + 1 is replaced by a single BLAS or GPU call. Finally, we manually implemented well-
+optimized“big”operations,suchasalayerinneuralnetwork.
+Memory Allocation. Note that each variable’s life time, namely the period between the creation
+andthelasttimewillbeused,isknownforacomputationgraph. Sowecanreusememoryfornon-
+intersectedvariables. However,anidealallocationstrategyrequiresO(n2)timecomplexity,where
+nisthenumberofvariables.
+Weproposedtwoheuristicsstrategieswithlineartimecomplexity. Thefirst, calledinplace, simu-
+latestheprocedureoftraversingthegraph,andkeepsareferencecounterofdependednodesthatare
+notusedsofar. Ifthecounterreacheszero,thememoryisrecycled. Thesecond,namedco-share,
+allows two nodes to share a piece of memory if only if they cannot be run in parallel. Exploring
+co-share imposes one additional dependency constraint. In particular, each time upon scheduling,
+amongthependingpathsinthegraph,wefindthelongestpathandperformneededmemoryalloca-
+tions.
+3.2 DependencyEngine
+InMXNet,eachsourceunits,includingNDArray,randomnumbergeneratorandtemporalspace,
+isregisteredtotheenginewithauniquetag.Anyoperations,suchasamatrixoperationordatacom-
+munication, isthenpushedintotheenginewithspecifyingtherequiredresourcetags. Theengine
+continuously schedules the pushed operations for execution if dependencies are resolved. Since
+there usually exists multiple computation resources such as CPUs, GPUs, and the memory/PCIe
+buses, the engine uses multiple threads to scheduling the operations for better resource utilization
+andparallelization.
+Different to most dataflow engines [14], our engine tracks mutation operations as an existing re-
+sourceunit. Thatis,ourssupportsthespecificationofthetagsthataoperationwillwriteinaddition
+toread. Thisenablesschedulingofarraymutationsasinnumpyandothertensorlibraries. Italso
+enableseasiermemoryreuseofparameters,byrepresentingparameterupdatesasmutatingthepa-
+rameter arrays. It also makes scheduling of some special operations easier. For example, when
+generating two random numbers with the same random seed, we can inform the engine they will
+writetheseedsothattheyshouldnotbeexecutedinparallel. Thishelpsreproducibility.
+3.3 DataCommunication
+We implemented KVStore based on the parameter server [8, 9,
+4](Figure5). Itdifferstopreviousworksintwoaspects: First,we
+use the engine to schedule the KVStore operations and manage
+thedataconsistency. Thestrategynotonlymakesthedatasynchro-
+nizationworksseamlesswithcomputation,andalsogreatlysimpli- dev 0 dev 1 dev 0 dev 1
+fies the implementation. Second, we adopt an two-level structure.
+worker 0 worker 1
+Alevel-1servermanagesthedatasynchronizationbetweenthede-
+viceswithinasinglemachine,whilealevel-2servermanagesinter- Figure5: Communication.
+machinesynchronization. Outbounddatafromalevel-1servercan
+alexnet googlenet vgg
+TensorFlow
+Torch7 MXNet 600
+alexnet googlenet vgg
+Figure 6: Compare MXNet
+to others on a single forward-
+backwardperformance.
+co-share 6 inplace & co-share
+alexnet googlenet vgg
+co-share 6 inplace & co-share
+Figure 7: Internal memory usage of MXNet under various al-
+locationstrategiesforonlyforward(left)andforward-backward
+(right)withbatchsize64.
+be aggregated, reducing bandwidth requirement; intra- and inter-machine synchronization can use
+differentconsistencymodel(e.g. intra-issequentialandinter-iseventual).
+4 Evaluation
+Rawperformance WefistcompareMXNetwithTorch7, Caffe, andTensorFlowonthepopular
+“convnet-benchmarks”[2]. AllthesesystemsarecompiledwithCUDA7.5andCUDNN3except
+for TensorFlow, which only supports CUDA 7.0 and CUDNN 2. We use batch size 32 for all
+networksandruntheexperimentsonasingleNvidiaGTX980card. ResultsareshowninFigure6.
+As expected that MXNet has similar performance comparing to Torch7 and Caffe, because most
+computations are spent on the CUDA/CUDNN kernels. TensorFlow is always 2x slower, which
+mightbedueitsuseofalowerCUDNNversion.
+Memoryusage Figure7showsthememoryusagesoftheinternalvariablesexceptsfortheout-
+puts. As can be seen, both “inplace” and “co-share” can effective reduce the memory footprint.
+Combingthemleadstoa2xreductionforallnetworksduringmodeltraining,andfurtherimproves
+to4xformodelprediction. Forinstance,evenforthemostexpensiveVGGnet,trainingneedsless
+than16MBextra.
+0 5 10 15 20
+Scalability WeruntheexperimentonAmazonEC2
+g2.8x instances, each of which is shipped with 0.6
+four Nvidia GK104 GPUs and 10G Ethernet. We
+0.5 train googlenet with batch normalization [6] on the
+ILSVRC12dataset[13]whichconsistsof1.3million
+images and 1,000 classes. We fix the learning rate to
+.05,momentumto.9,weightdecayto10−4,andfeed
+eachGPUwith36imagesinonebatch.
+TheconvergenceresultsareshowninFigure8.Ascan 0.2 10 machines
+be seen, comparing to single machine, the distributed
+trainingconvergessloweratthebeginning,butoutper-
+formsafter10datapasses. Theaveragecostofadata
+Figure 8: Progress of googlenet on
+passis14Kand1.4Kseconasinglemachineand10
+ILSVRC12dataseton1and10machines.
+machines,respectively. Consequently,thisexperiment
+revealsasuper-linearspeedup.
+5 Conclusion
+MXNet is a machine learning library combining symbolic expression with tensor computation to
+maximizeefficiencyandflexibility.Itislightweightandembedsinmultiplehostlanguages,andcan
+beruninadistributedsetting. Experimentalresultsareencouraging. Whilewecontinuetoexplore
+newdesignchoices, webelieveitcanalreadybenefittherelevantresearchcommunity. Thecodes
+Acknowledgment. WesincerelythanksDaveAndersen,CarlosGuestrin,TongHe,ChuntaoHong,
+QiangKou,HuShiwen,AlexSmola,JunyuanXie,DaleSchuurmansandallothercontributors.

@@ -1,0 +1,345 @@
+AtomNet: A Deep Convolutional Neural Network for
+Bioactivity Prediction in Structure-based Drug
+IzharWallach MichaelDzamba AbrahamHeifets
+Atomwise,Inc. Atomwise,Inc. Atomwise,Inc.
+izhar@atomwise.com misko@atomwise.com abe@atomwise.com
+Deepconvolutionalneuralnetworkscompriseasubclassofdeepneuralnetworks
+(DNN) with a constrained architecture that leverages the spatial and temporal
+structureofthedomaintheymodel. Convolutionalnetworksachievethebestpre-
+dictiveperformanceinareassuchasspeechandimagerecognitionbyhierarchi-
+callycomposingsimplelocalfeaturesintocomplexmodels.AlthoughDNNshave
+been used in drug discovery for QSAR and ligand-based bioactivity predictions,
+none of these models have benefited from this powerful convolutional architec-
+ture. ThispaperintroducesAtomNet,thefirststructure-based,deepconvolutional
+neuralnetworkdesignedtopredictthebioactivityofsmallmoleculesfordrugdis-
+coveryapplications. Wedemonstratehowtoapplytheconvolutionalconceptsof
+feature locality and hierarchical composition to the modeling of bioactivity and
+chemical interactions. In further contrast to existing DNN techniques, we show
+thatAtomNet’sapplicationoflocalconvolutionalfilterstostructuraltargetinfor-
+mationsuccessfullypredictsnewactivemoleculesfortargetswithnopreviously
+knownmodulators.Finally,weshowthatAtomNetoutperformspreviousdocking
+approachesonadiversesetofbenchmarksbyalargemargin,achievinganAUC
+greaterthan0.9on57.8%ofthetargetsintheDUDEbenchmark.
+1 Introduction
+Fundamentally,biologicalsystemsoperatethroughthephysicalinteractionofmolecules.Theability
+todeterminewhenmolecularbindingoccursisthereforecriticalforthediscoveryofnewmedicines
+and for furthering of our understanding of biology. Unfortunately, despite thirty years of compu-
+tational efforts, computer tools remain too inaccurate for routine binding prediction, and physical
+experiments remain the state of the art for binding determination. The ability to accurately pre-
+dictmolecularbindingwouldreducethetime-to-discoveryofnewtreatments,helpeliminatetoxic
+moleculesearlyindevelopment,andguidemedicinalchemistryefforts[1,2].
+Inthispaper,weintroduceanewpredictivearchitecture,AtomNet,tohelpaddressthesechallenges.
+AtomNetisnovelintworegards:AtomNetisthefirstdeepconvolutionalneuralnetworkformolec-
+ularbindingaffinityprediction. Itisalsothefirstdeeplearningsystemthatincorporatesstructural
+informationaboutthetargettomakeitspredictions.
+Deep convolutional neural networks (DCNN) are currently the best performing predictive models
+forspeechandvision[3,4,5,6]. DCNNisaclassofdeepneuralnetworkthatconstrainsitsmodel
+architecturetoleverage thespatialandtemporalstructureof itsdomain. For example, alow-level
+imagefeature,suchasanedge,canbedescribedwithinasmallspatially-proximatepatchofpixels.
+Such a feature detector can share evidence across the entire receptive field by “tying the weights”
+ofthedetectorneurons,astherecognitionoftheedgedoesnotdependonwhereitisfoundwithin
+1v55820.0151:viXra
+animage[3]. Thisreductioninthenumberofmodelparametersreducesoverfittingandimproves
+thediscoveryofgeneralizablefeatures. Locallow-levelfeaturesarethenhierarchicallycomposed
+bythenetworkintolarger, morecomplexfeatures(e.g., forafacerecognitiontask, pixelsmaybe
+combinedintoedges;edgesintoeyesandnoses;eyesandnosesintofaces)[7].
+Ourinsightisthatbiochemicalinteractionsaresimilarlylocal,andshouldbemodeledbysimilarly-
+constrainedmachinelearningarchitectures. Chemicalgroupsaredefinedbythespatialarrangement
+and bonding of multiple of atoms in space, but these atoms are proximate to each other. When
+chemical groups interact, e.g. through hydrogen bonding or π-bond stacking, the strength of their
+repulsion or attraction may vary with their type, distance, and angle, but these are predominantly
+localeffects[8]. Morecomplexbioactivityfeaturesmaybedescribedbyconsideringneighboring
+groupsthatstrengthenorattenuateagiveninteractionbut,becauseeveninthesecasesdistantatoms
+rarelyaffecteachother,theenforcedlocalityofaDCNNisappropriate. Additionally,aswithedge
+detectorsinDCNNsforimages,theapplicabilityofadetectorfore.g.,hydrogenbondingorπ-bond
+stacking, is invariant across the receptive field. These local biochemical interaction detectors may
+thenbehierarchicallycomposedintomoreintricatefeaturesdescribingthecomplexandnonlinear
+phenomenonofmolecularbinding.
+InadditiontointroducingtheDCNNarchitectureforbiochemicalfeaturediscovery,AtomNetisthe
+firstdeepneuralnetworkforstructure-basedbindingaffinityprediction.
+Recently, deep neural networks have been shown to out-perform random forests and SVMs for
+QSAR and ligand-based virtual screening [9, 10, 11]. Introduced by Dahl et al. [9], the best per-
+formingarchitecturefortheMerckMolecularActivityKaggleChallenge[10]wasamulti-taskdeep
+neuralnetwork(MT-DNN).Themulti-taskarchitecturetrainsasingleneuralnetworkwithmultiple
+output neurons, each of which predict the activity of the input molecule in a different assay. Be-
+causemoleculesareoftentestedinmultipleassays,theMT-DNNarchitecturecancombinetraining
+evidenceamongsimilarpredictiontasks[9]. ThatworkwasfollowedbyUntherhineretal.[11,12]
+and Ramsundar et al. [13] that demonstrated the MT-DNN technique scales to large biochemical
+databasessuchasPubChemBioassays[14]andChEMBL[15].
+Ligand-based techniques, including MT-DNN, come with several limitations. First, they are re-
+stricted to targets for which substantial amounts of prior data are already available and, as such,
+cannot make predictions for novel targets. In practice, this creates a paradoxical dynamic – these
+predictive models offer the most help precisely for those targets which least require it. The de-
+pendenceonknownactiveligandsalsomakesitdifficulttoshowthatthenetworkis“rightforthe
+right reasons”; artifacts in the training data, such as analogue bias, make it very difficult to prop-
+erly assess accuracy and generalizability [16, 17, 18]. Second, existing deep neural networks for
+ligand-basedmodelstakemolecularfingerprints,suchasECFP[19],asinput. Suchinputencoding
+limits the discovery of features to compositions of the pre-specified molecular structures defined
+duringthefingerprintingprocess[11]andeliminatestheabilitytodiscoverarbitraryfeatures.Third,
+asthemodelisblindtothetarget, themodelcannotelucidatewhichpotentialinteractionsareleft
+unfulfilledbyamolecule. Thislimitstheguidancethatcouldbeprovidedtomedicinalchemistsfor
+optimizationofthemolecule.
+To address these limitations, AtomNet combines information about the ligand with information
+aboutthestructureofthetarget.Ourapproachrequiresthelocationsofeachatominthebindingsite
+ofthetarget(aburdenthatligand-basedapproachesavoid),butaccesstothisinformationenablesthe
+modeltodiscoverarbitrary molecular features. Thesefeaturesdescribefavorable andunfavorable
+interactions between ligands and targets and, as shown in Section 3, can be applied to targets for
+whichnobindersareknownbythemodel.
+Inthefollowing,wepresentthedesignanddevelopmentofAtomNetandreportitsperformanceon
+arangeofchallengingstructure-basedbioactivitypredictionexperiments.
+We first describe the construction of the experimental benchmarks on which we test our system.
+Thenwedescribeourdataencodingandthedesignofourdeepconvolutionalnetwork.
+2.1 Datasets
+We demonstrate the application of our AtomNet model on three realistic and challenging bench-
+marks:theDirectoryofUsefulDecoysEnhanced(DUDE)benchmark[20];ourinternalDUDE-like
+benchmark;andabenchmarkwithexperimentally-verifiedinactivemolecules.Eachofthesebench-
+marks provide a different and complimentary assessment of our performance; the advantages of
+eacharesummarizedhere,anddescribedinmoredetailbelow. Asthestandardbenchmark,DUDE
+permits direct comparisons to other structure-based binding affinity prediction systems. Unfortu-
+nately, DUDE only specifies a test set, without specifying a separate training set; by constructing
+ourownDUDE-likebenchmark,wecanensurethatthereisnooverlapbetweenthetrainingandtest
+molecules. Finally, correctlyclassifyingexperimentally-verifiedactiveandinactivemoleculesisa
+challengingtestbecausestructurallysimilarmoleculescanhavedifferentlabels[21].Suchcasesare
+excludedfrombenchmarksusingproperty-matcheddecoysbecauseofthedissimilarityrequirement
+inordertopresumedecoysareinactive.
+DUDE TheDUDEisawell-knownbenchmarkforstructure-basedvirtualscreeningmethodsfrom
+the Shoichet Lab at UCSF [20]. The methodology of the DUDE benchmark is fully described by
+Mysingeretal.[20]. Briefly,thebenchmarkisconstructedbyfirstgatheringdiversesetsofactive
+moleculesforasetoftargetproteins. Analoguebiasismitigatedbyremovingsimilaractives;sim-
+ilaractivesareeliminatedbyfirstclusteringtheactivesbasedonscaffoldsimilarity,thenselecting
+exemplar actives from each cluster. Then, each active molecule is paired with a set of property
+matched decoys (PMD) [22]. PMD are selected to be similar to each other and to known actives
+withrespecttosome1-dimensionalphysico-chemicaldescriptors(e.g.,molecularweight)whilebe-
+ingtopologicallydissimilarbasedonsome2Dfingerprints(e.g., ECFP[19]). Theenforcementof
+the topological dissimilarity supports the assumption that the decoys are likely to be inactives be-
+causetheyarechemicallydifferentfromanyknowactive. Thebenchmarkconsistsof102targets,
+22,886actives(anaverageof224activespertarget)and50PMDperactive. Werandomlyselected
+30targetsasourtestsetanddesignatedtheremaining72targetsasthetrainingset.
+ChEMBL-20PMD WeconstructedaDUDE-likedatasetderivedfromChEMBLversion20[15].
+Weconsideredallactivitymeasurementsthatpassedthefollowingfilters:
+• AffinityunitsmeasuredinIC50orKiandlowerthan1µM.
+• Targetconfidencegreaterorequalto6.
+• TargethasanannotatedbindingsiteinthescPDBdatabase[23]andresolution<2.5A˚.
+• LigandspassedPAINSfilers[24]andpromiscuityrules[25].
+Following Mysinger et al. [20], we first grouped target affinities by their UniProt gene name pre-
+fix[26]andremovedtargetsforwhichtherewerelessthan10activeligands. Thisfilteringprocess
+yielded a set of 123,102 actives and 348 targets. Second, each active was paired with a set of 30
+PMDselectedfromtheZINCdatabase[27]similarlytoMysingeretal.[20]. Third,wepartitioned
+thedataintotraining,validation,andtestingsetsbyfirstclusteringtheactiveligandsforeachtarget
+basedontheirBemis-Murckoscaffolds[28]andchoosingligandsthatwereatleast3µM apartas
+theclusterexemplars. Clusterswithlessthan10exemplarswerediscarded. Fourth,wedefinedthe
+testsetbyrandomlyselecting50targetswiththeircorrespondingactivesanddecoys.Last,thetrain-
+ing set was further partitioned over the clusters into 5-fold cross validation sets. The final dataset
+consistsof78,904actives,2,367,120decoys,and290targets.
+Experimentallyverifiedinactives AlimitationofbenchmarksbasedonPMDisthattheyexclude
+decoys that are similar to active molecules. This design decision is to justify the assumption that
+selecteddecoysarelikelytobeinactive, evenwithoutexperimentalvalidation. Thisenforceddis-
+similarity between actives and decoys means that PMD benchmarks lack some challenging cases
+whereactivesandinactivemoleculesarehighlysimilar[21].
+We include these challenging cases by substituting decoys with molecules that have been experi-
+mentallyvalidatedtobeinactives. WeconstructedabenchmarksimilartoourChEMBL-20PMD
+onebutreplacedPMDwithinactivemolecules. Wedefinedamoleculeasinactiveifitsmeasured
+activity is higher than 30µM. We ended up with a set of 78,904 actives, 363,187 inactives, and
+290targetswhichwaspartitionedinto3-foldcross-validationsetsovertheBemis-Murckoclusters.
+Targetswithlessthan10clusterswereneverassignedintoavalidationset. Hence, thenumberof
+targetsinthevalidationsetswas149.
+2.2 Structure-baseddeep-convolutionalneuralnetwork
+Thenetworktopologyconsistsofaninputlayer,followedbymultiple3D-convolutionalandfully-
+connected layers, and topped by a logistic-cost layer that assigns probabilities over the active and
+inactiveclasses. AllunitsinhiddenlayersareimplementedwiththeReLUactivationfunction[29].
+Input representation The input layer receives vectorized versions of 1A˚ 3D grids placed over
+co-complexesofthetargetproteinsandsmall-moleculesthataresampledwithinthetarget’sbinding
+site. First, we define the binding site using a flooding algorithm [30] seeded by a bound ligand
+annotated in the scPDB database [23]. Second, we shift the coordinate of the co-complexes to a
+3DCartesiansystemoriginatedatthecenter-of-massofthebindingsite. Third,wesamplemultiple
+poseswithinthebindingsitecavity. Fourth,wecropthegeometricdatatofitwithinanappropriate
+boundingbox. Inthisstudyweusedacubeof20A˚,centeredattheorigin. Fifth, wetranslatethe
+input data into a fixed-size grid with 1A˚ spacing. Each grid cell holds a value that represents the
+presenceofsomebasicstructuralfeaturesinthatlocation. Basicstructuralfeaturescanvaryfroma
+simpleenumerationofatomtypestomorecomplexprotein-liganddescriptorssuchasSPLIF[31],
+SIFt[32],orAPIF[33]. Last,weunfoldthe3Dgridintoa1Dfloatingpointvector.
+Networkarchitecture 3Dconvolutionallayerswereimplementedtosupportparameterssuchas
+filter size, stride, and padding in a similar fashion to the implementation of Krizhevsky et al. [4].
+Weusednetworkarchitectureofaninputlayerasdescribedabove,followedbyfourconvolutional
+layers of 128×53, 256×33, 256×33, 256×33 (number of filters × filer-dimension), and two
+fully-connectedlayerswith1024hiddenunitseach,toppedbyalogistic-regressioncostlayerover
+twoactivityclasses.
+ModelTraining TrainingthemodelwasdoneusingstochasticgradientdescentwiththeAdaDelta
+adaptivelearningmethod[34],thebackpropagationalgorithm[35],andmini-batchesof768exam-
+plespergradientstep. Noattemptwasmadetooptimizemeta-parametersexceptthelimitationof
+fittingthemodelintoaGPUmemory. Trainingtimewasaboutaweekon6Nvidia-K10GPUs.
+Baselinemethodforcomparison WeusedSmina[36],aforkofAutoDockVina[37],asabase-
+line for the SB evaluation. Smina implements an improved empirical scoring function and mini-
+mizationroutinesoveritspredecessorandisfreelyavailableundertheGPLv2license.
+We use the area under the receiver operating characteristic (AUC) and logAUC to report results
+over the three benchmarks. The AUC indicates classification (or ranked order) performance by
+measuring the area under the curve of true-positive rate versus the false-positive rate. AUC value
+of 1.0 means perfect separation whereas a value of 0.5 implies random separation. LogAUC is a
+measurementsimilartoAUCthatemphasizesearlyenrichmentperformancebyputtingmoreweight
+atthebeginningofthecurvesocasescorrectlyclassifiedatthetopoftherank-orderedlistcontribute
+more to the score than later ones. Here, we used logarithmic base of 10 which means that the
+weightofthefirst1%oftherankedresultsequaltotheweightofthenext10%. Becausethenon-
+linearity of a logAUC value makes it hard to interpret, we subtract the area under the log-scaled
+randomcurve(0.14462)fromalogAUCtogetanadjusted-logAUC[38]. Hence,positiveadjusted-
+logAUC values imply better than random performance whereas negative ones imply worse than
+random performance. For brevity, we will use adjusted-logAUC and logAUC interchangeably for
+therestofthismanuscript.
+Table 1 and Figures 1 to 3 summarize the results across the three different benchmarks. On each
+ofourfourevaluationdatasets,AtomNetachievesanorder-of-magnitudeimprovementoverSmina
+at a level of accuracy useful for drug discovery. Tables 2 and 3 summarize the AUC and logAUC
+resultswithrespecttodifferentperformancethresholds. OnthefullDUDEset,AtomNetachieves
+or exceeds 0.9 AUC on 59 targets (or 57.8%). Smina only achieves 0.9 AUC for a single target
+(wee1),approximately1%ofthebenchmark. AtomNetachieves0.8orbetterAUCfor88targets
+(86.3%), while Smina achieves it for 17 targets (16.7%). When we restrict the evaluation to the
+held-out30targetsubsetofDUDE,AtomNetexceedsanAUCof0.9and0.8for14targets(46.7%)
+and 22 targets (73.3%), respectively. Smina achieves the same accuracy for 1 target (3.3%) and 5
+targets(16.7%),respectively. AtomNetachievesmeanandmedianAUCof0.855and0.875onthe
+held-outsetcomparedto0.7and0.694achievedbySmina,reducingavailablemeanerrorby51.6%.
+Asexpected,theperformanceofAtomNetdropsslightlyforitsheld-outexamples,whereasSmina’s
+performancedoesnot.
+OntheChEMBL-20-PMDdataset,AtomNetachievesanAUCof0.9orbetterfor10held-outtargets
+(20%oftheset),whileSminaachievesitonzerotargets. Whenwereducethestandardofaccuracy
+toanAUCof0.8orbetter,AtomNetsucceedson25targets(50%),whileSminaonlysucceedson1
+target(2%).
+Thethirdbenchmark, whichusesinactivesinsteadofproperty-matcheddecoys, seemstobemore
+challengingthantheothertwo. AtomNetpredictswithanAUCatorbetterthan0.9for10targets
+(6.7%), whileSminasucceedsatzero. Formeetingorexceeding0.8AUC,AtomNetsucceedsfor
+45targets(30.2%)andSminasucceedsfor4(2.7%). AlthoughbothAtomnetandSminaperform
+worsethanonthepreviousbenchmarks,AtomNetstillsignificantlyoutperformsSminawithrespect
+to overall and early enrichment performances. Because this benchmark uses inactives it includes
+challenging classification cases of structurally similar molecules with different labels [21]. These
+casesareexcludedfrombenchmarksusingPMDbecausedecoysmustbestructurallydissimilarin
+ordertopresumetheycanbelabelledasinactive.
+Additionally,AtomNetshowsgoodearlyenrichmentperformanceasindicatedbythehighlypositive
+logAUCvalues.AtomNetoutperformsSminawithrespecttoitsearlyenrichment,achievingamean
+logAUCof0.321comparedto0.153ofSminaontheDUDE-30benchmark. VisualizingtheROC
+curves illustrate the difference between the AUC and logAUC measurements with respect to the
+early enrichment. For example, in Figure 4 we see that the AUC value for target 1m9m is 0.66
+whichmayimplymediocreperformance. However,theearlyenrichmentindicatedbythelogAUC
+forthattargetis0.25whichsuggestthatmanyactivesareconcentratedattheverytopoftherank-
+orderedresults. Similarly,target1qzyhasAUCvalueof0.76butlog-scaleplotsuggestthat35%of
+itsactivesareconcentratedattheverytopoftherank-orderlistwithlogAUCof0.44.
+AUC AdjustedlogAUC
+Mean Median Mean Median
+AtomNet 0.781 0.792 0.317 0.328
+ChEMBL-20PMD
+Smina 0.552 0.544 0.04 0.021
+AtomNet 0.855 0.875 0.321 0.355
+Smina 0.7 0.694 0.153 0.139
+AtomNet 0.895 0.915 0.385 0.38
+Smina 0.696 0.707 0.138 0.132
+AtomNet 0.745 0.737 0.145 0.133
+ChEMBL-20inactives
+Smina 0.607 0.607 0.054 0.044
+Table1:ComparisonsofAtomNetandSminaontheDUDE,ChEMBL-20-PMD,andChEMBL-20-
+inactivesbenchmarks. DUDE-30referstotheheld-outsetof30targetswhereasDUDE-102refers
+tothefulldataset.
+4 Discussion
+Filtervisualization Convolutionallayersconsistofmultipledifferentfiltersthatlearntoidentify
+specificlocally-relatedfeaturesbyrepeatedlyapplyingthesefiltersacrossthereceptivefield. When
+dealingwithimages,onecanvisualizethesefilterstoverifythatthemodeliscapableoflearningrel-
+evantfeatures. Forexample,Krizhevskyetal.[4]demonstratedthatfiltersinthefirstconvolutional
+layer of their model could detect lines, edges, and color gradients. In our case, however, we can
+noteasilyvisualizethefiltersbecause: (i)thefiltersare3-dimensional, and(ii)theinputchannels
+are discrete. For example, two close RGB values will result with two similar colors but carbon is
+not closer to nitrogen than to oxygen. That is, similar values do not imply similar functionalities.
+AtomNet Smina
+AtomNet Smina
+ChEMBL-20 PMD Benchmark Results
+Figure 1: Distribution of AUC and logAUC values of 50 ChEMBL-20-PMD targets for AtomNet
+andSmina.
+AtomNet Smina
+AtomNet Smina
+DUDE Benchmark Results
+Figure2: DistributionofAUCandlogAUCvaluesof102DUDEtargetsforAtomNetandSmina.
+AtomNet Smina
+AtomNet Smina
+ChEMBL-20 with Inactives Benchmark Results
+Figure3: DistributionofAUCandlogAUCvaluesof149ChEMBL-20-inactivestargetsforAtom-
+NetandSmina.
+0.0 0.2 0.4 0.6 0.8 1.0
+1m9m (0.66)
+10-3 10-2 10-1 100
+0.0 0.2 0.4 0.6 0.8 1.0
+1m9m (0.25)
+1qzy (0.76)
+10-3 10-2 10-1 100
+0.0 0.2 0.4 0.6 0.8 1.0
+1qzy (0.44)
+3bej (0.74)
+10-3 10-2 10-1 100
+0.0 0.2 0.4 0.6 0.8 1.0
+3bej (0.24)
+3oy1 (0.79)
+10-4 10-3 10-2 10-1 100
+0.0 0.2 0.4 0.6 0.8 1.0
+3oy1 (0.43)
+4dv8 (0.73)
+10-3 10-2 10-1 100
+4dv8 (0.3)
+Figure 4: An illustrationof the differencesbetween the AUCand logAUCmeasurements with re-
+specttotheearlyenrichment.
+AUC >0.5 >0.6 >0.7 >0.8 >0.9
+AtomNet 49 44 36 24 10
+ChEMBL-20PMD Smina 38 10 4 1 0
+AtomNet 30 29 27 22 14
+DUDE-30 Smina 29 25 14 5 1
+AtomNet 102 101 99 88 59
+DUDE-102 Smina 96 84 53 17 1
+AtomNet 149 136 105 45 10
+ChEMBL-20inactives Smina 129 81 31 4 0
+Table2: ThenumberoftargetsonwhichAtomNetandSminaexceedgivenAUCthresholds. For
+example, ontheCHEMBL-20PMDset, AtomNetachievesanAUCof0.8orbetterfor24targets
+(outof50possibletargets). ChEMBL-20PMDcontains50targets,DUDE-30contains30targets,
+DUDE-102contains102targets,andChEMBL-20inactivescontains149targets.
+Adjusted-LogAUC >0.0 >0.1 >0.2 >0.3 >0.4
+AtomNet 49 44 36 27 20
+ChEMBL-20PMD
+Smina 35 8 2 1 0
+AtomNet 30 27 22 17 10
+Smina 29 19 8 2 1
+AtomNet 102 99 88 69 43
+Smina 94 65 28 5 1
+AtomNet 147 107 36 10 2
+ChEMBL-20inactives
+Smina 123 35 5 0 0
+Table3:ThenumberoftargetsonwhichAtomNetandSminaexceedgivenadjusted-logAUCthresh-
+olds. For example, on the CHEMBL-20 PMD set, AtomNet achieves an adjusted-logAUC of 0.3
+orbetterfor27targets(outof50possibletargets). ChEMBL-20PMDcontains50targets,DUDE-
+30 contains 30 targets, DUDE-102 contains 102 targets, and ChEMBL-20 inactives contains 149
+targets.
+To overcome these limitations we take an indirect approach. Instead of directly visualizing filters
+in order to understand their specialization, we apply filters to input data and examine the location
+wheretheymaximallyfire. Usingthistechniquewewereabletomapfilterstochemicalfunctions.
+For example, Figure 5 illustrate the 3D locations at which a particular filter from our first convo-
+lutional layer fires. Visual inspection of the locations at which that filter is active reveals that this
+filter specializes as a sulfonyl/sulfonamide detector. This demonstrates the ability of the model to
+learncomplexchemicalfeaturesfromsimplerones. Inthiscase,thefilterhasinferredameaningful
+spatialarrangementofinputatomtypeswithoutanychemicalpriorknowledge.
+Figure5: Sulfonyl/sulfonamidedetectionwithautonomouslytrainedconvolutionalfilters.
+Comparisontootherstructure-basedmethods Theaimofthispaperistopresentanovelappli-
+cationofdeepconvolutionalneuralnetworkstobioactivitypredictions,ratherthanreportinghead-
+to-headcomparisonstootherstructure-basedmethods.Inordertoputresultsincontext,weusedthe
+popularprogramSminaasabaselinepointofreference. Sminahaspracticaladvantages: itisfast,
+free,andunderactivedevelopment,sowefinditsuitableforanalyzinglargebenchmarksinatimely
+andcost-efficientmanner. Nevertheless,usingpublishedwork,wecanprovidebroadercontextby
+comparing AtomNet to other commercial docking algorithms reported in the literature. The most
+common benchmark is DUDE [20] which, like Smina, is publicly available and widely used. We
+thereforepresentthefollowingcomparisonstopreviouslydescribedresults:
+• Gabel et al. [39] evaluated Surflex-Dock [40] on a representative set of 10 targets from
+the DUDE. The median AUC of Surflex-Dock was 0.76 compared to 0.93 achieved by
+AtomNet.
+• Colemanetal.[41]evaluatedDOCK3.7[42]inafullyautomatedmanneroverthewhole
+DUDEbenchmark. TheyachievedmeanAUCof0.696andlogAUCof0.174comparedto
+ourAUCof0.895andlogAUCof0.385.
+• Allenetal. reportedmeanAUCof0.72on5DUDEtargetsusingDock6.7[43]compared
+toAUCof0.852byAtomNet.
+5 Conclusion
+We presented AtomNet, the first structure-based deep convolutional neural network, designed to
+predictthebioactivityofsmallmoleculesfordrugdiscoveryapplications. Thelocally-constrained
+deepconvolutionalarchitectureallowsthesystemtomodelthecomplex,non-linearphenomenonof
+molecularbindingbyhierarchicallycomposingproximatebasicchemicalfeaturesintomoreintri-
+cateones. ByincorporatingstructuraltargetinformationAtomNetcanpredictnewactivemolecules
+even for targets with no previously known modulators. AtomNet shows outstanding results on a
+widelyusedstructure-basedbenchmarkachievinganAUCgreaterthan0.9on57.8%ofthetargets
+intheDUDEbenchmark,farsurpassingpreviousdockingmethods.

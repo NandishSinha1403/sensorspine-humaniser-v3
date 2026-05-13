@@ -1,0 +1,1094 @@
+Persistent Robotic Tasks:
+Monitoring and Sweeping in Changing Environments
+Stephen L. Smith Mac Schwager Daniela Rus
+Abstract—We present controllers that enable mobile robots
+to persistently monitor or sweep a changing environment. The
+changing environment is modeled as a field which grows in
+locations that are not within range of a robot, and decreases
+inlocationsthatarewithinrangeofarobot.Weassumethatthe
+robotstravelongivenclosedpaths.Thespeedofeachrobotalong
+itspathiscontrolledtopreventthefieldfromgrowingunbounded
+at any location. We consider the space of speed controllers that
+can be parametrized by a finite set of basis functions. For a
+single robot, we develop a linear program that is guaranteed
+to compute a speed controller in this space to keep the field
+bounded, if such a controller exists. Another linear program is
+thenderivedwhosesolutionisthespeedcontrollerthatminimizes
+the maximum field value over the environment. We extend our
+linear program formulation to develop a multi-robot controller
+that keeps the field bounded. The multi-robot controller has the
+unique feature that it does not require communication among
+the robots. Simulation studies demonstrate the robustness of
+the controllers to modeling errors, and to stochasticity in the Fig. 1: A persistent monitoring task using three robots with heterogeneous,
+limitedrangesensors.Thesurfaceshowstheaccumulationfunction,indicating
+environment.
+the quantity of material to be removed in a cleaning application, or the
+uncertaintyateachpointinasensingapplication.Theaccumulationfunction
+growswhenarobot’sfootprintisnotoverit,anddecreaseswhenthefootprint
+I. INTRODUCTION isoverit.Eachrobotcontrolsitsspeedalongitsprescribedpathsoastokeep
+thesurfaceaslowaspossibleeverywhere.
+In this paper we treat the problem of controlling robots
+to perpetually act in a changing environment, for example to
+clean an environment where material is constantly collecting,
+ortomonitoranenvironmentwhereuncertaintyiscontinually a constant rate, as if the point were collecting dust. When a
+growing. Each robot has only a small footprint over which to robot’s footprint is over the point, the accumulation function
+act (e.g. to sweep or to sense). The difficulty is in controlling decreasesataconstantrate,asifthedustwerebeingvacuumed
+therobotstomovesothattheirfootprintsvisitallpointsinthe bytherobot.Theratesofgrowthanddecreasecanbedifferent
+environment regularly, spending more time in those locations at different points in the environment.
+where the environment changes quickly, without neglecting This model is applicable to situations in which the task
+the locations where it changes more slowly. This scenario is of the robot is to remove material that is collecting in
+distinct from most other sweeping and monitoring scenarios the environment, for example cleaning up oil in the ocean
+in the literature because the task cannot be “completed.” around a leaking well [1], vacuuming dirt from the floor
+That is to say, the robots must continually move to satisfy of a building [2], or tending to produce in an agricultural
+the objective. We consider the situation in which robots are field[3].Itisalsoapplicabletomonitoringscenariosinwhich
+constrained to move on fixed paths, along which we must the state of the environment changes at each point, and we
+control their speed. We consider both the single robot and want to maintain up-to-date knowledge of this changing state.
+multi-robot cases. Figure 1 shows three robots monitoring an Some examples include monitoring temperature, salinity, or
+environment using controllers designed with our method. chlorophyll in the ocean [4], maintaining estimates of coral
+We model the changing environment with a scalar valued reefhealth[5],ormonitoringtrafficcongestionoveracity[6].
+function defined, which we call the accumulation function. These applications all share the property that they can never
+The function behaves analogously to dust accumulating over be completed, because the environment is always changing. If
+a floor. When a robot’s footprint is not over a point in the the robot were to stop moving, the oil would collect beyond
+environment, the accumulation function grows at that point at acceptable levels, or the knowledge of the ocean temperature
+would become unacceptably outdated. For this reason we call
+ThismaterialisbaseduponworksupportedinpartbyONR-MURIAward
+these applications persistent tasks. In this paper, we assume
+N00014-09-1-1051
+The authors are with the Computer Science and Artificial Intelligence that the model is known either from the physics of the
+Laboratory, Massachusetts Institute of Technology, Cambridge MA 02139 environment, from a human expert, or from an initial survey
+(slsmith@mit.edu, schwager@mit.edu, rus@csail.mit.edu). M. Schwager is
+of the environment. However we show analytically and in
+also affiliated with the GRASP Laboratory, University of Pennsylvania,
+Philadelphia,PA19104. simulation that our controllers are robust to model errors.
+1v3060.2011:viXra
+We focus on the situation in which the robots are given control [12], and machine learning [13]. Our LP formulations
+fixed, closed paths on which to travel, and we have to carry also incorporate both maximum and minimum limits on the
+out the persistent task only by regulating their speed. This is robot’sspeed,whichcanbedifferentatdifferentpointsonthe
+relevantinmanyreal-worldscenarios.Forexample,inthecase path. This is important because we may want a robot not to
+that the robots are autonomous cars, they may be constrained exceedacertainspeedaroundasharpturn,forexample,while
+to move on a particular circuit of roads in a city to avoid it can go much faster on a long straightaway.
+traffic congestion, or in the case of autonomous aircraft, they
+may be constrained to fly along a particular path to stay away
+B. Related Work
+from commercial air traffic, or to avoid being detected by
+an adversary. Even in the case of vacuuming the floor of a Our work is related to the large body of existing research
+building,therobotsmayberequiredtostayalongaprescribed on environmental monitoring, sensor sweep coverage, lawn
+pathsoasnottointerferewithfoottraffic.Furthermore,ifwe mowing and milling, and patrolling. In the environmental
+have the freedom to plan the robot’s path, we can employ an monitoring literature (also called objective analysis in mete-
+off-line planner to generate paths that are optimal according orological research [14] and Kriging in geological research
+to some metric (using the planner in [7] for example), then [15]), authors often use a probabilistic model of the environ-
+apply the procedure in this paper to control the speed along ment, and estimate the state of that model using a Kalman-
+thepath.Decouplingthepathplanningfromthespeedcontrol like filter. Then robots are controlled so as to maximize a
+in this way is a well-established technique for dealing with metric on the quality of the state estimate. For example, the
+complex trajectory planning problems [8]. work in [16] controls robots to move in the direction of the
+gradient of mutual information. More recently, the authors of
+[17]and[18]controlvehiclestodecreasethevarianceoftheir
+A. Contributions
+estimate ofthe state ofthe environment. Thisis accomplished
+Ourapproachtotheproblemistorepresentthespaceofall
+in a distributed way by using average consensus estimators
+possible speed controllers with a finite set of basis functions,
+to propagate information among the robots. Similarly, [19]
+whereeachpossiblespeedcontrollerisalinearcombinationof
+proposes a gradient based controller to decrease the variance
+those basis functions. A rich class of controllers can be repre-
+of the estimate error in a time changing environment. In [20]
+sentedinthisway.Usingthisrepresentationasourfoundation,
+sensing robots are coordinated to move in a formation along
+the main contributions of this paper are the following.
+levelcurvesoftheenvironmentalfield.In[21]theauthorsfind
+(i) We formally introduce the idea of persistent tasks for optimal trajectories over a finite horizon if the environmental
+robotsinchangingenvironments,andproposeatractable model satisfies a certain spatial separation property. Also, in
+model for designing robot controllers. [22] the authors solve a dynamic program (DP) over a finite
+(ii) Considering the space of speed controllers parametrized horizon to find the trajectory of a robot to minimize the
+by a finite set of basis functions, we formulate a linear variance of the estimate of the environment, and a similar
+program(LP)whosesolutionisaspeedcontrollerwhich DP approach was employed in [23] over short time horizons.
+guarantees that the accumulation function eventually Many other works exist in this vein.
+falls below, and remains below, a known bound every- Although these works are well-motivated by the uncon-
+where. If the LP is infeasible, then no controller in the tested successes of Kalman filtering and Kriging in real-
+spacethatwillkeeptheaccumulationfunctionbounded. world estimation applications, they suffer from the fact that
+(iii) WeformulateanLPwhosesolutionistheoptimalspeed planning optimal trajectories under these models requires the
+controller—that which eventually minimizes the maxi- solution of an intractable dynamic program, even for a static
+mum of the accumulation function over all locations. environment. One must resort to myopic methods, such as
+(iv) We generalize to the multi-robot case. We find an LP gradient descent (as in [16], [17], [18], [20], [19]), or solve
+whose solution is a controller which guarantees that the DP approximately over a finite time horizon (as in [21],
+the accumulation function falls below, and stays below, [22], [23]). Although these methods have great appeal from
+a known bound. The multi-robot controller does not an estimation point of view, little can be proved about the
+require communication between robots. comparativeperformanceofthecontrolstrategiesemployedin
+Wedonotfindtheoptimalcontrollerforthemulti-robotcase, these works. The approach we take in this paper circumvents
+however, as it appears that this controller cannot be found as the question of estimation by formulating a new model of
+the solution to an LP. We demonstrate the performance of the growing uncertainty in the environment. Under this model,
+controllers in numerical simulations, and show that they are we can solve the speed planning problem over infinite time,
+robusttostochasticanddeterministicerrorsintheenvironment while maintaining guaranteed levels of uncertainty in a time-
+model, and to unmodeled robot vehicle dynamics. changingenvironment.Thuswehaveusedalesssophisticated
+It is desirable to cast our speed control problem as an environment model in order to obtain stronger results on the
+LP since LPs can be solved efficiently with off-the-shelf control strategy. Because our model is based on the analogy
+solvers [9]. This is enabled by our basis function represen- of dust collecting in an environment, we also solve infinite
+tation. The use of basis functions is a common, and powerful horizon sweeping problems with the same method.
+method for function approximation [10], and is frequently Ourprobleminthispaperisalsorelatedtosweepcoverage,
+used in areas such as compressive sampling [11], adaptive or lawn mowing and milling problems, in which robots with
+finitesensorfootprintsmoveoveranenvironmentsothatevery curve γ : [0,1] R2, where γ(0) = γ(1). (See Figure 2
+point in the environment is visited at least once by a robot. for an illustration.) The curve is parametrized by θ [0,1],
+Lawn mowing and milling has been treated in [24] and other and we assume without loss of generality that θ is the arc-
+works. Sweep coverage has recently been studied in [25], lengthparametrization.Theenvironmentalsocontainsasingle
+and in [26] efficient sweep coverage algorithms are proposed robot (we will generalize to multiple robots in Section IV)
+for ant robots. A survey of sweep coverage is given in [27]. whose motion is constrained along the path γ. The robot’s
+Our problem is significantly different from these because our position at a time t can be described by θ(t), its position
+environmentisdynamic,therebyrequiringcontinualre-milling along the curve γ. The robot is equipped with a sensor with
+or re-sweeping. A different notion of persistent surveillance finite footprint (θ) (For example, the footprint could
+has been considered in [28] and [29], where a persistent task be a disk of radius r centered at the robot’s position).1 Our
+isdefinedasonewhosecompletiontakesmuchlongerthanthe objectiveistocontrolthespeedv oftherobotalongthecurve.
+lifeofarobot.Whiletheterminologyissimilar,ourproblemis We assume that for each point θ on the curve, the maximum
+more concerned with the task (sweeping or monitoring) itself possiblerobotspeedisv (θ)andtheminimumrobotspeed
+than with power requirements of individual robots. is v (θ) > 0. This allows us to express constraints on the
+A problem more closely related to ours is that of pa- robot speed at different points on the curve. For example, for
+trolling [30], [31], where an environment must be continually safetyconsiderations,therobotmayberequiredtomovemore
+surveyed by a group of robots such that each point is visited slowly in certain areas of the environment, or on high curved
+with equal frequency. Similarly, in [32] vehicles must repeat- sections of the path. To summarize, the robot is described by
+edly visit the cells of a gridded environment. Also, continual the triple :=( ,v ,v ).
+perimeter patrolling is addressed in [33]. In another related A time- R varying B field Z : Q R R , which we call
+work, a region is persistently covered in [34] by controlling the accumulation function, is defined on the points of interest
+robots to move at constant speed along predefined paths. Our Q. This field may describe a physical quantity, such as the
+work is different from these, however, in that we treat the sit- amountofoilonthesurfaceofabodyofwater.Alternatively,
+uationinwhichdifferentpartsoftheenvironmentmayrequire the field may describe the robot’s uncertainty about the state
+differentlevelsofattention.Thisisasignificantdifferenceasit ofeachpointofinterest.Weassumethatateachpointq Q,
+induces a difficult resource trade-off problem as one typically the field Z increases (or is produced) at a constant rate p(q).
+finds in queuing theory [35], or dynamic vehicle routing [36], When the robot footprint is covering q, it consumes Z at a
+[37]. In [38], the authors consider unequal frequency of visits constant rate c(q), so that when a point q is covered, the net
+in a gridded environment, but they control the robots using a rate of decrease is p(q) c(q). Thus, Z evolves according
+greedy method that does not have performance guarantees. to the following differential equation (with initial conditions
+Indeed, our problem can be seen as a dynamic vehicle Z(q,0) and θ(0)):
+routingproblemwithsomeuniquefeatures.Mostimportantly,
+ (cid:0) (cid:1)
+and Z(q,t)>0,
+planningapathforvehiclesthatmoveatconstantspeed.Also, 0, − if q ∈B(cid:0) θ(t) (cid:1) and Z(q,t)=0,
+inourcaseallthepointsunderarobot’sfootprintareserviced ∈B (1)
+simultaneously,whereastypicallyrobotsserviceonepointata where for each q Q, we have c(q) > p(q) > 0. In this
+timeindynamicvehiclerouting.Finally,inourcaseservicing paper, we assume ∈ that we know the model parameters p(q)
+apointtakesanamountoftimeproportionaltothesizeofthe and c(q). It is reasonable to assume knowledge of c(q) since
+accumulation function at that point, whereas the service time it pertains to the performance of the robot. For example, in
+of points in dynamic vehicle routing is typically independent an oil cleanup application, the consumption rate of oil of the
+of that points wait-time. robot can be measured in a laboratory environment or in field
+The paper is organized as follows. In Section II we set up trials prior to control design. As for the production rate, p(q),
+the problem and define some basic notions. In Section III two this must be estimated from the physics of the environment,
+LPsareformulated,oneofwhichgivesastabilizingcontroller, from a human expert (e.g. an oil mining engineer in the case
+and the other one an optimal controller. Multiple robots are of an oil well leak), or it can be measured in a preliminary
+addressed in Section IV. The performance and robustness of surveyoftheenvironment.However,theaccuracyofthemodel
+the controllers are illustrated in simulations in Section V. is not crucial, as we show analytically and in simulations
+Finally, Section VI gives conclusions and extensions. that our method has strong robustness with respect to errors
+in p(q). The production function can also be estimated and
+II. PROBLEMFORMULATIONANDSTABILITYNOTIONS
+incorporated into the controller on-line, though we save the
+In this section we formalize persistent tasks, introduce the development of an on-line strategy for future work.
+notionofafieldstabilizingcontroller,andprovideanecessary With this notation, we can now formally define a persistent
+and sufficient conditions for field stability. task.
+A. Persistent Tasks 1Foragroundrobotorsurfacevessel,thefootprintmaybetherobot’sfield
+Consideracompactenvironment R2,andafinitesetof of view, or its cleaning surface. For a UAV flying at constant altitude over
+E ⊂ a 2D environment, the footprint could give the portion of the environment
+points of interest Q . The environment contains a closed viewablebytherobot.
+(θ) in the sense that the speed at a point θ is the same on each
+γ cycle of the path. The controller can be written as
+v :[0,1] R ,
+F(q) q whereeachθ [0,1]ismappedtoaspeedv(θ)satisfyingthe
+boundsv (θ) v(θ) v (θ).Thesecontrollershavethe
+advantage that they do not require information on the current
+state of the field Z, only its model parameters p(q) and c(q).
+While it may seem restrictive to limit our controllers to this
+special form, the following result shows that it is not.
+Proposition II.4 (Periodic Position-Feedback Controllers). If
+Fig.2:Anillustrationofacurveγfollowedbytherobot.Therobotislocated
+atθandhasfootprintB(θ).ThesetF(q)ofrobotpositionsθforwhichthe a persistent task can be stabilized by a general controller
+footprintcoversq areshownasthickgreysegmentsofthecurve. v(θ,Z,IC,t), then it can be stabilized by a periodic position-
+feedback controller v(θ).
+The proof of Proposition II.4 is given in Appendix A, and
+Definition II.1 (Persistent Tasks). A persistent task is a tuple
+relies on the statement and proof of the upcoming result in
+( ,γ,Q,p,c), where is the robot model, γ is the curve
+R R Lemma II.5. Therefore, we encourage the reader to postpone
+followed by the robot, Q is the set of points of interest, and p
+reading the proof until after Lemma II.5.
+and c are the production and consumption rates of the field,
+We will now investigate conditions for a controller to be
+respectively.
+field stabilizing and for a persistent task to be feasible. Let us
+In general, for a given persistent task, the commanded define a function which maps each point q Q, to the curve
+speed v could depend on the current position θ, the field positions θ for which q is covered by the ro ∈ bot footprint. To
+Z, the initial conditions θ(0) and Z(q,0), and time t. Thus, this end, we define
+definingthesetofinitialconditionsasIC:=(θ(0),Z(q,0)),a
+general controller has the form v(θ,Z,IC,t). For the reader’s F(q):= θ [0,1] q (θ) .
+{ ∈ | ∈B }
+convenience, the notation used in this paper is summarized in
+An illustration of the curve, the robot footprint, and the set
+Table I.
+F(q)isshowninFigure2.(InSectionVwediscusshowthis
+set can be computed in practice.)
+B. Field Stability and Feasibility Given a controller θ v(θ), we define two quantities: 1)
+the cycle time, or period, T, and 2) the coverage time per
+In this section we formalize the problem of stabilizing the
+cycle τ(q). Since v(θ)>0 for all θ, the robot completes one
+field in a persistent task. As a first consideration, a suitable
+full cycle of the closed curve in time
+controller should keep the field bounded everywhere, inde-
+pendent of the initial conditions. This motivates the following (cid:90) 1 1
+definition of stability. v(θ)
+Definition II.2 (Field Stabilizing Controller). A speed con- During each cycle, the robot’s footprint is covering the point
+troller field stabilizes a persistent task if the field is always q only when θ(t) F(q). Thus the point q is covered for
+eventually bounded, independent of initial conditions. That is, (cid:90)
+if there exists a Z < + such that for every q Q and τ(q):= dθ, (3)
+initial condition Z
+d θ(0), we have
+time units during each complete cycle.
+limsupZ(q,t) Z max . Withthesedefinitionswecangiveanecessaryandsufficient
+condition for a controller to stabilize a persistent task. In
+Note that in this definition of stability, for every initial Section III, we develop a method for testing if this condition
+condition, the field eventually enters the interval [0,Z ]. can be satisfied by a speed controller.
+There are some persistent tasks for which no controller is
+Lemma II.5 (Stability condition). Given a persistent task, a
+field stabilizing. This motivates the notion of feasibility.
+controller v(θ) is field stabilizing if and only if
+Definition II.3 (Feasible Persistent Task). A persistent task is (cid:90) 1 (cid:90) 1 1
+feasible if there exists a field stabilizing speed controller. c(q) dθ >p(q) dθ (4)
+Asstatedabove,foragivenpersistenttask,ageneralspeed
+for every q Q. Applying the definitions in (2) and (3), the
+controller can be written as v(θ,Z,IC,t). However, in the ∈ (cid:0) (cid:1)
+condition can be expressed as τ(q)> p(q)/c(q) T.
+remainder of the paper we will focus on a small subset of
+speed controllers which we call periodic position-feedback The lemma has a simple intuition. For stability, the field
+controllers.Inthesecontrollers,thespeedonlydependsonthe consumption per cycle must exceed the field production per
+robot’scurrentpositionθ [0,1].Thecontrollersareperiodic cycle, for each point q Q. We now prove the result.
+Proof: Consider a point q Q, and the set of curve III. SINGLEROBOTSPEEDCONTROLLERS:
+positions F(q) for which q is covered by the robot footprint. STABILITYANDOPTIMALITY
+Given the speed controller v, we can compute the cycle time
+In this paper we focus on a finite set of points of interest
+T in (2). Then, let us consider the change in the field from
+Q = q ,...,q . These m locations could be specific
+Z(q,t) to Z(q,t+T), where t 0. { 1 m }
+≥ regions of interest, or they could be a discrete approximation
+Define an indicator function I : [0,1] Q 0,1 as
+× → { } of the continuous space obtained by, for example, laying a
+I(θ,q)=1 for θ F(q) and 0 otherwise. Then, from (1) we
+∈ grid down on theenvironment. In the Section Vwe will show
+examples of both scenarios. Our twomain results are given in
+Z˙(q,t) p(q) c(q)I(θ(t),q), Theorems III.1 and III.8, which show that a field stabilizing
+≥ − controller, and a controller minimizing (v), can each be
+for all values of Z(q,t), with equality if Z(q,t) > 0. found by solving an appropriate linear pro H gram.
+Integrating the above expression over [t,t+T] we see that Tobegin,itwillbemoreconvenienttoconsidertherecipro-
+(cid:90) t+T cal speed controller v−1(θ):=1/v(θ), with its corresponding
+whereτ(q)isdefinedin(3),andtheequalityfollowsfromthe
+Now,ourapproachistoconsiderafinitesetofbasisfunctions
+fact that I(θ(t),q) is simply an indicator function on whether
+β (θ),...,β (θ) . Example basis functions include (a finite
+or not the footprint is covering q at a given time. From (5) 1 n
+subset of) the Fourier basis or Gaussian basis [10]. In what
+we see that for the field to be eventually bounded by some
+follows we will use rectangular functions as the basis:
+Z forallinitialconditionsZ(q,0),werequirethatτ(q)>
+p(q)/c(q)T for all q Q. (cid:40)
+To see that the condition is also sufficient, suppose that β (θ)= ∈ − (6)
+0, otherwise,
+τ(q) > p(q)/c(q)T. Then there exists (cid:15) > 0 such that
+(cid:0) (cid:1)
+− − − for each j 1,...,n . This basis, which provides a piece-
+the field at the point q Q is strictly positive over the entire ∈ { }
+∈ wiseconstantapproximationtoacurve,hastheadvantagethat
+interval [t,t+T], implying that
+we will easily be able to incorporate the speed constraints
+Z(q,t+T)=Z(q,t) (cid:15). v min (θ) and v max (θ) into the controller.
+− Thenletusconsiderreciprocalspeedcontrollersoftheform
+Thus, from every initial condition, Z(q,t) moves below
+(cid:0) c(q) p(q) (cid:1) T.Additionally,notethatforeacht¯intheinter- (cid:88) n
+Thus, we have that there exists a finite time ≤ t¯such that for all j=1
+t t¯, where α ,...,α R are free parameters that we will use
+to optimize the speed controller. A rich class of functions
+(cid:0) (cid:1)
+≤ − can be represented as a finite linear combination of basis
+functions, though not all functions can be represented this
+Since Q is finite, there exists a single (cid:15) > 0 such that for
+way. Limiting our speed controller to a linear parametrization
+every point q Q we have τ(q) p(q)/c(q)T > (cid:15). Hence,
+∈ − allows us to find an optimal controller within that class, while
+letting Z =max c(q)T, we see that Z is stable for all
+preserving enough generality to give complex solutions that
+q, completing the proof.
+wouldbedifficulttofindinanadhocmanner.Inthefollowing
+In the following sections we will address two problems,
+subsectionwewillconsidertheproblemofsynthesizingafield
+determining a field stabilizing controller, and determining a
+stabilizing controller.
+minimizing controller, defined as follows:
+Problem II.6 (Persistent Task Metrics). Given a persis-
+tent task, determine a periodic position-feedback controller A. Synthesis of a Field Stabilizing Controller
+v : [0,1] R >0 that satisfies the speed constraints (i.e., In this section we will show that a field stabilizing speed
+(cid:2) → (cid:3)
+v(θ) v min (θ),v max (θ) for all θ [0,1]), and controlleroftheform(7)canbefoundthroughthesolutionof
+(i) is field stabilizing; or a linear program. This result is summarized in Theorem III.1.
+(ii) minimizes the maximum steady-state field (v): We remind the reader that A summary of the mathematical
+(cid:18) (cid:19) symbols and their definitions is shown in Table I.
+(v):=max limsupZ(q,t) . To begin, let us consider reciprocal speed controllers in
+H q∈Q t→+∞ the form of (7). Then for q Q, the stability condition in
+In Section III we will show that by writing the speed Lemma II.5 becomes
+controller in terms of a set of basis functions, problems (i)
+and (ii) can be solved using linear programs. In Section IV (cid:88) n α (cid:90) β (θ)dθ > p(q i )(cid:88) n α (cid:90) 1 β (θ)dθ
+we will solve problem (i) for multiple robots. j=1 F(qi) c(q i ) j=1 0
+TABLEI:TableofSymbols
+Symbol Definition
+E the environment.
+Q a set of points of interest in the environment E.
+q a point of interest in Q.
+γ a curve followed by the robot, and parametrized by θ.
+v(θ) the speed of the robot along the curve γ.
+R the robot model, consisting of minimum and maximum speeds v (θ) and v (θ), and a robot footprint B(θ).
+B(θ) The set of points in the environment covered by the robot’s footprint when positioned at θ.
+F(q) the values of θ∈[0,1] along the curve γ for which the point q is covered by the footprint.
+Z(q,t) the field (or accumulation function) at point q∈Q at time t.
+p(q) the rate of production of the field Z at point q.
+c(q) the rate of consumption of the field Z when q is covered by the robot footprint.
+β(θ) a basis function.
+α a basis function coefficient, or parameter.
+T the time to complete one full cycle of the curve.
+τ(q) the amount of time the point q∈Q is covered per cycle.
+H(v) cost function (10) giving the steady-state maximum value of Z(q,t)
+Rearranging, we get thousands of variables and constraints [9]. Thus, the problem
+of computing a field stabilizing controller can be solved
+α K(q ,β )>0, for finely discretized environments with thousands of basis
+functions.Notethatintheabovelemma,weareonlychecking
+feasibility, and thus the cost function in the optimization is
+where we have defined
+arbitrary. For simplicity we write the cost as 0.
+(cid:90) p(q ) (cid:90) 1
+K(q ,β ):= β (θ)dθ i β (θ)dθ. (8) In Theorem III.1 the cost is set to 0 to highlight the
+F(qi) − c(q i ) 0 feasibility constraints. However, in practice, an important
+Finally, to satisfy the speed constraints we have that consideration is robustness of the controller to uncertainty
+and error in the model of the field evolution, and in the
+1 (cid:88) 1 motion of the robot. Robustness of this type can be achieved
+v (θ) ≤ ≤ v (θ) by slightly altering the above optimization to maximize the
+stability margin. This is outlined in the following result.
+For the rectangular basis in (6), the speed constraints become
+Corollary III.2 (Robustness via Maximum Stability Margin).
+α , The optimization
+where maximize B
+v (j)= inf v (θ), and (cid:88)
+max max α K(q ,β ) B i 1,...,m
+min min 1 1
+Thus, we obtain the following result. max min
+whereα ,...,α andB aretheoptimizationvariables,yields
+Theorem III.1 (Existence of a Field Stabilizing Controller). 1 n
+a speed controller which maximizes the stability margin,
+A persistent task is stabilizable by a speed controller of the
+α K(q ,β ). The controller
+form(7)ifandonlyifthefollowinglinearprogramisfeasible: qi∈Q j=1 j i j
+(i) has the largest decrease in Z(q ,t) per cycle, and thus
+minimize 0 i
+achieves steady-state in the minimum number of cycles.
+(cid:88) (ii) isrobusttoerrorsinestimatingthefieldproductionrate.
+subject to α K(q ,β )>0 i 1,...,m
+j i j ∀ ∈{ } If the robot’s estimate of the production rate at a field
+point q Q is p¯(q ), and the true value is p(q )
+1 1 i ∈ i i ≤
+α , j 1,...,n , p¯(q )+(cid:15), then the field is stable provided that for each
+max min q Q
+where K(q ,β ) is defined in (8), and α ,...,α are the
+i j 1 n  −1
+optimization variables. (cid:88) n (cid:90) 1
+(cid:15)<B c(q
+(θ)dθ .
+Hence, we can solve for a field stabilizing controller using ·
+asimplelinearprogram.Theprogramhasnvariables(onefor
+each basis function coefficient), and 2n+m constraints (two Proof: The first property follows directly from the fact
+for each basis function coefficient, and one for each point that
+α K(q ,β ) is the amount of decrease of the field
+of interest in Q). One can easily solve linear programs with at point q in one cycle.
+Toseethesecondproperty,supposethattheoptimizationis (i) foreverysetofinitialconditionsθ(0)andZ(q,0),there
+basedonaproductionratep¯(q )foreachq Q,butthetrue exists a time t∗ 0 such that
+production rate is given by p(q i ) := p¯(q i )+(cid:15), where (cid:15) > 0. Z(q,t)=Z¯(cid:0)
+In solving the optimization above, we obtain a controller with
+a stability margin of B >0. For the true system to be stable for all t t∗.
+we require that for each q i Q, (ii) thereexis ≥ tsatleastoneθ [0,1]suchthatZ¯(q,θ)=0.
+(cid:88) n (cid:90) p¯(q i )+(cid:15)(cid:88) n (cid:90) 1 From the above result we see that from every initial condi-
+j j c(q ) j j tion,thefieldconvergesinfinitetimetoasteady-stateZ¯(q,θ).
+j=1 F(qi) i j=1 0
+Insteady-state,thefieldZ(q,t)attimetdependsonlyonθ(t)
+This can be rewritten as
+(andisindependentofZ(q,0)).Eachtimetherobotislocated
+(cid:88) n (cid:15) (cid:88) n (cid:90) 1 atθ,thefieldisgivenbyZ¯(q,θ).Moreover,theresulttellsus
+j i j j j that in steady-state there is always a robot position at which
+j=1 i j=1 0 thefieldisreducedtozero.InordertoprovePropositionIII.4
+from which we see that the true field is stable provided that webeginwiththefollowinglemma.Recallthatthecycle-time
+(cid:0)(cid:80)n
+for each q Q. for a speed controller v is T :=
+1/v(θ)dθ.
+i j=1 j 0 j i ∈ 0
+Remark III.3 (Alternative Basis Functions). Given an ar- Lemma III.5 (Field Reduced to Zero). Consider a feasible
+bitrary set of basis functions, the inequalities in (9) yield persistent task and a field stabilizing speed controller. For
+an infinite (and uncountable) number of constraints, one for every q Q and every set of initial conditions Z(q,0) and
+each θ [0,1]. This means that for some basis functions the θ(0), there exists a time t∗ >T such that
+linear program in Theorem III.1 can not be solved exactly.
+However, in practice, an effective method is to simply en-
+force the constraints in (9) for a finite number of θ values, for all non-negative integers a.
+θ ,...,θ .Eachθ generatestwoconstraintsintheoptimiza-
+Proof: Consider any q Q, and initial conditions
+tion. Then, we can tighten each constraint by ξ >0, yielding
+(cid:80) Z(q,0) and θ(0), and suppose by way of contradiction that
+max i ≤ j j j i ≤ min i − the speed controller is stable but Z(q,t) > 0 for all t >
+i 1,...,w . Choosing the number of θ values w as large
+∈{ } T. From Lemma II.5, if the persistent task is stable, then
+as possible given the available computational resources, we
+c(q)τ(q) > p(q)T for all q. Thus, there exists (cid:15) > 0 such
+can then increase ξ until the controller satisfies the original
+speed constraints. (cid:3) that c(q)τ(q) p(q)T >(cid:15) for all q Q. From the proof of
+Lemma II.5, we have that
+B. Synthesis of an Optimal Controller Z(q,t+T) Z(q,t)=p(q)T c(q)τ(q)= (cid:15).
+In this section we look at Problem II.6 (ii), which is to Therefore, given Z(q,0), we have that Z(q,t∗)=0 for some
+minimize the maximum value attained by the field over the finite t∗ >T, a contradiction.
+finite region of interest Q. That is, for a given persistent task, Next we will verify that if Z(q,t∗) = 0 for some t∗ > T,
+our goal is to minimize the following cost function, then Z(q,t∗+T) = 0. To see this, note that the differential
+(cid:18) (cid:19) equation (1) is piecewise constant. Given a speed controller
+(v)=max limsupZ(q,t) (10)
+v(θ), the differential equation is time-invariant, and admits
+H q∈Q t→+∞
+unique solutions.
+overallpossiblespeedcontrollersv.Attimeswewillreferto
+Based on this, consider two initial conditions for (1),
+the maximum steady-state value for a point q using a speed
+(q,v):=limsupZ(q,t) and
+Our main result of this section, Theorem III.8, is that (v)
+H Since (1) is time-invariant, we have that Z (q,T) =
+canbeminimizedthroughalinearprogram.However,wemust 1
+Z(q,t∗) = 0, and Z (q,T) = Z(q,t∗ + T). In addition,
+first establish intermediate results. First we show that if v is 2
+by uniqueness of solutions, we also know that Z (q,0)
+a field stabilizing controller, then for every initial condition 1 ≥
+there exists a finite time t∗ such that Z(q,t) (v) for all Z 2 (q,0) implies that Z 1 (q,T) ≥ Z 2 (q,T). Thus, we have
+t t∗.
+≤ H that Z(q,t∗)=0
+Z(q,t∗+T), proving the desired result.
+Proposition III.4 (Steady-State Field). Consider a feasible Thepreviouslemmashowsthatfromeveryinitialcondition
+persistent task and a field stabilizing speed controller. Then, there exists a finite time t∗, after which the field at a point
+there is a steady-state field q is reduced to zero in each cycle. With this lemma we can
+prove Proposition III.4.
+Z¯ :Q [0,1] R ,
+× → ≥0 Proof of Proposition III.4: In Lemma III.5 we have
+satisfying the following statements for each q Q: shown that for every set of initial conditions Z(q,0), θ(0),
+there exists at time t∗ > T such that Z(q,t∗+aT) = 0 for From differential equation (1) we can write
+all non-negative integers a. Since T is the cycle-time for the (cid:90) xk dθ
+robot,wealsoknowthatθ(t∗+aT)=θ(t∗)foralla.Since(1) Z¯(q,x
+yields unique solutions, (11) uniquely defines Z(q,t) for all yk−1
+t ≥ t∗, with Z¯(q,y k )= (cid:18) Z¯(q,x k )+ (cid:0) p(q) c(q) (cid:1) (cid:90) yk dθ (cid:19)+ ,
+Z(q,t+T)=Z(q,t) for all t t∗. (14)
+where for z R, we define (z)+ := max z,0 . Combining
+Hence, we can define the steady-state profile Z¯(q,θ) as
+equations (13
+) and (14) we see that
+Z¯(cid:0) q,θ(t) (cid:1) :=Z(q,t) for all t [t∗,t∗+T). (cid:32) (cid:90) yk dθ
+Finally, we need to verify that Z¯(q,θ) is independent of (cid:90) yk dθ (cid:19)+
+initialconditions.Toproceed,supposebywayofcontradiction c(q) . (15)
+that there are two sets of initial conditions θ
+and θ 2 (0), Z 2 (q,0) which yield different steady-state fields For each b 1,...,(cid:96) , let us define3
+Z¯ (q,θ) and Z¯ (q,θ). That is, there exists θ˜ such that ∈{ }
+Z¯ 1 (q,θ˜) = Z¯ (q 2 ,θ˜). Without loss of generality, assume that (cid:90) yk dθ (cid:88) b−1(cid:90) yk−w dθ
+Z¯ 1 (q,θ˜) (cid:54) > Z 2 ¯ (q,θ˜). To obtain a contradiction, we begin N k−b,k (q):=p(q) v(θ)− c(q) v(θ) . (16)
+1 2 yk−b w=0 xk−w
+by showing that this implies Z¯ (q,θ) Z¯ (q,θ) for all
+θ. Note that Z and Z reach th 1 eir stead ≥ y-sta 2 te profiles Z¯ Note that we can write
+a w n h d ic Z h ¯ 2 θ in (t fi ) ni = te θ tim (t e. ) T = hus θ˜ , , t a h n e d re Z ex ( i q st ,t tim ) e = s t Z¯ 1 ,t ( 2 q, ≥ θ˜), 0 a f n o d r Z¯(q,y k )= (cid:0) Z¯(q,y k−1 )+N k−1,k (q) (cid:1)+ .
+1 1 2 2 1 1 1
+Z (q,t )= Z¯ (q,θ˜). Since Z (q,t ) >Z (q,t ), and since and, from (15) we have
+2 2 2 1 1 2 2
+Z is a continuous function of time, either i) Z 1 (q,t 1 +t) > Z¯(q,y k ) Z¯(q,y k−b )+N k−b,k (q). (17)
+Z (q,t +t) for all t 0, or ii) there exists a time t¯>0 for ≥
+which Z (q,t +t¯)= ≥ Z (q,t +t¯), which by uniqueness of Moreover,
+solutions implies Z (q,t +t) = Z (q,t +t) for all t t¯.
+Thus, Z (q,t +t) 1 Z 1 (q,t +t) 2 for 2 all t 0, imply ≥ ing Z¯(q,y k )=Z¯(q,y k−b )+N k−b,k (q),
+(q ≥ ,θ) for all θ. ≥ if Z(q,y k−j )>0 for all j
+From Lemma III.5, there exists a θ¯ for which Z¯ 1 (q,θ¯) = Thus, we see that the quantity N k−b,k (q) gives the maximum
+Z 0 ¯ . 2 ( S q in , c θ¯ e ) , = Z¯ 0 1 ( . q H , o θ w ) e ≥ ver Z , ¯ 2 th (q e , v θ a ) lu f e or of a Z ll 1 θ a , n w d e Z m 2 u at st θ¯ h u a n v i e qu t e h l a y t r e e x d a u m c p ti l o e n fo i r n b t = he 1 fi i e s l s d ho b w et n w i e n en Fig θ ur = e3 y c k . − W b it a h n t d he θ se = defi y n k i . tio A n n ,
+definesZ¯ 1 andZ¯ 2 forallθ,implyingthatZ¯ 1 (q,θ)=Z¯ 2 (q,θ), we can characterize the steady-state field at the points y k .
+a contradiction.
+Lemma III.6 (Steady-State Field at Points y ). Given a
+From Proposition III.4 we have shown the existence of k
+feasiblepersistenttaskandafieldstabilizingspeedcontroller,
+a steady-state field Z¯(q,θ) that is independent of initial
+consider a point q Q and the set F(q) = (cid:96) [x ,y ].
+conditions Z(q,0) and θ(0). ∈ ∪k=1 k k
+Then, for each k 1,...,(cid:96) we have
+Now, consider a point q Q and a field stabilizing speed ∈{ }
+controller v(θ), and let us ∈ solve for its steady-state field Z¯(q,y
+Z¯(q,θ). To begin, let us write F(q) (the set of θ values for b∈{0,...,(cid:96)−1}
+which the point q is covered by the footprint) as a union of where N k−b,k (q) is defined in (16) and N k,k (q):=0.
+disjoint intervals
+Proof:Letusfixk 1,...,(cid:96) .Givenafieldstabilizing
+controller, Proposition III.4 tells us that there exists θ such
+F(q)=[x 1 ,y 1 ] [x 2 ,y 2 ] [x (cid:96) ,y (cid:96) ], (12) that Z¯(q,θ) = 0. It is clear that this must occur for some
+θ F(q). Therefore,
+where (cid:96) is a positive integer, and y > x > y for each ∈
+k ∈{ 1,...,(cid:96) } .2 Thus, on the interva k ls [x k k ,y k ] th k− e 1 point q is Z¯(q,y j )=0 for some j ∈{ 1,...,(cid:96) } .
+coveredbytherobotfootprint,andontheintervals[y ,x ],
+k k+1 Let b be the smallest non-negative integer such that
+the point q in uncovered. As an example, in Figure 2, the set Z¯(q,y )=0. By (18) we have
+F(q) consists of two intervals, and thus (cid:96) = 2. An example
+of a speed controller and an example of a set F(q) are shown Z¯(q,y k )=N k−b,k (q) 0.
+in Figures 3a and 3b.
+If b = 0, then the previous equation simply states that
+Z(q,y ) = 0. Now, if N (q) N (q) for all
+k k−d,k k−b,k
+2Note that the number of intervals (cid:96), and the points x1,...,x (cid:96) and
+y1,...,y (cid:96) areafunctionofq.However,forsimplicityofnotation,wewill 3In this definition, and in what follows, addition and subtraction in the
+omitwritingtheexplicitdependence. indicesisperformedmodulo(cid:96).Therefore,ifk=1,thenN k−1,k =N (cid:96),1.
+0 0 N3,1 N2,3
+0 0.5 1 0 x1 y1 x2 y2 x3 y3 1 0 x1 y1 x2 y2 x3 y3 1
+(a)Asamplereciprocalspeedcontrollerv(θ) (b) The steady-state field Z¯(q,θ). The set F(q) (c) The calculation of quantities N1,2, N2,3 and
+consistsofthreeintervalswhichareshadedonthe N3,1.Thevaluesrepresentthemaximumreduction
+θ-axis.Thesteady-stateprofileisincreasingoutside from y k−1 to y k. Thus, N1,2,N3,1 < 0 while
+ofF(q)anddecreasinginsideF(q). N2,3>0.
+Fig.3:Thesteady-statefieldforapointq∈Q.Thesetofθ valuesforwhichqiscoveredisgivenbyF(q)=[x1,y1]∪[x2,y2]∪[x3,y3].Thefieldis
+producedataratep(q)=3,andisconsumedbythefootprintataratec(q)=8.5.
+d 0,...,(cid:96) , then Z¯(q,y ) = max N (q), where β ,...,β are basis functions (e.g., the rectangular
+k b∈{0,...,(cid:96)−1} k−b,k 1 n
+and we have completed the proof. basis). For a finite field Q = q ,...,q , the terms
+Suppose by way of contradiction that there is d N (q ) can be written as
+0,...,(cid:96) 1 for which N (q)>N (q). From (17)
+w { e have − } k−d,k k−b,k (cid:88) n
+k,b i j k,b i j
+k k−d k−d,k k−d,k
+where the second inequality comes from the fact that
+Z¯(q,y ) 0. However Z¯(q,y ) = N (q), implying
+that N k−d ( ≥ q) N (q), a co k ntradicti k o − n b . ,k X k,b (q i ,β j ):=
+k−d,k k−b,k
+Theabovelem ≤ magivesthevalueofthefieldinsteady-state (cid:90) yk (cid:88) b−1(cid:90) yk−w
+a th t e e s a e ch ar e e nd th p e oi θ nt v y a k lu . e T s h o e v fi e e r ld w d h e ic c h rea th se e s p fr o o in m t x q k i t s o c y o k v ( e s r i e n d c ) e , yk−b j − w=0 xk−w j
+and then increases from y to x . Therefore, the maximum With these definitions we can define a linear program for
+steady-state value is attained at an end point x for some k. minimizing the maximum of the steady-state field. We will
+For example, in Figure 3b, the maximum is attained at the write (cid:96)(q) to denote the number of disjoint intervals on the
+point x . However, the value at x can be easily computed curve γ over which the point q is covered, as defined in (12).
+from the value at y using (13):
+k−1 Theorem III.8 (Minimizing the Steady-State Field). Given a
+(cid:90) xk+1 dθ feasible persistent task, the solution to the following linear
+k+1 b∈{0,...,(cid:96)−1} k−b,k yk v(θ) program yields a speed controller v of the form (7) that
+minimizes the maximum value of the steady-state field (v).
+From this we obtain the following result. H
+minimize B
+Lemma III.7 (Steady-State Upper Bound). Given a field
+stabilizing speed controller v, the maximum steady-state field (cid:88) n
+subject to α X (q ,β ) B i 1,...,m ,
+at q Q (defined in (10)) satisfies j k,b i j ≤ ∀ ∈{ }
+(q,v)= max X (q), k 1,...,(cid:96)(q ) ,
+H k∈{1,...,(cid:96)} k,b ∈{ i }
+b∈{0,...,(cid:96)−1} b 0,...,(cid:96)(q i ) 1
+where (cid:88) n
+α K(q ,β )>0 i 1,...,m
+(cid:90) xk+1 dθ (cid:88) b−1(cid:90) yk−w dθ j i j ∀ ∈{ }
+yk−b w=0 xk−w α , j 1,...,n .
+and F(q)= (cid:96) [x ,y ] with y >x >y for each k. max min
+∪k=1 k k k k k−1
+The optimization variables are α and B and the quantities
+Theabovelemmaprovidesaclosedformexpression(albeit
+X (q ,β ) and K(q ,β ) are defined in (19) and (8).
+k,b i j i j
+quite complex) for the largest steady-state value of the field.
+Thus, consider speed controllers of the form From the above theorem, we can minimize the maximum
+valueofthefieldusingalinearprogram.Thisoptimizationhas
+v−1(θ)= α β (θ), n+1 variables (n basis function coefficients, and one upper
+j j boundB).Thenumberofconstraintsism (cid:80)m (cid:96)(q )2+m+
+2n. In practice, (cid:96)(q ) is small compared to n and m, and is all the robots. Let T = (cid:82)1 v−1(θ)dθ be the period of robot
+independent of n an i d m. Thus, for most instances, the linear r, and let τ (q)= (cid:82) r v 0 −1( r θ)dθ be the time in that period
+program has O(2n+m) constraints. that q is in robot r’s footprint. The existence of a common
+period rests on the following technical assumption.
+IV. MULTI-ROBOTSPEEDCONTROLLER Assumption IV.1 (Rational Periods). We assume that the
+In this section we turn to the multi-robot case. We find periods T r are rational numbers, so that there exist integers
+that a field stabilizing controller can again be formulated as num r and den r such that T r =num r /den r .
+the solution of a linear program. Surprisingly, the resulting
+AnimmediateconsequenceofAssumptionIV.1isthatthere
+multi-robot controller does not rely on direct communication exists a common period T such that T/T N for all r. That
+between the robots. We also show that the optimal controller ∈
+is, each controller executes a whole number of cycles over
+(the one that minimizes the steady state field) for multiple the time interval T. Specifically, letting T =ΠN num , we
+.
+t have T/T r = den r ΠN r(cid:48)=1,r(cid:48)(cid:54)=r num r(cid:48) . Now, we r= ca 1 n stat r e the
+necessaryandsufficientconditionsforafieldstabilizingmulti-
+ongoing work.
+robot controller.
+The multiple robots travel on fixed paths, but those paths
+my be different (or they may be the same) and they may Lemma IV.2 (Multi-Robot Stability Condition). Given a
+intersect arbitrarily with one another. The robots may have multi-robot persistent task, the set of controllers θ r v r (θ r ),
+different consumption rates, footprints, and speed limits. We r 1,...,N is field stabilizing if and only if
+donotexplicitlydealwithcollisionsinthissection,thoughthe
+controllerweproposecanbeaugmentedwithexistingcollision
+avoidance strategies. This is the subject of on going work. r
+Wemustfirstmodifyournotationtoaccommodatemultiple for every q Q, where T = (cid:82)1 v−1(θ)dθ and τ (q) =
+robots. Consider N robots with closed paths γ r :[0,1] → R2, (cid:82) v−1(θ) ∈ dθ. r 0 r r
+r 1,...,N where γ r and γ r(cid:48) may intersect with each Fr(q) r
+other arbitrarily (e.g., they may be the same path, share The lemma states an intuitive extension of Lemma II.5,
+some segments, or be disjoint). We again assume that the which is that the total consumption per cycle must exceed
+parametrization of each curve is an arc-length parametriza- the total production per cycle at each point q Q.
+tion, normalized to unity. Robot r, which traverses path Proof:TheproofcloselyfollowstheproofofLemmaII.5.
+γ at position θ (t), has a consumption rate c (q) over a Consider the change of Z(q,t) at a point q over any time
+(cid:0) (cid:1)
+footprint θ (t) , and has a speed controller v (θ ) with interval T, where T is a common period of all the rational
+maximum B and minimum speed constraints v (θ ) and periods T , so that T/T N for all r. By integrating (20)
+r,min r r r
+v (θ ), respectively. Let = ( ,v ,v ) be we have that
+r,max r r r r,min r,max
+the tuple containing the parameters for robot r and redefine (cid:88) N (cid:90) T
+R :=( R 1 ,..., R N ) to be the tuple containing all the robots’ Z(q,t+T) − Z(q,t) ≥ Tp(q) − I r (τ,q)c r (q)dτ
+tuples of parameters. Also, the set of points θ r from which r=1 t
+q is in robot r’s footprint is denoted F r (q). Furthermore, we (cid:88) T (cid:88) /Tr(cid:90) t+kTr
+let γ := (γ ,...,γ ) and c := (c ,...,c ) be the tuple =Tp(q) I (τ,q)c (q)dτ
+1 N 1 N r r
+of all robot’s paths and all robots’ consumption functions, r=Nq k=1 t+(k−1)Tr
+r ( esp , e γ c , t Q iv , e p ly , . c T ) h a e sb p e e f r o si r s e t , e a n n t d ta w sk e w se i e th k N spe r e o d bo c t o s n i t s ro n ll o e w rs w v ri ( t θ ten ) =T (cid:16) p(q) (cid:88) N c (q) τ r (q)(cid:17) ,
+R r r − r T
+to keep Z(q,t) bounded everywhere, as in Definition II.2. r=1 r
+We make the assumption that when multiple robots’ foot-
+where I (t,q) takes the value 1 when q is in the footprint of
+prints are over the same point q, their consumption rates are
+robotr and0otherwise.Tosimplifynotation,defineC(q):=
+additive. Specifically, let q (t) be the set of robots whose (cid:80)N c (q) and C¯(q):= (cid:80)N c (q)τ (q)/T .
+N r=1 r r=1 r r r
+footprints are over the point q at time t, First we prove necessity. In order to reach a contradiction,
+(cid:0) (cid:1) assume that the condition in Lemma IV.2 is false, but the
+N q (t):= { r | q ∈B r θ r (t) } . persistent task is stable. Then T (cid:0) p(q) C¯(q) (cid:1) 0 for some
+Then the rate of change of the function Z(q,t) is given by q, implying Z(q,t+T) Z(q,t) for some q and for all t,
+ (cid:88) whichcontradictsstability.Inparticular,foraninitialcondition
+.
+.
+.
+.
+.
+.
+.
+(cid:0) (cid:1)
+(20) T C(q) p(q) (if no such time and point exists, the
+We can reformulate a stability condition analogous to Lemma persistent task is stable). Then for all times in the interval
+II.5 to suit the multi-robot setting, but we must first establish τ [t,t+T], Z(q,t+τ) > 0, and by (20) we have that
+the notion of a common period for the speed controllers of Z( ∈ q,t+T) Z(q,t) = T (cid:0) p(q) C¯(q) (cid:1) = (cid:15). Therefore,
+after finitely many periods T, Z(q,t) will become less than for all r 1,...,N and q Q. Thus, defining
+T C(q) p(q) . Now for a time t and a point q such that (cid:90)
+− (cid:0) (cid:1)
+Z(q,t) < T C(q) p(q) , for all times τ [t,t+T] we K (q ,β ):=c (q ) β (θ)dθ, (23)
+r i j r i rj
+havethatZ(q,t+τ) Z(q,t)+p(q)T <TC(q).Therefore, Fr(qi)
+≤ (cid:0) (cid:1)
+once Z(q,t) falls below T C(q) p(q) (which will occur the stability constraints become
+in finite time), it will never again exceed TC(q). Therefore
+the persistent task is stable with Z =max TC(q). (cid:88)
+rj r i j i
+Remark IV.3 (Justification of Rational Periods). Assumption r=1j=1
+IV.1isrequiredonlyforthesakeofsimplifyingtheexposition.
+To satisfy the speed constraints, we also require that
+The rational numbers are a dense subset of the real numbers, v−1 (θ ) v−1(θ ) v−1 (θ ), which from (22) leads
+so for any (cid:15) > 0 we can find num r and den r such that to r,max r ≤ r r ≤ r,min r
+n th u r m ou r g / h d t e h n e r a ≤ nal T y r si ≤ s t n o u p m ro r v / e d o e u n r r r + es (cid:15) u . lt O s n i e n c g o e u n l e d ra c l a . rry the (cid:3) (cid:15) f r (cid:88) n α rj β rj (θ r ) f r ,
+r,max r r,min r
+A. Synthesis of Field Stabilizing Multi-Robot Controllers for all θ [0,1]. For the rectangular basis functions in (6),
+this specializes to f /v (j) α f /v (j) for all
+A field stabilizing controller for the multi-robot case can r r,min rj r r,min
+r and j, where
+again be formulated as the solution of a linear program,
+provided that we parametrize the controller using a finite
+r,max r,max r
+number of parameters. Our parametrization will be somewhat θ∈[(j−1)/nr,j/nr)
+different than for the single robot case, however. Because and
+there are multiple robots, each with its own period, we must
+r,min r,min r
+normalize the speed controllers by their periods. We then θ∈[(j−1)/nr,j/nr)
+represent the periods (actually, the inverse of the periods) as
+Thisgivesalinearsetofconstraintsforstability,whichallows
+separate parameters to be optimized. In this way we maintain
+us to state the following theorem.
+the independent periods of the robots while still writing the
+optimization over multiple controllers as a single set of linear Theorem IV.4 (Field Stabilizing Multi-Robot Controller). A
+constraints. persistent task is stabilizable by a set of multi-robot speed
+Define a normalized speed controller v¯ (θ ) := T v (θ ), controllers v (θ ), r 1,...,N , of the form (22) if and
+r r r r r r r ∈ { }
+and the associated normalized coverage time τ¯ (q ) := only if the following linear program is feasible:
+(cid:82) v¯−1(θ)dθ =τ (q )/T . We parametrize v¯−1 as
+Fr(qi) r r i r i minimize 0
+α rj β rj (θ r ), subject to (cid:88)
+α rj K r (q i ,β j )>p(q i ),
+where n r is the number of basis functions for the rth robot, i 1,...,m
+R and β rj : [0,1]
+R ≥0 are robot r’s jth
+parameter and basis function, respectively. It is useful to α =1 r 1,...,N
+allow robots to have a different number of basis functions,
+since they may have paths of different lengths with different f >0 r 1,...,N
+speedlimits.Assumingthebasisfunctionsarenormalizedwith ∀ ∈{ }
+(cid:82) 0 1 β rj (θ)dθ =1 for all r and j, then we can enforce that v¯ r v r (j) ≤ α rj ≤ v r (j) ∀ j ∈{ 1,...,n r } ,
+is a normalized speed controller by requiring r,min r,min
+r 1,...,N ,
+α rj =1 ∀ r ∈{ 1,...,N } . where each α rj and f r is an optimization variable, and
+j=1 K (q ,β ) is defined in (23).
+Asbefore,wecoulduseanynumberofdifferentbasisfunc-
+The above linear program has
+n +N variables (one
+tions, but here we specifically consider rectangular functions r=1 r
+for each basis function coefficient α , and one for each
+of the form (6). We also define the frequency for robot r as
+frequency f ), and m +
+1) constraints. Thus,
+f :=1/T , and allow it to be a free parameter, so that r r=1 r
+r r if we use n basis functions for each of the N robot speed
+v r (θ r )=f r v¯ r (θ r )= (cid:80)nr
+.
+j=1 rj rj r
+the linear program grows linearly with the number of robots.
+From (21), for the set of controllers to be field stabilizing, we
+require Remark IV.5 (Maximizing Stability Margin). As summa-
+rized in Corollary III.2, rather than using the trivial cost
+nr (cid:90)
+c (q ) α β (θ)dθ >p(q ) function of 0 in the LP in Theorem IV.4, one may wish
+r i rj rj i
+r=1 j=1 Fr(qi) to optimize for a meaningful criterion. For example, the
+controller that gives the minimum number of common periods
+to steady-state can be obtained by maximizing B subject to
+(cid:80)N (cid:80)nr
+α K (q ,β ) p(q ) B i 1,...,m ,
+.4.
+RemarkIV.6(MinimizingtheSteadyStateField). Thereader
+will note that we do not find the speed controller that mini-
+mizes the steady state field for the multi-robot case, as was
+Fig. 4: An example with a field consisting of 10 points. The field Z(q,t)
+doneforthesinglerobotcase.Thereasonisthatthequantities at each point is indicated by the area of the disk centered at the point. The
+called N in the single robot case would depend on the vehiclefootprintisadisk.Thetimesequenceofthethreesnapshotsgoesfrom
+lefttoright.Thevehicleismovingcounter-clockwisearoundthetophalfof
+relative positions of the robots in the multiple robot case.
+thefigureeightandclockwisearoundthebottomhalf.Thetimeevolutionof
+Thesequantitieswouldhavetobeenumeratedforallpossible theredfieldpointisshowninFigure5.
+relative positions between the multiple robots and there are
+infinite such relative positions. Thus the problem cannot be
+posed as an LP in the same way as the single robot case. We 1
+are currently investigating alternative methods for finding the 0.9
+optimal multi-robot controller, such as convex optimization.(cid:3) 0.8
+V. SIMULATIONS 0.5
+In this section we present simulation results for the single 0.4
+robot and multi-robot controllers. The purpose of this section 0.3
+is threefold: (i) to discuss details needed to implement the 0.2
+speed control optimizations, (ii) to demonstrate how con- 0.1
+0 0.2 0.4 0.6 0.8 1
+trollers can be computed for both discrete and continuous theta
+fields, and (iii) to explore robustness to modeling errors,
+parameter uncertainty, robot tracking errors, and stochastic
+field evolution.
+The optimization framework was implemented in
+MATLAB(cid:13)R, and the linear programs were solved using
+the freely available SeDuMi (Self-Dual-Minimization)
+toolbox. To give the readers some feel for the efficiency of
+the approach, we report the time to solve each optimization
+on a laptop computer with a 2.66 GHz dual core processor
+and 4 GB of RAM. The simulations are performed by
+discretizing time, and thus converting the field evolution into
+a discrete-time evolution. To perform the optimization, we
+needaroutineforcomputingthesetF(q)foreachfieldpoint
+q Q. This is done as follows. We initialize a set F(q) for
+each point q, and discretize the robot path into a finite set
+θ ,...,θ . For the rectangular basis, this disretization is
+naturally given by the set of basis functions. We iteratively
+place the robot footprint at each point θ , oriented with the
+desired robot heading at that point on the curve, and then add
+θ to each set F(q) for which q is covered by the footprint.
+By approximating the robot footprint with a polygon, we can
+determine if a point lies in the footprint efficiently (this is a
+standard problem in computational geometry).
+Figure 4 shows a simulation for one ground robot perform-
+ing a persistent monitoring task of 10 points (i.e., Q =10).
+Theenvironmentisa70mby70msquare,andtheclosedpath
+has a length of 300 m. For all points we set the consumption
+rate c(q) = 1 (in units of (field height)/s). For each yellow
+point q we set p(q) = 0.15, and for the single red point we
+set p(q) = 0.35. The robot has a circular footprint with a
+radius of 12 m, and for all θ the robot has a minimum speed
+of v =0.2 m/s and a maximum speed of v =2 m/s.
+If the robot were to simply move at constant speed along the
+path,then8ofthe10fieldpointswouldbeunstable.Thespeed
+0 500 1000 1500
+(a)Theoptimalspeedcontroller.
+(b)ThefieldZ(q,t)atthered(dark)
+point.
+Fig. 5: The optimal speed controller corresponding to the curve and field
+shown in Figure 4. The minimum speed is vmin = 0.22 m/s and the
+maximum speed is vmax =2 m/s. The field Z(q,t) is shown for the red
+(dark)pointinFigure4.Itconvergesinfinitetimetoasteadystate.
+controller resulting from the optimization in Section III-B is
+showninFigure5a.Atotalof150rectangularbasisfunctions
+were used. The optimization was solved in less than 1/10
+of a second. Using the speed controller, the cycle time was
+T =420 s.
+The field Z(q,t) for the red (shaded) point in Figure 4, is
+shownasafunctionoftimeinFigure5b.Onecanseethatthe
+field converges in finite time to a periodic cycle. In addition,
+the field goes to zero during each cycle. The periodic cycle is
+the steady-state as characterized in Section III-B.
+InFigure6,asimulationisshownforthecasewhentheen-
+tire continuous environment must be monitored by two aerial
+robots. For multiple robots we synthesized a field stabilizing
+controller by maximizing the stability margin, as discussed in
+RemarkIV.5.Thecontinuousfieldisdefinedovera690mby
+690 m square, and was approximated using a 32 32 grid.
+For all points q Q we set the consumption rate c(q) = 1,
+and the production function is shown in Figure 7. Robot 1
+followed a figure-eight path which has a length of 2630 m,
+whilerobot2followedafour-leafcloverpathwithalengthof
+2250 m. The footprint for robot 1, the higher (yellow) robot
+had a radius of 100 m, and the speed constraints were given
+by v = 1.5 m/s and v = 15 m/s. The footprint
+min,1 max,1
+for robot 2, the lower (red) robot, had a radius of 133 m,
+and the speed constraints were given by v =2 m/s and
+v =20m/s.Thecycletimeforrobot1wasT =519s,
+and the cycle time for robot 2 was T =443 s. A total of 150
+Fig. 6: An example of using a discretized approximation of a continuous field for two robots. The grid is 32×32, and the field Z(q,t) at each point is
+shownasthesurface.Thefootprintofthehigherrobot(yellow)is4/3theradiusofthefootprintofthelower(red)robot.Thesnapshotsequencegoesfrom
+lefttorightwiththeleftsnapshotshowingtheinitialconditionoftherobotsandfield.
+The robot had a circular footprint with a radius of 133 m, a
+minimum speed of v =1.5 m/s and a maximum speed of
+v = 15 m/s. The path had a cycle length of 4200 m. If
+the robot followed the path at constant speed, then 80 of the
+points would be unstable.
+For the speed controller, we used 280 rectangular basis
+functions, and solved the optimization as described in Corol-
+lary III.2, resulting in a stability margin of B = 97.8. The
+optimization was solved in approximately 10 seconds. The
+timefortherobottocompleteonecycleofthepathusingthis
+controller was T =439 s.
+Fig.7:Theproductionfunctionp(q)forthesimulationsinFigures8and6.
+Stochasticfieldevolution:Now,supposethatweaddzero-
+mean noise to the production function. Thus, the robot based
+rectangular basis functions were used for each robot’s speed its speed controller on the “nominal” production function
+controller. The optimization was solved in approximately 10 p¯(q) (shown in Figure 7), but the actual production function
+seconds. A snapshot for a simulation with three robots is is p(q,t) = p¯(q) + n(t,q), where n(t,q) is noise. For
+shown in Figure 1. In this case, the green robot flying at a the simulation, at each time instant t, and for each point
+higher altitude has a square footprint which is oriented with q Q, we independently draw n(t,q) uniformly from the
+the robot’s current heading. set [ n ,n ], where n >0 is the maximum value of
+max max max
+the noise.
+A. A Case Study in Robustness The simulations were carried out as follows. We varied the
+In this subsection we demonstrate how we can compute magnitudeofthenoisen max ,andstudiedthemaximumvalue
+a speed controller that exhibits robustness to motion errors, reachedbythefield.Foreachvaluen max ,weperformed20tri-
+modelinguncertainty,orstochasticfluctuations.Thisisimpor- als,andineachtrialwerecordedthemaximumvaluereached
+tant since the speed controller is computed offline. It should by the field on a time horizon of 2500 s. In Figure 9, we
+be noted, however, that in practice the controller can be display statistics from the 20 independent trials at each noise
+recomputed periodically during the robot’s execution, taking level, namely the mean, minimum, and maximum, as well as
+into account new information about the field evolution. thestandarddeviation.Withzeroaddednoise,onecanseethat
+As shown in Corollary III.2 we can maximize stability the mean, minimum, and maximum all coincide. As noise is
+margin of a speed controller. The corollary showed that in added to the evolution, the difference between the minimum
+maximizingthismetricweobtainsomerobustnesstoerror.To and maximum value grows. However, it is interesting to note
+explore the robustness properties of this controller, consider that while the performance degrades (i.e., the mean increases
+the single robot example in Figure 8. In this example, the with increasing noise), the system remains stable. Thus, the
+square 665 m by 665 m environment must be monitored by simulation demonstrates some of the robustness properties of
+an aerial robot. We approximated the continuous field using the proposed controller.
+a 32 32 grid. The consumption rate was set to c(q) = 5, Parameter errors: We can also consider robustness to
+for each field point q Q. The production rate of the field parameter errors. In particular, consider the case where the
+was given by the function shown in Figure 7. The maximum robot bases its optimization on a production rate of p¯(q)
+productionrateofthefieldwas0.74andtheaveragewas0.21. (shown in Figure 7), but the actual production rate is given
+Fig.8:Anexampleofusingadiscretizedapproximationofacontinuousfield.ThefieldZ(q,t)ateachpointisshownasthesurface.Thefootprintofthe
+vehicleisadisk,andtherobot’strajectoryisgivenbythe“sixleaf”clover.Thetimesequenceofthethreesnapshotsgoesfromlefttoright.Intherightmost
+snapshotthevehiclehasjustfinishedreducingthelargepeakthatformsintheleftandcentersnapshots.
+0 1 2 3 4 5
+Magnitude of noise added to production rate
+mean over trials 20
+max over trials
+min over trials
+0 0.2 0.4 0.6 0.8 1
+Fig.9:Therobustnessofthespeedcontrollertonoiseintheproductionrate.
+Foreachvalueofnoisenmax,theplotshowsstatisticsonthemaximumvalue
+reachedbythefieldover20independenttrials.
+by p(q) = p¯(q) + (cid:15), where (cid:15) > 0 (note that the field
+is trivially stable for any (cid:15) 0). By maximizing the sta-
+≤ bility margin, we obtain some level of robustness against
+this type of parameter uncertainty. The amount of error that
+we can tolerate is directly related to the stability margin
+B =97.8,asshowninCorollaryIII.2.Inparticular,weobtain
+(cid:0)(cid:80)n
+= 0.074. We performed
+i j=1 j 0 j
+simulations of monitoring task for successively larger values
+of (cid:15). From this data, we verified that the field remains stable
+for any (cid:15) 0.07. For this example, the average value of p(q)
+over all points q is 0.21, and so we can handle uncertainty in
+the magnitude of the production rate on the order of 30%.
+Tracking error: After running the speed optimization, a
+robot has a desired trajectory, consisting of the pre-specified
+path and the optimized speed along the path. In practice, this
+trajectorywillbetheinputtoatrackingcontroller,whichtakes
+into account the robot dynamics. Since there are inevitably
+trackingerrors,thestabilitymarginofthecontrollerisneeded
+to ensure field stability. As an example, we considered a
+unicycle model for an aerial robot. In this model, the robot’s
+configurationisgivenbyaheadingφandaposition(x,y).The
+control inputs are the linear and angular speeds: x˙ =vcosφ,
+y˙ = vsinφ, and φ˙ = ω. The linear speed had bounds of
+v = 1.5 m/s and v = 15 m/s, and the angular speed
+(cid:239)100
+(cid:239)200
+(cid:239)300
+(cid:239)400
+(cid:239)400 (cid:239)200 0 200 400
+Fig. 10: The robustness of the speed controller to tracking errors. The left
+figure shows the absolute tracking error in meters. In the right figure, the
+solidlineisthedesiredpath,andthedashedlineisthepathexecutedbythe
+unicyclerobot.
+was upper bounded by 0.5 rad/s. We used the same speed
+controller as in the previous two examples (maximizing the
+stability margin). For trajectory tracking, we used a dynamic
+feedback linearization controller [39]. We chose conservative
+controller gains of 0.5 for the proportional and derivative
+control in order to accentuate the tracking error. The results
+areshowninFigure10.Duetothestabilitymarginof97.8,the
+fieldremainsstable,eveninthepresenceofthistrackingerror.
+However, in simulation, the maximum field height increased
+by about 13% from 268 (as shown for the zero noise case in
+Figure 9) to 305.
+VI. CONCLUSIONS,EXTENSIONS,ANDOPENPROBLEMS
+In this paper we proposed a model for persistent sweeping
+and monitoring tasks and derived controllers for robots to
+accomplish those tasks. We specifically considered the case
+in which robots are confined to pre-specified, closed paths,
+along which their speed must be controlled. We formulated
+an LP whose solution gives speed controllers that keep the
+accumulation bounded everywhere in the environment for
+single robots and multiple robots. For single robots, we also
+formulated a different LP to give the optimal controller—the
+one that keeps the accumulation function as low as possible
+everywhere.Weseethisasasolutiontoonekindofpersistent Consider a general speed controller (Z,IC,t)
+task for robots, but many open problems remain. v(θ,Z,IC,t) where IC:=(Z(q,0),θ(0)) is the set of initial
+conditions. Since v (θ) > 0 for all θ [0,1], the value
+A. Extensions and Open Problems of θ strictly monotonically increases from ∈ 0 to 1 for every
+We are interested in the general problem of solving per- valid controller (once it reaches 1 it then wraps around to
+sistent tasks, which we broadly define as tasks that require 0). In addition, the evolution of Z is deterministic and is
+perpetual attention by a robotic agent. The main objective uniquely determined by the initial conditions and the speed
+of a persistent task is to maintain the accumulation of some controller, as given in (1). Because of this, every controller of
+undesirable quantity at as low a value as possible over an en- theformv(θ,Z,IC,t)canbewrittenasaninfinitesequenceof
+vironment using one or multiple robotic agents. The difficulty controllersv (θ,IC),v (θ,IC),...,wherecontrollerv (θ,IC)
+of this problem depends on what is known by the robots, and is the controller used during the kth period (or cycle).
+precisely what the robots’ capabilities are. Let us enumerate With the above discussion in place, we are now ready to
+several possible dimensions for extension on this problem. prove Proposition II.4
+• Trajectory vs. Path vs. Speed One might consider Proof of Proposition II.4: To begin, consider a feasible
+controlling only the speed over a prescribed path, as we persistent monitoring task and a field stabilizing controller of
+have done in this paper, only the path with a prescribed the form v(θ,Z,IC,t), where IC:=(Z(q,0),θ(0)). Without
+speed, or complete trajectory planning. loss of generality, we can assume that θ(0) := 0. From
+• Single vs. Multiple Robots There may be only one the discussion above, we can write the general controller
+robot, or there may be a team of robots, potentially with as a sequence of controllers v 1 (θ,IC),v 2 (θ,IC),..., where
+heterogeneous capabilities and constraints. controller v k (θ,IC), k N is used on the kth period (or
+• Known vs. Unknown Production Rate The robot may cycle).
+know (or be able to sense) the production rate, or it may Since the controller is stable, there exists a Z max
+have to learn it over time from measurements. such that for every set of initial conditions IC, we have
+• Constant vs. Time-Varying Production Rate The pro- limsup t→+∞ Z(q,t) ≤ Z max . Let us fix (cid:15) > 0 and fix the
+duction rate may be constant in time, or it may change initial conditions to a set of values IC such that Z(q,0) >
+indicating a change in the environment’s dynamics. Z max +(cid:15) for all q Q. Now, we will prove the result by
+• Finite vs. Continuum Points of Interest The points of constructing a periodic position-feedback controller.
+interest in the environment may be viewed as a finite set Let t 1 =0 and define
+ofdiscretepointsoverwhichtocontroltheaccumulation, (cid:90) 1 1
+or as an infinite continuum in which we would like to t k =t k−1 + dθ,
+control the accumulation at every point. 0 k
+In this paper we specifically considered speed control over a for each integer k 2. Thus, controller v k is used during the
+prescribed path of both single and multiple robots in a finite timeinterval[t k ,t k+1 ].Followingthesameargumentasinthe
+environment with a known, constant production rate. proof of Lemma II.5, we have that for each q Q,
+One interesting direction in which to expand this work
+is to consider planning full trajectories for robots to carry (cid:88) k (cid:90) 1 1
+out persistent tasks. The high dimensionality of the space of − ≥ (cid:96)=1 0 v (cid:96) (θ,IC)
+possible trajectories makes this a difficult problem. However,
+k (cid:90)
+(cid:88) 1
+if the robot’s path is limited by some inherent constraints, c(q) dθ.
+then this problem may admit solutions with guarantees. For − (cid:96)=1 F(q) v (cid:96) (θ,IC)
+example,underwaterglidersarecommonlyconstrainedtotake
+Now, Z(q,t ) > Z + (cid:15) is the initial condition, and
+piecewise linear paths, which can be parametrized with a low
+limsup Z(q,t) Z . Thus, for every fixed δ
+number of parameters. Another direction of extension is to t→+∞ ≤ max ∈
+(0,(cid:15)), there exists a finite k such that Z(q,t ) Z +δ.
+havearobotsolvetheLPforitscontrolleron-line.Thiswould ≤
+Since this must hold for every q Q, we see that there exists
+be useful if, for example the production rate is not known ∈
+an integer k such that
+beforehand,butcanbesensedoverthesensorfootprintofthe
+robot.Likewiseiftheproductionratechangesintime,itwould (cid:88) k (cid:90) 1 1 (cid:88) k (cid:90) 1
+be useful for a robot to be able to adjust its controller on-line v (θ,IC) − v (θ,IC)
+toaccommodatethesechanges.Apromisingapproachforthis (cid:96)=1 0 (cid:96) (cid:96)=1 F(q) (cid:96)
+istorepeatedlysolvefortheLPinarecedinghorizonfashion, foreveryq Q.Rearrangingthepreviousequationweobtain
+using newly acquired information to update the model of the (cid:90) (cid:88) k 1 (cid:90) 1(cid:88) k 1
+field evolution. We continue to study problems of persistent c(q) dθ >p(q) dθ.
+tasks for robots in these and other directions. F(q)(cid:96)=1 (cid:96) 0 (cid:96)=1 (cid:96)
+APPENDIX Therefore, let us define the periodic controller
+PERIODICPOSITION-FEEDBACKCONTROLLERS
+(cid:32) (cid:33)−1
+In this appendix we will prove Proposition II.4 on periodic (cid:88) 1
+position-feedback controllers. (cid:96)=1 v (cid:96) (θ,IC)
+foreachθ [0,1].Notethatifv min (θ) v (cid:96) (θ,IC) v max (θ) [22] J.L.NyandG.J.Pappas,“Ontrajectoryoptimizationforactivesensing
+for all θ ∈ [0,1] and all (cid:96) N, then ≤ ≤ in gaussian process models,” in IEEE Conf. on Decision and Control
+∈ ∈ andChineseControlConference,Shanghai,China,December2009,pp.
+6282–6292.
+min ≤ ≤ max [23] F. Bourgault, A. A. Makarenko, S. B. Williams, B. Grocholsky, and
+H.F.Durrant-Whyte,“Informationbasedadaptiveroboticexploration,”
+But, combining the definition of v(θ) with (24), we im-
+inIEEE/RSJInt.Conf.onIntelligentRobots&Systems,2002,pp.540–
+mediately see that v(θ) satisfies the stability condition in 545.
+Lemma II.5, and thus v(θ) is a field stabilizing position- [24] E. M. Arkin, S. P. Fekete, and J. S. B. Mitchell, “Approximation
+algorithms for lawn mowing and milling,” Computational Geometry:
+feedback controller.
+TheoryandApplications,vol.17,no.1-2,pp.25–50,2000.
+[25] I.Rekleitis,V.Lee-Shue,A.P.New,andH.Choset,“Limitedcommuni-
+cationmulti-robotteambasedcoverage,”inIEEEInt.Conf.onRobotics
+REFERENCES andAutomation,NewOrleans,LA,Apr.2004,pp.3462–3468.
+[26] S. Koenig, B. Szymanski, and Y. Liu, “Efficient and inefficient ant
+[1] N.M.P.KakalisandY.Ventikos,“Roboticswarmconceptforefficient coverage methods,” Annals of Mathematics and Artificial Intelligence,
+oil spill confrontation,” Journal of Hazardous Materials, vol. 154, pp. vol.31,pp.41–76,2001.
+880–887,2008. [27] H.Choset,“Coverageforrobotics–Asurveyofrecentresults,”Annals
+[2] D. MacKenzie and T. Balch, “Making a clean sweep: Behavior-based ofMathematicsandArtificialIntelligence,vol.31,no.1-4,pp.113–126,
+vacuuming,”inProceedingsoftheAAAIFallSymposium:Instantiating 2001.
+Real-worldAgents,Raleigh,NC,March1993. [28] B.Bethke,J.P.How,andJ.Vian,“GrouphealthmanagementofUAV
+[3] N.Correll,N.Arechiga,A.Bolger,M.Bollini,B.Charrow,A.Clayton, teamswithapplicationstopersistentsurveillance,”inAmericanControl
+F.Dominguez,K.Donahue,S.Dyar,L.Johnson,H.Liu,A.Patrikalakis, Conference,Seattle,WA,Jun.2008,pp.3145–3150.
+T. Robertson, J. Smith, D. Soltero, M. Tanner, L. White, and D. Rus, [29] B. Bethke, J. Redding, J. P. How, M. A. Vavrina, and J. Vian, “Agent
+“Buildingadistributedrobotgarden,”inIEEE/RSJInt.Conf.onIntel- capability in persistent mission planning using approximate dynamic
+ligentRobots&Systems,St.Louis,MO,2009,pp.1509–1516. programming,” in American Control Conference, Baltimore, MD, Jun.
+[4] R. N. Smith, M. Schwager, S. L. Smith, B. H. Jones, D. Rus, and 2010,pp.1623–1628.
+G. S. Sukhatme, “Persistent ocean monitoring with underwater glid- [30] Y.Chevaleyre,“Theoreticalanalysisofthemulti-agentpatrollingprob-
+ers: Adapting spatiotemporal sampling resolution,” Journal of Field lem,” in IEEE/WIC/ACM Int. Conf. Intelligent Agent Technology, Bei-
+Robotics,2010,Submitted. jing,China,Sep.2004,pp.302–308.
+[5] M. Dunbabin, J. Roberts, K. Usher, and P. Corke, “A new robot for [31] Y.Elmaliach,N.Agmon,andG.A.Kaminka,“Multi-robotareapatrol
+environmental monitoring on the Great Barrier Reef,” in Australasian under frequency constraints,” in IEEE Int. Conf. on Robotics and
+ConferenceonRoboticsandAutomation,AustralianNationalUniversity, Automation,Roma,Italy,Apr.2007,pp.385–390.
+Canberra,December2004. [32] N.NigramandI.Kroo,“Persistentsurveillanceusingmultipleunman-
+[6] S.Srinivasan,H.Latchman,J.Shea,T.Wong,andJ.McNair,“Airborne ndedairvehicles,”inIEEEAerospaceConf.,BigSky,MT,May2008,
+traffic surveillance systems: video surveillance of highway traffic,” in pp.1–14.
+InternationalworkshoponVideoSurveillance&SensorNetworks,New [33] D.B.Kingston,R.W.Beard,andR.S.Holt,“Decentralizedperimeter
+York,NY,USA,October2004,pp.131–135. surveillance using a team of UAVs,” IEEE Transactions on Robotics,
+[7] S. L. Smith and D. Rus, “Multi-robot monitoring in dynamic environ- vol.24,no.6,pp.1394–1404,2008.
+ments with guaranteed currency of observations,” in IEEE Conf. on [34] P.F.Hokayem,D.Stipanovic´,andM.W.Spong,“Onpersistentcoverage
+DecisionandControl,Atlanta,GA,Dec.2010,pp.514–521. control,”inIEEEConf.onDecisionandControl,NewOrleans,LA,Dec.
+[8] K. Kant and S. W. Zucker, “Toward efficient trajectory planning: 2007,pp.6130–6135.
+The path-velocity decomposition,” International Journal of Robotics [35] L.Kleinrock,QueueingSystems.VolumeI:Theory. JohnWiley,1975.
+Research,vol.5,no.3,pp.72–89,1986. [36] D. J. Bertsimas and G. J. van Ryzin, “Stochastic and dynamic vehicle
+[9] D. G. Luenberger, Linear and Nonlinear Programming, 2nd ed. routing in the Euclidean plane with multiple capacitated vehicles,”
+Addison-Wesley,1984. OperationsResearch,vol.41,no.1,pp.60–76,1993.
+[10] E. W. Cheney, Introduction to Approximation Theory, 2nd ed. AMS [37] S. L. Smith, M. Pavone, F. Bullo, and E. Frazzoli, “Dynamic vehicle
+ChelseaPublishing,2000. routing with priority classes of stochastic demands,” SIAM Journal on
+[11] E. J. Candes and M. B. Wakin, “An introduction to compressive ControlandOptimization,vol.48,no.5,pp.3224–3245,2010.
+sampling,”IEEESignalProcessingMagazine,pp.21–30,Mar.2008. [38] M. Ahmadi and P. Stone, “A multi-robot system for continuous area
+[12] R.SannerandJ.Slotine,“Gaussiannetworksfordirectadaptivecontrol,” sweeping tasks,” in IEEE Int. Conf. on Robotics and Automation,
+IEEETransactionsonNeuralNetworks,vol.3,no.6,pp.837–863,1992. Orlando,FL,May2006,pp.1724–1729.
+[13] T. Poggio and S. Smale, “The mathematics of learning: Dealing with [39] G.Oriolo,A.D.Luca,andM.Vendittelli,“WMRcontrolviadynamic
+data,”NoticesoftheAmericanMathematicalSociety,vol.50,no.5,pp. feedbacklinearization:design,implementation,andexperimentalvalida-
+537–544,2003. tion,”IEEETransactionsonControlSystemsTechnology,vol.10,no.6,
+[14] L.S.Gandin,ObjectiveAnalysisofMeteorologicalFields. Jerusalem: pp.835–852,2002.
+Israeli Program for Scientific Translations, 1966, (originally published
+inRussianin1963,Gidrometeor,Leningrad).
+[15] N. Cressie, “The origins of kriging,” Mathematical Geology, vol. 22,
+no.3,pp.239–252,1990.
+[16] B. Grocholsky, “Information-theoretic control of multiple sensor plat-
+forms,”Ph.D.dissertation,UniversityofSydney,2002.
+[17] K.M.Lynch,I.B.Schwartz,P.Yang,andR.A.Freeman,“Decentralized
+environmentalmodelingbymobilesensornetworks,”IEEETransactions
+onRobotics,vol.24,no.3,pp.710–724,June2008.
+[18] P.Yang,R.A.Freeman,andK.M.Lynch,“Mulit-agentcoordinationby
+decentralizedestimationandcontrol,”IEEETransactionsonAutomatic
+Control,vol.53,no.11,pp.248–2496,December2008.
+[19] J.Corte´s,“DistributedKrigedKalmanfilterforspatialestimation,”IEEE
+Transactions on Automatic Control, vol. 54, no. 12, pp. 2816–2827,
+2009.
+[20] F.ZhangandN.E.Leonard,“Cooperativefiltersandcontrolforcoop-
+erativeexploration,”IEEETransactionsonAutomaticControl,vol.55,
+no.3,pp.650–663,2010.
+[21] R. Graham and J. Corte´s, “Adaptive information collection by robotic
+sensornetworksforspatialestimation,”IEEETransactionsonAutomatic
+Control,2010,Submitted.

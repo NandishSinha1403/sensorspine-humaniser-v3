@@ -1,0 +1,1246 @@
+Under consideration for publication in Theory and Practice of Logic Programming 1
+Predicate Logic as a Modeling Language:
+Modeling and Solving some Machine Learning and
+Data Mining Problems with
+MAURICE BRUYNOOGHE, HENDRIK BLOCKEEL, BART BOGAERTS,
+BROES DE CAT, STEF DE POOTER, JOACHIM JANSEN,
+ANTHONY LABARRE, JAN RAMON, MARC DENECKER,
+Department of Computer Science, KU Leuven
+SICCO VERWER
+Radboud Universiteit Nijmegen, Institute for Computing and Information Sciences
+(e-mail: firstname.secondname@cs.kuleuven.be, siccoverwer@gmail.com)
+submitted March 22, 2013; revised Februari 3, 2014; accepted March 6, 2014
+This paper provides a gentle introduction to problem solving with the IDP3 system.
+The core of IDP3 is a finite model generator that supports first order logic enriched
+with types, inductive definitions, aggregates and partial functions. It offers its users a
+modeling language that is a slight extension of predicate logic and allows them to solve
+a wide range of search problems. Apart from a small introductory example, applications
+are selected from problems that arose within machine learning and data mining research.
+These research areas have recently shown a strong interest in declarative modeling and
+constraint solving as opposed to algorithmic approaches. The paper illustrates that the
+IDP3 system can be a valuable tool for researchers with such an interest.
+The first problem is in the domain of stemmatology, a domain of philology concerned
+with the relationship between surviving variant versions of text. The second problem is
+about a somewhat related problem within biology where phylogenetic trees are used to
+represent the evolution of species. The third and final problem concerns the classical
+problem of learning a minimal automaton consistent with a given set of strings. For this
+last problem, we show that the performance of our solution comes very close to that
+of a state-of-the art solution. For each of these applications, we analyze the problem,
+illustrate the development of a logic-based model and explore how alternatives can affect
+the performance.
+KEYWORDS: Knowledge representation and reasoning, declarative modeling, logic pro-
+gramming,knowledgebasesystems,FO(·),IDPsystem,stemmatology,phylogenetictree,
+deterministic finite state automaton.
+1 Introduction
+In his seminal paper, Kowalski (1974) proposed to use first order predicate logic
+(FO)asaprogramminglanguage.Hearguedthatitispossibletousedeductionfor
+2v3886.9031:viXra
+2 Bruynooghe et al.
+computation by associating a procedural interpretation to the Horn clause subset
+of first-order logic. These ideas found their incarnation in the language Prolog.
+Whereas Prolog uses deduction as inference method, other inference methods
+exist. Most prominent is model generation as used in propositional SAT solvers.
+Also the inference method of Constraint Programming can be considered as model
+generation; indeed, its solvers attempt to assign values to variables while satisfying
+a set of constraints. The last decades have witnessed tremendous progress in solver
+technologyforConstraintProgramming(CP)andSATsolving.InCP,thisprogress
+isatthebasisofashiftfromConstraintProgrammingtoConstraintModeling1.No-
+torious examples are Essence (Frisch et al. 2008) and Zinc (Marriott et al. 2008).
+Within logic programming, the introduction of stable semantics (Gelfond and Lifs-
+chitz1988)eventuallyledtotheAnswerSetProgramming(ASP)paradigm(Brewka
+et al. 2011) that, similar to SAT, uses model generation instead of deduction for
+inference. Many ASP-based systems exist. Examples are DLV (Leone et al. 2002),
+clasp (Gebser et al. 2007) and Smodels (Syrjänen and Niemelä 2001).
+Allthisprogressraisesthequestionwhatisthestatusoflogicasamodelinglan-
+guage.SATisrestrictedtopropositionallogic.Itcanbeconsideredastheassembler
+languageformodeling.Indeed,therearemanyexamplesofprogramsthatgenerate
+SATencodingstoobtainstate-of-the-artsolversforvariousclassesofproblems.One
+can find examples in the areas of planning and of generating deterministic finite
+automata,tonamejustafew.However,SATisnotsuitedasalanguagefordevelop-
+ing models. For what concerns ASP, it is an expressive high level language but it is
+notbasedonpredicatelogic.Today,manyintricaciesofstablemodelsemanticsare
+hidden in high level ASP constructs such as constraints and choice rules; however,
+its two forms of negation (“not” and strong negation) (Brewka et al. 2011) clearly
+distinguish it from first-order logic; the deviation from first-order-logic semantics
+could be an obstacle for newcomers.
+Historically,predicatelogicwasalwaysviewedasaveryexpressivemodelinglan-
+guage. This is remarkable given that anyone who used it for modeling a practical
+domainwillhaveexperienceditsinconvenienceinexpressingcertaincommonpropo-
+sitions.Aclearweaknessisinexpressinginductivelydefinableconceptssuchasthe
+transitive closure of a binary relation. Another deficiency is in expressing bounds
+on the cardinality or the sum of sets. Practical modeling languages in Constraint
+ProgrammingorASPthereforesupportsomeofthesepropositions.WhileASPcan
+express inductive definitions, it is built on radically different foundations than FO.
+A more conservative solution that preserves FO’s foundations is to extend it with
+suitable language constructs. For instance, it was argued in several works, for ex-
+amplebyDeneckerandTernovska(2008)andDeneckerandVennekens(2014),that
+a rule set formalism under an extension of the well-founded semantics (Van Gelder
+et al. 1991) is a natural formalism to express the most common forms of inductive
+1 Inthispaper,weusethewordmodelintwodifferentmeanings.Firstly,amodelisastructure
+thatsatisfiesthetheory,asin“modelgeneration”.Secondly,amodelistheresultofmodelinga
+problemdomain.Itisatheoryinlogic,aformalspecificationoftheproblemdomain.Itshould
+beclearfromthecontextwhatisintended.
+Predicate Logic as a Modeling Language 3
+definitions. Such a formalism can be integrated with FO in a conceptually clean
+way. The resulting logic was named FO(ID) by Denecker and Ternovska (2008).
+ThelinkbetweenFO(ID)andASPwasrecentlystudiedbyDeneckeretal.(2012).
+Below, we use the notation FO(·) to denote the family of extensions of first-order
+logic.
+In this paper, we explore the use of FO(·)IDP3, the instance of the FO(·) fam-
+ily that is supported by IDP3, the current version of the IDP Knowledge Base
+System (De Pooter et al. 2011). FO(·)IDP3 extends first-order logic with induc-
+tive definitions, partial functions, types and aggregates. The IDP system supports
+model generation and model expansion (Mitchell and Ternovska 2005; Wittocx
+et al. 2013) as inference methods and is one of the fastest such systems (Calimeri
+et al. 2011). Particular to the modeling language used here is the combination of
+a purely declarative modeling language with a procedural language that handles
+the interaction with the outside world. Indeed, in contrast to Prolog, the control of
+the search can be left to the solver and the user can concentrate on modeling. As
+we will illustrate in the paper, that does not mean that any correct model will do;
+when performance matters, models have to be designed with care.
+As for the organization of the paper, we start Section 2 with recalling the FO(·)
+familyofextensionsofpredicatelogic.Next,weintroducetheFO(·)IDP3 instanceof
+FO(·) and the IDP knowledge base system that supports FO(·)IDP3 as a modeling
+language. The section continues with the shortest path problem as an illustrative
+example. After describing a very basic model, it explores how alternative models
+affect the performance of the underlying solver.
+The other sections explore the use of the IDP system for solving some real-
+worldproblemsencounteredinthedomainofmachinelearninganddataminingby
+someoftheauthors. Researchersinthis domainhavebecomeincreasingly awareof
+the fact that data analysis problems come in many different variants, which do not
+alwaysfitthestandardalgorithmswell.Itisinfeasibletodevelopalgorithmsforeach
+specific variant, but recently it has been shown that some standard data mining
+problems, as well as their variants, can be modeled as constraint problems, and
+solvedbygeneral-purposesolverswithperformancecomparabletothatofdedicated
+algorithms (Guns et al. 2011). Our discussion on the use of IDP for three different
+tasks adds support for the claim that declarative modeling may have an important
+role to play in machine learning and data mining.
+The first task, addressed in Section 3 is in the domain of a stemmatology, a part
+of philology that studies the relationship between surviving variant versions of a
+text. A stemma is a family tree that shows how different copies of the same text
+relate to each other. These copies —manuscripts— are not identical, but evolve.
+Manuscripts often do not have a single parent, different parts can be copied from
+different parents, so a stemma is in fact a directed acyclic graph. A typical task
+is to analyze the plausibility of a stemma hypothesis. For this task, the philologist
+collects datasets describing features of the text. The values of a feature represent
+variantreadingsofafragmentofthetext.Acommonassumptionisthatthestemma
+has, for each variant, a unique manuscript that is the source of the variant. The
+feature value is unknown for some manuscripts, and the question is whether these
+4 Bruynooghe et al.
+unknown values can be assigned such that there is indeed a unique source for each
+feature value. In working out this task, we also illustrate how the procedural side
+of FO(·)IDP3 allows the user to organize a complete workflow.
+The second task (Section 4), although in the very different domain of biology, is
+somewhat related to the previous one as it is concerned with phylogenetic trees.
+Phylogeny is an area in which many problems arise. Several problems have been
+tackled by means of Answer Set Programming, see Erdem (2011) for an overview.
+Hereweaddressanewprobleminthisarea.Phylogenetictreeshaveintheirleavesa
+set of current species and the tree represents the evolutionary relationship between
+them.Oftenthereareseveralequallyplausibleevolutionaryexplanationsandhence
+different phylogenetic trees. The question addressed here is: what is the minimal
+supergraph that represents each of the individual trees. What makes the problem
+difficultisthatthecorrespondencebetweentheinternalnodesofthedifferenttrees
+isunknownandhastobeguessed.Differentguessesresultindifferentsupergraphs.
+In Section 5, we study the well-known problem of learning a minimal determin-
+istic finite state automaton (DFA) that is consistent with a given set of accepted
+and rejected strings. This is a classical machine learning task for which compe-
+titions are organized. A state-of-the-art method (Heule and Verwer 2010; Heule
+and Verwer 2012), winner of the 2010 Stamina competition (Stamina 2010), solves
+it by a problem-specific program that iteratively creates a SAT encoding and ap-
+plies a SAT-solver for an increasing number of states until a model is found. Here
+we explore to what extent a high level FO(·) formalization can compete with a
+laboriously constructed encoding as a propositional SAT problem.
+ThesethreeproblemscanbeabstractedasgraphproblemsandareNP-complete.
+Solving them inherently involves search; heuristics are needed to guide the search
+towards solutions. Developing an algorithm in a procedural language is time con-
+suming, error-prone and challenging. The use of a declarative modeling language
+liberates the programmer from the task and allows him to devote more time to the
+proper formalization. Moreover, the default heuristics of the underlying solvers are
+often sufficient to obtain adequate solutions.
+In Section 6, we reflect on our achievements and discuss where there is potential
+for further improvement. Some of the material in this paper is based on work of
+Blockeel et al. (2012) and, for stemmatology, on work of Andrews et al. (2012).
+2 FO(·) and the IDP system
+First-orderlogichasalongtraditionandawellunderstoodsemanticsbutalsosome
+limitations with regard to its expressiveness, which makes it not so well suited as
+a language for knowledge representation. The most notorious problem is that it
+cannot naturally express transitive closures such as “x is reachable from y if either
+x and y are connected or there exists a z such that x and z are connected and x is
+reachable from z”. Note that Prolog programmers can cope with transitive closure
+and that the least Herbrand interpretation captures its meaning; actually, in the
+first years of logic programming, many Prolog programmers did not realize it was
+an issue in the knowledge representation community; at the same time, many in
+Predicate Logic as a Modeling Language 5
+thelattercommunitywereignorantaboutProlog’sexpressiveness.Intheknowledge
+representationcommunity,therearetwowaystoworkaroundthelimitation.Onthe
+one hand, one can introduce knowledge representation languages with a semantics
+different from first-order logic; on the other hand, one can enhance first-order logic
+with additional constructs. The former approach is taken by the ASP community;
+the latter approach has been advocated in (Denecker and Ternovska 2008) where
+first-orderlogicwasextendedwith(notnecessarilymonotone)inductivedefinitions.
+Itwasarguedthatthisextensionresultedinaverynaturalandexpressivelanguage
+whose meaning was captured by a generalization of the well-founded semantics
+introduced by Van Gelder et al. (1991). This extension was named FO(ID) and
+later work used the notation FO(·) for a family of languages extending first-order
+logic.
+TheFOextensionusedasmodelinglanguagethroughoutthispaperincludesnot
+only inductive definitions, but also partial functions, types and aggregates. It is
+the extension supported by the IDP3 version of the IDP Knowledge Base System
+that was for the first time described by De Pooter et al. (2011)2. We denote this
+extension as FO(·)IDP3.
+Functions,ofwhichconstantsareaspecialcase,areveryconvenientinmodeling.
+They are used in all the modeling examples of the paper. While n-ary functions
+can be considered as syntactic sugar for predicates with n+1 arguments, the use
+of functions makes models more concise and readable. Indeed, when functions are
+represented as predicates, the functional dependency between the input arguments
+and the result needs to be represented as a separate constraint. Partial functions
+giveextraflexibilitytothemodeler.Anexamplecanbefoundinthemodeloffinite
+state automata in Section 5 where a state doesn’t need a transition for all symbols
+in the automaton’s input alphabet.
+In almost all applications, the universe is not uniform but contains different
+types. Relations are typed. Quantification is “naturally” typed, namely, we quan-
+tify over objects of a type. It is not difficult to make typing explicit in untyped
+predicate logic. Yet, it requires an extra discipline of the user to make the types in
+her quantifications and of her relations and functions explicit. By introducing an
+explicit type system, even a simple many-sorted type system, and a type checking
+and inference system (to discover type clashes and to guess the types of variables
+and/orparameters),theoriesbecomemorecompactandgraceful.Moreover,anum-
+berofbugscanbedetected:syntacticerrorsinvariablenames,swappedormissing
+arguments, unintended reuse of variables, etc. This is common wisdom. Indeed,
+well-typed theories go wrong less often (Milner 1978). The type system of IDP3 is
+not needed from a computational point of view, but for above-mentioned reasons,
+we often find it convenient.
+Aggregates are another extension that contribute to the readability and con-
+ciseness of models. Consider for example the constraint expressing the functional
+dependency. One needs to express that there is exactly one value (or in the case
+2 TheexamplesusedthroughoutthepapermakeuseofIDPversion3.2.0.
+6 Bruynooghe et al.
+of a partial function at most one value) for each combination of input arguments.
+The availability of aggregates makes it a lot more convenient to express such con-
+straints. A study about the semantics of aggregates in definitions, including the
+case of recursion, has been made by Pelov et al. (2007).
+2.1 The logical components of an FO(·)IDP3 model
+In this section we introduce the basic notions of an FO(·)IDP3 model. We restrict
+ourselves to what is needed to understand the examples later on in the paper.
+An FO(·)IDP3 model consists of a number of logical components, namely vocab-
+ularies, structures, terms, and theories. A vocabulary declares the symbols to be
+used3. A structure is used to specify the domain and the data; it can be viewed as
+a sort of database, it provides a partial (three-valued) interpretation of the sym-
+bols in the vocabulary. In the context of optimization problems, a term component
+declares the numerical cost term to be optimized. A theory consists of FO formulas
+and definitions. A definition is a set of rules of the form ∀x¯ : P(x¯) ← ϕ(x¯). where
+ϕ is an FO(·)IDP3 formula4. An FO(·)IDP3 formula differs from FO formulas in two
+ways. Firstly, FO(·)IDP3 is a many-sorted logic: every variable has an associated
+type and every type an associated domain. Moreover, it is order-sorted: types can
+be subtypes of others. Secondly, besides the standard terms in FO, FO(·)IDP3 for-
+mulas can also have aggregate terms: functions over a set of domain elements and
+associated numeric values which map to the sum, product, cardinality, maximum
+or minimum value of the set.
+We write M |= T to denote that structure M satisfies theory T. With xM,
+we denote the interpretation of x under M, where x can be a formula or a term.
+Without going in full details, M satisfies T when (i) every FO formula F of T
+is satisfied in M (FM is true) and (ii) every definition of T is satisfied in M. A
+structure M satisfies a definition D when the well-founded model construction on
+D(VanGelderetal.1991)thatstartsfromO,therestrictionofM tothepredicates
+not defined in D, results in M. See De Cat et al. (2014) for more details.
+2.2 The IDP3 system
+The IDP3 system (De Pooter et al. 2011) is a Knowledge Base System (KBS)
+that intends to offer the user a range of inference methods such as model expan-
+sion, optimization, verification, symmetry breaking and grounding and to make
+use of different state of the art technologies including SAT, SAT Modulo Theo-
+ries (Nieuwenhuis et al. 2006), Constraint Programming and various technologies
+from Logic Programming.
+In this paper, we make use of the inference methods model expansion, satisfia-
+bility checking and model minimization. The most important inference method is
+model expansion discussed by Mitchell and Ternovska (2005) and further extended
+3 ContrarytoPrologandASP,thefirstcharacterofasymbolhasnobearingonitskind.
+4 DefinitionshavealotincommonwithpurePrologrules.
+Predicate Logic as a Modeling Language 7
+by Wittocx et al. (2013). The idea of model expansion is to extend a partial struc-
+ture (an interpretation) into a full structure that satisfies all constraints specified
+by the FO(·)IDP3 model. More formally, the task of model expansion is, given a
+vocabulary V, a theory T over V and a partial structure S over V (at least inter-
+preting all types), to find a structure M that satisfies T and expands S, i.e., M
+is a model of the theory and the input structure S is a subset of M. In the IDP3
+system, this task is executed by modelexpand(T,S). The result of the modelexpand
+procedure is a list of models of T that expand S. If the option nbmodels is set to
+a value n different from 0, IDP3 will stop searching for more models once it has
+found n models.
+Satisfiabilitycheckingisrelatedtomodelexpansion.Callingsat(T,S)intheIDP3
+system will return true if and only if modelexpand(T,S) would have returned at
+least one model. However, since we are not interested in the actual models, some
+optimizations can be done to speed up this inference.
+Incaseofmodelminimization,alsoanumericalcosttermtisgiven.Thetaskisto
+find a model M of T that expands S such that, for all other models M’ expanding
+S, tM ≤ tM(cid:48). Model minimization is activated by minimize(T,S,t) with t referring
+to the term component defining the term.
+The IDP3 system allows users to specify FO(·)IDP3 problem descriptions. The
+basic overall structure of the logical components is as in the following schema.
+vocabulary V { ... } theory T: V { ... }
+term t: V { ... } structure S: V { ... }
+This schema defines a vocabulary V which is then used as a context in the theory
+T, the term t and the structure S. In general, several vocabularies can be defined,
+even extending other vocabularies.
+We use IDP syntax in the examples throughout the paper. Each IDP operator
+has an associated logical operator, the main (non-obvious) operators being: &(∧),
+A distinguishing feature of FO(·)IDP3 models is that they not only consist of
+logical components but also have one or more procedural components. These pro-
+cedural components consist of procedural code that can perform actions. Actions
+include the execution of an inference method on a particular logical theory, but
+also the presentation of results to the user. Procedures allow to glue together a
+sequence of actions in a process that performs a task for the user. The convention
+is that the user’s task is performed by invoking the procedure main(). Such a task
+can start with procedural code to prepare one or more structures from input files
+or databases, can continue with performing a number of inference task on combi-
+nations of theories with structures and can end with presenting the results to the
+user.Theprocedurallanguagehastobeaflexibleandextensiblescriptinglanguage
+thatoffersasmoothintegrationwiththeC++solversoftheIDPsystem.TheIDP
+system (De Pooter et al. 2011) makes use of the Lua (Ierusalimschy et al. 1996)
+scripting language for this purpose. It allows us to treat the various logical compo-
+nents of an FO(·)IDP3 theory as objects that can be manipulated from within the
+procedures.
+8 Bruynooghe et al.
+More information on the IDP system and in particular its IDP3 version is given
+//dtai.cs.kuleuven.be/krr/software/idp3.
+2.3 An example: The shortest path problem
+As an illustration, we model the shortest path problem (Listing 1). The vocabulary
+consistsofasingletype,twoconstantsandthreepredicates.Thestructurespecifies
+the given graph: the interpretation of the type node (the domain elements A, B,
+C, and D) and of the predicate edge(node,node) (the domain atoms edge(A,B),
+edge(B,C), edge(C,D), and edge(A,D)), as well as the constants from (the do-
+main element A) and to (the domain element D) which identify the begin- and
+endpoint of the path searched for. The predicate edgeOnPath(node,node) is used
+to represent the edges that participate in a shortest path. It provides the base case
+of the transitive relation reaches(node,node) which is defined in the theory com-
+ponent. Definitions are given between “{” and “}”. Note that we use the most basic
+definition for the transitive closure: we join the reaches relation with itself.
+Besides this inductive (recursive) definition, the theory also specifies the con-
+straintsexpressingthattheedgeOnPath/2atomsincludedinamodelofthetheory
+indeed compose a simple path from from to to. The first constraint, a univer-
+sally quantified implication, ensures that edgeOnPath/2 atoms are indeed edge/2
+atoms. This constraint explicitly mentions the type of the quantified variables;
+however, this is optional; these types can be inferred from the type declarations
+of the predicates of the formula. The types of the quantified variables are omit-
+ted in the following constraints. The second constraint, a simple fact, imposes that
+reaches/2 includes the pair (from,to). The third constraint, a conjunction of
+negated formulas, states that the edgeOnPath/2 atoms should neither include an
+edgearrivinginfromnoranedgeleaving to.Thefourthconstraintisauniversally
+quantified conjunction of two cardinality constraints; it expresses that every node
+has less than 2 incoming edges and less than 2 outgoing edges (i.e., that the path
+is simple). The notation ?<2 y : edgeOnPath(y,x) means that there are strictly
+less than 2 y’s that have an edge to x in the path. This is syntactic sugar for the
+aggregate#{ y : edgeOnPath(y,x)} < 2.Thisaggregateisamoreconciseformu-
+lation of the FO constraint ! y1 y2 : edgeOnPath(y1,x) & edgeOnPath(y2,x)
+=> y1=y2. Finally, the last constraint, another universally quantified implication,
+states that the endpoints of selected edges are reachable from from (i.e., that no
+edges are selected that do not contribute to the path).
+ThetermcomponentofthemodeldefinesthetermlengthOfPathasanaggregate
+expression counting the number of tuples in the edgeOnPath relation of a model of
+the theory. Minimizing this term ensures that the path described in a model of the
+theory is indeed a shortest path.
+The procedure component shows Lua code invoking the model minimization task
+and printing the result. The Lua code treats the logical components as first-class
+citizens and uses them as parameters in the method call activating the solver. The
+annotation [1] directs the solver to return at most one solution.
+Predicate Logic as a Modeling Language 9
+Listing 1. Calling main() solves the shortest path problem for the given data.
+vocabulary sp_voc {
+from,to: node
+edge(node,node)
+edgeOnPath(node,node)
+reaches(node,node)
+theory sp_theory1 : sp_voc {
+{! x y : reaches(x,y) <− edgeOnPath(x,y).
+! x y z : reaches(x,y) <− reaches(x,z) & reaches(z,y).}
+! x[node] y[node] : edgeOnPath(x,y) => edge(x,y). // (1)
+reaches(from,to). // (2)
+∼(? x : edgeOnPath(x,from)) & ∼(? x : edgeOnPath(to,x)).//(3)
+! x : (?<2 y : edgeOnPath(y,x)) &
+(?<2 y : edgeOnPath(x,y)). // (4)
+! x y : edgeOnPath(x,y) => reaches(from,y). // (5)
+structure sp_struct : sp_voc {
+node = {A..D} // shorthand for A,B,C,D
+edge = {A,B; B,C; C,D; A,D} // ‘;’ separated list of tuples
+term lengthOfPath : sp_voc { #{ x y : edgeOnPath(x,y) } }
+procedure main() {
+/∗ Search a minimal model ∗/
+sol = minimize(sp_theory1,sp_struct ,lengthOfPath)[1]
+/∗ If no result is returned , no models exist ∗/
+if (sol == nil)
+then print("No models exist.\n")
+else print(sol)
+The IDP3 system performs model expansion and model minimization by first
+reducing the problem to extended CNF, using the grounder GidL (Wittocx et al.
+2010) and subsequently calling the solver MiniSAT(ID) (Mariën et al. 2008). The
+grounding process can be fine-tuned using options for symmetry breaking (De-
+vriendt et al. 2012), grounding with bounds (Wittocx et al. 2010), lazy grounding
+(DeCatetal.2012),etc.ThesolverisanextensionofMiniSat(EénandSörensson
+2003)withsupportforaggregateexpressions,inductivedefinitionsandbranch-and-
+bound optimization. Recently, MiniSAT(ID) was extended to offer support for
+finite domain constraints, using the propagation techniques described in (Schulte
+and Stuckey 2008) or, alternatively, interfacing with the Gecode Constraint Pro-
+gramming engine.
+10 Bruynooghe et al.
+Fig.1. Differentgroundingandtotalrunningtimesforsp_theory1,sp_theory2and
+sp_theory3. Experiments are performed on graphs with an increasing number of
+nodes but a constant edge density. The vertical bar shows the grounding time, the
+part above the vertical bar is the solving time.
+2.4 Exploring the space of models for the shortest path problem
+The above is a correct IDP3 model that provides a declarative solution to the
+problem at hand. However, if performance matters, or the instances are that large
+that the grounding cannot fit in memory, then other models can be preferable.
+In the long run, perhaps an optimizer can transform a simple model in a model
+for which model generation has a better performance, but, with the current state
+of affairs, it is up to the user to explore the design space and to look for better
+performing models. We do so in this section for the shortest path problem.
+Listing 2. Another definition for reaches.
+theory sp_theory2 : sp_voc {
+{ reaches(x,y) <− edgeOnPath(x,y).
+reaches(x,y) <− edgeOnPath(x,z) & reaches(z,y). }
+/∗ ... constraints as in sp_theory1 ... ∗/
+Prolog programmers would never define the reaches/2 predicate as in theory
+sp_theory1 of Listing 1 but rather as in theory sp_theory2 of Listing 2. Indeed,
+apartfromtheriskofenteringaninfiniteloop,reaches(x,z)canhavemanymore
+Predicate Logic as a Modeling Language 11
+solutions than edgeOnPath(x,z) (which is bounded by the number of edges) and
+hence, the search space for Prolog’s proof procedure can be substantially larger5.
+WhilemodelgenerationcannotloopintheIDPsystem,thesearchspaceargument
+remains valid. Comparing the runtime of both systems (see Figure 1) reveals that
+theheuristicsoftheunderlyingSATsolverdonotcompensateforthelargersearch
+space and that the version of Listing 2 is substantially faster6. However, there is
+anotherfactorcontributingforthedifferencebetweenbothversions.Figure1splits
+runtime in grounding time (the vertical bar) and solving time (above the bar). For
+larger problems, one can observe that the grounding also takes more time. The
+explanation is the difference in grounding size (see Figure 2). The size difference
+must be attributed to the grounding of the recursive reaches(x,z) rule. With n
+nodes,therearen3 instancesoftherecursivereaches/2ruleinsp_theory1.Asfor
+sp_theory2,itfollowsfromconstraint(1)thatedgeOnPath(x,z)isfalsewhenever
+edges(x,z) is false, hence, with e the number of edges, the number of instances is
+limited to e∗n, which is typically substantially smaller than n3.
+Althoughtheperformancehasimprovedquiteabit,weseethatitisstillrapidly
+increasingwiththesizeofthegraph.Moreover(seeFigure1)mostoftheruntimeis
+groundingtime.Canwedobetter?Therecursivereaches/2rulehasthreevariables
+and remains expensive. The grounding has n2 atoms reaches(n1,n2), expressing
+whether n1 and n2 are connected while we are only interested in paths going from
+from to to. Hence we should better use a unary reachable predicate and define
+whichpointsarereachablefromfrom.Thenewversionsofthevocabularyandthe
+theory are shown in Listing 3. The term and procedure parts are as in Listing 1.
+Listing 3. A unary reachable relation instead of the binary reaches relation.
+vocabulary sp_voc2 {
+from,to: node
+edge(node,node)
+edgeOnPath(node,node)
+reachable(node)
+theory sp_theory3: sp_voc2 {
+{ reachable(from).
+reachable(y) <− edgeOnPath(x,y) & reachable(x). }
+! x[node] y[node] : edgeOnPath(x,y) => edge(x,y). //(1)
+reachable(to). //(2)
+∼(? x : edgeOnPath(x,from)) & ∼(? x : edgeOnPath(to,x)).//(3)
+! x : (?<2 y : edgeOnPath(y,x)) &
+(?<2 y : edgeOnPath(x,y)). //(4)
+! x y : edgeOnPath(x,y) => reachable(y). //(5)
+5 Whenusingasystemwithtabling,theorderinthebodyoftherecursiveclauseisbetterinverted
+(SwiftandWarren2012).
+6 UsinganIntelR CoreTM i5-3550CPUat3.30GHzwith7.8GBRAMrunningUbuntuwiththe
+IDP3defaultoptions.
+12 Bruynooghe et al.
+Fig. 2. Grounding size for sp_theory1, sp_theory2, sp_theory3 and sp_theory4. Ex-
+periments are performed on graphs with an increasing number of nodes but a con-
+stant edge density.
+As Figure 1 shows, this modification results in a dramatic speed-up. Also the
+grounding size (Figure 2) is substantially reduced.
+Constraints (3) and (4) are cardinality constraints on the number of edges con-
+nected to the same node that can participate in a path. They are redundant with
+respect to the minimization of the lengthOfPath term. Indeed, paths of minimal
+length satisfy both constraints. Dropping them, as in Listing 4, spoils the clarity
+of the model; however, it further reduces the size of the grounding as can be seen
+in Figure 2. The effect on the runtime is negligible for small graphs and rather
+negative for larger ones as one can observe in Figure 3. The explanation is that the
+removal of those constraints increases the search space. Indeed, partial solutions
+violating constraints (3) and (4) are not immediately rejected. This causes a lot
+more variance in the solving times.
+Listing 4. Removing redundant constraints.
+theory sp_theory4: sp_voc {
+{ reachable(from).
+reachable(y) <− reachable(x) & edgeOnPath(x,y). }
+! x[node] y[node] : edgeOnPath(x,y) => edge(x,y). // (1)
+reachable(to).
+Predicate Logic as a Modeling Language 13
+Fig.3. Differentgroundingandtotalrunningtimesforsp_theory3andsp_theory4.
+Experiments are performed on graphs with an increasing number of nodes but a
+constant edge density.
+Theaboveexample,inwhichwesolvedaclassicalproblemwithIDP3,illustrates
+thebasicfeaturesofFO(·)IDP3.ItshowsthatproblemsolvingwithIDP3isaquite
+differentendeavorfromproblemsolvinginotherlanguages.Thisholdsnotonlyfor
+procedural languages, but also for a declarative language such as Prolog. It also
+shows the importance of exploring various models when performance and memory
+use matters.
+3 Stemmatology
+Before the invention of the printing press, texts were copied manually by scribes.
+This copying process was not perfect; scribes often modified texts, either acci-
+dentally or intentionally. As a result the surviving copies of many old texts vary
+significantly. No text written before the invention of the printing press, and even
+uptotheendofthe18thcentury,whenthehabitofcirculatingtextsinmanuscript
+form practically disappeared, can be read without a preliminary critical analysis of
+its material witnesses. This is the purpose of stemmatology. The Oxford English
+Dictionary defines the field as “the branch of study concerned with analyzing the
+14 Bruynooghe et al.
+relationship of surviving variant versions of a text to each other, especially so as to
+reconstruct a lost original.”
+A stemma is a kind of “family tree” of a tradition, a set of related manuscripts.
+It indicates which manuscripts have been copied from which other manuscripts
+(“parents”),andwhichmanuscriptistheoriginalsource.Itmayincludebothextant
+(currentlyexistingandavailable)andnon-extant(“lost”)manuscripts.Thestemma
+isnotnecessarilyatree:sometimesamanuscripthasbeencopiedpartiallyfromone
+manuscript, and partially from another, in which case the manuscript has multiple
+parents.
+More formally, a stemma can be defined as a CRDAG, a Connected Directed
+Acyclic Graph with a single Root (Andrews and Macé 2013). A dataset contains
+the manuscripts from one tradition. Each manuscript is described by a fixed set of
+featuresF ,...,F ,eachofwhichhasanominaldomainDom(F )(variantreadings
+offeatureF ).Typically,afeaturereferstoaparticularlocationorsectioninatext,
+though it can also be the spelling of a particular word, e.g., the dwelling of “Van
+den Vos Reynaerde” can be spelled as Malpertuis, Malpertus, or Malpertuus.
+The 19th century philologist Karl Lachmann was among the first to apply a
+principled method for reconstructing stemmata from sets of manuscripts (Timpa-
+naro2005).Nowadays,avarietyofmethodsexist.Manyareborrowedfrombiology,
+whereasimilarproblem,reconstructionofphylogenetictrees,iswell-studied.How-
+ever, these methods do not always fit the stemmatological context well. First, they
+assumethatphylogeniesaretree-shaped,whilestemmataareDAGs7.Second,these
+treescontainonlybifurcations,whilestemmatacanhavemultifurcations.Third,in
+most methods, the trees are such that each extant copy is at a leaf of the tree,
+whereas in stemmatology one extant copy may be an ancestor of another (and
+hence should be an internal node). Fourth, stemmatologists often have additional
+information, for instance about the time or place of origin of a manuscript, which
+ideallyshouldbetakenintoaccount.Researchcontinuestodevelopnewalgorithms
+better suited for the stemmatological context (Baret et al. 2006).
+3.1 The task
+Apartfromreconstructingstemmatafromdata,stemmatologistsarealsointerested
+in other types of analyses, which may, for instance, use a known stemma or a
+manually-constructed best-guess stemma as an input. These types of analysis can
+be very diverse. The data mining tasks we address in this section belong to this
+category.
+The problem studied here assumes that a CRDAG representing a stemma of a
+traditionisgiven,aswellasfeaturedataaboutthemanuscriptsfromthetradition.
+More specifically, the data include a feature for each location where variation is
+observed in the tradition represented by the stemma. For each extant manuscript
+inthetradition,thefeaturedatadescribeitsvariantreading;thevariantreadingis
+7 Some methods return phylogenetic networks, but these represent uncertainty about the real
+tree,whichisdifferentfromclaimingthatthenetworkrepresentstheactualphylogeny.
+Predicate Logic as a Modeling Language 15
+unknown for the non-extant ones. For most features, it seems rather unlikely that
+the same variant reading originated multiple times independently; i.e., it is reason-
+abletoassumethereisoneancestorwherethevariantreadingoccurredforthefirst
+time (the “source” of the variant). Therefore, we say that the feature is consistent
+withthestemmaifitispossibletoindicateforeachvariantasinglemanuscriptthat
+may have been the origin of that variant. Since for some manuscripts the value of
+the feature is not known, checking consistency boils down to assigning a variant to
+eachnodeintheCRDAGinsuchawaythat,foreachvariant,thenodeshavingthat
+variant form a CRDAG themselves. Note that one can imagine exceptions to the
+above, e.g., a new spelling of a word can be independently introduced in different
+copies.
+3.2 Consistency checking of a stemma is NP-complete
+Welearnedaboutthisproblemthroughcontactswithresearchersinstemmatology.
+One of them had developed an algorithm (implemented with a program of about
+370 lines of Perl using a graph library as a back end) to solve the basic task, did
+several iterations to handle yet uncovered cases and was still worried about the
+completeness of their approach (does the algorithm always find a solution when a
+solution exists?). The algorithm attempts not to make wrong decisions by initially
+assigning several variant readings to the non-extant manuscripts and, in a second
+phase, remove variant readings while preserving consistency. Once understood, the
+problem was formalized as a graph problem and shown to be NP-complete by one
+of the authors of this paper. In this formalization, the variant reading of a text is
+represented as a color and checking a stemma is a color-connected problem.
+Definition 1 (Color-connected)
+Two nodes x and y in a colored CRDAG are color-connected if a node z exists (z
+canbeoneofxandy)suchthatthereisadirectedpathfromz tox,andonefrom
+z to y, and all nodes on these paths (including z, x, y) have the same color.
+Given a partially colored CRDAG, the color-connected problem is to complete
+the coloring such that every pair of nodes of the same color is color-connected.
+AnillustrationisgiveninFigure4.Acandidatecoloringcanbecheckedinpoly-
+nomial time, hence proving that the color-connected problem is NP-hard implies it
+is NP-complete.
+The color-connected problem is NP-hard.
+The proof is by showing a polynomial reduction from SAT to color-connectedness.
+There exists a polynomial reduction from a CNF formula to one with all clauses
+eitherpositive(allliteralsarepositive)ornegative(allliteralsarenegative).Indeed,
+replace all occurrences of a negative literals ¬x by a new positive literals notx and
+add, for every such notx literal the clauses x∨notx and ¬x∨¬notx.
+DAG coloring &
+16 Bruynooghe et al.
+r r y b r r y
+Fig. 4. Left: a partial labeling showing for a given feature which manuscripts have
+which variant readings/colors. Right: a complete extension of that labeling where
+each variant reading is a CRDAG. Because such an extension exists, the feature is
+consistent with the stemma.
+So, we assume without loss of generality a CNF formula T consisting of positive
+clausesT+ andnegativeclausesT−.Weconstructacolor-connectedproblemwhose
+solutions correspond to the models of T. Let T+ = C+ ∧ C+ ∧ ... ∧ C+ and
+T− = C− ∧ C− ∧ ... ∧ C− with C+,...,C+ positive clauses and C−,...,C+
+1 2 n 1 m 1 n
+negative clauses. Let V be the set of propositional variables in T.
+Now we construct a DAG G consisting of the nodes V(G) = r ∪ A ∪ B ∪ V
+where A = {a,a ,a ,...,a } (a stands for clause C+; a is an extra node) and
+B = {b,b ,b ,...,b } (b stands for clause C−; b is an extra node). The directed
+edges are given by E(G) = {(v,a )|i ∈ [1..m],v ∈ C+}∪{(v,b )|i ∈ [1..n],v ∈
+C−}∪{(a,v)|v ∈ V}∪{(b,v)|v ∈ V ∪{(r,a),(r,b)} . Next we color r, a and all
+nodes a black and b and all nodes b white. We obtain a partially colored CRDAG
+(SeeFigure5foranexample).Moreover,asolutiontothecolor-connectedproblem
+encodes a solution to the original SAT problem. Indeed, each a node, representing
+a positive clause, is connected with at least one black variable. Hence, making all
+black variables true satisfies all positive clauses. Also, each b node, representing a
+negative clause, is connected with at least one white variable. Hence making the
+whitevariablesfalsesatisfiesallnegativeclauses.Itfollowsthatthecolor-connected
+problem is NP-hard.
+The problem being NP-complete, it is unlikely it can be solved by a procedural
+programwithoutsearch.Theproofsuggeststheproblembecomeshardwhennodes
+can have multiple parents. This situation is not dealt with (and therefore usually
+abstracted away) in traditional stemmatological methods. However, it does occur
+inthedatasetsweanalyzed.Constructingsmallexampleswhereseveralnodeshave
+multiple parents, we quickly obtained an example for which the procedural code
+erroneously claimed no connected coloring exists. So the worries of the developer
+about the completeness of the code were grounded.
+Predicate Logic as a Modeling Language 17
+a a a a a a b b b b
+1 2 3 4 5 6 1 2 3 4
+Fig. 5. A partially colored CRDAG constructed from a CNF theory T. The black
+a nodesrepresentthepositiveclauses,thewhiteb nodesthenegativeclauses.The
+grey nodes represent the propositional variables; they are linked to the clauses in
+which they participate and have to be colored.
+3.3 An FO(·)IDP3 Solution
+A first FO(·)IDP3 solution used a binary relation SameVariant for representing
+that two manuscripts have the same variant reading and imposed two constraints:
+(i) transitivity of SameVariant relation, (ii) manuscripts with the same variant
+reading have a common ancestor with that variant reading and are connected to
+that ancestor through manuscripts with that same variant reading. This resulted
+in a working version that could serve as a golden standard for the procedural code
+but was much slower than the latter.
+As we already noticed in the shortest path problem, modeling transitive closures
+results in large grounding sizes and runtime. Hence, a major improvement can be
+expected when that can be avoided. Representing the variant reading as a function
+from manuscripts to variants allowed us to drop the transitivity constraint. The
+finalimprovement,resultingintheprogrambelow,camefromlearningmoreabout
+the procedural code: it checks for connectedness by following a path to the original
+sourcemanuscriptofthevariantreadingandchecksthatthereisasinglesuchsource
+for the variant reading. Expressing the latter as a single constraint resulted in a
+versionthatturnedouttobefasterthantheincompleteproceduralalgorithm.The
+IDP3 model is shown in Listing 5 and explained below. We also show most of the
+procedural code, so that the reader can see how a number of satisfiability-checking
+tasks can be embedded in a single process.
+Listing 5. Checking the consistency between stemma and features.
+procedure main() {
+process("besoin")
+process("parzival")
+process("florilegium")
+process("sermon158")
+18 Bruynooghe et al.
+process("heinrichi")
+vocabulary V {
+type Manuscript
+type Variant
+CopiedBy(Manuscript ,Manuscript)
+VariantReading(Manuscript): Variant
+vocabulary Vtask {
+extern vocabulary V
+SourceOf(Variant): Manuscript
+theory Ttask : Vtask {
+! x : (x ∼= SourceOf(VariantReading(x))) =>
+? y : CopiedBy(y,x) & VariantReading(y) = VariantReading(x).
+/∗ −−−−− Check consistency between feature and stemma −−−−−−−− ∗/
+procedure check(feature) {
+setvocabulary(feature ,Vtask)
+return sat(Ttask,feature)
+procedure process(tradition) {
+io.write("Processing ",tradition ,".\n")
+local path = "data/"
+local stemmafilename = path.. tradition ..".dot"
+local featurefilename = path.. tradition ..". json"
+processFiles(stemmafilename ,featurefilename)
+procedure processFiles(stemmafilename ,featurefilename) {
+local stemma,nbnodes,nbedges = readStemma(stemmafilename)
+io.write("Stemma has ",nbnodes," nodes and
+",nbedges , " edges.\n")
+local nbp,nbs,time = processFeatures(stemma,featurefilename)
+io.write("Found ",nbp," positive out of ",nbs," groupings ")
+io.write("in ",time," sec.\n")
+procedure readStemma(stemmafilename) {
+/∗ 19 lines of lua code ∗/
+procedure processFeatures(stemma,featurefilename) {
+/∗ 23 lines of lua code
+a loop iterating over the features ,
+−− compute feature as stemma extended with
+the feature specific data
+−− call check(feature)
+−− process the results
+finally , return the overall results ∗/
+Predicate Logic as a Modeling Language 19
+The logical model is described in the “Knowledge base” section of the code. The
+vocabulary has been split in two parts. The vocabulary V is used to represent the
+input data: the stemma and the feature. It introduces the types Manuscript and
+Variant, the binary relation CopiedBy representing the parent-child pairs in the
+given structure of the stemma and the function VariantReading representing the
+known data about variant readings of manuscripts. The vocabulary Vtask extends
+V with the task specific vocabulary. Only one extra function is needed namely
+sourceOf which maps a variant reading to the manuscript that is the source of
+thatvariantreading.ThetheoryTtaskconsistsofasingleconstraint;itstatesthat
+a manuscript that is not the source of its own variant reading must have a parent
+with the same variant reading.
+The remainder is procedural code. The procedure main iterates over all tradi-
+tions to be analyzed and calls the procedure process for each of those. The latter
+procedure uses concatenation to construct two filenames from the name of the
+tradition and passes these file names to the processFiles procedure; the “.dot”
+file contains the stemma data; the “.json” file the feature data. The readStemma
+procedure (code omitted) returns the input structure describing the stemma as
+well as the number of manuscripts (nodes) and parent-child pairs (edges). The
+processFeatures procedure (code omitted) iterates over the features in the file.
+For each feature, it constructs a feature structure by extending the stemma struc-
+ture with the feature specific data. It then calls the check procedure. This pro-
+cedure extends the feature structure with the symbols from the Vtask vocabulary
+(setvocabulary(feature,Vtask))andthenchecksthecolor-connectednessofthe
+feature(sat(Ttask,feature)).Theyes/noresultisreturnedtotheprocessFiles
+procedure which collects and returns the global results: number of consistent (pos-
+itive) features, total number of features and time. The processFiles procedure
+prints these global data and returns to main.
+Ascanbeseeninthemain()procedure,weusedthecodetoperformconsistency
+checking for the features of 5 traditions; two of them, Sermon 158 and Florilegium
+arerealtraditions,withstemmatathathavebeenconstructedaccordingtocurrent
+philological best practice; the other three are artificial traditions, produced under
+test conditions by volunteers for the purposes of empirical research into stemmato-
+logical methods. We received the data from Tara Andrews. A website where such
+tion about the stemma we used is given in Table 1.
+TheIDPprogramdeterminesconsistencyforallfeaturesanddatasetsinamatter
+of seconds8:
+Processing besoin.
+Stemma has 13 nodes and 13 edges.
+8 Using an IntelR CoreTM2 Duo CPU at 3.00GHz with 3.7 GB of RAM running Ubuntu with
+the IDP3 options stdoptions.groundwithbounds = false (disabling bounded grounding) and
+stdoptions.liftedunitpropagation=false(disablingliftedunitpropagation).
+20 Bruynooghe et al.
+Table 1. The five traditions used in this work.
+Name # manu- # parent-child # features # variant readings
+scripts pairs maximum average
+Notre Besoin 13 13 44 5 2,18
+Parzival 21 20 122 6 2,59
+Florilegium 22 21 547 5 2,19
+Sermon 158 34 33 270 3 2,12
+Heinrichi 48 51 1042 17 4,84
+Found 26 positive out of 44 groupings in 0 sec.
+Processing parzival.
+Stemma has 21 nodes and 20 edges.
+Found 45 positive out of 122 groupings in 1 sec.
+Processing florilegium.
+Stemma has 22 nodes and 21 edges.
+Found 431 positive out of 547 groupings in 2 sec.
+Processing sermon158.
+Stemma has 34 nodes and 33 edges.
+Found 64 positive out of 270 groupings in 2 sec.
+Processing heinrichi.
+Stemma has 48 nodes and 51 edges.
+Found 1 positive out of 1042 groupings in 12 sec.
+Our largest benchmark is the heinrichi data set (Roos and Heikkilä 2009). This
+stemma about old Finnish texts includes 48 manuscripts, 51 copiedBy tuples and
+information about 1042 features. Processing all features takes 12 seconds with the
+IDP system while it took 25 seconds with the original procedural code.
+One can observe that rather few features are consistent with the stemma. This
+raises the question what is the minimal number of sources needed to explain the
+data. To solve that inference task, it suffices to replace the vocabulary extension
+Vtaskandthetheory Ttaskintheknowledgebaseandtointroducethetermtobe
+minimized.Ascoreprocedure,CheckisreplacedbyminSourcesandtheprocessing
+of results has to be adjusted. The most relevant new parts are shown in Listing 6.
+The IsSource predicate is defined as manuscripts that do not have a parent with
+the same variant reading.
+Listing 6. Minimize the number of sources.
+vocabulary Vms {
+extern vocabulary V
+IsSource(Manuscript)
+theory Tms : Vms {
+{! x : IsSource(x) <− ∼? y : CopiedBy(y,x) &
+VariantReading(y) = VariantReading(x).}
+term NbOfSources : Vms {
+#{ x : IsSource(x) }
+Predicate Logic as a Modeling Language 21
+procedure minSources(feature) {
+setvocabulary(feature ,Vms)
+return minimize(Tms,feature ,NbOfSources)[1]
+Althoughthisisaminimizationproblem,processingthetraditionsisstillamatter
+of seconds, except for the larger Heinrichi dataset which now requires about 5
+minutes to process its 1042 features.
+Other variations are of interest to the researchers. One variation, mentioned by
+Andrews et al. (2012), considers the possibility that the scribe has copied from an
+olderancestorthanthedirectparent,thusreintroducingavariant.Playingwiththe
+relative penalty of introducing a new variant versus reverting to an older variant,
+onecanobtainvariousexplanationsofinteresttothestemmatologist.Allthesecan
+be achieved with modifying a handful of lines in the model. Interesting about the
+abovevariantisthatitusesapredicateIndirectAncestorthatisdefinedinterms
+of the stemma data, so it can be computed once and reused when processing each
+of the features. As illustrated in Listing 7, the tight integration of the knowledge
+base with the procedural code makes this very easy9. The procedure readStemma,
+which constructs the stemma structure from the inputfile, is extended with the
+call modelexpand(T,stemma)[1]. The resulting model is the stemma structure ex-
+tended with the true IndirectAncestor atoms. This structure, together with the
+other outputs of readStemma, is returned to the procedure processFiles which
+uses it to handle the features one by one.
+Listing7. Materializingadefinitiononceandusingthematerializationmanytimes.
+vocabulary V {
+/∗ ... as in Listing 5 ... ∗/
+IndirectAncestor(Manuscript ,Manuscript)
+theory T : V {
+{! x y : IndirectAncestor(x,y) <−
+? z : CopiedBy(x,z) & IndirectAncestor(z,y).
+! x y : IndirectAncestor(x,y) <−
+? z : CopiedBy(x,z) & CopiedBy(z,y).}
+procedure readStemma(stemmafilename) {
+local stemma = newstructure(V,"stemma")
+/∗ ... reading the stemma data ... ∗/
+return modelexpand(T,stemma)[1] , #nodes, #edges
+9 WithamorerecentversionofIDP3,theusercanleavethisoptimizationtothesystem(Jansen
+etal.2013).
+22 Bruynooghe et al.
+4 Minimum common supergraphs of partially labeled trees
+Phylogenetic trees, extensively surveyed by Felsenstein (2004), are the traditional
+tool for representing the evolution of a given set of species. However, there exist
+situations in which a tree representation is inadequate. One reason is the presence
+ofevolutionaryeventsthatcannotbedisplayedbyatree:genesmaybeduplicated,
+transferred or lost, and recombination events (i.e., the breaking of a DNA strand
+followed by its reinsertion into a different DNA molecule) as well as hybridization
+events (i.e., the combination of genetic material from several species) are known
+to occur. A second reason is that even when evolution is indeed tree-like, there
+are cases in which a relatively large number of tree topologies are “equally good”
+according to the chosen criterion, and that not enough information is available to
+discriminate between those trees. One solution that has been proposed to address
+the latter issue is the use of consensus trees, where the idea is to find a tree that
+representsacompromisebetweenthegiventopologies.Anotherapproach,thefocus
+of this section, consists in building a network that is compatible with all topologies
+of interest. A somewhat loose description of the variant we are interested in, which
+willbestatedinamoreformalwaybelow,istofindthesmallestgraphthatcontains
+agivensetofevolutionarytrees.Formoreinformationaboutphylogeneticnetworks,
+see the recent book by Huson et al. (2010) and the online, up-to-date annotated
+bibliography maintained by Gambette (2010).
+4.1 The problem
+Thestudiedproblemisabouttheevolutionofafixedsetofmspecies.Theinputis
+a set of phylogenetic trees, each tree showing a plausible relationship between the
+m species. All trees have n (> m) nodes, m of them are labeled with the name of
+the species (typically, in the leaves, but also internal nodes can be labeled). Given
+n−m extra names, the labeling of each tree can be extended into a full labeling.
+Now, we can consider the union of these full labelings: a network with m labeled
+nodesandedgeswhichareinducedbythebijectionsbetweenthefullylabeledtrees
+and the network. Obviously, the number of edges of the network depends on the
+chosen full labelings of the trees. The task is to find a network with a minimum
+numberofedges.Below,weformulatetheproblemasaslightlymoregeneralgraph
+problem where we do not fix the size of the initial labeling.
+Definition 2 (Common supergraph of partially labeled n-graphs)
+Given is a set N of n names and a set of graphs {G ,G ,...,G } where each
+graph G = (V,E ,L ) has n vertices (the set V), edges connecting pairs of ver-
+tices (the set E ) and where some of the vertices are labeled by names (an injec-
+tive partial function L : V → N). A graph (N,EN) is a common supergraph of
+{G ,G ,...,G } if there exists, for each i, a bijection L(cid:48) : V → N that extends
+L and such that {v,w} ∈ EN iff there exists an i such that {v(cid:48),w(cid:48)} ∈ E and
+A common supergraph (N,EN) is a minimum common supergraph if no other
+common supergraph (N,EN(cid:48)) exists for which |EN(cid:48)|<|EN|.
+Predicate Logic as a Modeling Language 23
+Note that every labeling function L(cid:48) induces an injection E → EN, hence the
+name common supergraph. Figure 6 shows two partially labeled 7-graphs, along
+with two of their common supergraphs. G is not a minimum common supergraph
+since it has more edges than G ; G is a minimum common supergraph since T
+and T are not isomorphic and G has only one more edge than each of T and T .
+1 3 1 3 1 3 1
+T1 T2 G1 G2
+Fig. 6. Two 7-graphs, T and T , and two of their common supergraphs. G is a
+minimum common supergraph.
+Now, we can consider the following decision problem: Given a set of partially
+labeled n-graphs, can the labelings be completed such that the n-graphs have a
+common supergraph with at most k edges? Labarre and Verwer (2014) prove that
+this problem is NP-hard, even if the n-graphs are trees with all leaves labeled.
+4.2 An FO(·)IDP3 solution
+Listing 8 shows a simple model inspired by (Labarre and Verwer 2014). It makes
+use of three types, tree, vertex, and name. The latter two types have the same
+number of elements in a correct input structure. The structure of the given trees
+is described by the ternary predicate edge (the first argument refers to the tree to
+which the edge belongs), the structure of the common supergraph (over the names
+themselves) by the predicate arc. The labeling is described by the function label
+from the nodes of the given trees to the names. It is partially given in the input
+structureanditiscompletedduringmodelexpansion.Theconstraintinthetheory,
+stating that, for each name nm and each tree t, there exists exactly one node nd
+(denoted? 1 nd)suchthatitslabelisnm,ensuresthatthelabelingisbijective.The
+arc atoms can be defined as the pairs of names induced by the labels on the nodes
+of an edge of the tree (the definition in the theory). However, as the minimization
+isonthenumberof arcatomsinamodel,somecareisrequired.Oneshouldensure
+either that arc is a symmetric relation or that there is at most one arc atom for
+each pair of names. The latter approach is taken as it gives a somewhat smaller
+grounding.Itisachievedbyexploitingthetotalorderwhichexistsovereachdomain
+(the tests label(t,x) < label(t,y)).
+Listing 8. Modeling cs-plt in FO(·)IDP3.
+vocabulary CsPltVoc {
+type vertex
+24 Bruynooghe et al.
+type name // Isomorphic to vertex
+edge(tree ,node,node) // trees , given in input structure
+arc(name,name) // the induced network
+label(tree ,node): name // the labeling ,
+// partially given in the input structure
+theory CsPltTheory : CsPltVoc {
+{ // induced network; arc is anti−symmetric
+! t x y : arc(label(t,x),label(t,y)) <− edge(t,x,y) &
+label(t,x) < label(t,y).
+! t x y : arc(label(t,x),label(t,y)) <− edge(t,y,x) &
+label(t,x) < label(t,y).
+! t nm : ?1 nd : label(t,nd) = nm. // label is bijective
+term SizeOfSupergraph : CsPltVoc { #{ x y : arc(x,y) } }
+procedure main() {
+print(minimize(CsPltTheory,CsPltStructure ,SizeOfSupergraph)[1])
+The rules of the arc definition in this solution each have have two occurrences
+of the terms label(t,x) and label(t,y). The current grounder naively associates a
+distinct symbol with each occurrence, which boils down to grounding a clause of
+the following form:
+Listing 9. One of the arc rules after initial processing by the grounder.
+! t x y lx1 lx2 ly1 ly2 : arc(lx1 ,ly1) <− lx1=label(t,x) &
+ly1=label(t,y) & lx2=label(t,x) & ly2=label(t,y) &
+edge(t,x,y) & lx2 < ly2.
+This approach creates extra variables and very large groundings. To avoid this
+behavior, on can rewrite the definition as:
+Listing 10. Better performing definition of arc.
+{ // induced network
+! t x y lx ly : arc(lx ,ly) <− lx=label(t,x) & ly=label(t,y) &
+edge(t,x,y) & lx < ly.
+! t x y lx ly : arc(lx ,ly) <− lx=label(t,x) & ly=label(t,y) &
+edge(t,y,x) & lx < ly.
+While the formulation is less elegant, the effect on the size of the grounding and
+the solving time is dramatic; e.g., the grounding is reduced from 620798 to 6024
+propositional clauses and the solving time from 144s to 8s on a problem with 5
+trees of 8 vertices and 4 initial labels.
+One can explore several other variations. As mentioned above, one could use a
+symmetric arc relation. Also, as the arc definition is free of recursion, one could
+replace it with the two implications of the completion. Then, exploiting the min-
+imization on the number of arc atoms, one could drop the only-if part of the
+completion. The effect on solving time of all these variations is rather marginal.
+Predicate Logic as a Modeling Language 25
+#initial exact greedy
+#trees #nodes labels #edges #edges
+5 55 5 130 131.25
+5 60 10 128 132.75
+5 75 25 207.75* 184.75
+10 55 5 183.75* 154.50
+10 60 10 177.75* 154.75
+10 75 25 270.00* 269.25
+20 55 5 241.50* 171.75
+20 60 10 232.00* 152.25
+20 75 25 346.25* 279.00
+Table2. Randomlygeneratedinstancesoftheminimumcommonsubgraphproblem
+solved with a time bound of 2000s. Sizes of MCS (average over four runs) for exact
+and greedy approach. *: approximate solution due to time out.
+4.3 An approximate solution
+The solving time is exponential in the number of nodes and, if several trees are
+involved,theprogrambecomesimpracticalonreal-worldproblems,evenifthebest
+solution found so far is returned when some time budget is exceeded. However, the
+versatility of the IDP system allowed us to experiment with various strategies for
+greedily searching an approximate solution. This led to the following quite natural
+solution that performed very well, with respect to both running time and quality
+of the solution.
+1. Find a minimum common supergraph (MCS) for every pair of trees.
+2. Pick an MCS with minimum size (say G) and remove the two trees that are
+the input for G.
+3. Find an MCS between G and every remaining tree.
+4. ReplaceG10 byanMCSwithminimumsize,removethetreethatistheinput
+for this MCS and go back to step 3 if any tree remains.
+Steps1and3ofthissimpleprocedureareperformedbyIDP3usingamodelvery
+similartothatofListing8(seeLabarreandVerwer(2014)fortheactualmodel)11.
+This greedy approach works very well. Indeed, for large instances and a fixed time
+budget,theexactmethodrunsoutoftimeandreturnsasuboptimalsolutionwhile
+the greedy method completes and returns a solution that, although suboptimal,
+is typically much smaller. Table 2 shows some experimental results on randomly
+generated data with various parameters. A timeout was set to 2000s12 and average
+number of edges were recorded over four runs for each instance for both the exact
+and the greedy method.
+10 Thisway,theMCSisassembledbyeachtimeincorporatingoneadditionaloriginaltree.
+11 The whole method can be implemented as an IDP3 procedure; however, the scripts had been
+implementedbeforetheLuainterfacewasavailable.
+12 UsinganIntelR CoreTM i7CPU870at2.93GHzwith8GBofRAMrunningUbuntu;default
+settingsforIDP3.
+26 Bruynooghe et al.
+5 Learning deterministic finite state automata
+A third task is about learning a deterministic finite state automaton (DFA). The
+goal is to find a (non-unique) smallest DFA that is consistent with a given set of
+positive and negative examples. It is one of the best studied problems in grammat-
+ical inference (de la Higuera 2005), has many application areas, and is known to
+be NP-complete (Gold 1978). Interestingly, one of the first algorithms proposed to
+solve this problem was based on a translation to constraint programming (Bier-
+mann and Feldman 1972). Much later, translations of this problem to graph col-
+oring (Coste and Nicolas 1997; Costa Florêncio and Verwer 2012) and satisfiabil-
+ity (Grinchtein et al. 2006; Heule and Verwer 2010) were proposed. Although the
+DFA learning problem is typically tackled using greedy approaches (de la Higuera
+2005),HeuleandVerwer(2012)recentlywonthe2010StaminaDFAlearningcom-
+petition(Stamina2010)byanimprovedtranslationtoaSATproblemandrunning
+an off-the-shelf SAT solver. Here we explore to what extent an FO(·)IDP3 formal-
+ization can compete with this competition winner.
+5.1 The problem
+Adeterministic finite state automaton (DFA)isadirectedgraphconsistingofaset
+ofstates Q(nodes)andlabeledtransitions T (directededges).Therootisthestart
+stateandanystateiseitheranaccepting orarejecting state.Ineachstate,thereis
+exactlyonetransitionforeachsymbol.ADFAdefinesalanguage,thesetofstrings
+itaccepts.Itcanbeusedtogenerate orverify sequencesofsymbols(strings)using
+aprocesscalledDFAcomputation.Whenverifyingstrings,thesymbolsoftheinput
+string determine a path through the graph. When the final state is an accepting
+state, the string is accepted, otherwise it is rejected.
+Given a pair of finite sets of positive example strings S+ and negative example
+strings S−, (the input sample), the goal of DFA identification (or learning) is to
+find a (non-unique) smallest DFA A that is consistent with S = {S+,S−}, i.e.,
+every string in S+ is accepted, and every string in S− is rejected by A. Typically,
+the size of a DFA is measured by |Q|, the number of states it contains.
+Most DFA learning algorithms are based on the method of state-merging. This
+method first constructs a tree-shaped automaton called the augmented prefix tree
+acceptor (APTA). As can be seen in Figure 7, the APTA accepts the positive
+examples and rejects the negative ones. Other strings either end up in a non-final
+state or cannot be processed due to a missing transition. The APTA automaton
+can be completed to obtain a DFA with the same number of states by (arbitrarily)
+labelingthenon-finalstatesandaddingthemissingtransitions.Whenallnon-final
+states are labeled as reject and all extra transitions target a reject state with no
+path to an accepting state, this DFA accepts only the positive examples.
+A smaller DFA, accepting more strings, can be constructed by state-merging
+on the APTA. Merging states under the constraints that the automaton remains
+deterministic (at most one transition/label in each state) and that accepting and
+rejecting states cannot be merged preserves consistency with the input sample.
+Predicate Logic as a Modeling Language 27
+b b accepting
+Fig. 7. An augmented prefix tree acceptor (APTA) for S = (S+ =
+{a,abaa,bb},S− = {abb,b}). The start state (annotated with incoming arrow) is
+the root of the APTA.
+State-merging increases the number of strings accepted by the automaton, and
+hencegeneralizesthelanguageacceptedbytheDFAthatcompletestheautomaton.
+States of the final automatonare thusequivalence classes of states of theAPTA.
+Callingthestatesofthefinalautomatoncolors,theproblembecomesthatoffinding
+a coloring of the states of the APTA that is consistent with the input sample.
+Following Coste and Nicolas (1997), Heule and Verwer (2010) take this approach.
+They formulate constraints expressing which pairs of states are incompatible, and
+abstract the problem as a graph. The nodes of this graph are the states of the
+APTA and the edges are the incompatible pairs. The decision problem, whether
+there exists an automaton with k states, becomes a graph coloring problem for k
+colors. They use a clever SAT encoding to solve this decision problem and embed
+it in a workflow to solve the minimization problem. For really large problems,
+the SAT formulation becomes too big (hundreds of colors, resulting in over 100
+millionclauses)tobehandledbyaSATsolver(HeuleandVerwer2010).Toreduce
+the problem size, they used a greedy heuristic procedural method based on state-
+merging. Every merge performed by this method reduces the size of the APTA
+andthereforealsothesizeoftheencoding.Inaddition,thispreprocessingidentifies
+a clique of pairwise incompatible states in the APTA. For states in this clique,
+the colors can be fixed in advance. The effect is to break the symmetries between
+these colors and thus to further reduce the size of the problem. The preprocessing
+also deduces that certain state/color combinations cannot result in a solution. A
+preprocessedprobleminstanceisthenextendedwithasetofSATclausesandisthe
+input for the SAT solver. The SAT clauses express the constraints of the problem
+and are generated from the instance.
+5.2 An FO(·)IDP3 solution
+Ourgoalisnottosetupthecompleteworkflowdescribedabove,buttocomparethe
+performanceofthenativeSATencodingofHeuleandVerwer(2010)andHeuleand
+Verwer (2012) with the performance of an FO(·)IDP3 model on the same problem
+instances as obtained after the preprocessing. Our FO(·)IDP3 model for solving a
+single instance is shown in Listing 11.
+Listing 11. Modeling DFA in FO(·)IDP3.
+vocabulary dfaVoc {
+28 Bruynooghe et al.
+type state // states used in APTA
+type label // symbols triggering transitions
+type color // available states for resulting automaton
+partial trans(state ,label ): state // transitions of APTA
+acc(state) // accepting states of APTA
+rej(state) // rejecting states of APTA
+colorOf(state): color // fixed in input for colors in clique
+// the resulting automaton:
+partial colorTrans(color ,label ): color // transitions of DFA
+accColor(color) // accepting states
+theory dfaTheory : dfaVoc {
+! x : acc(x) => accColor(colorOf(x)).
+! x : rej(x) => ∼accColor(colorOf(x)).
+// trans induces colorTrans:
+! x l z: trans(x,l)=z =>
+! i j : colorOf(x)=i & colorOf(z)=j => colorTrans(i ,l)=j.
+procedure main() {
+print(modelexpand(dfaTheory,instance )[1])
+The types state, label, the function trans, and the predicates acc and rej
+describethegiveninputsamples(andhencetheAPTA).Notethattransispartial
+asitisonlydefinedforthetransitionspresentintheinputsample.Thestatesofthe
+resulting automaton are elements of the type color. Its transitions are described
+by the function colorTrans. This function is also declared as a partial function.
+To obtain a complete DFA, the function colorTrans has to be extended with the
+missing transitions. Which one is assigned does not matter as it does not affect
+the processing of the strings in the input sample (though it has an effect on the
+language that is accepted). The function colorOf maps the states of the APTA
+on the states (colors) of the DFA. The predicate accColor describes the accepting
+states of the resulting automaton.
+ThetheoryexpressestwoconstraintsonaccColor:acceptingstatesoftheAPTA
+must and rejecting states cannot be mapped to an accepting state of the DFA.
+A third constraint states that each transition in the APTA induces a transition
+(between colors) in the DFA.
+The input structure, which is omitted, not only completely defines the types
+color,stateandlabelbutalsotheAPTA.ThatimpliesthattheIDP3grounder
+has complete knowledge about the relations accept and reject and the function
+trans. Hence, for example, the grounder only grounds the formula
+colorTrans(colorOf(x),l)=colorOf(z)fortuples(x,l,z)forwhich trans(x,l)=zistrue
+in the input structure. Further, the input structure also contains the partial infor-
+mationaboutcolorOfandcolorTransthathasbeenderivedbythepreprocessing.
+Themainprocedureassumesthattheinputstructureisnamedinstance;itcalls
+the solver to search for a model and prints it.
+The above model is a very natural formulation of the problem and corresponds
+quite closely to a “decompilation” of the SAT clauses expressing the constraints
+Predicate Logic as a Modeling Language 29
+of the problem (Table 1 in both Heule and Verwer (2010) and Heule and Verwer
+(2012)). The most noticeable difference is in a redundant constraint which can be
+decompiled into:
+Listing 12. Redundant constraint
+!v l w: trans(w,l)=v =>
+!j: colorTrans(colorOf(w),l)=j => colorOf(v)=j.
+This formula can be derived from the last formula in our theory together with the
+fact that colorOf is a total function.
+InFO(·)IDP3 itisverystraightforwardtoextendthemodelwithatermcounting
+thenumberofcolorsusedandtominimizethatnumber.ThismakesourFO(·)IDP3
+method very similar to the optimization method used by Heule and Verwer (2010;
+Heule and Verwer (2012). IDP, however, has several advantages over an encoding
+constructed by hand. For instance, variants of the model such as minimizing the
+numberoftransitionsintheDFAinsteadofthenumberofstatesareverystraight-
+forward to obtain, but would require a major reengineering of the SAT encoding.
+ThishaspracticalvalueasdifferentapplicationdomainsofDFApreferdifferentop-
+timization criteria. Furthermore, it is much easier to introduce bugs in handmade
+encodings than in the few lines of IDP code. In fact, by analyzing and comparing
+the results of IDP and the handmade encoding, we discovered some subtle bugs in
+the handmade translation that caused an incorrect answer in rare occasions.
+5.3 Experiments
+We compared the performance of our model with that of the SAT encoding, de-
+noted DFASAT, for 100 tough problems (the DFA is restricted to have only 5
+states on top of those in the initial clique) from the 2010 Stamina DFA learning
+competition (Stamina 2010).13
+Figure8comparesthesolvingtimeofDFASATwiththatoftwoFO(·)IDP3 mod-
+els.ThefirstoneisasshowninListing11(IDP);thesecondoneextendsthemodel
+withtheredundantconstraintofListing12(IDP+RED).Onecanobservethatthe
+redundant constraint improves the performance of the IDP3 system and that the
+performance comes quite close to that of DFASAT. Still, DFASAT can solve more
+problems than IDP+RED (69 vs. 59). We also have to add that the dedicated pre-
+processingthatgeneratestheSATinstancesrequiresonaverage5secondswhilethe
+groundingtakessubstantiallymoretime.FortheIDPversion,itisonaverage124s;
+forID+RED,theaverageis168s.Theresultsreportedherearesubstantiallybetter
+than those reported in (Blockeel et al. 2012). By analyzing these earlier results, we
+unraveled that the large performance gap was due to our grounding being three
+times the size of the SAT encoding. This was caused by the introduction of un-
+needed auxiliary predicates (so called Tseitins) during the grounding. The problem
+13 Using an IntelR CoreTM i5-2500 CPU at 3.30GHz with 7.7 GB of RAM Running Ubuntu.
+Memoryusewaslimitedto4GB,timeto5000seconds.IDP3wasranwithstandardoptions.
+30 Bruynooghe et al.
+Fig. 8. Solving time for the SAT encoding (DFASAT), for the FO(·)IDP3 model
+of Listing 11 (IDP) and for that model extended with the redundant constraint
+of Listing 12 (IDP+RED). Times are monotonically increasing, so the order of
+probleminstancesisdifferentforeachsystem.Timeoutissetat5000s.69problems
+are solved by DFASAT, 59 by IDP and IDP+RED.
+was repaired in a new version of the grounder. As mentioned before, our detailed
+analysis also revealed subtle bugs in the dedicated preprocessing which generates
+the SAT encodings for DFASAT. Thus, using an IDP implementation of a hard
+problem such as DFA learning and comparing it to a fast competition winning
+SATtranslationwasnotonlyusefulforimprovingIDP,butalsoforimprovingthe
+competition winner.
+It is very encouraging to observe that the performance of a tiny and compre-
+hensible predicate logic model comes very close to that of an ingeniously-tuned
+SAT-encoding that is a key component of a competition winner.
+6 Conclusion
+In this paper, we presented the IDP3 system from a user’s perspective. We in-
+troduced the various components of an FO(·)IDP3 model and illustrated their use
+in a model for the shortest path problem. We also showed models for some prob-
+lems encountered by researchers in data mining and machine learning. In a first
+problem from stemmatology, FO(·)IDP3 models proved to be of invaluable help
+Predicate Logic as a Modeling Language 31
+for researchers trying to cope with stemma that go beyond tree structures (An-
+drews et al. 2012). We obtained a model that not only correctly handles arbitrary
+directed acyclic graphs, but also achieved better performance than the original
+(incomplete) procedural code. In the second problem, about phylogenetic trees,
+FO(·)IDP3 models helped researchers to explore approximate solutions for an NP-
+hard problem (Labarre and Verwer 2014). The third problem we modeled is the
+classical problem of learning a deterministic finite state automaton. We compared
+an FO(·)IDP3 model with a state of the art SAT encoding of the problem. Here
+we found that the performance of an IDP3 solution comes pretty close to that of
+a highly tuned SAT encoding. These applications illustrate that FO(·)IDP3 models
+are a valuable alternative for dedicated procedural code when novel data needs to
+beanalyzedandexplored.Interestingly,inbothproblemswherewecomparedwith
+an existing solution (stemmatology and DFA learning), we uncovered some bugs
+in those solutions. It is fair to add that we also uncovered some cases where the
+grounder of the IDP3 system performed a suboptimal job. In the minimum com-
+mon supergraph application we found it deals poorly with multiple occurrences of
+the same term in a formula; in the DFA application we found that it introduced
+unneeded auxiliary symbols. While the latter problem has already been solved, the
+former is, at the time of writing, still on the todo list of the implementation team.
+Our work is a further indication that the IDP3 system is coming of age. It was
+already known from the ASP-competitions that it compares pretty well with ASP
+systems in terms of performance (Denecker et al. 2009; Calimeri et al. 2011). In
+contrast to ASP, which relies on the stable semantics (Gelfond and Lifschitz 1988),
+it is based on first-order logic. The informal semantics of FO’s connectives and of
+thenovellanguageconstructsisclearandeasytounderstand.Thisprobablymakes
+iteasierfornewcomerstostartmodeling.Forexample,theauthorsoftheminimum
+commonsupergraphproblem(LabarreandVerwer2014)wereneitherfamiliarwith
+Prolog nor with FO(·)IDP3 and hardly needed any help from the IDP team. The
+coreofanFO(·)IDP3 modelconsistsontheonehandofformulasinfirst-orderlogic,
+whichactasconstraints,andontheotherhandofdefinitions,whichareclosetothe
+rules of traditional logic programs. Given interpretations for open predicates (the
+predicates that are not defined in the theory), the definitions determine a unique
+model through the well-founded semantics (Van Gelder et al. 1991). The search
+results in an interpretation of the open predicates and hence a model of the theory
+that is consistent with the constraints. What distinguishes FO(·) from traditional
+logicprogrammingistheuseofnon-Herbrandinterpretationsandcorrespondingly,
+the lack of constructor functions. This often leads to a simpler data representation
+and gives rise to elegant model formulations. On the other hand, there are cases
+where the rich data structures that arise in Herbrand interpretations (compound
+terms,lists,trees,...)areusefultooandthesecurrentlycannoteasilybemodeledin
+IDP3.AnotherdistinctionisthattheIDPframeworkoffersotherformsofinference,
+most notably model expansion and model minimization. A feature of the IDP3
+systemistheintegrationofproceduresinFO(·)IDP3 models(DePooteretal.2011)
+and the clean separation between declarative and procedural components. As we
+32 Bruynooghe et al.
+illustrated in the stemmatology application, this allows a user to develop a whole
+workflow in an FO(·)IDP3 model.
+The logic of FO(·)IDP3 extends predicate logic with inductive definitions, types,
+arithmetic, aggregates and partial functions. Of these, inductive definitions is the
+most fundamental one. The basis of the language is predicate logic. In fact, in
+manyapplications,theextensionsonlyserveformakingmodelsmorereadable.For
+example, the aggregates (in the form of quantifications ?<2) in the shortest path
+problem are directly translatable to FO and the (non-recursive) definition in the
+minimum common supergraph problem is equivalent with its completion. Hence,
+three out of the four problems we describe in this text are in fact solved with pure
+predicate logic models.
+Our work on applications taught us also a few things about good models. In
+all problems we solved in this paper, a class of objects is separated in equivalence
+classes.(Intheshortestpathproblemthereistheclassofedgesparticipatinginthe
+path, and the class of other edges). It is tempting to represent these equivalence
+classes by the transitive closure of some relation. However, the transitive closure of
+a binary relation is expensive. It gives rise to large groundings and this, together
+with the cost of checking for unfounded sets, results in poor performance. Binary
+transitive closures arise naturally during modeling but they are better avoided in
+the IDP3 system. In the shortest path problem our first solution had a binary
+transitive reaches relation. It required some creative tinkering and awareness that
+binary transitive closures are harmful to make the switch to the solution we pre-
+sented. Replacing it with the unary reachable relation had a major impact on
+efficiency. Also our first solution to the stemmatology problem had a transitive
+closure. Here, transitive closure could be avoided altogether. It was a major step
+forwardinefficiencytoreplaceitbyacoloringfunctionforthenodesinthestemma
+graph.Theothertwoproblemsalsousefunctions(labelandcolorOfrespectively)
+whose range defines membership in an equivalence class.
+The preference of a unary transitive relation over a binary one is an illustration
+of another general principle: less variables is better in rules and constraints. One
+should try to break up complex rules and constraints in simpler ones requiring less
+variablesandexplorewhetheronecandowithpredicatesandfunctionshavingless
+arguments. Another important point is that one should not be satisfied with a first
+correct model. Often, major improvements are possible, as we illustrated in several
+of our applications.
+The IDP3 system is an evolving research system and further improvements are
+on the way. A lot of ongoing work aims at making the performance less dependent
+on clever modeling. One recent feature is symmetry breaking. Predicate level sym-
+metry detection and dynamic symmetry breaking (during search) automatically
+exploit symmetries present in the problem (Devriendt et al. 2012) (symmetry is
+present in the DFA problem: permuting the colors gives another solution; however
+it was broken in an ad-hoc way in the SAT encoding and hence also in the input
+structure of our instances). One recent feature is to avoid complete proposionaliza-
+tion during grounding. On one hand by keeping function terms in the grounding
+(De Cat et al. 2013), on the other hand through lazy, demand driven grounding
+Predicate Logic as a Modeling Language 33
+during search (De Cat et al. 2012; De Cat et al. 2014). Another feature is the de-
+tection of functional dependencies and their use to reduce the arity of predicates
+(De Cat and Bruynooghe 2013).
+Acknowledgements
+CarolineMacéandTaraAndrewsintroducedsomeoftheauthorstostemmatology
+andprovidedthedatasets;Taraalsoexplainedtheworkingoftheproceduralcode.
+ThisworkwassupportedbyResearchFoundation-Flanders(FWO-Vlaanderen)
+and by the Research Council of KU Leuven (GOA/08/008 and GOA 13/010).

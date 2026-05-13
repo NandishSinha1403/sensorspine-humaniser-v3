@@ -1,0 +1,428 @@
+Knowledge Representation for Robots through
+Human-Robot Interaction
+E.Bastianelli,D.Bloisi,R.Capobianco,G.Gemignani,L.Iocchi,D.Nardi
+Dept.Computer,ControlandManagementEngineering
+SapienzaUniversityofRome,Italy
+<lastname>@dis.uniroma1.it
+Abstract. The representation of the knowledge needed by a robot to perform
+complextasksisrestrictedbythelimitationsofperception.Onepossiblewayof
+overcomingthissituationanddesigning“knowledgeable”robotsistorelyonthe
+interactionwiththeuser.Weproposeamulti-modalinteractionframeworkthat
+allowstoeffectivelyacquireknowledgeabouttheenvironmentwheretherobot
+operates.Inparticular,inthispaperwepresentarichrepresentationframework
+that can be automatically built from the metric map annotated with the indica-
+tionsprovidedbytheuser.Sucharepresentation,allowsthentherobottoground
+complexreferentialexpressionsformotioncommandsandtodevisetopological
+navigationplanstoachievethetargetlocations.
+Keywords: KnowledgeRepresentation,Robotics,Human-RobotInteraction
+1 Introduction
+Robots are expected to become consumer products. However, there is still a gap in
+termsofuserexpectationsandrobotfunctionality.Akeylimitingfactoristhelackof
+knowledge and awareness of the robot on the problem to be solved and on the opera-
+tionalenvironment.Thedifficultiesarisefromseveralsources:thecurrentcapabilities
+ofperceptionsystems,thedifficultyofcommunicatingwithhumans,and,arguably,the
+abilitytoacquire,maintainandusesymbolicknowledge.
+Our long term research goal is to improve the performance of robotic systems
+by addressing the above three limitations, and, specifically to devise “Knowledgeable
+Robots” [1]. Many researchers are addressing the above challenges. For example, re-
+cently,therehasbeenasignificantprogressinnewsensingdevicesandimprovedper-
+ceptioncapabilities.Atthesametime,severalresearchershaveaddressedformsofcol-
+laborationbetweenhumansandrobots,andvoiceinteractioninparticular,thatprovides
+anaturalapproachtocommunicatewithusers.Indeed,speechinterfaceshavereacheda
+levelofperformancethatmakesthemdeployableonhandhelddevicesforapplications
+thatgobeyondthebasictelephonefunctionality.
+Still,fewworksaddresstheuseofclassicalsymbolicmethodsforknowledgerepre-
+sentationandreasoningonrobots.Moreover,whenthisisaddressed,therepresentation
+ofsymbolicknowledgeistypicallybasedonastaticrepresentationofgeneralknowl-
+edge(i.e.foractionplanning),whichisdisconnectedfromboththeperceptionsystem
+andtheinteractionwiththeuser.
+Fig.1.Exampleofhuman-robotcollaboration:speech-guidedtaggingoftheenvironment.
+We propose to address the challenge of knowledgeable robots by embracing the
+paradigm of symbiotic autonomy [2], which relies on the interaction with the user in
+ordertoovercomethelimitationsoftherobotinperceptionandactioncapabilities.
+Akeyissueintheinteractionwithrobotstoestablishaproperrelationshipbetween
+the symbols used in the representation and the corresponding elements of the oper-
+ational environment. This process is usually referred to as symbol grounding and, in
+thecaseofrobots,requiresto“closetheloop”withperception.Consequently,symbol
+grounding characterizes one of the most critical design issues in the interaction with
+robots,namelytheconnectionbetweennumericandsymbolicrepresentation.
+Specifically,ourworkaddressestheproblemofbuildinghigh-levelrepresentations
+oftheenvironmentthatembodybothmetricandsymbolicknowledgeaboutit.Tothis
+aim,amulti-modalinteraction(includingaspeechinterface)canbeusedintheprocess
+ofbuildingaveryrichrepresentation,byacquiringinformationinasuitableandnatural
+way.
+In order to obtain a representation that the robotic system can effectively use to
+perform complex tasks, such as “go near the fridge” or “check whether the TV set
+is on”, metric and semantic information need to be suitably merged. The resulting,
+integrated representation should enable the system to perform topological navigation,
+understandingtargetlocationsandthepositionofobjectsintheenvironment.
+The approach that we present in this paper aims at building a rich representation
+of the robot’s knowledge about the environment, comprising a suitable integration of
+metricandsemanticinformation.Morespecifically,wedescribetherepresentationand
+the acquisition of the robot’s knowledge about a specific environment with the use of
+amulti-modalhuman-robotinteractionsystem.Wealsoconsiderthepossibilityofex-
+tendingtheapproachtoanon-lineconstructionandmaintenanceofthesemanticmap
+throughacontinuouslong-standinginteractionwiththeuser.
+Asageneraldifferencewithpreviousworkinproducinghumanaugmentedmaps,
+aswellasinrepresentingtheknowledgeoftherobotabouttheenvironment,weaimata
+richanddetailedrepresentationofaspecificenvironment,asopposedtotryingtoembed
+intherobottheknowledgethatallowsittooperateinanykindofenvironment,without
+any previous interaction with the user and the actual operational environment. This is
+currentlypossibleonlythroughanadequateuseofmulti-modalnaturaluserinteraction
+(notrequiringspecificroboticexpertise)and,specificallyontheuseofvoiceinteraction
+tocreateacommonreferenceforthesymbolsrepresentingtheknowledgeoftherobot.
+Theapproachdescribedinthispaperbuildsonpreviousworkforoff-linebuilding
+ofasemanticmap[3],basedontwobasiccomponents:1)asubsystemforSimultaneous
+LocalizationAndMapping,thatprovidesametricmapoftheenvironment;2)amulti-
+modal interface, including speech, that allows the user to point at the elements of the
+environment and to assign their semantic role (see Figure 1). The novel contribution
+here is the definition of a richer representation of the environment, including a Cell
+Map and a Topological Graph, and of the corresponding procedures for knowledge
+construction,thatincreasethecapabilityoftherobottoperformcomplexreasoningfor
+executingcomplextasks.
+Thepaperisorganizedasfollows.Section2describesthebackgroundandasuitable
+context for our work with respect to state of the art. The representation of the robot’s
+knowledgeispresentedinSection3,whilethemethodforitsconstructionisdescribed
+inSection4.Conclusionsaredrawninthelastsection.
+2 RelatedWork
+HertzbergandSaffiotti[4]characterizesemanticknowledgeinroboticsbytwoproper-
+ties: (i) the need for an explicit representation of knowledge inside the robot; and (ii)
+theneedforgroundingthesymbolsusedinthisrepresentationinrealphysicalobjects,
+parameters,andevents.Manyroboticsystemsnowadaysembodysomesortofseman-
+ticknowledge,butitisoftenhard-codedintheirimplementation.Thisgreatlyreduces
+its reuse, the possibility to reason on it, or to share it with other entities (e.g. robots,
+hardware devices, or humans). Several works have addressed symbolic representation
+of knowledge for complex robot tasks. For example, Schiffer et al. [5] describe the
+implementation of an intelligent service robot whose knowledge about the task to be
+executedisrepresentedwiththelogiclanguageREADYLOG(avariantofGolog).Aker
+etal.[6]useAnswerSetProgrammingforrepresentingandreasoningabouttheactions
+to be accomplished by a housekeeping robot. De Giacomo et al. [7] present a knowl-
+edgerepresentationandreasoningframeworkbasedonDescriptionLogicsforaservice
+robot. In all these works the knowledge base is assumed to be given to the robot and
+themethodsusedtoactuallyacquirethisknowledgearenotdiscussed.Inthispaperwe
+focusontheconstructionofasemanticrepresentationofknowledge,morepreciselyon
+semanticmapping.
+“Asemanticmapforamobilerobotisamapthatcontains,inadditiontospatialin-
+formationabouttheenvironment,assignmentsofmappedfeaturestoentitiesofknown
+classes”[8].Twopropertiescomeoutfromthisdefinition:1)semanticmapsareinde-
+pendentfromtheadoptedrepresentationforthegeometricmapbehindit:2Dmaps,3D
+maps,topologicalmaps,texture-basedmaps;2)semanticmapsalsoincludecommon-
+senseknowledgeaboutgenericpropertiesofthelabeledentities.
+Theworksonsemanticmappingcanbegroupedintotwomaincategories,bydis-
+tinguishingautomaticprocessingfromapproachesinvolvingahumanusertohelpthe
+robotinthesemanticmappingprocess.
+Inthefirstcategory,weconsiderworksdescribingfullyautomaticmethodsinwhich
+humaninteractionisnotconsideredatall.Afirstsetoftechniquesaimatextractingfea-
+turesoftheenvironmentfromlaserbasedmetricmapstosupportlabelingandextract
+high-levelinformation.Theseworksincludedeterminingattributesofrooms[9],door-
+ways detection [10], etc. Moreover, in Galindo et al. [11], environmental knowledge
+is represented by augmenting a topological map (extracted with fuzzy morphological
+operators)withsemanticknowledgeusinganchoring.Asecondsetoftechniquesmake
+use of classification and clustering for automatic segmentation and labeling of metric
+maps. For example, in Nu¨cther et al. [12], environmental knowledge is extracted by
+labeling3Dpointsthroughthegradientdifferencebetweenneighboringpoints;points
+are then classified into floor-points, object-points, or ceiling-points. While generation
+of 2D topological maps from metric maps has been described in [13] and [14] (using
+AdaBoost), in Brunskill et al. [15] (using spectral clustering), in [16] (using Voronoi
+random fields), etc. Finally, a third set of techniques for object recognition and place
+categorizationusevisualfeatures,suchasin[17],oracombinationofvisualandrange
+information, provided from an RGB-D camera, such as in [18]. Although significant
+progresshasbeenmadeinfullyautomatedsemanticmapping,theapproachstillsuffers
+fromerrorsandlackofgenerality.
+In the second category, we consider approaches for human augmented mapping
+wheretheuseractivelysupportstherobottoacquiretherequiredknowledgeaboutthe
+environment. In particular, the user role is in grounding symbols to objects that are
+still autonomously recognized by the robotic platform. In this case, the human-robot
+interaction is uni-modal, and typically achieved through speech. In Diosi et al. [19]
+an interactive SLAM procedure and a watershed segmentation are employed to cre-
+ate a contextual topological map. In Zender et al. [20] a system to create conceptual
+representations of human-made indoor environments is described. A robotic platform
+owns a priori knowledge about spatial concepts, and through them builds up an inter-
+nalrepresentationoftheenvironmentacquiredthroughlow-levelsensors.Theuserrole
+throughout the acquisition process is to support the robot in place labeling. However,
+once achieved, the conceptual representation is also useful for effective human-robot
+dialogue. Pronobis and Jensfelt [21] present a multi-layered semantic mapping algo-
+rithmthatcombinesinformationabouttheexistenceofobjectsandsemanticproperties
+about the space, such as room size, share and appearance. These properties decouple
+low-level information from high-level room classification. The user input, whenever
+provided, is integrated in the system as additional properties about existing objects.
+Finally, Nieto-Granda et al. [22] adopts human augmented mapping based on a mul-
+tivariate probabilistic model to associate a spatial region to a semantic label. A user
+guide supports a robot in this process, by instructing the robot in selecting the labels.
+Few approaches aim at a more advanced form of human-robot collaboration, where
+theuseractivelycooperateswiththerobottobuildasemanticmap,notonlyforplace
+categorization and labeling, but also for object recognition and positioning. Such an
+interaction is more complex and requires natural paradigms, not to result in a tedious
+effortforanon-expertuser.Forthisreason,multi-modalinteractionispreferred,tonat-
+urallydealwithdifferenttypesofinformation.Forexample,Kruijffetal.[23]introduce
+asystemtoimprovethemappingprocessbyclarificationdialoguesbetweenhumanand
+robot,usingnaturallanguage;Randellietal.[3]proposearichmulti-modalinteraction,
+includingspeech,gesture,andvisionenablingforasemanticlabelingofenvironment
+landmarksthatmakestheknowledgeabouttheenvironmentactuallyusable,butwithout
+creatingasuitablerepresentation.
+Theapproachpresentedinthispaperaimsatimprovinghuman-robotcollaboration
+byallowingnon-expertoperatorstogeneraterichsemanticinformationaboutanenvi-
+ronment. To this end, we adopt a multi-modal natural interaction framework to build
+semantic maps, where the acquired knowledge can effectively support the execution
+ofcomplextasks.Themaindifferenceswithpreviousworkonsemanticmappingare:
+1)amuchricherrepresentationoftheenvironmentincludingsemanticdescriptionsof
+places,objectsandfunctionalitiesoftheobjects;2)anincreasedflexibilityofthesys-
+temthatcanbeeffectivelyusedindifferentkindsofenvironmentswithoutrequiringa
+substantialtrainingtobuildaprioriknwowledge.
+3 RepresentationoftheRobot’sKnowledge
+In this section we describe the representation of the robot’s knowledge, while the de-
+scriptionofhowthisknowledgeisacquiredandhowtherepresentationisactuallybuilt
+isprovidedinthenextsection.
+Therobot’sknowledgeisdividedintwolayers:1)thespecificknowledgethatthe
+system acquires about the environment, denoted as world knowledge; 2) the general
+knowledgeaboutthedomainanditsuse,thatwedenoteasdomainknowledge.
+Itisimportanttopointoutthat,whilethetwocomponentsmayresembletheexten-
+sionalandintensionalcomponentsofaclassicalknowledgebase,heretheyareindepen-
+dentofeachother.Infact,theworldknowledgemaybeinconsistentwiththedomain
+knowledge(e.g.,therobotmayhavediscoveredafridgeinthelivingroom,ratherthan
+orinadditiontotheoneinthekitchen,whilethedomainknowledgestatesthat“fridges
+areinthekitchen”).Generallyspeaking,domainknowledge(whichrepresentsanapri-
+ori knowledge about the environment) is used to support the action of the robot, only
+whenspecificworldknowledgeisnotavailable.Forexample,therobotisabletoreach
+an object (e.g., the fridge in the living room) , because it has been previously discov-
+ered; if there is no specific knowledge about the position of an object (e.g., a fridge),
+the system will refer to the general domain knowledge to find out a possible location
+(e.g.,thekitchen).
+Morespecifically,therobot’sknowledgeisdefinedbythefollowingstructures:
+– WorldKnowledge
+InstanceSignatureDataBase
+TopologicalGraph
+– DomainKnowledge
+ConceptualKnowledgeBase
+3.1 Knowledgeabouttherobot’sworld
+Asalreadymentioned,asemanticmapistypicallycharacterizedasalow-levelrepre-
+sentationofthe2Dmap(i.e.agrid),thatislabelledwithsymbols(e.g.[21],[20],[22]).
+Suchsymbolsdenoteforexample,theareacorrespondingtoakitchen(orsimplytoa
+room)orthepresenceofstructuralelementsoftheenvironmentandobjects.Ourrepre-
+sentationbuildsonasimilarstructure,butitsupportsamuchmoredetaileddescription,
+basedontheinteractionandhintsprovidedbytheuser.
+In the following definitions we use the term Concept to refer to a set of symbols
+used in the conceptual KB to denote general concepts (i.e., abstraction of objects or
+locations).Forexample,FridgeandKitchenareconceptnamesofthegeneralDomain
+Knowledge discussed in the next subsection. While the term Label is used to refer
+to a set of symbols indicating specific instances of objects or locations. For example,
+fridge1 is a label denoting a particular fridge and kitchen1 is a label denoting a par-
+ticular kitchen. In the notation used in this paper, concept names have the first letter
+capitalized,whilelabelsaredenotedwithalllowercaseletters,typicallyfollowedbya
+digit. The associations between labels and concepts are denoted as label Concept.
+Forexample, fridge1 Fridgedenotesthatthelabel fridge1isrelatedtotheconcept
+Fridge (i.e., fridge1 is a fridge). Notice that the meaning of the labels is simply that
+ofapointertotheconceptthatinthedomainknowledgerepresentsthegeneralknowl-
+edgeabouttheobjectorlocation,anditisnotaninstanceoftheconcept.Inthisway,
+alabeledobjectcanbeenrichedwithgeneraldomaininformation,butitisnotrequired
+tobeconsistentwiththedomainKB.
+TherepresentationformalismoftheWorldKnowledgecontainsthefollowingele-
+ments.
+Metric Map. The Metric Map is represented as an occupancy grid generated by a
+SLAMmethod.Thismaphasusuallyafinediscretization(e.g.,5cm)andisusedfor
+low-levelrobottasks,suchaslocalizationandnavigation.
+Instancesignatures. Theinstancesignaturesarerepresentedasadatabaseofstruc-
+tureddata,whereeachinstancehasauniquelabel(l Label),anassociatedconcept
+(C Concept)suchthatl C,andasetofproperties(includingforexamplethepo-
+sitionintheenvironment)expressedasattribute-valuepairs.
+CellMap. TheCellMapisrepresentedasadiscretizationoftheenvironmentincells
+ofvariablesize.Eachcellrepresentsaportionofaphysicalareaandisanabstraction
+oflocationsthatarenotdistinguishablefromthepointofviewofrobothigh-levelbe-
+haviors.TheCellMapalsoincludesafunction f :Cell 2Label,thatmapseachcell
+to a set of labels associated to concepts in the conceptual KB of the Domain Knowl-
+edge,andaconnectivityrelationConnect Cell Cell,thatdescribestheconnectivity
+betweenadjacentcells.
+TopologicalGraph. TheTopologicalGraphisagraphwherenodesarelocationsas-
+sociated to cells in the Cell Map and edges are connections between these locations.
+Locations are distinguished in two types: static and dynamic. For the static locations,
+the corresponding positions (i.e., the correspondences with the metric map) are fixed,
+whileinthedynamiclocations,thecorrespondingpositionsarevariablewithinagiven
+areaoftheenvironment.SincetheTopologicalGraphisusedbytherobotfornavigation
+purposes, the edges also contains the specific navigation behavior that is required for
+therobottomovefromonelocationtoanother.Inthiswaythetopologicalmapisalso
+used to generate appropriate sequences of behaviors to achieve the robot’s navigation
+goals.
+Fig.2.AnexampleofWorldKnowledge.
+Inordertobetterexplaintheserepresentations,intheremainingofthissectionwe
+provide an example of World Knowledge for a home environment, while in the next
+sectionwedescribehowthisrepresentationhasbeenbuiltandhowtheknowledgehas
+beenacquired.
+Figure 2 shows a graphical representation of the World Knowledge as described
+above. The Metric Map with a resolution of 5 cm generated by the SLAM method is
+shownasbackgroundoftheimage,whereblackpixelsrepresentoccupiedcells.
+Every object and location reported in the figure has an entry in the data base of
+instance signatures. In particular, each instance is determined by a unique label rep-
+resenting an entity within the mapped environment, (e.g. fridge1), the corresponding
+conceptaccordingtotheconceptualKB(e.g. f Fridge),andasetofproperties(e.g.,
+position=<x,y,θ >,color=white,open= false,...).
+The Cell Map is shown in the same image. Cells are delimited by solid borders;
+colorsandtextinthecellspecifythelabelsassociatedtoeachcell.ThelabelsintheCell
+Maprefertoatypicalareaofahome(kitchen,livingroom,bathroom,bedroom,etc.)
+andtotypicalobjects(tables,chairs,heaters,doors,etc.).Eachcellcanhavemorethan
+one label, thus representing that the same area can be associated with more concepts.
+Inparticular,eachcolorcorrespondstoalabelindicatedinthelegendtotherightand
+text(wherepresent)correspondstoadditionallabelsforthatcellcorrespondingtothe
+objects reported on the right side of the figure. For example, the green cells labeled
+with f (top-rightcornerofthekitchenarea)aremappedtothelabels f ,kitchen and
+theselabelsareassociatedwiththeconceptsFridgeandKitchen,i.e. f Fridgeand
+kitchen Kitchen,respectively.Thus,thecorrespondingareaischaracterizedasbeing
+occupied by a fridge and as belonging to the kitchen. Connectivity relations between
+cellsarenotexplicitlyshowninthefigure,buttheycanbederivedbyadjacentcells.
+TheTopologicalGraph,thatestablishestherelationshipbetweenthemetricandthe
+symbolicrepresentation,isshowninthefigureasagraphconnectingovalnodes.Dark
+nodesarestaticlocations,whilelightnodesaredynamiclocations,thatareassociatedto
+themainareas(labels)oftheenvironment.Thestaticlocationsdenotespecificpositions
+thatareofinterestfortherobottasks(e.g.,thepositiontoenterinaroom),whilethe
+dynamiclocationsareusedtodenoteareas,whereinstantiationoftheposition(i.e.,the
+mappingtothemetricmap)foranavigationbehaviorisexecutedatrun-time,depending
+onthecurrentstatusoftherobotandonitsgoals.
+3.2 Generalknowledgeaboutthedomain
+Inpreviouswork,domainknowledgehastypicallybeencharacterizedasaconceptual
+knowledge base, representing a hierarchy of concepts, including their properties and
+relations,aprioriassertedasrepresentativeofanyenvironment.Theconceptualknowl-
+edgebasecontainsataxonomyoftheconceptsinvolvedintheenvironmenttiedbyan
+is-arelation,aswellastheirpropertiesandrelations(see[11],[13]).Theseconceptsare
+usedintheWorldKnowledgetocharacterizethespecificinstancesoftheenvironment,
+asexplainedintheprevioussection.Inatypicalrepresentationthreetop-mostclasses
+have been considered: Areas, Structural Elements, and Objects. Areas denote places
+in the environment (corridors, rooms, etc.), Structural Elements are static entities that
+formtheenvironmentandthattopologicallyconnectareas(windows,doors,etc.),while
+Objectsareelementsintheenvironmentnotrelatedtoitsstructureandlocatedwithin
+areas(printers,tables,etc.).Asnapshotoftheconceptualknowledgebaseusedinthe
+experimentsisreportedinFigure3.
+Theknowledgebasecontainsalsoenvironmentalpropertiesofthedefinedconcepts,
+likesizeandfunctionalitiesofobjects,typicalconnectionsamongplaces,etc.,thatare
+useful to describe the general knowledge about an environment and to support robot
+taskexecution.Forexample,thegeneralknowledgeinahomeenvironmentthatfridges
+are in kitchens helps the robot to perform tasks related with a fridge even when the
+exactlocationofafridgeisnotknown.Anoticeabledifferencewithrespecttoprevious
+worksisthatthepurposeofthiscomponentisnottoclassifyspacesandobjects;rather,
+we focus on the inheritance of properties to support the map acquisition, as well as
+differentactionsoftherobotintheenvironment.
+TheusesoftheDomainKnowledgebasearemanifold.Spatialpropertiesofobjects
+can be used to build metric representations of objects (see next section); functional
+propertiescanbeusedtodeterminelocationofobject(e.g.,fordevisingaplantosearch
+for an object); physical properties can be used to check preconditions for executing
+transportation,etc.
+Fig.3.Afragmentoftheconceptualknowledgebaseusedintheexperiments.
+Asamatteroffact,anysourceofdomainknowledgemaybeaccessedandusedby
+therobot,suchasforexampleinqueryingtheweb,(e.g.RoboEarth[24]andOpenEval[25]),
+orevenqueryingotherrobotsoperatinginsimilarenvironments.
+4 Acquisitionofthe Robot’sKnowledge
+Theprocessofbuildingtherepresentationoftherobot’sknowledgeiscomposedoftwo
+phasesthattakeplace,withthehelpoftheuser,aftertheexplorationoftheenvironment:
+1) Metric Map and Instance Signatures Construction. A 2D metric map is generated
+through a SLAM module and the set of instance signatures is created; 2) Cell Map
+and Topological Graph Generation. Starting from the 2D metric map, a grid-based
+topologicalrepresentation(cellmap)isobtained.Then,thetopologicalgraphneededby
+therobottoperformhighlevelbehavioursisbuiltbyprocessingtheinstancesignatures
+andthecellmap.
+4.1 MetricMapandInstanceSignatures
+Inthefirstphaseoftheknowledgeacquisitionprocedure(seeFig.4),therobotisused
+tonavigatetheenvironmentinordertocreatethe2Dmapandtoregisterthepositionsof
+thedifferentobjectsofinterest.Theusercantagaspecificobjectbyusingacommercial
+laserpointer(Fig.5a).
+While the object is pointed through the laser, the user has to name the object, so
+thatthelabelcanbeassignedtoit.Theimagesegmentationmoduleisresponsiblefor
+extracting the 3D shape of the pointed object by exploiting the RGB-D data coming
+fromtheKinect,sensor[26].ThelaserdotisdetectedintheRGBimage(Fig.5b)by
+searchingforthecolorofthelightemitted(greeninourcase).Then,alltheplanesin
+the scene are extracted from the 3D point cloud and those that do not contain the dot
+Fig.4.Inputdataareobtainedfromahumanuserandarobotinordertoproducethemetricmap
+andtheinstancesignatures.
+arediscarded.Theremainingpointsareanalysedtosegmenttheshapeoftheobjectof
+interest(Fig.5c).
+Itisworthnoticingthattheimagesegmentationmoduleexploitsboththeinforma-
+tionprovidedbythedatabase(height,width,andlength)andthelaserdotpositionin
+theKinectview(usedasseedpointoftheexpansion).Iftheextractedshapeiscoherent
+with the dimensional attributes of the corresponding instance signature stored in the
+data base (i.e., the one with the same label recognized by the vocal interface), then a
+correct acquisition message is sent to the user in order to acknowledge the successful
+association.
+Fig.5.Objecttagging.a)Theobjectistaggedwiththelaserpointer.b)TheRGBimagefrom
+theKinectisusedtolocatethelaserdot.c)The3Dpointcloud(left)isanalysedtofindallthe
+planes,theonesdonotcontainingthelaserdotarediscarded(center)andthedotisusedasseed
+pointtosegmentthetaggedobject(right).
+The pose estimation module outputs the 2D position x,y and the bearing θ of the
+taggedobject.Thepose(x,y,θ)iscalculatedbytakingintoaccountthenormalcorre-
+sponding to the surface of the segmented object in reference frame of the Kinect and
+thenapplyingatransformationtothereferenceframeoftherobot.
+When the acquisition run is terminated all the recorded data (i.e., laser scans and
+objectposes)areprocessed.Thelaserscansareusedastheinputforgeneratingthe2D
+metricmap.AGraph-basedSLAMapproach,aspresentedin[27],isusedtoestimate
+the2Dmapoftheenvironmentandthetrajectoryoftherobot.Thenodesinthegraph
+representtheposesoftherobot,whiletheedgesexpressspatialconstraintsarisingfrom
+odometrymeasurements.Inordertoobtaintheobjectmapthatintegratestheinstance
+signatures into the SLAM generated map, new edges are added to the graph together
+withthepreviousones(givenbylaserscansandrobotodometry).Eachregisteredobject
+pose is considered as a new edge of the graph, embodying the pose and the label of
+the object. When the new expanded graph is complete, a least-square minimization
+algorithm [28] is performed to obtain the optimized final 2D metric map. The final
+poses of the tagged objects (coherent with the optimized map) are stored as instance
+signaturestogetherwithcorrespondinglabels.
+4.2 CellMapandTopologicalGraph
+Inthesecondphaseoftheknowledgeacquisitionprocedurethecellmapandthetopo-
+logicalgrapharegenerated(seeFig.6).
+Fig.6. Cell map and topological graph generation. The metric map is enriched with semantic
+informationtoobtainthecellmap.Theinstancesignaturesandthecellmapareusedtocreatea
+topologicalgraph.
+The cell map contains a high-level description about the regions, structural ele-
+ments,andobjectscontainedintheenvironment.Itisgeneratedusingboththeinstance
+signatures and the 2D topological map. The algorithm to generate such a map can be
+furtherdecomposedintothefollowingsteps:1)rasterizingthemetricrepresentationof
+the map into a grid-based topological representation (grid computation); 2) including
+in this new map representations of the objects and structural elements tagged in the
+environment (object addition); 3) automatically labeling the areas of the environment
+(labelingareas),usingcontourclosureandregionfillingtechniques.
+Grid computation is accomplished by applying the Hough Transform at different
+resolution levels to identify the lines passing through the walls. In such a way, it is
+possibletofindallthemainwallsinthemap.Thecellsofthegridhavedifferentsizes
+withrespecttotheamountofrelevantfeaturesintheconsideredarea(forexample,the
+cellsinthecorridorarewiderthentheonesintheoffices).
+Objectadditionconsistsinplacingthetaggedobjectsintothegridmap.Forthiswe
+useobjects’pose,shapeandsize,presentintheinstancesignaturedatabase.
+Finally,labelingareasisappliedtosegmenttheenvironmentintodifferentrooms.
+The algorithm is enhanced by considering the tagged objects and structural elements
+previouslyincludedintheenvironment.Forexample,asimpleheuristicusestheknowl-
+edgeaboutdoorstoseparatedifferentareas.
+Inthefinalstepofourknowledgebuildingprocess,atopologicalgraphiscreated
+byusingtheknowledgecontainedbothinthecellmapandintheinstancesignatures.
+Such graph embodies the information needed to the robot for navigating and acting
+in the environment. The constituting nodes of this graph are locations associated to
+cells in the cell map, while the edges are connections between these locations. For
+eachroom,twokindsofnodesareproduced:staticanddynamic.Staticnodesrepresent
+locations that have a fixed position on the map and they are used to deal with critical
+pathwaysinthemap(i.e.doors),whereaspecificbehaviorisrequired.Dynamicnodes
+represent,instead,variablepositionswithinagivenareaoftheenvironment.Thus,for
+eachroommappedinthecellmap,adynamicnodeiscreatedwhile,foreachdoorway
+thatconnectssucharoomtoanother,astaticnodeiscreatedwithitsfixedpositionset
+in front of the considered door. Finally, each static node is connected to the dynamic
+nodeoftheroomitbelongstoandtothestaticnodethatrepresentsthelocationinfront
+oftheothersideofitsrelateddoor.Theconstructionofthetopologicalgraphhighlights
+atwofoldaspectofoursystem:boththeknowledgeprovidedthroughuserinteraction
+anda-priorihigh-levelknowledgecontributetorefinetheoverallmappingprocess.
+5 Conclusions
+Inthispaper,weproposeanapproachtobuildaneffectiverepresentationoftheknowl-
+edgeabouttheenvironmentwheretherobotoperates,byrelyingonmulti-modalhuman-
+robotinteraction,includingnaturallanguage.Theproposedframeworkmakesitpossi-
+bletobridgethegapbetweenthenumericalandthesymbolicknowledgeneededbythe
+robot,bygroundingthesymbolsontotheobjectsrepresentedinthemetricmap.Asa
+result,theproposedsettingforrepresentingtheknowledgeoftherobotissignificantly
+richer than previous approaches in the literature; in particular, it supports better per-
+formanceandgreatergeneralitywithrespecttofullyautomaticmethods.Throughthe
+acquiredrepresentationtherobotcanexecutecomplextasks.Forexample,therobotcan
+execute complex commands such as “check whether in the corridor the third window
+on the left is open”, retrieve its metric position in the map, plan a path and reach the
+specifiedlocationandexecutethetask.
+Theproposedapproachcanbefurtherdevelopedinatleasttwofundamentaldirec-
+tions, that we are currently investigating. First, the generation of the map is currently
+done off-line. A more general setting should enable the robot to grow and update the
+representation through a continuous interaction with the user. While the proposed ap-
+proachtosymbolgroundingcanbenaturallyextended,thenewframeworkwouldre-
+quiretoensuretheconsistencyoftherepresentationandtodealwiththechangesinthe
+environment and the dynamics of objects. Second, currently the robot can only learn
+knowledgeabouttheenvironment,butnotknowledgeabouttaskstobeaccomplished
+in response to user commands. This extension would require a representation of the
+robot’sactionsandanextendeddialoguetoacquireinputfromtheuser.
+In conclusion, in our view, the proposed approach brings about a new perspective
+andnewdevelopmentsfortherepresentationoftherobot’sknowledge.

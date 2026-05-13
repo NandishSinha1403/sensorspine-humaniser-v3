@@ -1,0 +1,707 @@
+The Partner Units Configuration Problem:
+Completing the Picture
+Erich Christian Teppan1 and Gerhard Friedrich
+Universitaet Klagenfurt, Austria
+The partner units problem (PUP) is an acknowledged hard benchmark
+problem for the Logic Programming community with various industrial ap-
+plication fields like surveillance, electrical engineering, computer networks or
+railway safety systems. However, computational complexity remained widely
+unclearsofar. Inthispaperweprovideallmissingcomplexityresultsmaking
+the PUP better exploitable for benchmark testing. Furthermore, we present
+QuickPup, a heuristic search algorithm for PUP instances which outper-
+forms all state-of-the-art solving approaches and which is already in use in
+real world industrial configuration environments.
+Keywords: Partner units problem, heuristic search, automated
+configuration, computational complexity analysis
+1. Introduction
+The partner units problem (PUP, Falkner et al. (2011)) is a classical con-
+figuration problem where components have to be connected such that all user
+requirements and technical constraints are satisfied (see Mittal and Frayman
+(1989)). Solving such real world configuration problems are one of the ma-
+jor success stories of Artificial Intelligence which resulted in a commercially
+attractive area where many companies are offering configuration tools and
+services. Current modern configuration tools apply declarative knowledge
+representation and reasoning techniques based on constraint satisfaction,
+SAT solving, Answer Set Programming or Description Logics (see Junker
+1Corresponding author. contact: erich.teppan@aau.at, +43 463 2700 3756
+Preprint submitted to – June 30, 2021
+3v6026.8031:viXra
+(2006) for an overview). Consequently, there is a strong interest that these
+techniques are applicable for typical configuration problems.
+GiventheresultsoftheASPcompetition20112 (ONLINE(2011))andthe
+evaluation documented in Aschinger et al. (2011a) the PUP is an exception-
+ally hard real world problem. Although general problem solving techniques
+based on constraint programming, SAT solving or Answer Set Programming
+are applicable for small and some mid-sized PUP instances, large real world
+cases are clearly out of reach for current solver technologies.
+Figure 1 shows the 34 benchmark problems in the model-and-solve track
+of the ASP competition 2011 and depicts how often corresponding instances
+could be consistently solved or proved to be unsatisfiable within time and
+memory limits3. Obviously, the hardest problem was the strategic company
+problem (Cadoli et al. (1997), Leone et al. (2006)) which is complete on the
+second level of the polynomial hierarchy, i.e. ΣP = NPNP.
+As it turns out the second hardest problem, and thus the hardest problem
+inNPoutofall2011ASPcompetitionmodel-and-solvebenchmarkproblems,
+wasasubclassofthePUPwhichhadalreadybeenproventobeofpolynomial
+complexity (Aschinger et al. (2011b)). Also a second PUP benchmark for
+which no complexity results were available so far, belonged to the hardest
+thirdoftestedbenchmarkproblems. Consequently, thePUPisbothfromthe
+practical and theoretical point of view a very important problem for further
+investigations.
+Originally, the partner units problem was identified in the domain of rail-
+way safety systems. One of the problems in this domain is to make sure
+that certain rail tracks are not occupied by a train/wagon before another
+train enters this track. For deciding if a rail track is occupied, occupancy
+indicators and wheel sensors for counting the number of train wheels pass-
+ing a wheel sensor are connected to processing units. Because of fail-safety
+and realtime requirements the number of sensors and indicators which can
+be connected to the same unit is limited (called unit capacity, UCAP). Also
+one sensor/indicator can only be directly connected to one unit. Moreover,
+a unit can only be connected to a limited number of other units (called in-
+ter unit capacity, IUCAP). These units are called the partner units of the
+2Summarized results and raw data set available at
+Figure1: PercentageofASPcompetitionrunswhereasolutioncouldbefoundbyasolver
+or unsatisfiability could be proved
+Figure 2: Example of a railway track layout
+unit. Elements can only communicate with elements connected to the same
+unit and with elements connected to one of the partner units. Given an in-
+put graph specifying which sensor data is needed in order to calculate the
+correct signal of an occupancy indicator, the problem consists in connect-
+ing sensors/indicators with units and units with other units such that all
+communication requirements are fulfilled.
+Figure2showsasimpleexamplewiththreeconnectedrailwaytrackswith
+corresponding occupancy indicators and wheel sensors, the corresponding
+PUP input graph and a solution wherby UCAP = 2, i.e. only two sensors
+and two indicators can be connected to the same unit, and IUCAP = 2,
+i.e. each unit can at most have two partner units. In order to calculate the
+correct signal for Indicator 3 only data from Sensor 3 and Sensor 4 is needed.
+IfthenumberofoutgoingwheelscountedbySensor4isequaltotheincoming
+wheel counts of Sensor 3 then Track 3 is empty. For Track 2 and Track 3
+it is somewhat more complex. In order to calculate the correct signal for
+Indicator 2 it is not sufficient to only incorporate data from Sensor 2 and
+Sensor 5 as it is not clear whether a wheel has headed to or is coming from
+Track 3. Therefore, additional data from Sensor 3 and Sensor 4 is needed.
+For Indicator 1 data from Sensor 1, Sensor 2, Sensor 5 and Sensor 6 must be
+considered.
+Furtherimportantapplicationdomainsapartfromrailwaysafetyareelec-
+trical engineering, peer-to-peer networking and CCTV surveillance (Teppan
+(2012), Aschinger et al. (2011a)).
+At tis point, there can be drawn three important conclusions:
+1. The PUP is a very hard real world problem which is perfectly suitable
+for benchmark testing in the declarative programming community.
+2. InordertofurtherandbetterexploitthePUPasabenchmarkproblem,
+complexity results for all problem subclasses are needed.
+3. Because of the practical relevance of the PUP for many industrial fields
+and also as a benchmark problem, it is further desirable to have a
+competitive solving strategy in order to:
+• provide solutions for large real world cases.
+• provide a yardstick for benchmark testing of general problem solv-
+ing techniques.
+Our main contributions are the following:
+1. We deliver complexity results for all PUP sub problems and show that
+except all PUP subclasses which were not proved polynomial so far are
+NP-complete.
+2. We present a novel heuristic backtracking algorithm which performs
+better than state-of-the-art approaches by orders of magnitude and
+solves real world PUP instances in milliseconds.
+The paper is structured as follows. In Section 2 we provide the complex-
+ity results for all possible subclasses. QuickPup, our heuristic backtracking
+search algorithm, is introduced in Section 3. In Section 4 we provide experi-
+mental results which are based on real-world problem instances.
+2. Complexity of the PUP
+WithregardtotheoriginofthePUPwerefertothetwotypesofelements
+to be placed on communication units as indicators and sensors and to the
+communication units as units for the rest of the paper. Formally, the PUP
+can be defined as follows:
+Definition 1. ApartnerunitsprobleminstanceisasixtupleP =< I,S,E,U,
+UCAP,IUCAP > where I represents a set of indicators, S represents a set
+of sensors, U is a set of units and E ⊆ I × S is the set of edges between
+I and S in the corresponding bipartite input graph. Given the two natural
+numbers UCAP (unit capacity) and IUCAP (inter unit capacity), the PUP
+decision problem consists in deciding whether there exists a solution function
+f : I ∪S → U such that:
+Figure 3: Current complexity landscape for the PUP
+• For every u ∈ U:
+• Every u,v ∈ U with u (cid:54)= v are connected, whenever i ∈ I ∧ s ∈
+• The connection relation is symmetric, i.e. if u ∈ U is connected to
+v ∈ U then v is connected to u
+• Every unit u ∈ U is connected to at most IUCAP other units.
+Thesolutionfunctioncorrespondstoasolutiongraphshowingwhichindi-
+cators and sensors are placed on which units and how the units are connected
+to each other (see Figure 2).
+Figure3showsanoverviewaboutthecomplexitylandscapeofthepartner
+units problem (PUP). In the most general form, that is when IUCAP and
+UCAP are part of the input, the PUP is NP-complete. This was shown by
+reducing bin-packing to the special case where IUCAP = 0, thus when the
+units in fact constitute bins (Aschinger et al. (2011b), Garey and Johnson
+(1990)). Also the special case with IUCAP = 1 is basically the same as with
+IUCAP = 0. This is due to the fact that cases with IUCAP = 0 can be
+transformed to IUCAP = 1.
+Corollary 1. The PUP is NP-complete when IUCAP = 1 and UCAP is
+part of the input.
+Proof 1. Membership in NP is evident. For showing completeness, we can
+transform PUP with IUCAP = 0 to PUP with IUCAP = 1 as follows:
+1. For each unit in the PUP with IUCAP = 0 there are two units for
+IUCAP = 1.
+2. For every indicator i in the input graph for we add a dummy indicator
+d and for every sensor s in the input graph we add a dummy sensor
+d .
+3. For connected elements i and s we add also an edge between:
+The new input graphs for IUCAP = 1 have exactly double the size as the
+original input graphs for IUCAP = 0 but there are also double the number
+of units available, which can be connected to pairs of units. Thus, a PUP
+instance with IUCAP = 0 is satisfiable if and only if the corresponding PUP
+instance with IUCAP = 1 is satisfiable.(cid:3)
+For the cases with IUCAP = 2 and fixed UCAP a polynomial-time al-
+gorithm could be found due to the fact the solution input graphs for such
+cases are always chains or rings of units Aschinger et al. (2011b). For the
+cases with fixed IUCAP ≥ 3 complexity remained unclear so far. Also for
+the complexity with IUCAP = 2 but not fixed UCAP there has not been
+a complexity result. For practical purposes the fixed parameter complexity
+when both parameters, i.e. IUCAP and UCAP, are fixed to some natural
+number is of special importance. This is because typically the PUP occurs
+in application cases where standardized devices (indicators/sensors, commu-
+nication, units circuit boards, etc.) are used which provide a fixed number
+of connectors and ports.
+In the following it will be shown that any PUP with unfixed UCAP or
+with fixed IUCAP ≥ 3 is NP-complete. Thus, we will be able to color all
+white gaps on the complexity landscape in Figure 3.
+Theorem 1. The PUP is NP-complete when IUCAP=2 and UCAP is part
+of the input and thus not fixed.
+Proof 2. Membership in NP is evident. For NP-completeness we reduce
+from bin-packing given by a set of natural numbers N = {n ...n } repre-
+senting the item sizes, the bin size binSize and the number of bins k. The
+PUP instance is produced as follows:
+Figure 4: Principle of bins for PUP with IUCAP = 2 and UCAP not fixed
+• Set UCAP = binSize+1 and IUCAP = 2
+• For every item of size n ∈ N produce a new indicator i and n bicliques
+(i,si )...(i,si ) with si ...si constituting fresh sensors.
+• For each bin introduce (2 × UCAP) + 1 fresh indicators and (2 ×
+UCAP) + 1 fresh sensors and produce bicliques between all those in-
+dicators and sensors. As every indicator and sensor is connected to
+(2×UCAP)+1 elements, every unit has exactly 2 partner units. Fur-
+thermore, as all elements share the same elements they also share the
+same partner units which results in a ring structure consisting of 3 units
+(see Figure 4). For every such structure there remain UCAP − 1 =
+binSize free slots for placing the item structures. Note that the free
+slots may be arbitrarily distributed on the units.
+There exists a packing with k or fewer bins iff there exists a solution to
+the PUP with 3×k units.(cid:3)
+For proving NP-completeness results for PUP instances with IUCAP ≥
+3, we use a special form of bin-packing.
+Lemma 1. Bin packing is NP-complete when item sizes and bin sizes are
+even.
+Proof 3. Given a regular bin packing problem given by a set of natural num-
+bers N = {n ...n } representing the item sizes, the bin size b and the num-
+ber of bins k, we can transform regular bin packing by multiplying item sizes
+n ∈ N and the bin size b with two. Every combination of items which summed
+up to ≤ b in the regular problem sums up to ≤ 2×k in the transformed prob-
+lem. Analogously, every combination of items which summed up to > b in
+the regular problem sums up to > 2×k in the transformed problem.(cid:3)
+Before we introduce the structures which are necessary for transforming
+bin packing to the PUP, we need the notion of induced input graphs. Infor-
+mally, an induced input graph is an input graph that is produced based on
+a given solution graph (which we call inducing graph) such that there is an
+edge between an indicator and a sensor in the induced input graph whenever
+they can communicate in the given solution graph (inducing graph).
+Definition 2. Given a PUP solution graph G =< I ∪ S,U,V,W > which
+we call inducing graph, with the indicators and sensors I ∪S, the units U,
+the edges V between I ∪S and U, and the edges W between units in U, the
+induced input graph is the bipartite input graph P =< I,S,E > such that
+(i,s) ∈ E with i ∈ I and s ∈ S iff
+• (i,u) ∈ V ∧(s,u) ∈ V with u ∈ U or
+• (i,u1) ∈ V ∧(s,u2) ∈ V and (u1,u2) ∈ W with u1,u2 ∈ U
+In order to simulate even sized bins (see Lemma 1) by means of PUP
+structures we need the graphs defined in Figure 5 employing UCAP= 1 and
+IUCAP= 3. Twographsaretobeusedincombination. TheFigureshowsthe
+inducing graphs and the induced input graphs for both. Furthermore, Figure
+5 introduces the graph condensing symbols which are to be further used
+for ease of presentation. In the subsequent proofs we exploit the following
+property of the solution graph given the input graph of Figure 5.
+Lemma 2. The PUP input graphs in Figure 5 guarantee that indicator ’a’
+is placed on a unit that contains a free sensor slot at this stage and which
+contains two free unit connections. Likewise for the other graph, it is guar-
+anteed that sensor ’b’ is placed in a unit that contains a free indicator slot
+and which contains two free unit connections.
+Proof 4. For the ease of understanding the major steps of the proof are
+visualized by Figure 6.
+1. i1 must communicate to all sensors in {s1,s2,s3,s4} and as a conse-
+quence the unit hosting i1 must be connected to three other units and
+each of the four units must contain one of the sensors in {s1,s2,s3,s4}.
+We call the unit hosting i1 U1.
+2. As i2 is also connected to all sensors in {s1,s2,s3,s4} and U1 will also
+host one of the sensors in {s1,s2,s3,s4}, i2 must be placed on one of
+the three partner units of U1. We call the unit hosting i2 U2. The
+other two units have to be connected to U2. We call these units U3 and
+U4, depending on which element (i3 or i4 is placed on the unit).
+3. i3 respectively i4 must be placed on U3 and U4 because i3 as well as
+i4 have to communicate to three sensors in {s1,s2,s3,s4}. As both U1
+and U2 do not allow any more unit connections, i3 as well as i4 have
+to be on an already connected partner unit, i.e. U3 or U4.
+4. s1 as well as s2 must go to U1 or U2 and not to U3 or U4 as s1 and s2
+have to communicate to all four indicators in {i1,i2,i3,i4}. Placing
+s1 or s2 on U3 or U4 would demand that U3 gets connected to U4,
+making it impossible to connect any further elements.
+5. Similarly, s3 must be placed on U3 (together with i3) and s4 must go
+to U4 (together with s4) and not the other way round. Placing s3 on
+U4 and s4 on U3 would again require that U3 and U4 are connected,
+making it impossible to connect any further elements.
+6. As U3 as well as U4 have only one free unit connection left at this stage,
+and because both i3 and i4 have to communicate to s5 and furthermore
+because both s3 and s4 have to communicate to i5 the only possibility is
+to place i5 and s5 on the same unit (U5) which is connected to U3 and
+U4. As a consequence U5 has only one free unit connection left which
+is to be used for connecting the ’a’ or ’b’ element.(cid:3)
+Building on the graphs in Figure 5, the main principle of simulating any
+even-sized bin is shown in Figure 7. The left-over unit slots are positioned in
+such a way that there is enough connected space to host additional indicator-
+sensor chains of maximal length equal to bin size, hence items are to be rep-
+resented by chains of indicators and sensors. Figure 8 gives a small example
+with one bin of size = 4 and one item of size = 4.
+Theorem 2. The PUP is NP-complete when IUCAP = 3 and UCAP = 1.
+Proof 5. Membership in NP is evident. For completeness we reduce from
+bin packing given by a set of natural numbers N = {n ...n } representing
+the items and corresponding (even) item sizes, the (even) bin size binSize
+and the number of bins k. The PUP instance is produced as follows:
+Figure 5: Inducing graphs and corresponding input graphs used for simulating bins
+Figure 6: Proof of Lemma 2. ’;’ stands for a logical ’or’.
+Figure 7: Simulating bins on the basis of the graphs given in Figure 5
+Figure 8: An item fitting in a bin
+1. For every bin introduce a new structure based on the graphs given in
+Figure 5 and Figure 7.
+2. For every item size n ∈ N introduce a set of fresh indicators i i
+and a set of fresh sensors s ...s and connect them such that they
+build a chain, i.e. i is connected to s , s is connected to i , i is
+n1 n1 n1 n2 n2
+connected to s , ..., i is connected to s .
+As there are only bins and items of even size each chain begins with an
+indicator and ends with a sensor or vice-versa. This facilitates avoiding gaps
+when filling the bins. When binSize = 2, the bin packing instance is solvable
+with k bins iff the corresponding PUP is solvable with (6 × 4) × k units.
+When binSize ≥ 4, the bin packing instance is solvable with k bins iff the
+corresponding PUP is solvable with a set of (6×binSize)×k units.(cid:3)
+In order to generalize the proof to UCAP > 1 we only have to show how
+bins are represented for such cases, i.e. it suffices to define corresponding
+inducing graphs which induce input graphs simulating bins.
+Corollary 2. The PUP is NP-complete when UCAP fixed to some m ≥ 2
+and IUCAP = 3.
+Proof 6. The proof is basically the same as for UCAP = 1 by using the
+graphs in Figure 9 and Figure 10 and thus lifting Lemma 2 as well as Theo-
+rem 2 to any UCAP ≥ 2. The corresponding proofs can be lifted by following
+the structure in Proof 4 and Proof 5 by simultaneously replacing the indica-
+tors/sensors by the corresponding sets of indicators/sensors.(cid:3)
+For the generalization to any fixed IUCAP > 3 we have to define how
+the basic graphs in Figure 5 respectively Figure 9 are evolved in order to
+’deactivate’ the additional unit connections which come along with a higher
+IUCAP.
+Corollary 3. The PUP is NP-complete when UCAP fixed to some m ≥ 2
+and IUCAP is fixed to some n ≥ 3.
+For the ease of readability we explain the proof with respect to Proof 4,
+Proof5andProof6. Basically, thechainsofreasoningforallIUCAPs≥3are
+similar. The main difference are the input graphs to be used for simulating
+the bins. As the concrete input graphs are becoming to big and confusing we
+Figure 9: Bins for the PUP with UCAP = u ≥ 2
+Figure 10: Simulating bins for PUP with UCAP = u ≥ 2
+only define their inducing graphs. Note, that by definition the corresponding
+input graphs are uniquely determined. Figure 11 shows the principle for all
+fixed IUCAPs ≥ 3. The nodes are standing for whole units whereby all units
+except the ’a-untits’ respectively the ’b-units’ contain UCAP many sensors
+andindicators. Thea-unitshaveonefreesensorslotandtheb-unitshaveone
+free indicator slot. The principle becomes obvious in Figure 9. The graphs
+for IUCAP = 3 are the same as shown in Figure 5 and Figure 7.
+Proof 7. Having the graphs for IUCAP = 3 as the base, For IUCAP = 4
+and IUCAP = 5 the edges slightly change in order to adapt to the higher
+number of available unit connections and to make sure that there are exactly
+two left over unit connections for the units containing the a and b elements.
+We begin with the fact that the maximum number of elements (i.e. sensors
+respectively indicators) some indicator respectively sensor can be connected
+to is (IUCAP +1)∗UCAP (Aschinger et al. (2011b)).
+As a direct consequence for IUCAP = 4, all elements of U1, U2, U3,
+U4 and U5 in the inducing graph must be placed on exactly 5 units in any
+solution graph leaving no space for any other elements, as all elements in
+U1, U2, U5 are connected to exactly UCAP many elements in each unit
+in U1,U2,U3,U4,U5. Let us call these units again U1 − U5 in order to
+support the close relation between inducing graphs and solution graphs. Fur-
+thermore, the elements of {U1,U2,U5} in the inducing graph are stitched
+to {U1,U2,U5} in the solution graph although the elements can be placed
+on any unit in {U1,U2,U5}, similar to the elements in U1 and U2 in the
+IUCAP = 3 case (compare Proof 4). Placing any of these elements in U3 or
+U4 would afford that U3 and U4 are connected, making further connections
+impossible. Thus, also the position of the elements of U3 and U4 in the in-
+ducing graph are bound to U3 and U4 in the solution graph. Moreover, the
+elements of U3 and U4 in the inducing graph cannot be mixed up between
+U3 and U4 in the solution graph as this would again afford the connection
+of U3 and U4, making further connections impossible. As a consequence all
+elements of the a-units respectively the b-units in the inducing graph must be
+placed together on the same unit in the solution graph which is connected to
+U3 and U4 and thus there are only two unit connections left over. The rest
+stays the same as in Proof 5 and Proof 6.
+Beginning with IUCAP = 5, it is necessary to consider two graphs (one
+for the graph containing the a-unit and one for the graph containing the b-
+unit) in combination. That the elements of U1 in the inducing graph have to
+be on U1 in the solution graph respectively the elements of U1(cid:48) in the inducing
+graph have to be together on U1(cid:48) in the solution graph arises out of the fact
+that the corresponding elements are to be connected to the maximum possible
+number of other elements (i.e. (IUCAP +1)∗UCAP) which must be placed
+on exactly on IUCAP +1 = 6 units. From the perspective of the elements of
+U1 in the inducing graph these are U1(cid:48),U1,U2,U3,U4 and U5 in the solution
+graph. From the perspective of the elements of U1(cid:48) in the inducing graph these
+are U1,U1(cid:48),U2(cid:48),U3(cid:48),U4(cid:48) and U5(cid:48) in the solution graph. Placing only a single
+element of U1 respectively U1(cid:48) on a different unit (i.e. not U1 respectively
+U1(cid:48)) in the solution graph would afford at least one additional unit connection
+which is not possible. Analogous arguments hold for the U2 in combination
+with U2(cid:48), U3 in combination with U3(cid:48) and U4 in combination with U4(cid:48). As
+U1,U1(cid:48),U2,U2(cid:48),U3,U3(cid:48),U4 and U4(cid:48) in the solution graph contain all elements
+from U1,U1(cid:48),U2,U2(cid:48),U3,U3(cid:48),U4 and U4(cid:48) in the inducing graph there is no free
+space left on these units. Consequently the elements of U5 respectively U5(cid:48)
+in the inducing graph have to be together on the same unit in the solution
+graph (i.e. U5 respectively U5(cid:48)). As U3, U4, and U5 in the solution graph
+each have only exactly one free unit connection left for connecting to further
+elements, all of these elements, i.e. all elements of the a-unit respectively the
+b-unit in the inducing graph, must be placed together on a single unit in the
+solution graph, which is connected to U3, U4, and U5. Again, the rest stays
+the same as in Proof 5 and Proof 6.
+Starting from IUCAP = 5 the arguments can be adapted to IUCAP = 6
+by introducing two additional units (see Figure 11), one for the (sub)graph
+including the a-unit and one for the (sub)graph including the b-unit, filled
+with fresh elements which are connected to all possible elements (sensors to
+indicators and vice versa) in the IUCAP +1 = 6 units of the (sub)graph. As
+a consequence the new elements are pinned to the new units in the solution
+graph. By this trick, the arguments which hold for IUCAP = 5 also hold for
+IUCAP = 6. Again, the rest stays the same as in Proof 5 and Proof 6.
+What remains to be shown is that the proof for some IUCAP = x ≥ 6 can
+be done on behalf of the proof for IUCAP = x−1. Hereby it suffices to show
+that any increase of the IUCAP by one can be compensated by the addition
+of two new units. Hence, it is to show that, given a graph for some IUCAP
+= k, the number of additional unit connections when setting k := k + 1 is
+exactly 2 ∗ (k + 1), i.e. the number of connections of two fresh units. This
+can be done easily by induction.
+As a base case we can use the graph for IUCAP = k = 5. When setting
+Figure 11: Inducing graphs for any IUCAP ≥ 3
+k := (k + 1) = 6 there are exactly 2 ∗ 6 additional unit connections. For
+the inductive step we use the hypothesis that, given a consistent graph for
+IUCAP = k, the number of units in this graph is 2∗(k +1). As every unit
+gets an additional connection when increasing IUCAP = k by one there are
+also exactly 2∗(k+1) additional connections which is exactly the number of
+connections of two fresh units with IUCAP = k +1.(cid:3)
+The following consequence follows directly from the presented fixed pa-
+rameter complexity results.
+Corollary 4. The PUP is NP-complete when
+• UCAP is not fixed or
+• IUCAP is not fixed.
+The new complexity landscape for the PUP is shown in Figure 12. Hence,
+complexity of the PUP has been completely clarified.
+Figure 12: New complexity landscape for the PUP
+3. QuickPup: A Heuristic Backtracking Search Algorithm
+The hardness results of the last section explain why common AI tech-
+niques like Constraint Programming, Answer Set Programming, or Integer
+Programming are often not applicable on real world problem instances with
+hundreds or thousands of indicators and sensors. Interestingly, human ex-
+perts in real world PUP domains are often able to produce solutions easily
+even for big PUP instances where common AI techniques fail. Obviously,
+human experts use highly efficient heuristics to master this challenge. Out of
+this, efforts have been made for developing some heuristic algorithm in order
+to tackle real world sized problems.
+One result of these efforts is QuickPup (QP), a novel heuristic algorithm
+for tackling the PUP4. QP basically follows a backtracking search approach
+but combines it with a static heuristic ordering of the indicators and sensors
+(elements). Based on this fixed ordering, QP tries to assign each element to
+a unit and backtracks in case of unsatisfiability.
+Algorithm 1 depicts the main procedure of QP. The input consists of a
+set of indicators, a set of sensors, the edges of the corresponding bipartite
+input graph, the unit and inter unit capacities and a maximal time limit
+(maxTime) for solution calculation, and a maximal number of units to be
+used (maxunits). The first important extension to simple backtracking is to
+restartthebacktrackingprocessfromadifferententrypointifnosolutioncan
+be found within a certain time slice. If unsatisfiability is proven, no further
+enrtry points are investigated. In QP each indicator constitutes a possible
+entrypoint(startIndicator). Foreachentrypointthereisamaximaltimeslice
+4QuickPup has been first introduced in Teppan et al. (2012).
+Algorithm 1 QuickPup: Main
+INPUT: indicators, sensors, edges, ucap, iucap, maxTime, maxUnits
+timeslice ← maxTime DIV numberOf(indicators)
+for all startIndicator IN indicators do
+elements ← GetBreadthFirstOrder(startIndicator, indicators, sensors, edges)
+index ← firstIndexOf(elements)
+model ← {} %%model is a global variable
+stopTime ← SystemTime + timeslice
+status ← Assign(elements, edges, ucap, iucap, model, index, stopTime, max-
+if status = TRUE then
+Minimize(model)
+return model
+else if status = FALSE then
+return FALSE
+else if status = TIMEOUT then
+return TIMEOUT
+Figure 13: Reordered input graph and corresponding ordering for startIndicator ’A’ for
+example given in Figures 2
+of maxTime DIV number of indicators. Furthermore, the algorithm produces
+a different breadth-first ordering of the indicators and sensors (elements) for
+each entry point. Note that if a concrete implementation of QP is multi-
+threaded, maxTime and the time slices are not needed, as the algorithm may
+start from each entry point concurrently.
+For ordering the elements, QP uses a breadth-first strategy (see Figure
+13). Starting from a certain indicator (startIndicator) the next elements
+to be considered are all connected sensors based on the given input graph.
+Then, all indicators connected to these sensors are considered, and so forth,
+until there are no more elements. This way of traversing a graph (i.e. the
+input graph) is known as breadth-first or also as topological order, as the
+graph is traversed from level to level. Algorithm 2 shows how this is realized.
+The ⊕ operation stands for inserting an element into a vector of elements
+at the last position.
+Algorithm 2 QuickPup: GetBreadthFirstOrder
+INPUT: startIndicator, indicators, sensors, edges
+elements ← {startIndicator}
+while sizeOf(elements) < sizeOf(indicators) + sizeOf(sensors) do
+connectedElems ← getConnectedElems(elements, indicators, sensors, edges)
+for all elem IN connectedElems do
+if elem NOT IN elements then
+elements ← elements ⊕ elem
+return elements
+Once an element ordering is fixed, QP creates an empty model and calls a
+recursive sub-procedure (Assign, see Algorithm 3) creating and connecting
+the units and trying to assign the elements. Thus, the model (also called
+the solution graph or simply solution) consists of the units, their partner
+unit connections, and the element assignments to the units. If Assign runs
+into a timeout (SystemTime > stopTime), QP continues with the next entry
+point (i.e. startIndicator is reassigned). If all iterations produced timeouts
+the maxTime is reached and QP stops with no decision. If Assign can prove
+the unsatisfiability of the given input graph QP returns FALSE. Please note
+that the combination of multiple start indicators and breadth-first ordering
+focuses on the early detection of unsatisfiable instances. The idea is that if
+an instance is unsatisfiable then there is also at least one indicator which
+is part of the conflict. Iterating through all indicators guarantees that the
+subsequent backtracking procedure encounters the conflict in the beginning
+at least once.
+If Assign is successful, i.e. a consistent assignment for all elements has
+been found, such that all edges in the input graph are supported, QP mini-
+mizes the model and returns it. Minimizing the model in this context means
+merging units when possible. This step is important for reducing the number
+of units in the model. Algorithm 5 depicts the idea. For pairs of units in the
+(consistent) model, merging is executed if possible. The ⊕ operator stands
+for unit merging. If merging is successful, the obsolete unit will be removed
+from the model.
+Actual model checking by backtracking is done by Assign. Algorithm
+Algorithm 3 QuickPup: Assign
+INPUT: elements[], edges, ucap, iucap, model, index, stopTime, maxUnits
+if index > lastIndexOf(elements) then
+return TRUE
+else if SystemTime > stopTime then
+return TIMEOUT
+currElem ← elements[index]
+if numUnits(model) < maxUnits then
+unit ← createNewUnit(model, ucap, iucap)
+if AssignAndConnect(currElem, unit, model, edges) = TRUE then
+consistent ← Assign(elements, model, index + 1, stopTime)
+if consistent = TRUE then
+return TRUE
+else if consistent = FALSE then
+UndoAssignAndConnect(currElem, unit, model, edges)
+remove(unit,model)
+else if consistent = TIMEOUT then
+return TIMEOUT
+for all oldUnit IN model do
+if AssignAndConnect(currElem, oldUnit, model, edges) = TRUE then
+consistent← Assign(elements, model, index + 1, stopTime)
+if consistent = TRUE then
+return TRUE
+else if consistent = FALSE then
+UndoAssignAndConnect(currElem, oldUnit, model, edges)
+else if consistent = TIMEOUT then
+return TIMEOUT
+return FALSE
+3 shows the procedure. The input consists of the (ordered) elements, the
+edges of input graph, the intermediate model, an index pointing to the next
+element to be assigned, and a time limit (stopTime). First, Assign checks
+whether the index is greater than the last possible index. In this case all
+elements have already been assigned successfully and Assign returns TRUE.
+If this is not the case, Assign checks whether there is still some time left for
+further calculations, otherwise Assign returns TIMEOUT.
+If there is at least one element and some time left Assign proceeds with
+the assignment of the next element (currElem). To this end QP first creates
+a new unit of the model and checks whether the assignment to the new
+unit leads to a consistent intermediate model, i.e. all relevant partner unit
+connections can be established. Please note that a unit is limited in its
+maximal number of indicators/sensors (UCAP) and its maximal number of
+partner unit connections (IUCAP).
+Consistency checking, the establishment of new partner unit connections
+andelementassignmentarecarriedoutinAssignAndConnect,seeAlgorithm
+4. Basically, AssignAndConnect checks two preconditions before an element
+is assigned to a unit. First, there must be at least one free place left on the
+unit for picking up a further indicator or sensor, respectively. In the case of
+a new unit, this precondition is always given. Second, AssignAndConnect
+verifies that all additional partner unit connections can be established, this
+being limited by means of IUCAP5.
+Algorithm 4 QuickPup: AssignAndConnect
+INPUT: currElem, unit, model, edges
+if hasFreePlace(unit, currElem) = FALSE then
+return FALSE
+else if relevantUnitsCanBeConnected(currElem, unit, model, edges) = FALSE
+return FALSE
+add(currElem, unit)
+establishConnections(currElem, unit, model)
+return TRUE
+5Note,thatthepartnerunitconnectionsareuniquelydetermined,i.e.nosearchneeded.
+If the assignment is successful, Assign calls itself recursively with the
+updated intermediate model and incremented index pointing to the next
+element. In case the subsequent Assign returns TRUE, all remaining ele-
+ments have been assigned consistently, and the current instance of Assign
+also returns TRUE. If a timeout has been triggered, and hence the return
+value of the called Assign instance is TIMEOUT, the current Assign back-
+propagates TIMEOUT.
+If the called Assign instance returns FALSE, this means that no assign-
+ment for the remaining elements could be found which is consistent with
+assignment of the current element (currElem) to the newly created unit. In
+this case, all changes which have been done by AssignAndConnect are re-
+voked and the new unit is removed from the model.
+In a second step, QP tries to assign currElem to one of the old units
+already existing in the model. The procedure for any old unit is similar to
+the case where new units are exploited, except that it is well possible that
+the unit could be ’full’, i.e. there is no free place for the current element on
+that unit. If no consistent assignment could be found for both, the old units
+and a newly generated unit, Assign returns FALSE (i.e. backtracks).
+Algorithm 5 QuickPup: Minimize
+INPUT: model
+for all unitA IN model AND unitB IN model AND unitA (cid:54)= unitB do
+if NOT tooManyIndicators(unitA ⊕ unitB) then
+if NOT tooManySensors(unitA ⊕ unitB) then
+if NOT tooManyPartners(unitA ⊕ unitB) then
+unitA ← unitA ⊕ unitB
+remove(unitB, model)
+It is obvious, that preferring the creation of new units typically results
+in non-minimal models, regarding the number of units. For optimizing the
+model QP uses the greedy procedure depicted in Algorithm 5. If the problem
+is only to decide whether for a given input graph a configuration exists, the
+optimization step can be skipped.
+4. Experimental Results
+In order to test the performance of QP we refer to the results and the
+benchmark instances presented in Aschinger et al. (2011a). Thereby, the first
+priority was to come up with a consistent solution respecting UCAP and IU-
+CAP and only as a second priority to come up with a solution minimizing the
+number of used units. All experiments in Aschinger et al. (2011a) were car-
+ried out on a 3 GHz dual-core system with 4 GByte of RAM, running Fedora
+Linux. The results for QP (with model minimizing) were produced by an In-
+tel Core i7 quad-core notebook with 2.8 GHz and 8 GByte of RAM, running
+Windows 7. QP was implemented in Java 1.6. Thereby, a multi-threaded
+version of the algorithms was produced. The main idea was to concurrently
+start one thread per start node (indicator), thus making time slices obsolete.
+As soon as one of the threads encounters satisfiability or unsatisfiability the
+procedure stops. Moreover, the maximal number of units was not set such
+that optimization was purely done by the Minimize procedure.
+In Aschinger et al. (2011a) five different implementations were tested6:
+• DecidePup
+(DP, polynomial time algorithm only for IUCAP = 2 Aschinger et al.
+• Constraint Programming
+(CP, implementation with Eclipse-Prolog (www.eclipseclp.org))
+• SAT Solving
+(SAT, MiniSat (www.minisat.se))
+• Integer Programming
+(IP,twodifferentsystemsweretested: CBCfromtheCOIN-ORproject
+(www.coin-or.org) and IBM’s Cplex (www.ibm.com))
+• Answer Set Programming
+(ASP, Clingo from the Potsdam Answer Set Solving Collection
+(potassco.sourceforge.net))
+6Detailed information about the implementations can be found in Aschinger et al.
+Figure 14: Real problem instance of Siemens Austria in the railway station domain and
+benchmark instance grid8 Teppan et al. (2012)
+The benchmark7 consists of two parts. In part one the corresponding
+instances are to be solved with a unit capacity of 2 (UCAP=2) and an inter
+unit capacity of 2 (IUCAP=2). The instances of part two are to be solved
+with the same UCAP but with an IUCAP = 4. There are four different
+types of instances: double (dbl) double-variant (dblv), triple (tri), and grid8.
+The instances differ in their number of zones and sensors and the number
+of sensors per zone. Furthermore, the instances have different structural
+characteristics, as they are patterned on real problem instances. Figure 14
+shows an example of a real world input graph and the grid8-instance of the
+benchmark9.
+Table 1 and Table 2 summarize the experimental runtimes (seconds) on
+klu.ac.at/pupsolver/
+8Instancesgrid-90, ..., grid-99 wereremovedfromthebenchmarkasthecorresponding
+input graphs were not connected such that those instances can be seen as a collection of
+trivial non-relevant instances.
+9More details about the instance structure can be found in Aschinger et al. (2011a).
+the described benchmark instances10. The units column lists the minimal
+number of units required for a consistent solution. A minimal number of
+’0’ means that no solution exists (instances tri-34 and tri-64 for IUCAP
+= 2). In these cases, the results refer to the time needed in order to prove
+unsatisfiability. A ’/’ means that the corresponding approach could not solve
+an instance within a certain time frame. For the experiments in Aschinger
+et al. (2011a) the time frame was limited to 600 seconds. Except for QP, all
+approaches produced only minimal solutions by construction. The number
+of additional units needed by QP is listed in the +units column.
+Instancemin #Units DP SAT CP ASP IP QP +Units
+dbl-20 14 0.01 0.48 0.02 0.16 1.53 <0.01 0
+dbl-40 29 0.05 2.36 0.28 3.93 13.58 <0.01 0
+dbl-60 44 0.08 29.74 0.42 / 213.58<0.01 0
+dbl-80 59 0.16 / 1.14 / 522.5 <0.01 0
+dbl-100 74 0.41 / 1.89 / / 0.01 0
+dbl-120 89 0.39 / 3.21 / / <0.01 0
+dbl-140 104 0.59 / 5.01 / / <0.01 0
+dbl-160 119 0.71 / 13.94 / / <0.01 0
+dbl-180 134 0.87 / 20.07 / / <0.01 0
+dbl-200 149 1.08 / 14.40 / / <0.01 0
+dblv-30 15 65.49 0.42 0.09 0.26 2.93 <0.01 0
+dblv-60 30 / 3.15 0.26 1.94 / <0.01 0
+dblv-90 45 / 12.54 0.82 27.35 / <0.01 0
+dblv-120 60 / 41.65 1.85 13.92 / <0.01 0
+dblv-150 75 / 20.97 3.48 29.54 / <0.01 0
+dblv-180 90 / 44.28 6.20 54.50 / <0.01 0
+tri-30 20 0.50 0.79 1.07 0.41 45.17 <0.01 0
+tri-32 20 / 0.74 0.64 0.26 4.66 <0.01 0
+tri-34 0 / 22.77 21.10 0.89 5.06 <0.01 0
+tri-60 40 114.08315.42158.49 4.40 108.01<0.01 0
+tri-64 0 / 379.36 / 43.88 76.26 <0.01 0
+Table 1: Results IUCAP=2, time is given in secs
+Only QP was able to solve all instances. Even DP, which is a polynomial
+10For IP the better result produced by the two different approaches is listed.
+time algorithm capable of only solving problem instances with IUCAP = 2,
+was not able to solve all instances (with IUCAP = 2). In the cases where
+the other approaches were able to calculate a solution, QP was always much
+faster. In fact, the time needed for the calculation of all solutions was sig-
+nificantly below one second. The overhead of additional units used by QP
+is very small in most cases. As a matter of fact, for almost all instances
+QP produced minimal solutions, i.e. +units = 0. Compared to the optimal
+solution, only for tri−90 an additional unit was needed. This makes up a
+practicallynegligibleincrease of5%. InDrescher(2012) someconceptsof QP
+were transferred to CP technology and also partially extended. Although,
+this significantly boosted solution calculation, original QP remained the best
+approach.
+Instancemin #Units SAT CP ASP IP QP +Units
+tri-30 20 2.40 0.12 0.40 24.79<0.01 0
+tri-32 20 1.91 0.14 0.66 20.84<0.01 0
+tri-34 20 1.98 / 0.60 / <0.01 1
+tri-60 40 / 0.52 11.07 / <0.01 0
+tri-64 40 / / 7.61 / <0.01 0
+tri-90 59 401.441.50332.34 / <0.01 0
+tri-120 79 / 3.37 / / <0.01 0
+grid1 50 78.19 / 31.45 / <0.01 0
+grid2 50 90.89 / 18.91 / <0.01 0
+grid3 50 88.87 / 25.72 / <0.01 0
+grid4 50 95.12 / 24.66 / <0.01 0
+grid5 50 454.42 / 48.88 / <0.01 0
+grid6 50 204.85 / 9.15 / <0.01 0
+grid7 50 112.36 / 12.89 / <0.01 0
+grid8 50 / / 11.89 / <0.01 0
+grid9 50 91.62 / 19.71 / <0.01 0
+grid10 50 545.16 / 13.54 / <0.01 0
+Table 2: Results IUCAP=4, time is given in secs
+5. Conclusions
+The partner units problem (PUP) is an important problem in the do-
+main of knowledge-based configuration and furthermore acknowledged as
+hard benchmark problem for Logic Programming, Answer Set Programming
+and Constraint Programming. There are various application domains for the
+PUP such as railway safety, CCTV surveillance or electrical engineering.
+Although there has been remarkable effort in investigating the problem,
+the complexity remained widely unclear. This article closes the gap by sum-
+marizing already existing complexity results and providing NP-completeness
+results for all problem subclasses of which the exact complexity class was
+unknown so far.
+Furthermore, we present the QuickPup algorithm which is a heuristic
+backtracking search algorithm for the PUP. The comparison of new runtime
+results with results presented in (Aschinger et al. (2011a)) on benchmark
+instances patterned on real life problem instances shows the clear superiority
+of QuickPup. Since QuickPup is currently the best known algorithm for the
+PUP, this problem solving strategy was integrated in the Siemens’ Configu-
+ration Problem Solving Engine (Falkner et al. (2007)) and has already been
+successfullyappliedforrealworldconfigurationandreconfigurationproblems
+(Teppan (2012)).

@@ -1,0 +1,94 @@
+Comparative Assembly Hubs: Web Accessible Browsers for
+Comparative Genomics
+December 2, 2021
+Ngan Nguyen1∗, Glenn Hickey1∗, Brian J. Raney1∗, Joel Armstrong1, Hiram Clawson1, Ann Zweig1, Jim
+Kent1, David Haussler1,2, Benedict Paten1∗∗
+1 Center for Biomolecular Sciences and Engineering, CBSE/ITI, UC Santa Cruz, 1156 High St, Santa Cruz,
+CA 95064, USA.
+2 Howard Hughes Medical Institute, University of California, Santa Cruz, CA 95064, USA.
+* These authors contributed equally to this work. ** Corresponding author: benedict@soe.ucsc.edu
+WeintroduceapipelinetoeasilygeneratecollectionsofwebaccessibleUCSCgenomebrowsersinter-
+relatedbyanalignment. Usingthealignment,allannotationsandthealignmentitselfcanbeefficiently
+viewed with reference to any genome in the collection, symmetrically. A new, intelligently scaled align-
+ment display makes it simple to view all changes between the genomes at all levels of resolution, from
+substitutions to complex structural rearrangements, including duplications.
+Visualization is key to understanding functional and comparative genomic information. Genome browsers
+are therefore critical to the study of biology, providing accessible resources for displaying annotations and
+alignments. The UCSC Genome Browser [1] is one of the most popular, but creating a browser within
+it previously required significant resources, as it was necessary to create a mirror site to host the browser
+separately, or to work with the staff of the genome browser to create a browser within their main site.
+Assemblyhubs,whichbuildonthesuccessfultrackhubmodel[2],makeiteasytogenerateaUCSCbrowser
+simply by hosting the data in the form of flat-files on any publicly addressable URL [1]. This avoids users
+having to install and configure the substantial browser code base on their machines and, by using user
+hosting, makes updating straightforward. This work extends assembly hubs to allow users to quickly create
+“comparativeassemblyhubs”,aframeworkofgenomebrowsersandannotationsinterrelatedbyanalignment.
+Integraltothisframework,wehaveaddedsnaketracks,toallowallstructuralvariationstobeviewed. Snake
+tracksareanalogoustoalinearizationofthepopularCircosplots[3,4], butimplementintelligentalignment
+scaling, making them useful at all levels of detail.
+Our software pipeline is comprised of three components, for which we provide an overall distribution that
+can be downloaded and installed with just three commands (see Methods), and which should work on unix
+distributionssuchasLinux,BSDandOSX.ThefirstcomponentistheCactusalignmentprogram[5],which
+takes as input a set of genome sequences and outputs a genome multiple sequence alignment in Hierarchical
+Alignment (HAL) format [6]. The second component is HAL tools, which provides a series of command
+line tools and C/C++ APIs for manipulating HAL files and building comparative assembly hubs. The final
+component is the snake track display, which is part of the UCSC Genome Browser code base [1], and which
+provides visualization of alignments directly from HAL files.
+The pipeline is run in two stages (see Methods). Firstly, Cactus is run to generate the HAL alignment file,
+then the hal2AssemblyHub script (in the HAL tools package) builds the comparative assembly hub using
+]NG.oib-q[
+1v1421.1131:viXra
+ucsc.edu/FAQ/FAQformat.html). This script takes care of converting the base annotation files into the
+display scaleable bigBed and bigWig formats, and translates these annotations (optionally) via a process
+of alignment lift-over [7], to all the other genomes. At the end of this process a directory is created that
+containsthenecessaryfiles,usingcompressedformatsforminimalspaceusage. Thelocationofthe‘hub.txt’
+file, addressable as a public URL, is pasted into the UCSC browser hub page to view the browsers.
+Thepipelinebuildsonebrowserforeachinputgenome,and,inaddition,anyancestralorpan-genomesthat
+were imputed by Cactus during the alignment process (Paten et al., submitted). To illustrate by example,
+Figure1showsacomparativeassemblyhubcontainingE.coli andShigella genomes(seeMethods),displayed
+upon one of the E. coli reference genomes, K12 MG1655, with snake tracks, BED and WIG annotations
+and lifted-over BED annotations. The top most tracks are K12 MG1655 annotations, including Alignability
+(number of genomes mapped to each position), GC%, Antibiotic Resistance Database (ARDB), Genes,
+Genomic Islands (GI) and non-coding RNAs (rRNA and tRNA). Below these are snake tracks, showing the
+alignment of the genome to a subset of the other genomes and lifted-over ncRNA annotation track (track
+K12 W3110 RNA) of E. coli K12 W3110.
+Eachsnaketrackshowstherelationshipbetweenthechosenbrowsergenome,termedthereference(genome),
+and another genome, termed the query (genome). The snake display is capable of showing all possible
+types of structural rearrangement (see Methods). In full display mode (snake tracks in Figure 1), it can be
+decomposedintotwoprimitivedrawingelements,segments,whicharethecoloredrectangles,andadjacencies,
+which are the lines connecting the segments. Segments represent subsequences of the query genome aligned
+to the given portion of the reference genome. Adjacencies represent the covalent bonds between the aligned
+subsequences of the query genome. Segments can be configured to be colored by chromosome, strand (as
+shown) or left a single color. Red tick-marks within segments represent substitutions with respect to the
+reference,showninwindowsofthereferenceof(bydefault,userconfigurable)upto50kilo-bases(Figure1(b-
+c)). Zoomed in to the base-level these substitutions are labeled with the non-reference base. An insertion
+in the reference relative to the query creates a gap between abutting segment sides that is connected by
+an adjacency. An insertion in the query relative to the reference is represented by an orange tick mark
+that splits a segment at the location the extra bases would be inserted, or by coloring an adjacency orange,
+indicatingthatthereareunalignedbasesbetweenthetwosegmentendsitconnects. Morecomplexstructural
+rearrangements create adjacencies that connect the sides of non-abutting segments in a natural fashion, for
+example,Figure1showstheknownlargeinversioninK12MG1655’scloselyrelatedstrainK12W3110[8,9].
+Duplications within the query genome create extra segments that overlap along the reference genome axis.
+For example, Figure 2 shows a tandem repeat region of E. coli KO11FL 162099 displayed along the genome
+of E. coli KO11FL 52593 (52593 was engineered by chromosomal insertion of the Zymomonas mobilis pdc,
+adhB and cat genes into E. coli W for ethanol production purpose [10]; 162099 is a derivative of 52593
+and contains 20 tandem copies of the inserted pdc-adhB-cat genes[11]). To show regions where the query
+segments align to multiple locations within the reference, for each snake track we draw colored coded sets
+of lines along the reference genome axis that indicate self homologies (intervals of the reference genome that
+align to other intervals of the reference genome), and, to maintain the semantics of the snake, align any
+query segments that align to these regions arbitrarily to just one copy of the reference (Figure 2).
+The pack display option can be used to display a snake track in more limited vertical space. It eliminates
+the adjacencies from the display and forces the segments onto as few rows as possible, given the constraint
+of still showing duplications in the query sequence (e.g. track W 162099 of Figure 2). The dense display
+further eliminates these duplications so that a snake track is compactly represented along just one row (e.g.
+tracks SE11 and IAI1 of Figure 2). Clicking on segments moves to the corresponding region in the query
+genome, makingitsimpletonavigatebetweenreferences. Variousmouse-oversareimplementedtoshowthe
+sizes of display elements, and the snakes and annotations can be reordered by dragging. A “hub central”
+configuration page makes managing the large number of possible snake and lifted-over annotations easy.
+Export of subregions of the alignment and track intersections can be made via the UCSC table browser
+[12]. In the methods we describe a novel algorithm that, analogously to the bigBed and bigWig formats,
+creates the scaleable levels of alignment detail, and show that this achieves near constant time page reloads
+at all possible zoom levels. We have tested comparative assembly hubs with clades of mammalian genomes,
+demonstrating that they are practical even for large animal genomes.
+Acknowledgements
+We would like to thank the Howard Hughes Medical Institute, Dr. and Mrs. Gordon Ringold, NIH grant
+2U41 HG002371-13 and NHGRI/NIH grant 5U01HG004695 for providing funding.

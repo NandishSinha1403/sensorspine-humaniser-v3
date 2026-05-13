@@ -1,0 +1,443 @@
+1v6006000/sc:viXra
+A Real–Time Novelty Detector For A Mobile Robot ∗
+Stephen Marsland, Ulrich Nehmzow and Jonathan Shapiro
+Department of Computer Science
+University of Manchester
+Oxford Road
+Manchester M13 9PL, U.K.
+{smarsland, ulrich, jls}@cs.man.ac.uk
+of a ‘clean’ area, which has been inspected by hu-
+mans and is known to exhibit no undesirable fea-
+Recognising new or unusual features of an environ- tures. The robot then explores the wider environ-
+ment is an ability which is potentially very useful mentandmarksthosestimuliwhicharenotpresent
+to a robot. This paper demonstrates an algorithm in the model and therefore were not in the original
+whichachieves thistaskbylearninganinternalrep- environment.
+resentation of ‘normality’ from sonar scans taken This paper demonstrates the behaviour of the
+as a robot explores the environment. This model novelty filter when the inputs to it are sonar scans
+of the environment is used to evaluate the novelty taken while a robot explores an environment using
+of each sonar scan presented to it with relation to a wall-following behaviour. One property of the
+themodel. Stimuliwhich have not been seen before, novelty filter which is investigated here is the abil-
+and therefore have more novelty, are highlighted by itytoforget. Thismeansthatitwillstillfindtobe
+the filter. The filter has the ability to forget about novel any stimuli which are seen only infrequently.
+features which have been learned, so that stimuli Thisisusefulbecauseitensuresthatthesefeatures
+which are seen only rarely recover their response arealwaysconsiderednovel,not learnedovertime.
+over time. A number of robot experiments are pre- This can help the robot to deal with dynamic en-
+sentedwhichdemonstratetheoperationofthefilter. vironments,where things may changeovertime. If
+aneventhappensonlyoccasionallywewouldlikeit
+Keywords: Novelty Detection, Habituation, Mobile to be considered novel, but without forgetting the
+Robot, Self-Organisation robot will learn to recognise it no matter what the
+time interval between occurrences.
+1 Introduction
+1.1 Related Work
+Novelty detection, recognising when a particular The best known example of a novelty detector is
+stimulus has not been seen before, is a very use- the Kohonen Novelty Filter [9, 8]. This is an au-
+ful ability for both animals and robots. This pa- toencoder neural network which is trained using
+per presents an algorithm which allows a robot to backpropagationoferror[2]. Oncethenetworkhas
+detect novel stimuli. The novelty filter described been trained, presenting an input to the network
+learnsarepresentationofanenvironmentandthen produces one of the learned outputs, and taking
+detects deviations from that model by evaluating the bitwise difference between the two displays the
+the novelty of each feature presented. novel components of the input.
+Anoveltyfilterhasmanypotentialusesonamo- A number of other researchers have proposed
+bile robot. For instance, it could be used as an novelty filters. Ypma and Duin [22] proposed a
+attentionalmechanism,directingtherobot’satten- novelty detector based on the self-organising map.
+tion to newer features, which may be important Training data was used to train the map, so that
+and have not previously been learned [11]. This the data formed organised neighbourhoods. Then,
+reduces the amount of processing needed to deal when any data caused a neuron to fire which was
+with the robot’s sensory perceptions. The novelty beyond a predefined threshold from any of the
+filter could also enable the robot to be used as an neighbourhoods, the data was considered to be
+inspection agent. A model is built by the robot novel. Thistechniquedependsverystronglyonthe
+∗In Proceedings of the EUREL European Advanced choice of threshold and assumes that the data pre-
+RoboticsSystemsMasterclassandConference,2000 sented to the network formed strictly segmented
+neighbourhood clusters. The technique has been
+used by Taylor and MacIntyre [18] to detect ma-
+chinery faults. The network was trained on data
+recorded while the machine was operating without
+problems,anddatadeviatingfromthispatternwas
+taken as novel.
+The technique of training the network on ‘nor-
+mal’ data and then attempting to recognise
+whether inputs come from the learned probability
+distribution is a common one when there is little
+datafromaparticularclass,suchasmachinefaults,
+but lots ofdata fromthe other classes. It has been 0 20 40 60 80 100 120 140 160
+usedfortopicsasdiverseasmammogramscans[17]
+to machine breakdowns [12, 21].
+An alternative method was proposed by Ho and
+Rouat [6] whose model is based on an integrate-
+and-fire network. The algorithm times how long it
+takestheoscillatorynetworktosettletoastableso-
+lution, reasoning that inputs which have been seen
+previously will converge faster than novel ones.
+2 The Novelty Filter
+The novelty filter described in this paper works on
+the principle that something is novel if it has not
+been seen before. The question is how to recog-
+nise that an item is new. If we know in advance
+what everything in the environment will look like
+then it is relatively simple to train the robot to
+recognise each of those features. However, this is
+usually not possible. Instead, if the robot learns
+to ignore anything which it has seen before, then,
+it will only respond to novel things. This is some-
+thing which animals do quite well [14]. There are
+then two parts to the desired system - learning to
+recognise features that have been seen before, and
+evaluating their novelty. The first part, recognis-
+ing features, is a pattern recognition problem and
+has been considered widely in the neural network
+literature. One possible solution is the Kohonen
+Self-Organising Map [8], which is described below.
+The second problem, how to evaluate the novelty,
+is considered in section 2.2.
+2.1 The Self-Organising Map
+The Self-Organising Map (SOM) of Kohonen [8] is
+a clustering mechanism which clusters input vec-
+tor in a topological way, so that perceptions which
+are similar excite similar regions of the network.
+The SOM is used here to perform Learning Vector
+Quantisation,choosing a winning neuronthat best
+matches the input and moving that neuron and its
+neighbours closer to the input vector. It does this
+byselectingtheneuronwiththeminimumdistance
+Habituation Curves for Varying Tau
+tau = 14.3
+0.9 tau = 3.33
+0 20 40 60 80 100 120 140 160
+Number of Presentations
+Habituation Curves for Varying Tau
+tau = 14.3
+tau = 3.33
+Number of Presentations
+Figure1: Left: Anexampleofhowthesynapticefficacy
+dropswhenhabituationoccurs. Inbothcurves,aconstant
+stimulusS(t)=1ispresented,causingtheefficacytofall.
+ThestimulusisreducedtoS(t)=0attimet=60where
+the graphs rise again, and becomes S(t) = 1 again at
+t=100, causing another drop. The two curves show the
+effects of varying τ in equation 3. It can be seen that a
+larger value of τ causes both the learning and forgetting
+to occur faster. The other variables were the same for
+both curves, α=1.05 andy0 =1.0.
+between itself and the input. The distance is de-
+fined by:
+where v(t) is the input vector at time t, w i the
+weightbetweeninputiandtheneuronandthesum
+is overthe N components of the input vector. The
+weights for the winning neuron and its eight topo-
+logical neighbours are updated by:
+whereηisthelearningrate,0≤η(t)≤1. Asquare
+mapfield,comprising100neuronsarrangedina10
+by 10 grid, was used in the experiments reported
+here. Theneighbourhoodsizewaskeptconstantat
+±1 unit and the learning rate η was 0.25, so that
+the network was always learning.
+2.2 Evaluating the Novelty
+Once a feature has been classified using the SOM,
+the novelty filter needs to assign a novelty value
+to the reading. A simple counter could be kept on
+each neuron, recording the number of times that
+each neuron has fired, and the output reduced ac-
+cordingly. Thisisbiologicallyimplausibleanddoes
+notallowforanyforgettingofstimuli. Whenanan-
+imal stops responding to a feature which has been
+presentedtoitrepeatedly,theanimalissaidtohave
+Output Neuron
+Habituable Synapses
+16 infrared
+Figure 3: TheNomad 200 mobile robot.
+2.3 Putting it all together
+By attaching an habituable synapse to each of the
+i 1 i2 i 3 i n neurons in the SOM, a novelty filter is produced.
+Thenetworkisshowninfigure2. Theonlyremain-
+Figure 2: Thenovelty filter. The inputlayer connects ingquestionishowtheconstantsαandτ shouldbe
+toaclusteringlayerwhichrepresentsthefeaturespace,the chosen. In order for the network to learn quickly,
+winningneuron(i.e.,theone‘closest’totheinput)passing the synapse of the winning neuron should habit-
+itsoutputalongahabituablesynapsetotheoutputneuron uate rapidly. By choosing a value of τ = 3.33,
+so that the output received from a neuron reduces with the synapse decreases to below 90% of its original
+thenumberof times it fires. value within 5 iterations. The neighbourhood neu-
+rons, which recognise similar perceptions, have a
+smaller amount of habituation, τ = 14.33 and the
+habituated to the signal. Habituation, thought to
+other neurons, which are forgetting, have a longer
+be one of the simplest forms of plasticity in the
+time period, τ = 100. This is because we do not
+brain[19],hasbeendetectedinawiderangeofani-
+wantthe networktoforgetperceptionstoorapidly.
+malsfromtheseaslugAplysia[1,4]tohumans[14].
+Usingthisvalueaperceptionwillrecoverfromcom-
+Theincreaseintheresponsetoanhabituatedstim-
+plete habituation in about 280 presentations.
+uluswhenthestimulusiswithdrawniscalleddisha-
+bituation. It is thought to be a separate process
+acting on the habituable synapses [5]. 3 Experiments
+Several researchers have proposed models of the
+phenomenon of habituation, including Groves [5], The experiments presented investigate the ability
+WangandHsu[20]andStanley[16]. Itisthemodel
+of the novelty filter to learn a model of an exter-
+ofStanley,describedbelow,whichisusedhere. The nalenvironmentthroughperiodicsonarscanstaken
+synaptic efficacy, y(t), decreases according to the
+whileexploring,andtodetectdeviationsfromthat
+following equation: model. Theeffectsoftheforgettingmechanismare
+demonstrated.
+3.1 The Robot
+wherey0 istheoriginalvalueofy,τ andαaretime
+constantsgoverningthe rateofhabituationandre- A Nomad 200 mobile robot (shown in figure 3)
+coveryrespectively,andSisthestimuluspresented. was usedto performthe experiments. The band of
+The activity of the winning neuron and its neigh- infra-redsensorsmountedatthebottomofthetur-
+bours are propagated up the synapse, so the input retoftherobotwereusedtoperformapre–trained
+is S(t) = d (d defined in equation 1). Using equa- wall–following routine [13], and the 16 sonar sen-
+tion 3 we can control how strongly a synapse re- sors at the top of the turret were used to provide
+sponds to an input. The first time a synapse fires perceptions of the robot’s environment. The an-
+itsvalueishigh,buteachtimeitisuseditsstrength gle between the turret and base of the robot was
+decreases, as can be seen in the graph in figure 1. kept fixed. The input vector to the novelty filter
+Neuronswhichdonotbelongtothewinningneigh- consisted of the 16 sonar sensors, each normalised
+bourhoodgive aninput of S(t)=0 to the synapse. to be between 0 and 1, were thresholded at about
+This has the affect of causing the efficacy of the 4metres. Thereadingswereinvertedsothatinputs
+synapse to increase, or ‘forget’ some of its inhibi- from sonar responses received from closer objects
+tion, dishabituation. were greater.
+3.2 Experimental Procedure highlightedinthelatertrials. Aftertwomorelearn-
+ingtrials,thenoveltyfilter haslearnedanaccurate
+The experiments eachconsistedofa number oftri-
+representation of the environment, as can be seen
+als. In each trial, the robot started from an ar-
+from the lack of response from the output neuron
+bitrarily chosen starting point, and moved using a
+in trial 6.
+wall–following behaviour. Every 10cm along the
+Once the novelty filter stopped finding anything
+route, the smoothed readings from the sonar sen-
+novel in environment A, the robot was moved into
+sorswerepresentedtothenoveltyfilter,whichpro-
+environmentB. This is a similar environmentto A
+duced a novelty reading. Once the robot had trav-
+(see figure 4). The right of figure 5 shows the re-
+elled10m it stoppedand savedthe neuralnetwork
+sultsofthis. The onlythings whichthe robotfinds
+weights. The robotwas then returnedto the start-
+tobe novelinthisenvironmentarethe perceptions
+ing point using manual control and the same pro-
+ofthedoorways. Thisisbecausethedoorsareinset
+cedurerepeatedwiththeupdatednetworkweights.
+further intothe wallin this environment. The con-
+After each training trial, where the novelty filter
+troltrialdemonstratesthe responsesofthe novelty
+learnedabout the environment,the learningmech-
+filter when the robot is put into environment B af-
+anism was turned off and a non-learning trial per-
+ter training in a control environment. For this the
+formed. The sonar inputs still generated output
+robotwasdrivenaroundinanopenarea,travelling
+fromthe noveltyfilter to recordthe novelty ofper-
+closeto awall,intothe openspaceandbacktothe
+ceptions, but the robot did not learn.
+wall. It can be seen that the robot finds the en-
+vironment to be considerably more novelafter this
+3.3 Environments training.
+Two environments were used in the experiments,
+4.2 Experiment Two
+together with a control environment for training.
+The two environments are shownin figure 4. They
+The secondpair ofexperiments (shownin figure6)
+are similar sections of corridor on the second floor
+were designed to show the behaviour of the forget-
+oftheComputerScience buildingatthe University
+tingpartofthenoveltyfilter. Twodifferentexperi-
+of Manchester. The corridors are 1.7m wide and
+mentswereperformed. Inboththenetworkweights
+have walls made from painted breezeblock. Doors
+learned when exploring environment A were used.
+made of varnished wood lead from the corridors
+The first trial shows that the novelty filter had
+into offices.
+learnedaboutthisenvironment,sincetherobotdid
+notfindanythingnovel. Adoorintheenvironment
+4 Results wasthenopened(shownasEnvironmentA*atthe
+bottom of figure 6), and the robot learned about
+thisnewenvironment. Acardboardboxwasplaced
+4.1 Experiment One
+in the doorway. This was of sufficient height to be
+Thefirstexperimentaimedtodemonstratetheabil- seen by the infra-red sensors which were respon-
+ity of the novelty filter to learn a representation sible for the wall-following, but not by the sonar
+of an environment and recognise novel features, so sensors. After each learning trial in this environ-
+thattherobotcouldbeusedasaninspectionagent. ment, the door was closed and a non-learning trial
+Thenoveltyfilterwasinitialisedrandomlyandthen inenvironmentAwasperformed. Thefiguresshow
+the robot was put into environment A. The left of that while no other features aredetected, the open
+figure 5 shows the results of this. The figures show door is initially novel, but is learnedoverthe three
+theresponseoftheoutputneurontotheinputvec- trials,andthecloseddoorisinitiallyrecognisedbut
+tor of sonar readings that it receives every 10cm isfoundprogressivelymorenovelasthe noveltyfil-
+along the route it travelled. At the top of the fig- ter forgets about this perception (since the filter is
+ure is a diagramof the environmentthat the robot not learning when the robot perceives the closed
+was travelling in at the time. Initially it can be door).
+seen that everything is novel, but where the robot The right of figure 6 shows the second experi-
+perceives only wall, it rapidly learns to recognise ment. Asimilartechnique wasused, againstarting
+this. The next thing that it notices is the crack in with the network weights learned in environment
+thewallonitsrightandthenthe doors. Itis inter- Ainthe firstexperiment. Therobotlearnedabout
+esting to note that the robot finds the first crack environment B, and after each learning trial was
+more novel in the third run than in the second. returnedtoenvironmentAforanon-learningtrial.
+This is because perceptions of such small features Similarresultscanbeseen-therobotinitiallyfinds
+varygreatlydependingupontheprecisepositionof parts of environment B novel, but learns to recog-
+the robot. Only the cracks and the doorways are nise it over the trials, while environment A, which
+Environment A
+Rough Brick
+Doors A and B Door C
+Crack in wall Rough Brick Crack in wall
+Environment B
+Rough Brick
+Door E Door F
+Boxes on wall
+Door G Door H
+Rough Brick
+Figure 4: Diagrams of the environments used. The robot is shown facing in the direction of travel adjacent to the
+wall that it followed. The environments are two similar sections of corridor. The photographs show the environments as
+theyappearfrom thestartingposition oftherobot. Thenoticeboardswhichcanbeseenin environment Bareabovethe
+height of the robot’s sonar sensors, and were therefore not detected.
+is recognised at first, becomes more novel. Obvi- fore being presented to the novelty filter to reduce
+ously, only particularly features of environment A computational time. In addition, an investigation
+arefoundnovel,thosewhicharenotalsoseeninen- intoalternativestotheSelf-OrganisingMap(SOM)
+vironment B. These are the crack in the wall near usedinthis workis underway. Thereareanumber
+thebeginningoftheenvironmentandthedoorway, of well documented problems with the SOM, such
+which is set into the wall less than those in envi- as the fact that the size of the networkneeds to be
+ronment B. pre-determined,whichmeansthatthe networkcan
+fill up, so that novel stimuli are incorrectly recog-
+nised as familiar. One possible solution is to use a
+5 Summary and Conclusions
+growing network such as the Growing Neural Gas
+of Fritzke [3], another is to use a Mixture of Ex-
+Theexperimentsdescribedhavedemonstratedthat
+perts[7],witheachexpertlearningarepresentation
+thenoveltyfiltercanbeusedtolearnamodelofan
+ofa particular feature andvoting onthe noveltyof
+environmentanddetectdeviationsfromthismodel.
+perceptions. A committee of networks, where net-
+The second experiment demonstrated the ability
+worksofvaryingsizesandtrainingregimesvote on
+of the filter to forget perceptions that have been
+theresponsetoaparticularinput[10,15]couldalso
+learnedpreviously. Thismeansthatthenoveltyfil-
+be used.
+terwillfindnovelfeatureswhichareseenonlyocca-
+sionallyornotseenforalongtime. Thereforeitcan
+betrainedindynamicenvironments,whereunfore-
+Acknowledgements
+seen and undesirable perceptions, such as people
+walking past the robot, can occur.
+There are a number of areas which need further This research is supported by a UK EPSRC Stu-
+investigation. The integration of a number of ad- dentship.
+ditional sensory systems will allow the filter to be
+more widely applicable. In particular, the output
+of a monochrome CCD camera will be used. The References
+imageswillneedtobeextensivelypreprocessedbe-
+Environment A Environment B
+Robot Trajectory
+Robot Trajectory
+2 4 6 8 10 2 4 6 8 10
+Output of Output Neuron Distance (m) Output of Output Neuron Distance (m)
+Trial 1 (Learning) Trial 1 (Robot accustomed to env. A and not learning)
+Trial 2 (Not Learning) Trial 2 (Learning)
+Trial 3 (Learning) Trial 3 (Not Learning)
+Trial 4 (Learning)
+Trial 4 (Not Learning)
+Trial 5 (Not Learning)
+Trial 5 (Learning)
+Trial 6 (Not Learning) Control Trial (Robot trained in different environment)
+environment
+trainingin
+completely
+environment.
+thisareshownontheright,andarediscussedinsection4.1.
+Thefinalpictureontherightshowstheresultsofinvestigating
+noveltyfeatures(sothattheactivityoftheoutputneuronislow),therobotwasmovedintoenvironmentB.Theresultsof novelty
+environment
+learning.
+5:
+experiment.
+Environment A Environment B
+Robot Trajectory
+Robot Trajectory
+2 4 6 8 10 2 4 6 8 10
+Output of Output Neuron Distance (m) Output of Output Neuron Distance (m)
+Trial 1 (Not Learning - Env A)
+Trial 1 (Learning and Forgetting - Env B)
+Trial 2 (Learning and Forgetting - Env A*)
+Trial 2 (Not Learning- Env A) 0.5 0.5
+Trial 3 (Not Learning - Env A)
+Trial 3 (Learning and Forgetting - Env B) 0.5 0.5
+Trial 4 (Learning and Forgetting - Env A*) Trial 4 (Not Learning - Env A)
+Trial 5 (Not Learning - Env A) Trial 5 (Learning and Forgetting - Env B)
+Trial 6 (Learning and Forgetting - Env A*) Trial 6 (Not Learning - Env A)
+Environment A
+Environment A*
+4.2.
+morenoveltyin
+thisfeature.
+experiment
+theright,butusingenvironments
+AandB.
+Theresults
+newenvironment,withforgettingturnedon.
+Itcanbeseenthataftereveryexploration,thetrialwiththedoorclosedfinds
+A.
+environment
+Figure6:
+Ademonstrationoftheeffectsofforgetting.
+Inthefigureonthelefttherobotwasaccustomedtoenvironment
+[1] Craig Bailey and M.C. Chen. Morphological [13] Ulrich Nehmzow. Autonomous acquisition of
+basis of long-term habituation and sensitiza- sensor-motor couplings in robots. Technical
+tion in aplysia. Science, 220:91–93,1983. Report UMCS-94-11-1, Department of Com-
+puterScience,UniversityofManchester,1994.
+[2] C.M. Bishop. Neural Networks for Pattern
+Recognition. OxfordUniversity Press,Oxford, [14] JohnO’KeefeandLynnNadel. TheHippocam-
+England, 1995. pus as a Cognitive Map. Oxford University
+Press, Oxford, England, 1977.
+[3] Bernd Fritzke. A growing neural gas network
+learnstopologies. InG.Tesauro,D.S.Touret- [15] MichaelP.PerroneandLeonN.Cooper.When
+zky,andT.K.Leen,editors,AdvancesinNeu- networks disagree: Ensemble methods for hy-
+ral Information Processing Systems 7, pages brid neural networks. In R.J. Mammone, ed-
+625–632,Cambridge, MA, 1995. MIT Press. itor, Neural Networks for Speech and Image
+Processing. Chapman–Hall, 1993.
+[4] S. Greenberg, V. Castellucci, H. Bayley, and
+J.Schwartz. Amolecular mechanismfor long- [16] James C. Stanley. Computer simulation of a
+term sensitisation in aplysia. Nature, 329:62– model of habituation. Nature, 261:146–148,
+65, 1987. 1976.
+[5] P.M. Groves and R.F. Thompson. Habitua- [17] L. Tarassenko, P. Hayton, N. Cerneaz, and
+tion: Adual-processtheory. Psychological Re- M. Brady. Novelty detection for the identi-
+view, 77(5):419–450,1970. fication of masses in mammograms. Artificial
+Neural Networks, 1995.
+[6] Tuong Vinh Ho and Jean Rouat. Novelty de-
+tection based on relaxation time of a network [18] OdinTaylorandJohnMacIntyre.Adaptivelo-
+of integrate–and–fire neurons. In Proceedings calfusionsystemsfornoveltydetectionanddi-
+of the 2nd IEEE World Congress on Compu- agnosticsinconditionmonitoring.InSPIEIn-
+tational Intelligence, WCCI’98, pages 1524– ternational Symposium on Aerospace/Defense
+1529, 1998. Sensing, 1998.
+[7] MichaelI.JordanandRobertA.Jacobs. Hier- [19] R.F. Thompson and W.A. Spencer. Habitu-
+archicalmixtures of experts and the EM algo- ation: A model phenomenon for the study of
+rithm. NeuralComputation,6:181–214,1994. neuronal substrates of behaviour. Psychologi-
+cal Review, 73(1):16–43,1966.
+[8] Teuvo Kohonen. Self-Organization and Asso-
+ciativeMemory,3rded.Springer,Berlin,1993. [20] DeLiang Wang and Chochun Hsu. SLONN:
+A simulation language for modelling of neural
+[9] TeuvoKohonenandE.Oja. Fastadaptivefor-
+networks. Simulation, 55:69–83,1990.
+mation of orthogonalizing filters and associa-
+tive memory in recurrent networks of neuron- [21] K. Worden, S.G. Pierce, G. Manson, W.R.
+likeelements.BiologicalCybernetics,25:85–95, Philp, W.J. Staszewski, and B. Culshaw. De-
+1976. tection of defects in composite plates using
+lamp waves and novelty detection. Interna-
+[10] Anders Krogh and Jesper Vedelsby. Neural
+tional Journal of Systems Science, 1999.
+network ensembles, cross validation, and ac-
+tive learning. In G. Tesauro, D.S. Touretzky, [22] AlexanderYpmaandRobertP.Duin. Novelty
+and T.K. Leen, editors, Advances in Neural detection using self-organizing maps. In Pro-
+Information Processing Systems 7, pages 231 ceedingsofInternationalConferenceonNeural
+– 238. MIT Press, 1995. Information Processing and Intelligent Infor-
+mation Systems, 1997.
+[11] Stephen Marsland, Ulrich Nehmzow, and
+JonathanShapiro. Noveltydetectionforrobot
+neotaxis. In Proceedings of the 2nd Inter-
+national Symposium on Neural Compuatation
+(NC’2000), pages 554 – 559, 2000.
+[12] Alexandre Nairac, Neil Townsend, Roy Carr,
+Steve King, Peter Cowley, and Lionel
+Tarassenko. A system for the analysis of jet
+system vibration data. Integrated Computer-
+Aided Engineering, 6(1), 1999.

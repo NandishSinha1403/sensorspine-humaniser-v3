@@ -1,0 +1,813 @@
+Shaping Pulses to Control Bistable Biological
+Systems.
+Aivar Sootla, Diego Oyarzu´n, David Angeli and Guy-Bart Stan
+Abstract—Inthispaperwestudyhowtoshapetemporalpulses to implement with current technologies. In addition, because
+to switch a bistable system between its stable steady states. Our of technical limitations and the inherent nonlinearity of bio-
+motivation for pulse-based control comes from applications in
+chemicalinteractions,actuatorsareseverelyconstrainedinthe
+synthetic biology, where it is generally difficult to implement
+type of input signals they can produce. As a consequence, the
+real-time feedback control systems due to technical limitations
+in sensors and actuators. We show that for monotone bistable inputsignalsgeneratedbytraditionalfeedbackcontrollers(e.g.
+systems, the estimation of the set of all pulses that switch the PID or model predictive control) may be hard to implement
+system reduces to the computation of one non-increasing curve. without a significant decrease in control performance.
+We provide an efficient algorithm to compute this curve and
+In this paper we show how to switch a bistable system
+illustrate the results with a genetic bistable system commonly
+without the need for output measurements. We propose an
+used in synthetic biology. We also extend these results to models
+with parametric uncertainty and provide a number of examples open-loop control strategy based on a temporal pulse of
+andcounterexamplesthatdemonstratethepowerandlimitations suitable magnitude µ and duration τ:
+of the current theory. In order to show the full potential of the
+framework, we consider the problem of inducing oscillations in 1 0≤t≤τ,
+amonotonebiochemicalsystemusingacombinationoftemporal u(t)=µh(t,τ), h(t,τ)= (1)
+0 t>τ.
+pulses and event-based control. Our results provide an insight
+into the dynamics of bistable systems under external inputs and
+open up numerous directions for future investigation. Our goal is to characterise the set of all pairs (µ,τ) that
+can switch the system between the stable steady states and
+the set of all pairs (µ,τ) that cannot. We call these sets the
+I. INTRODUCTION
+switchingsetsandaboundarybetweenthesesetstheswitching
+In this paper we investigate how to switch a bistable separatrix. The pairs (µ,τ) close to the switching separatix
+system between its two stable steady states using external are especially important in synthetic biology applications, as
+input signals. Our main motivation for this problem comes a large µ or a large τ can trigger toxic effects that slow down
+from synthetic biology, which aims to engineer and control cell growth or cause cell death.
+biologicalfunctionsinlivingcells[3].Mostofcurrentresearch In a previous paper [1], we showed that for monotone
+insyntheticbiologyfocussesonbuildingbiomolecularcircuits systems the switching separatrix is a monotone curve. This
+inside cells through genetic engineering. Such circuits can result was therein extended to a class of non-monotone sys-
+control cellular functions and implement new ones, including tems whose vector fields can be bounded by vector fields of
+cellular logic gates, cell-to-cell communication and light- monotone systems. This idea ultimately leads to robustness
+responsivebehaviours.Thesesystemshaveenormouspotential guarantees under parametric uncertainty. These results are in
+in diverse applications such as metabolic engineering, biore- the spirit of [10], [11], [12], where the authors considered the
+mediation, and even the energy sector [4]. problemofcomputingreachabilitysetsofamonotonesystem.
+Severalrecentworks[5],[6],[7]haveshowcasedhowcells Some parallels can be also drawn with [13], [14], where
+can be controlled externally via computer-based feedback and feedback controllers for monotone systems were proposed.
+actuators such as chemical inducers or light stimuli [8], [9]. Contributions.Inthepresentpaperweprovidethefirstcom-
+An important challenge in these approaches is the need for plete proof of our preliminary results in [1] and extend them
+real-time measurements, which tend to be costly and difficult in several directions. We formulate necessary and sufficient
+conditions for the existence of the monotone switching sepa-
+DrSootlaiswithInstitutMontefiore,UniversityofLie`ge,B-4000,Belgium
+ratrixfornon-monotonesystems.Althoughitisgenerallyhard
+asootla@ulg.ac.be. Dr Oyarzu´n, Dr Angeli, Dr Stan (d.oyarzun,
+d.angeli, g.stan)@imperial.ac.uk are with Departments of to use this result to establish monotonicity of the switching
+Mathematics, Electrical and Electronic Engineering, and Bioengineering, separatrix, we use it to prove the converse. For example, we
+respectively,ImperialCollegeLondon,SW72AZ,London,UK.DrAngeliis
+showthatforabistableLorenzsystemtheswitchingseparatrix
+alsowiththeDepartmentofInformationEngineering,UniversityofFlorence,
+Italy. is not monotone. We then generalise the main result of [1] by
+Part of this work was performed, while Dr Sootla was a post-doctoral providingconditionsfortheswitchingseparatrixtobeagraph
+research associate at ICL. Dr Sootla and Dr Stan acknowledge support by
+ofafunction.Wealsodiscusstherelationbetweenbifurcations
+the EPSRC grants EP/J014214/1, EP/G036004/1. Dr Stan is additionally
+supportedbytheEPRSCgrantEP/M002187/1.DrSootlaisnowsupportedby and the mechanism of pulse-based switching, which provides
+anF.R.S.–FNRSFellowship.DrOyarzu´nissupportedbyaJuniorResearch additional insights into the switching problem. We use this
+FellowshipfromICL.TheauthorswouldliketothankDrAlexandreMauroy
+intuition to show and then explain the failure of pulse-based
+for valuable suggestions and discussions. This technical report contains the
+materialfrompublications[1]and[2]. controlonanHIVviralloadcontrolproblem[15].Weproceed
+3v0516.9041:viXra
+by providing a numerical algorithm to compute the switching (x ∼ y, y ∼ z implies x ∼ z), and antisymmetric (x ∼ y,
+separatrices for monotone systems. The algorithm can be y ∼ x implies x = y). We define a partial order (cid:23) through
+efficiently distributed among several computational units and a cone K ∈Rn as follows: x(cid:23) y if and only if x−y ∈K.
+does not explicitly use the vector field of the model. We We write x (cid:54)(cid:23) y, if the relation x (cid:23) y does not hold. We
+evaluate the theory and computational tools on the bistable will also write x (cid:31) y if x (cid:23) y and x (cid:54)= y, and x (cid:29) y
+LacI-TetRsystem,whichiscommonlyreferredtoasagenetic if x−y ∈int(K). Similarly we can define a partial order on
+toggleswitch[16].Genetictoggleswitchesarewidelyusedin the space of signals u ∈ U : u (cid:23) v if u(t)−v(t) ∈ K for
+synthetic biology to trigger cellular functions in response to all t≥0. We write u(cid:31) v, if u(cid:23) v and u(t)(cid:54)=v(t) for all
+extracellular signals [3], [17]. t≥0.Partialordersalsoinducesomegeometricpropertieson
+We complement our theoretical findings with several ob- sets. A set M is called p-convex if for every x, y in M such
+servations that illustrate limitations of the current theory thatx(cid:23) y,andeveryλ∈(0,1)wehavethatλx+(1−λ)y ∈
+and highlight the need for deeper investigations of bistable M.
+systems. For example, we show that for a toxin-antitoxin Definition 1: The system (3) is called monotone on D ×
+system [18], the switching separatrix appears to be monotone, U with respect to the partial orders (cid:23) , (cid:23) , if for all x,y ∈
+even though the system does not appear to be monotone. Fi- D and u,v ∈ U such that x (cid:23) y and u (cid:23) v, we have
+nally, in order to demonstrate the full potential of pulse-based φ (t,x,u)(cid:23) φ (t,y,v)forallt≥0.Ifadditionally,x(cid:31) y,
+control, we consider the problem of inducing an oscillatory oru(cid:31) v impliesthatφ (t,x,u)(cid:29) φ (t,y,v)forallt>0,
+behaviour in a generalised repressilator system [19]. then the system is called strongly monotone.
+Organisation. The rest of the paper is organised as follows. In general, it is hard to establish monotonicity of a system
+InSectionIIwecoverthebasicsofmonotonesystemstheory, with respect to an order other than an order induced by an
+formulate the problem in Subsection II-A, and provide an orthant (e.g., positive orthant Rn ). Hence throughout the
+intuition into the mechanism of pulse-based switching for paper, by a monotone system we actually mean a monotone
+monotone systems in Subsection II-B. We also provide some system with respect to a partial order induced by an orthant.
+motivational examples for the development of our theoretical A certificate for monotonicity with respect to an orthant is
+results. In Section III we formulate the theoretical results referred to as Kamke-Mu¨ller conditions [20].
+and in Section IV we present the computational algorithm, Proposition 1 ([20]): Consider the system (3), where g is
+which we evaluate in Section V on the LacI-TetR system. In differentiable in x and u and let the sets D , U be p-convex.
+SectionVI,weprovidecounterexamplesandanapplicationof Let the partial orders (cid:23) , (cid:23) be induced by P Rn , P Rm ,
+x u x ≥0 u ≥0
+inducing oscillations in a generalised repressilator system. All respectively, where P
+the proofs are found in the Appendix. diag((−1)δ1,...,(−1)δm) for some ε
+in {0,1}. Then
+Notation.Let(cid:107)·(cid:107) standfortheEuclideannorminRn,Y∗
+stand for a topological dual to Y, X\Y stand for the relative (−1)εi+εj ∂g i ≥0, ∀ i(cid:54)=j, (x,u)∈cl(D )×U
+complement of X in Y, int(Y) stand for the interior of the ∂x M
+set Y, and cl(Y) for its closure. ∂g
+II. PRELIMINARIES
+if and only if the system (3) is monotone on D ×U with
+Consider a single input control system M ∞
+respect to (cid:23) , (cid:23)
+x˙ =f(x,u), x(0)=x , (2) If we consider the orthants Rn , Rm , then the conditions
+above are equivalent to checking if for all x (cid:22) y such that
+where f : D × U → Rn, u : R → U, D ⊂ Rn, x
+≥0 x = y for some i, and all u (cid:22) v we have g (x,u) ≤
+U ⊂ R and u(·) belongs to the space U of Lebesgue i i u i
+∞ g (y,v).
+measurable functions with values from U. We say that the i
+system is unforced, if u = 0. We define the flow map
+φ : R×D ×U → Rn, where φ (t,x ,u) is a solution
+f ∞ f 0 A. Problem Formulation
+to the system (2) with an initial condition x and a control
+signal u. We consider the control signals in the shape of a We confine the class of considered control systems by
+pulse, that is signals defined in (1) with the set of admissible making the following assumptions:
+µ and τ denoted as S ={µ,τ ∈R }.
+≥0 A1. Let f(x,u) in (2) be continuous in (x,u) on D ×U.
+Inordertoavoidconfusion,wereservethenotationf(x,u)
+Moreover, for each compact sets C ⊂ D and C ⊂
+for the vector field of non-monotone systems, while systems
+U, let there exist a constant k such that (cid:107)f(ξ,u) −
+x˙ =g(x,u), x(0)=x , (3) f(ζ,u)(cid:107) 2 ≤k(cid:107)ξ−ζ(cid:107) 2 for all ξ,ζ ∈C 1 and u∈C 2 .
+A2. Lettheunforcedsystem(2)havetwostablesteadystates
+0 in D , denoted as s0 and s1,
+denote so-called monotone systems throughout the paper. In A3. Let D = cl(A(s0)∪A(s1)), where A(si) stands for
+short, monotone systems are those which preserve a partial the domain of attraction of the steady state si for i =
+orderrelationininitialconditionsandinputsignals.Arelation 0,1 of the unforced system (2),
+∼ is called a partial order if it is reflexive (x∼x), transitive A4. Foranyu=µh(·,τ)withfiniteµandτ letφ (t,s0,u)
+The proof of the proposition is in the Appendix. In many
+applications, the functions ξ(µ), η(µ) are simply evolutions
+of the steady states s0, s1 with respect to the parameter µ,
+respectively.Hence,statement(1)ofProposition2showshow
+thesteadystatesmovewithrespecttochangesinµ.Statement
+(2) ensures that there are at least two distinct asymptotically
+stable equilibria for µ<µ . Finally, statement (3) indicates
+that the system undergoes a bifurcation for µ = µ . The
+Fig. 1. A schematic depiction of the evolution of the stable nodes s0 g (µ), particular type of the bifurcation will depend on a specific
+s1(µ) and the saddle su(µ) with respect to µ in the genetic toggle switch
+g g model. Next we investigate further aspects of this result
+system.Byslowmanifoldwemeanamanifoldconnectingstableequillibria
+and a saddle. The arrows show the direction of the equillibria movements with some examples of monotone and non-monotone bistable
+withincreasingµ.Atµmin theequilibrias0 g (µ)andsu g (µ)collideresulting systems.
+inasaddle-nodebifurcationpreservingonlys1(µ).
+g Example 1: LacI-TetR Switch. The genetic toggle switch is
+composedoftwomutuallyrepressivegenesLacI andTetRand
+wasapioneeringgeneticsystemforsyntheticbiology[16].We
+belong to int(D ). Moreover, let the sets
+f consider its control-affine model, which is consistent with a
+S+ ={µ,τ >0 (cid:12) (cid:12)lim φ (t;s0,µh(·,τ))=s1} toggle switch actuated by light induction [9]:
+f (cid:12) t→∞ f f f p
+(cid:12) x˙ = 1 +p −p x +u,
+(cid:12) t
+x˙ = 6 +p −p x ,
+be non-empty. 2 1+(x
+)p8 9 10 2
+Assumption A1 guarantees existence, uniqueness and con- where the parameters have the following values
+tinuity of solutions to (2), while Assumptions A2–A3 define
+p =40, p =1, p =4, p =0.05, p =1,
+a bistable system on a set D controlled by pulses. In 1 2 3 4 5
+AssumptionA4wedefinetheswitchingsets:thesetS f +,which p 6 =30, p 7 =1, p 8 =4, p 9 =0.1, p 10 =1.
+containsall(µ,τ)pairsthatswitchthesystem,andthesetS f −, In the model (5), x i represents the concentration of each
+which contains all pairs that do not. The boundary between protein, whose mutual repression is modelled via a rational
+these sets is called the switching separatrix. In the rest of the function. The parameters p and p represent the repression
+paper, we focus on the control problem of estimating the thresholds, whereas p and p model the basal synthesis rate
+switching sets. ofeachprotein.Theparametersp andp arethedegradation
+rateconstants,p ,p arecalledHill(orcooperativity)parame-
+B. Mechanism of Pulse-Based Switching ters,andp 1 ,p 6 describethestrengthofmutualrepression.By
+means of Proposition 1 we can readily check that the model
+The general problem of switching a bistable system with is monotone on R2 × R for all nonnegative parameter
+external inputs is amenable to an optimal control formulation. ≥0 ≥0
+values.Itcanbeverifiedbydirectcomputationthatthesystem
+However, in applications such as synthetic biology, optimal satisfies Assumptions A1–A4 with D = R2 . It can be
+control solutions can be very hard to implement due to f ≥0
+also shown that the unforced system is strongly monotone in
+technical limitations in actuators and output measurements. int(R2 ) using the results in [21].
+Additionally,thesolutionofthisoptimalcontrolproblemmay ≥0
+With the chosen parameter values, we numerically found
+be technically challenging. Hence applying open-loop pulses
+a bifurcation to occur at µ ≈ 1.4077. For µ < µ the
+can be a reasonable solution, if we can guarantee some form
+system has two stable nodes and a saddle. We observe that
+of robustness. As we shall see later, our results show that for
+ξ(µ)=η(µ) for all µ>µ , and therefore we conclude that
+monotone systems, pulse-based switching is computationally
+the system undergoes a saddle-node bifurcation, as illustrated
+tractable and robust towards parameter variations.
+in Figure 1.
+Before presenting our main results, we first provide an
+Example 2: Lorenz system. Consider a system
+intuitive link between monotonicity and the ability to switch
+a system with temporal pulses. If we consider constant inputs x˙ 1 =σ(x 2 −x 1 )+u
+u = µ and regard µ as a bifurcation parameter, we have the x˙ =x (ρ−x )−x +u
+following result.
+Proposition 2: Letthesystem(3)satisfyAssumptionsA1–
+A4 and be monotone on D ×U with respect to Rn , R . with parameters σ = 10, ρ = 21, β = 8/3, which is
+Letµ besuchthatallpairs(µ,τ)∈S− for0<µ<µ , non-monotone and bistable with two stable foci. Numerical
+andanyfinitepositiveτ.Letalsoξ(µ)= lim φ (t,s0,µ)and computation of the sets S− and S+ in Figure 2 suggests that
+η(µ)= lim φ (t,s1,µ). Then t→∞ the switching separatrix is not monotone. We will revisit this
+t→∞ g g conclusion in the next section using our theoretical results.
+1) If µ≤λ<µ min then ξ(µ)(cid:22) x ξ(λ), η(µ)(cid:22) x η(λ) Example 3: HIV viral load control problem. In [15] the
+2) If 0<µ<µ min then ξ(µ)∈A(s0 g ) and ξ(µ)≺ x η(µ). authors considered the problem of switching from a “non-
+3) The function ξ(µ) is discontinuous at µ min . healthy” (s0) to a “healthy” (s1) steady state by means of two
+Pulse length τ
+40 As shown next, Theorem 1 can also be used to establish non-
+monotonicity of the switching separatrix.
+Remark 1 (Lorenz system revisited): Consider the Lorenz
+system from the previous section and three different pulses
+u (t) = µ h(t,τ) with µ = 24, µ = 25, µ = 26, and
+τ =1.Numericalsolutionswithincreasedaccuracyshowthat
+the flows φ(t,s0,u ) and φ(t,s0,u ) converge to s0, whereas
+10 φ(t,s0,u ) convergesto s1.Application ofTheorem1 proves
+that the switching separatrix is not monotone.
+5 10 15 20 25
+ThemajorbottleneckinthedirectapplicationofTheorem1
+is the verification of condition (1), which is generally compu-
+Fig. 2. Switching sets for the Lorenz system. We simulated the Lorenz tationally intractable. For example, condition (1) is satisfied if
+system for (µ,τ) pairs taken from a mesh grid. The green and red crosses
+thepartialorderispreservedforcontrolsignals.Thatisforany
+correspondtothepairsthatswitchedornotswitchedthesystem,respectively.
+u (cid:22) v, it should follow that φ (t,s0,u) (cid:22) φ (t,s0,v) for
+u g g x g g
+allt>0.Althoughthispropertyisweakerthanmonotonicity,
+controlinputs(u andu )thatmodeldifferentdrugtherapies. itisnotclearhowtoverifyit.Monotonicity,ontheotherhand,
+Due to space limitations we refer the reader to [15] for a is easy to check and implies condition (1) in Theorem 1. This
+description of the model. It can be shown that both steady is used in the following result.
+states are stable foci and that the model is non-monotone. Theorem 2: Letthesystem(3)satisfyAssumptionsA1–A4
+Although the system can be switched with non-pulse control and be monotone on D g ×U ∞ .
+signals [15], using extensive simulations we were unable to 1) The set S− is simply connected. There exists a curve
+find a combination of pulses in u 1 and u 2 switching the µ g (τ), which is a set of maximal elements of S g − in the
+system. standardpartialorder.Moreover,thecurveµ (τ)issuch
+As in the case of monotone bistable system, we found a that for any µ ∈µ (τ ) and µ ∈µ (τ ), µ ≥µ for
+1 g 1 2 g 2 1 2
+bifurcation with respect to constant control signals u 1 = µ 1 τ 1 <τ 2 .
+and u 2 = µ 2 . More specifically, we fixed µ 2 = 0.4, and 2) The set S+ is simply connected. There exists a curve
+numerically found a bifurcation at µ 1 ≈ 0.7059. The major ν g (τ), which is a set of minimal elements of S g + in the
+difference between this case and the monotone system case standardpartialorder.Moreover,thecurveν (τ)issuch
+(Example 1) is that the steady state s1(0.7059,0.4) lies the that for any ν ∈ ν (τ ) and ν ∈ ν (τ ), ν ≥ ν for
+1 g 1 2 g 2 1 2
+domain of attraction of s0(0,0). Hence if we stop applying τ <τ .
+the constant control signal we regress back to the initial point 3) Let the system (3) be strongly monotone and ∂A be
+s0(0,0). Furthermore, with increasing µ
+the steady state theseparatrixbetweenthedomainsofattractionsA(s0)
+s1(µ 1 ,0.4) is moving towards the origin, which also lies in and A(s1) of the unforced system (3). Let additionally
+the domain of attraction of s0(0,0). This makes pulse-based ∂A be an unordered manifold, that is, there are no x,
+switching very difficult, if not impossible. y in ∂A such that x (cid:31) y. Then ν (τ) = µ (τ) for
+all τ > 0 and the curve µ (·) = ν (·) is a graph of a
+monotonically decreasing function.
+III. THEORETICALRESULTS
+We state implicitly in Theorem 2, that if µ (·) (cid:54)= ν (·),
+In [1] we showed that the switching separatrix of a mono- g g
+then the flow φ (t,s0,µh(·,τ)) does not converge to s0 or
+tone bistable system x˙ = g(x,u) is non-increasing. Here we g g g
+s1, since it may end up on the separatrix ∂A. We note that
+presentageneralisationofthisresultbyformulatingnecessary g
+ourcomputationalprocedurepresentedinSectionIVdoesnot
+and sufficient conditions for the switching separatrix to be
+require that µ (τ) = ν (τ) or that µ (·), ν (·) are graphs of
+monotone, the proof of which is found in the Appendix. g g g g
+functions. Hence we treat point (3) in Theorem 2 as a strictly
+Theorem 1: Letthesystem(2)satisfyAssumptionsA1–A4.
+theoretical result, but remark that sufficient conditions for the
+Then the following properties are equivalent:
+separatrix ∂A to be unordered are provided in Theorem 2.1
+1) If φ f (t,s0 f ,µh(·,τ)) belongs to A(s0 f ) for all t ≥ 0, in [22]. The most relevant condition to our case is that the
+then φ f (t,s0 f ,µh(·,τ)) belongs to A(s0 f ) for all t ≥ 0, flow of the unforced system is strongly monotone, which we
+and for all µ, τ such that 0<µ≤µ, 0<τ ≤τ. also assume in Theorem 2.
+2) The set S− is simply connected. There exists a curve
+f Besides µ g (·) (cid:54)= ν g (·), there are other pathological cases.
+µ f (τ), which is a set of maximal elements of S f − in the For example, applying constant input control signals u = µ
+standardpartialorder.Moreover,thecurveµ f (τ)issuch typically results in a system (2) with a different set of steady
+that for any µ 1 ∈µ f (τ 1 ) and µ 2 ∈µ f (τ 2 ), µ 1 ≥µ 2 for states than s0 or s1. Moreover, the number of equilibria may
+τ 1 <τ 2 . be different. Hence, with τ → ∞ the set S+ typically does
+Theorem 1 shows that the computation of the set S− is not contain the limiting control signal u = µ. If the set of
+reduced to the computation of a curve µ (τ). This result also pairs(µ,τ)resultinginthesepathologicalcasesisnotmeasure
+provides a connection between the geometry of domains of zero, then the sets cl(S+) and cl(R2 \S−) are not equal,
+attractionoftheunforcedsystemandtheswitchingseparatrix. which can complicate the computation of the switching sets.
+hard to check monotonicity of the system with respect to an
+arbitrary cone.
+boundary of
+Theorem 3 also provides a way of estimating the switching
+boundary of
+set under parametric uncertainty, which is stated in the next
+boundary of
+corollary.
+Corollary 1: Consider a family of systems x˙ = f(x,u,p)
+withavectorofparametersptakingvaluesfromacompactset
+P.Letthesystemsx˙ =f(x,u,p)satisfyAssumptionsA1–A4
+Fig.3. Aschematicdepictionoftheconditions(8)and(9).Thecondition(8) for every p in P. Assume there exist parameter values a, b in
+ensures that all the steady states lie in the intersection of the corresponding
+domains of attractions (violet area). The steady state s1 cannot lie in the P such that the systems x˙ =f(x,u,a) and x˙ =f(x,u,b) are
+dashedblueboxduetocondition(9). monotone on D M ×U ∞ , where D M = ∪ D f(·,·,q) and
+f(x,u,a)(cid:22) f(x,u,p)(cid:22) f(x,u,b), (11)
+However, in many practical applications, the sets cl(S+) and
+f for all (x,u,p)∈D ×U ×P. Let also
+cl(R2 \S−)appeartobeequal.Thereforeinordertosimplify M
+≥0 f (cid:18) (cid:19)
+the presentation we study only the properties of the set S f −. s0 ∈int ∩ A(s0 ) , (12)
+Ifthesystemx˙ =f(x,u)tobecontrolledisnotmonotone, f(·,·,p) q∈P f(·,·,q)
+thenthecurveµ f (τ)maynotbemonotone,whichisessential s1 (cid:54)∈ (cid:110) z|s0 (cid:22) z (cid:22) s0 (cid:111) , (13)
+for our computational procedure. Instead, we estimate inner f(·,·,p) f(·,·,a) x x f(·,·,b)
+andouterboundsontheswitchingsetprovidedthatthevector for all p in P. Then the following relation holds:
+field of the system can be bounded from above and below by S− ⊇S− ⊇S− ∀p∈P. (14)
+vector fields of monotone systems. This is formally stated in f(·,·,a) f(·,·,p) f(·,·,b)
+the next result, while the proof is in the Appendix. The proof follows by setting g(x,u) = f(x,u,a) and
+Theorem 3: Let systems (2), (3), (4) satisfy Assump- r(x,u)=f(x,u,b)andnotingthattheconditionsin(12),(13)
+tions A1–A4. Let D = D ∪ D ∪ D , the systems (3) imply the conditions in (8), (9) in the premise of Theorem 3.
+and (4) be monotone on D ×U and Theorem 3 states that if the bounding systems (3), (4)
+can be found, the switching sets S−, S− can be estimated,
+g(x,u)(cid:22) x f(x,u)(cid:22) x r(x,u) on D M ×U. (7) thereby providing approximations o g n th r e switching set S−.
+Additionally assume that the stable steady states s0, s0, s0, In what follows we provide a procedure to find monotone
+s1 satisfy boundingsystemsifthesystem(2)isnear-monotone,meaning
+that by removing some interactions between the states the
+s0 g ,s0 f ,s0 r ∈int (cid:0) A(s0 g )∩A(s0 f )∩A(s0 r ) (cid:1) , (8) system becomes monotone (see [24] for the discussion on
+s1 (cid:54)∈ (cid:8) z|s0 (cid:22) z (cid:22) s0(cid:9) . (9) near-monotone systems).
+Let there exist a single interaction which is not compatible
+Then the following relations hold: with monotonicity with respect to an order induced by Rn ,
+S− ⊇S− ⊇S−. (10) and let this interaction be between the states x i and x j . This
+happens if, for example, the (i,j)-th entry in the Jacobian
+The technical conditions in (8), (9) are crucial to the proof (cid:110) ∂fi (cid:111) is smaller or equal to zero. A monotone system can
+and are generally easy to satisfy. An illustration of these ∂xj i,j
+beobtainedbyreplacingthevariablex withaconstantinthe
+conditions is provided in Figure 3. Checking the condition j
+function f (x,u), which removes the interaction between the
+(9) reduces to the computation of the stable steady states, i
+as does checking the condition (8). Indeed, to verify that s0 states x i and x j . If the set D is bounded then clearly we can
+f find x and x such that x ≥ x ≥ x for all x ∈ D. If the
+belongs to the intersection of A(s0), A(s0), A(s0), we check j j j j j
+g f r set D is not bounded, then we need to estimate the bounds on
+if the trajectories of the systems (3), (4) initialised at s0 with
+f the intersection of A(s0) and the reachability set starting at
+u = 0 converge to s0 and s0, respectively, which is done by f
+g r s0 for all admissible pulses. Let g = r = f for all k (cid:54)= i,
+numerical integration. The computation of stable steady states f (cid:12) k k k (cid:12)
+can be done using the methods from [23].
+In some applications, we need to find a subset of the pairs is straightforward to show that x˙ = g(x,u), and x˙ = r(x,u)
+(µ,τ) that switch the system (2) from s0 to s1. Due to the aremonotonesystemsandtheirvectorfieldsareboundingthe
+inclusion S− ⊇ S−, existence of the system (3) allows to vector field f from below and above, respectively. Note that
+do that. In this case, we are only interested in finding the in order to apply Theorem 3 we still need to check if these
+system (3), hence the condition (9) is not required and the bounding systems satisfy Assumptions A1–A4.
+condition(8)istransformedtos0,s0 ∈int (cid:16) A(s0)∩A(s0) (cid:17) . In the case of Corollary 1, the procedure is quite similar.
+g f g f If the system x˙ = f(x,u,p) is monotone for all parameter
+Remark 2: The proofs of Theorems 2 and 3 are adapted
+values p, then we can find a, b if there exists a partial order
+in a straightforward manner to the case when systems are
+in the parameter space. That is a relation (cid:22) such that for
+monotonewithrespecttoanorder(cid:23) inducedbyanarbitrary p
+x parameter values p and p satisfying p (cid:22) p we have that
+cone K , and the order (cid:23) induced by R . In examples, 1 2 1 p 2
+however, we always assume that K is an orthant, since it is f(x,u,p )(cid:22) f(x,u,p ) ∀x∈D,u∈U.
+Algorithm 1 Bisection Algorithm for Computation of the Algorithm 2 Computation of Switching Separatrix Based on
+Switching Separatrix Random Sampling
+1: Inputs: The system x˙ = f(x,u) with initial state s0, 1: Inputs:Thesystemx˙ =f(x,u)withinitialstates0,final
+final state s1, tolerance ε, simulation time t , a grid state s1, total number of samples N, simulation time t ,
+T ={τ }N , an upper bound on the magnitude µup, the lowerandupperboundsonτ,τ andτ respectively,
+i i=1 min max
+number of used processors N . the numbers N , N , probability distribution δ
+2: Outputs: finite sets Mmin and Mmax 2: Outputs: sets Mmin and Mmax
+3: for i=1,...,[N/N par ] do 3: Compute µ min and µ max using bisection for values τ min
+4: Set µl j =0, µu j =µup, and τ max
+5: for j =1,...,N par do 4: Set N par =2(N gr +N ε )
+6: while µu j −µl j >ε do 5: Set Mmax =Mmin ={(µ max ,τ min ),(µ min ,τ max )}
+7: µc j =(µu j +µl j )/2 6: for i=1,...,[N/N par ] do
+8: Set uc =µc j h(·,τ i(Npar−1)+j ) 7: Compute the values µ err , τ err , and the corresponding
+9: if φ f (t e ;s0 f ,uc)(cid:22) x s1 f then boxes B µ , B τ .
+10: µc j =µl j 8: Generate N gr samples (µ,τ) in each of the boxes B µ
+11: else and B τ using a probability distribution δ
+12: µc j =µu j 9: Generate randomly 2N ε samples
+13: end if 10: for j =1,...,N par do
+14: end while 11: Check if the samples (µ,τ) switch the system
+15: end for 12: end for
+16: Mmin =[Mmin,µl,...µl ] 13: Update and prune the sets Mmin, Mmax
+17: Mmax =[Mmax,µ 1 u,...µ N u par ] 14: end for
+18: end for
+approximation as
+If a partial order is found, the values a and b are computed
+as minimal and maximal elements of P in the partial order rel err max min err max min
+(cid:22) . This idea is equivalent to treating parameters p as inputs
+p Note that, even if the green and red circles lie very close to
+and showing that the system x˙ =f(x,u,p) is monotone with
+each other the relative error can be substantial. In numerical
+respect to inputs u and p.
+simulations we use a logarithmic grid for τ, which yields
+a significantly lower relative error in comparison with an
+equidistant grid. This can be explained by an observation
+IV. COMPUTATIONOFTHESWITCHINGSEPARATRIX
+that in many numerical examples µ(τ) appears to be an
+ThetheoreticalresultsinSectionIIIguaranteetheexistence exponentially decreasing curve.
+oftheswitchingseparatrixformonotonesystems,butinorder There are a few drawbacks in Algorithm 1. Firstly, it
+to compute µ(τ) we resort to numerical algorithms. requires a large number of samples. Secondly, the choice of
+Given a pair (µ,τ) we can check if this pair is switching the grid is not automatic, which implies that for switching
+the system using simulations (that is, numerically integrating separatrices with different geometry the relative error on the
+thecorrespondingdifferentialequation).Ifthecurveµ(τ)isa same grid may be drastically different. Finally, the algorithm
+monotonefunction,thenforeveryτ thereexistsauniquepulse
+magnitude µ = µ(τ). Let T = {τ }N be such that τ =
+τ ≤ τ ≤ τ ≤ τ = τ for all i. Clearly, for every τ
+1 i i+1 N max i
+wecancomputethecorrespondingµ usingbisection.Westart
+the algorithm by computing the value µ corresponding to τ .
+Due to monotonicity of the switching separatrix, the minimal
+switching magnitude µ for the pulse length τ is smaller or
+equaltoµ .Therefore,wecansavesomecomputationaleffort
+by setting the upper bound on the computation of µ equal to
+µ . The computation of the pairs (µ,τ) can be parallelised by
+settingthesameupperboundonµ ,···,µ ,whereN
+i i+Npar par
+is the number of independent computations. The procedure
+is summarised in Algorithm 1, where M and M are
+the sets of pairs (µ,τ) approximating the switching separatrix
+Fig. 4. Illustration of the error of computation of the switching separatrix
+from below and above, respectively. betweenthevaluesτmin,τmax.Theblackcurveistheswitchingseparatrix
+tobecomputed,theredandgreencirclesaretheupperandlowerbounding
+In order to evaluate the error of computing the switching
+points,respectively.Theswitchingseparatrixshouldliebetweenthecoloured
+separatrix consider Figure 4. According to the definitions in regionsduetoitsmonotonicity.Thevaluesµerrandτerrarethelargestheight
+the caption of Figure 4 we define the relative error of the andwidthofboxesinscribedbetweenthecolouredregions,respectively.
+Total Number of Samples
+Centralised Alg 2 TABLEI
+Alg 2 SAMPLEEFFICIENCYN eff INPERCENT.INTHENOTATIONx±y,xSTANDS
+FORTHEEMPERICALMEAN,ANDyFORTHEEMPERICALSTANDARD
+Alg 2 DEVIATION.RECALLTHATNpar=2(Ngr+Nε)FORALGORITHM2.
+Centralised Alg 1
+Alg 1 Algorithm N eff
+Alg.1withNpar=1 14%
+Alg.1withNpar=20 13.3%
+Alg.2withNgr=1,Nε=0 28.21±0.72%
+Alg.2withNgr=10,Nε=0 19.90±0.45%
+Alg.2withNgr=5,Nε=5 39.68±0.76%
+Alg.2withNgr=0,Nε=10 49.36±0.55%
+V. ILLUSTRATIONOFTHEORETICALRESULTSONTHE
+Fig. 5. Average error against total number of generated samples. The
+LACI-TETRSWITCH
+curves corresponding to Algorithm 1 are computed by a single run of the
+algorithm. The curves corresponding to Nε =0 are averages over ten runs A. Evaluation of the Computational Algorithm
+of Algorithm 2, while the curves for Nε > 0 are the averages over twenty
+runsofAlgorithm2.RecallthatNpar=2(Ngr+Nε)forAlgorithm2. Here we will compare Algorithm 1 and 2 with different
+parameter values, as well as their distributed implementations
+on the LacI-TetR switch introduced in Subsection II-B. Note
+thatAlgorithm2doesnotdependexplicitlyonthedynamicsof
+relies on the assumption that µ(τ) is a graph of a monotone
+theunderlyingsystem,butdependsonlyonthegeneratedpairs
+function, which may not be true. In order to overcome these
+(µ,τ). Therefore, the convergence and sample efficiency re-
+difficulties, we have derived Algorithm 2 based on random
+sultspresentedherewillbevalidforabroadclassofsystems.
+sampling,whichconvergesfasterthanAlgorithm1,hashigher
+In Figure 5, we compare the error against the total number
+sample efficiency, does not require a predefined grid and the
+of generated samples. Since checking if a sample switches
+graph assumption. Some of the steps in Algorithm 2 require
+the system is the most expensive part of both algorithms, the
+additional explanation:
+totalnumberofsamplesreflectsthecomputationalcomplexity.
+Step7.Findtwoboxes:theboxB µ withthemaximalheight In the case of Algorithm 2 with N ε = 0 the randomisation
+(denoted as µ err ) and the box B τ with the maximal width level is not high, hence an average over ten runs is sufficient
+(denoted as τ err ) that can be inscribed between the coloured to demonstrate the average behaviour of this algorithm. Note
+regions as depicted in Figure 4. that both curves corresponding to Algorithm 2 with N = 0
+Step 9. Generate N samples of τ using a probability outperform the curves corresponding to Algorithm 1 in terms
+distribution δ between τ and τ . For every τ generate of accuracy.
+a value µ using a distribution δ such that µ lies in the Some computational effort in Algorithm 2 goes into com-
+area between the coloured regions. Repeat this step by first puting the error. However, this effort appears to be negligible
+generating µ between µ and µ using a distribution incomparisonwithnumericallysolvingadifferentialequation
+δ, and then generating τ for every generated µ in the area for a given pair (µ,τ) even for such a small system as the
+between the coloured regions. toggleswitch.Werunthesimulationsonacomputerequipped
+with Intel Core i7-4500U processor and 8GB of RAM. Using
+Step 13. First, we update the sets Mmin, Mmax by adding
+thecentralisedversionofAlgorithm2weachievedonaverage
+the samples that do not switch and switch the system, respec-
+arelativeerrorequalto0.0448in87.65seconds,whileittook
+tively. Then if there exist two pairs (µ ,τ ) and (µ ,τ ) in
+1 1 2 2 89.17 seconds to obtain a relative error equal to 0.0842 with
+the set Mmin (resp., Mmax) such that µ ≤µ and τ ≤τ ,
+Algorithm 1. Note that for systems with a larger number of
+thendeletethepair(µ ,τ )fromthesetMmin (resp.,thepair
+states the difference may be larger.
+(µ ,τ ) from the set Mmax).
+In Table I, we compare the sample efficiency of Algo-
+Note that Step 11 is the most computationally expensive
+rithms 1 and 2 with different input parameters, which we
+part of the algorithm and its computation is distributed into
+N par independent tasks. In our implementation, we chose δ N =|Mmin∪Mmax|/N
+as a Beta distribution with parameters 1 and 3 and adjusted
+the support to a specific interval. Note that the set between where N is the total number of generated samples, and
+the coloured regions is getting smaller with every generated |Mmin∪Mmax| is the number of samples in the set Mmin∪
+sample, hence the relative error of Algorithm 2 is a non- Mmax.ResultsinTableIindicatethatAlgorithm2hashigher
+increasing function of the total number of samples. In fact, sample efficiency than Algorithm 1.
+numerical experiments show that this function is on average Our results also indicate that Algorithm 2 with N = 5,
+exponentially decreasing. After the sets Mmin and Mmax N = 5 has on average a higher empirical convergence rate
+are generated one can employ machine learning algorithms to and a higher sample efficiency than Algorithm 2 with N =
+build a closed form approximation of a switching separatrix 10, N =0. This indicates that combination of non-zero N ,
+(e.g., Sparse Bayesian Learning [25]; see also [26], [27] for N improves convergence and sample efficiency, which can
+efficient algorithms). be explained as follows. When the total number of generated
+PARAMETERVALUESFORSYSTEMSINSUBSECTIONV-B.THE
+UNSPECIFIEDPARAMETERVALUESARETHESAMEASIN(6).
+Fi Fi upper lower 30
+p1=40,p4=0.05 p1=20,p4=0.01,
+p6=30,p9=0.1 p6=45,p9=0.3,
+p1=40,p4=0.05 p1=20,p4=0.01, 20
+i=2 p6=30,p9=0.1 p6=45,p9=0.3,
+p2=4,p7=1 p2=1,p7=4, 10
+p1=40,p4=0.05 p1=20,p4=0.01,
+i=3 p6=30,p9=0.1 p6=45,p9=0.3,
+p5=1,p10=2 p5=3,p10=1, 0
+0 5 10 15 20
+Pulse length τ
+samples is low, we do not have sufficient information on the
+behaviour of the switching separatrix. Therefore we need to
+explorethisbehaviourbyrandomlygeneratingsamples,before
+westartminimisingtherelativeerror.Thisideaissimilartothe
+so-called exploration/exploitation trade-off in reinforcement
+learning [28].
+B. Switching in the LacI-TetR System
+Robust Switching in the LacI-TetR System. In Table II, we
+specify different versions of the LacI-TetR system by varying
+some of the parameters in (6). After that we compute the
+switchingseparatricesandplottheminFigure6.Notethatthe
+separatrices for F2 , F3 intersect, which happens since
+lower lower
+the vector fields f and f of systems F2 and F3 , cor-
+2 3 lower lower
+respondingly,arenotcomparable.Thismeansthatthereexists
+a set X = {(x,u) ∈ D×U} on which f (x,u) (cid:54)(cid:22) f (x,u)
+and f (x,u)(cid:54)(cid:22) f (x,u).
+The separatrices for F1 , F1 lie very close to each
+upper lower
+otherdespitethenumberofparametersvariedandthelevelof
+variations. This is not true for the separatrices F2 , F2
+upper lower
+andF3 ,F3 .Thisindicatesthattheswitchingseparatrix
+upper lower
+is sensitive to variations of some parameters more than to
+variations of other. In our case, this happens because the
+variationsinparametersp ,p ,p ,andp affectsignificantly
+thepositionsofthestablesteadystates.Therefore,pulseswith
+significantly smaller magnitudes are required to switch the
+systems F2 and F3 in comparison with F2 and
+lower lower upper
+F3 , respectively.
+Switching in LacI-TetR Systems with Perturbed Dynamics.
+Consider the following three-state system
+F = 1000 (15) x˙ = −4x +u,
+p 3x1 x + 1 1 +5x 2 −0.3x 3 .
+Consider two nominal systems F1 and F2 specified in Ta-
+ble III by changing parameter values for p , p , p . In
+Table III, the notations Gi and Gi stand for the upper
+upper lower
+and lower bounding system of Fi (for i=1,2).
+Consider first the system F1 and compute the bounding
+systems G1 and G1 . We will follow the procedure
+upper lower
+described in Section III. Using Proposition 1, it is easy to
+check that with a positive value for p this system is not 2
+monotone with respect to any orthant. Hence, we need to
+Switching separatrices
+Fig. 6. Switching separatrices for the LacI-TetR system (5). The system
+parametersaredefinedinTableII.
+boundthetermp x byconstantsinordertoobtainmonotone
+bounding systems. By simulating the system we observe that
+x lies in a bounded interval between 0 and z1(1), where
+z1(1) is the first component of the initial point z1. Hence,
+we can build an upper G1 and a lower G1 bounding
+upper lower
+system for the nominal one F1. We take the system G1 upper
+with the same parameter values as the nominal one except for
+p ,whichisequaltozero,andp equalto0.1z1(1).Similarly, 2 1 0
+we choose the system G1 with p = 0, and p = 0. The lower 2 1
+results can be seen in the upper panel of Figure 7. We have
+computed the approximation of the switching separatrix for
+F1 by simulating the system on a mesh grid in µ and τ.
+Thisrequiresaconsiderablecomputationaleffort,butprovides
+a decent approximation. Note that the switching separatix
+for F1 appears to be a monotone curve, even though it
+cannotbeguaranteed.However,thiscanbeguaranteedforthe
+separatrices of the bounding systems, which are monotone.
+Now let us compute the bounds on the switching separatrix
+of the nominal system F2, where the Michaelis-Menten term
+(x /(x +1)) prevents the system from being monotone. In a 1 1
+similar fashion as for the case of F1, we can build an upper
+G2 and a lower G2 bounding systems for F2. This upper lower
+resultsintheswitchingseparatricesdepictedinthelowerpanel
+of Figure 7. The bounds on the switching separatrix for F2
+are tighter in comparison with the bounds of the switching
+separatrix for F1. Note that in the case of the system F1, we
+use the following bound 0 ≤ x ≤ z1(1), while in the case 1 0
+of the system F2, we use the bound 0 ≤ x1 ≤ z 0 2(1) , where z2(1) is the first component of the in x it 1 i + al 1 poin z t 0 2 o (1 f )+ th 1 e 0
+system F2. At the same time the numbers z1(1), z2(1) are 0 0
+PARAMETERVALUESFORSYSTEMSWITHDIFFERENTPARAMETER
+VARIATIONS,WHEREz
+i(1)ISTHEFIRSTCOMPONENTOFTHEINITIAL
+i OFTHESYSTEMFiFORiEQUALTO1AND2.
+lower upper p2=0.1 p1=0 p1=0.1z
+p1=p3=0 p2=p3=0 p2=p3=0
+lower upper
+p3=0.1 p1=0 p1=0.1 z2 z ( 0 2 1 ( ) 1 + ) 1 0
+p1=p2=0 p2=p3=0 p2=p3=0
+0 10 20 30 40 50 60 70
+Pulse lengthτ
+10 15 20 25 30
+Pulse lengthτ
+Switching separatrices
+5 10 15 20 25 30 35 40
+Pulse length τ
+Switching separatrices
+Fig.7. TheswitchingseparatricesforsystemsF1(theupperpanel)andF2
+(thelowerpanel)withlowerandupperbounds.
+of order O(103), hence clearly z 0 2(1) (cid:28)z1(1). This means z2(1)+1 0
+that the bounds on the vector fiel 0 d of F2 are tighter than the
+bounds on the vector field of F1. This in turn indicates that
+tighter bounds on the vector field entail tighter bounds on the
+separatrix.
+VI. FURTHERCOUNTEREXAMPLESANDAPPLICATIONS
+Toxin-Antitoxin System. Consider a model of a toxin-
+antitoxin system studied in [18]
+]2(cid:19)
+]2(cid:19)
+where A and T is the total number of toxin and antitoxin
+proteins, respectively, while [A ], [T ] is the number of free
+toxin and antitoxin proteins. In [18], the authors considered
+the model with ε = 0. In order to simplify our analysis we
+set ε=10−6. If the parameters are chosen as follows:
+σ =166.28, K =1, β =β =0.16, σ =102 T 0 M c A
+Γ =0.2, K =K =0.3;
+the system is bistable with two stable nodes. But the system
+is not monotone and we were not able to find bounding
+Fig. 8. Approximation of the switching separatrix for the toxin-antitoxin
+system.
+systems satisfying Assumptions A1-A4. Nevertheless, we ap-
+proximated the switching sets and the switching separatrix on
+ameshgridinµ∈[10,30]andτ ∈[5,40].Wehad200points
+inthegridforτ and80pointsinthegridforµ.InFigure8we
+plot a curve which separates the pairs (µ,τ) which toggle the
+systemfromthosewhichdonot.Asthereadermaynoticethe
+curve appears to be monotone. We can provide some intuition
+behindthisphenomenon.Withεtendingtozero,wecanapply
+singular perturbation theory (cf. [29]) to eliminate the states
+[A ], [T ]. Numerical computations indicate that the reduced f f
+ordersystemisnotmonotoneinR2 ,however,itismonotone
+around the stable equilibria, which may explain monotonicity
+of the switching separatrix of the full order system.
+Switching in a Mass Action Kinetics System. The following
+system was considered in [30]
+x˙ =f (x ,x )=2k x −k x2−k x x −k x +βu,
+1 1 1 2 1 2 2 1 3 1 2 4 1
+x˙ =f (x ,x )=k x2−k x . 2 2 1 2 2 1 1 2
+We can assume without loss of generality that k = 1, since
+we can remove one of the parameters using a simple change
+of variables. In [30] it is shown that the unforced system has
+three equilibria:
+(cid:17)2 0 k1− L k1+ L 2k3 2k3
+where L = k −4k k , s0, s1 are stable nodes, and su is 1 3 4
+a saddle. Naturally the system is bistable if L > 0, globally
+asymptotically stable if L < 0 and a saddle-node bifurcation
+occurs if L = 0. The system is not monotone in the positive
+orthant, since the derivative of f (x ,x ) with respect to x 1 1 2 2
+is equal to 2k −k x and it is negative for x > 2k /k .
+1 3 1 1 1 3
+However, we are interested in pairs (µ,τ), which are close to
+theseparatrixandaffectthesysteminthedomainofattraction
+of s0. It can be verified that all equilibria s0, su and s1 lie
+inside the box D = {x ,x |0 ≤ x ≤ 2k /k }, hence the
+system is monotone inside D and non-monotonicity outside
+of this set does affect our problem.
+The derivatives of f , f with respect to k and k do not 1 2 1 2
+have the same sign hence the system is not monotone with
+respecttoparametersk andk .Thesetermsappearduetoso-
+called mass action kinetics, which are common in biological
+applications and hence this problem is met often. We have
+already removed the parameter k 2 from the consideration, 1.8
+which simplifies the problem. A straightforward solution is
+to treat every instance of k as an independent parameter.
+Hence we have a vector of parameters [k , k , k , k ],
+wherek istheinstanceofk enteringthefirstequation,and
+k is the instance of k entering the second equation. Let
+k ∈[7.7, 8.3], k ∈[1, 1.2], k ∈[1, 1.2] and consider the
+lowerboundingparametervectorp =[7.7, 1.2, 1.2, 8.3],and
+the upper bounding parameter vector p = [8.3, 1, 1, 7.7].
+We apply Corollary 1 only to relatively small perturbations in 2 6 10 14
+Pulse length τ
+parameters, since with larger variations the system becomes
+mono- or unstable. There is no indication that this problem is
+uniquetothissystem,anddoesnotappearinothermass-action
+systems.
+We conclude this example by performing a sweep for the
+parameter k ∈ [6,10], while k = k = 1 (see Figure 9).
+Numerical simulations suggest that for any k ∈ (6,10) the
+switching separatrix appears to lie between the blue and the
+red curves, which are switching separatrices for k = 6 and
+k = 10, respectively. Again we can only provide some
+intuitionbehindthisobservation.Itisstraightforwardtoverify
+that the gradient of su with respect to k is a negative
+vector, and the gradient of s1 with respect to k is a positive
+vector. Hence the equilibria depend on k in the way which
+is consistent with a behaviour of a monotone system. This
+example indicates that the behaviour of the equilibria may
+be one of the necessary conditions allowing the switching
+separatrix to be a monotone curve and change monotonically
+with respect to parameter variations.
+Shaping Pulses to Induce Oscillations in an Eight Species
+GeneralisedRepressilator.Aneightspeciesgeneralisedrepres-
+silator is an academic example, where each of the species re-
+presses another species in a ring topology. The corresponding
+dynamic equations for a symmetric generalised repressilator
+are as follows:
+p x˙ = 1 +p −p x +u ,
+)p3 4 5 1 1
+p x˙ 2 = 1+(x 1 1 /p 2 )p3 +p 4 −p 5 x 2 +u 2 , (16)
+x˙ = 1 +p −p x , ∀i=3,...8,
+i 1+(x i−1 /p 2 )p3 4 5 i
+where p = 40, p = 1, p = 3, p = 0.5, and p = 1. This 1 2 3 4 5
+system has two stable equilibria s1 and s2 and is monotone
+with the respect to P R8 ×P R2, where P = diag([1, − x u x
+1, 1, −1, 1, −1, 1, −1]), P = diag([1, −1]). It can
+actually be shown that the system is strongly monotone in the
+interior of R8 for all positive parameter values. The control ≥0
+signal u can switch the system from the state s1 to the state 1
+s2, while the control signal u can switch the system from
+the state s2 to the state s1. The switching separatrix for the
+control signal u is depicted in the left panel of Figure 10. 1
+Note that the separatrix is identical for the control signal u ,
+since the repressilator is symmetric.
+Numerical simulations suggest that the trajectories exhibit
+an oscillatory behaviour, while switching between the stable
+steady states using a pulse. This is in agreement with pre-
+vious studies that showed the existence of unstable periodic
+orbits[19]inageneralisedrepressilator.Switchingtrajectories
+Fig.9. Switchingseparatricesforamassactionkineticssystemwithdifferent
+valuesfork1.Thebluecurveistheswitchingseparatrixfork1=6,thered
+curve is the switching separatrix for k1 = 10. The green curves are the
+switchingseparatricesfork1=6.1,7.5,8.5,9.9.
+of species x for various pairs (µ,τ) are depicted in the right
+panel of Figure 10. The observations made in the caption of
+Figure 10 indicate that the closer the pair (µ,τ) is to the
+switching separatrix the longer oscillations will persist.
+We can set up another control problem: to induce os-
+cillations in the generalised repressilator. One can address
+the problem by forcing the trajectories to be close to the
+unstable periodic orbit of the system, which, however, is very
+hard to compute. In [31], it was proposed to track other
+periodic trajectories instead. However, the solution was very
+computationally expensive and offering little insight into the
+problem. Here we will use pulses to induce oscillations as
+was proposed in [19]. In contrast to [19], we provide a way
+to shape all possible pulses inducing oscillations.
+Let the initial point be s1. We can shape the control signal
+u to switch to the state s2. Once we have reached an ε-ball
+around the state s2, we can shape the control signal u to
+switch back to the state s1 and so on. During switching we
+will observe oscillations depending on the position of the pair
+(µ,τ) with respect to the switching separatrix. Now we need
+to define an automatic way of switching between the steady
+(cid:12) states. Let M be equal to {z(cid:12)s1 (cid:22) x z (cid:22) x s2}. It can be verified that the unstable equilibrium lies in M, which typi-
+cally holds for monotone systems. Moreover, the trajectories
+observedinFigure10lieinMduetomonotonicity.Letε>0
+and M ε = {z(cid:12)s1 +εP x 1 (cid:22) x z (cid:22) x s2 −εP x 1}, where 1 is
+thevectorofones.ClearlyM ⊂Mandifεissmallenough ε
+then oscillating trajectories lie in M . Since the repressilator ε
+is symmetric we can assume that the shape of pulses for both
+u and u is the same. In this case we can formalise our 1 2
+control strategy as follows. If the event x(t ) (cid:22) s1+εP 1 e x x
+occurs at time t , then e
+If the event x(t )(cid:23) s2−εP 1 occurs at time t , then e x x e
+Note that we change the entire control signals when the event
+occurs, which we assume happens at some time t . Due to
+this fact, the pulse µh(·,t +τ) is of length τ. The resulting
+trajectoriesforthespeciesx andx ,aswellascontrolsignals
+are depicted in Figure 11. Our control algorithm falls into the
+4.5 5 5.5 6 6.5
+Pulse lengthτ
+snoitartnecnoC
+0 50 100 150
+Fig. 10. Switching between steady states in a generalised repressilator system. All trajectories generated by the pairs (µ,τ) corresponding to the black
+crossesintheleftpanelwillconvergetoasteadystatewiththesamerateastheblackcurveintherightpanel.Similarcorrespondenceisvalidforthered
+andgreencrossesintheleftpanelandtheredandgreencurvesintherightpanel.Thisobservationindicatesthatthecloserthepair(µ,τ)istotheswitching
+separatrixthelongeroscillationswillpersist.
+classofevent-basedcontrol,withtheeventsoccurringifx(t )
+leaves M . For any small enough ε, our control strategy will
+induce oscillations.
+VII. CONCLUSIONANDDISCUSSION
+In this paper we have presented a framework for shaping
+pulsestocontrolbistablesystems.Ourmainmotivationcomes
+from control problems arising in Synthetic Biology, but the
+resultsholdinotherclassesofbistablesystems.Weconsidered
+the problem of switching between stable steady states using
+temporal pulses. We showed that the problem is feasible,
+if the flow of the controlled system can be bounded from
+aboveandbelowbyflowsofmonotonesystems.Wepresented
+a detailed analysis of the conditions needed for switching,
+together with an algorithm to compute the pulse’s length and
+duration. We illustrated the theory with a number of case
+studies and counterexamples that shed light on the limitations
+of the approach and highlight the need for further theoretical
+tools to control bistable non-monotone systems.
+Throughoutthisworkwedidnottakeintoaccountstochas-
+ticity in the model dynamics, which can be particularly im-
+portant in biochemical systems [32]. Noisy bistable dynamics
+can be controlled, for example, using reinforcement learning
+algorithms as the ones described in [31], [33]. These ap-
+proaches,however,requirelargeamountsofmeasurementdata
+thataretypicallyimpracticaltoacquire.Apromisingextension
+to our results is the switching problem in stochastic bimodal
+snoitartnecnoC
+systems. This requires the use of the so-called stochastically
+monotone Markov decision processes, for which a whole new
+set of theoretical tools needs to be developed. Work in this
+direction started in [34] and the references within, addressing
+the extension of the concept of monotonicity to stochastic
+systems.

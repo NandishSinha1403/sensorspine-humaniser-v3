@@ -1,0 +1,671 @@
+]NG.oib-q[
+1v0436.7041:viXra
+Maximizing Protein Translation Rate in the
+Nonhomogeneous Ribosome Flow Model: A Convex
+Optimization Approach
+Gilad Poker1, Yoram Zarai2, Michael Margaliot3, and Tamir Tuller4
+1 School of EE-Systems, Tel Aviv University,Tel Aviv 69978, Israel
+pgilad08@gmail.com
+2 School of EE-Systems, Tel Aviv University,Tel Aviv 69978, Israel
+yoramzar@mail.tau.ac.il
+3 School of EE-Systemsand theSagol School of Neuroscience, Tel Aviv University,Tel
+Aviv69978, Israel
+michaelm@post.tau.ac.il
+4 Dept. of Biomedical Eng. and the Sagol School of Neuroscience, Tel Aviv University,Tel
+Aviv69978, Israel
+tamirtul@post.tau.ac.il
+Abstract. Translation isan important stage ingene expression.Duringthis
+stage,macro-moleculescalledribosomestravelalongthemRNAstrandlinking
+amino-acids together in a specific order to create a functioning protein.
+Animportantquestion,relatedtomanybiomedicaldisciplines,ishowtomax-
+imizeproteinproduction.Indeed,translationisknowntoconsumemostofthe
+cell’s energyanditisnaturaltoassumethatevolutionshapedthisprocessso
+thatitmaximizestheproteinproductionrate.Ifthisisindeedsothenonecan
+estimate various parameters of the translation machinery by solving an ap-
+propriate mathematical optimization problem. The same problem also arises
+in the context of synthetic biology, namely, re-engineer heterologous genes in
+order to maximize their translation rate in a host organism.
+We consider the problem of maximizing the protein production rate using
+a computational model for translation-elongation called the ribosome flow
+model(RFM).ThismodeldescribestheflowoftheribosomesalonganmRNA
+chain of length n using a set of n first-order nonlinear ordinary differential
+equations. Italso includesn+1positive parameters: theribosomal initiation
+rate into themRNA chain, and n elongation rates along thechain sites.
+Weshowthatthesteady-statetranslationrateintheRFMisastrictlyconcave
+function of its parameters. This means that the problem of maximizing the
+translation rate under a suitable constraint always admits a unique solution,
+and that thissolution can bedetermined usinghighly-efficient algorithms for
+solvingconvexoptimizationproblemsevenforlargevaluesofn.Furthermore,
+our analysis shows that the optimal translation rate can be computed based
+onlyontheoptimalinitiation rateandtheelongation rateofthecodonsnear
+the beginning of the ORF. We discuss some applications of the theoretical
+results to syntheticbiology, molecular evolution, and functional genomics.
+1 Introduction
+Gene expressionisthe processbywhichthe informationencodedinthe genesisused
+tosynthesizeproteins.Thetwomajorstepsofgeneexpressionarethetranscriptionof
+thegeneticinformationfromDNAtomessengerRNA(mRNA) byRNApolymerase,
+andthe translationofthe mRNA moleculesto proteins.During gene translation,the
+genetic information is deciphered into proteins by molecular machines called ribo-
+somes that move along the mRNA chain in a unidirectional manner from the 5 ′ end
+This research is partially supported by research grants from the ISF and from the Ela
+Kodesz Institutefor Medical Engineering and Physical Sciences.
+tothe3′ end[1].EachtripletofthemRNAconsecutivenucleotides,calledacodon,is
+decoded by a ribosome into a corresponding amino-acid. The rate in which proteins
+are produced during the translationstep is referredto as the protein production rate
+or translation rate.
+The translationprocess occurs in all organisms,in almost all cells, and in almost
+all conditions. Thus, understanding translation has important implications in many
+scientific disciplines, including medicine, biotechnology, functional genomics, evolu-
+tionarybiology,andmore.Theamountofbiologicalfindingsrelatedtotranslationin-
+creasesatanexponentialrateandthisleadstoconsiderableinterestincomputational
+modelsthatcanintegrateandanalyzethesefindings(see,e.g.,[68,12,24,36,62,61,10,56,15,49]).
+A fundamental challenge in
+biotechnology and synthetic biology is to control the expression of heterologous
+genes in a host organism in order to synthesize new proteins or to improve certain
+aspects of the host fitness [53,43,5]. Computational models of translation are also
+important in this context, as they allow one to simulate and analyze the effect of
+various manipulations of the genomic machinery on the translation process.
+Aconventionalcomputationalmodeloftranslation-elongationisthetotally asym-
+metric simple exclusion process (TASEP) [57,69]. TASEP is a stochastic model that
+describes particles moving along a one-dimensional lattice of sites. The term totally
+asymmetric is used to indicate unidirectional motion along the chain. Each site can
+be either empty or occupied by a single particle. This captures interaction between
+the particles, as a particle in site i blocks the movement of a particle in site i−1.
+Hence, the term simple exclusion. At each time instant, the sites are scanned and
+provided that a site is occupied by a particle and the next site is empty, the particle
+hops to the nextsite withsome probability.The twosides ofthe chainareconnected
+to particle reservoirs,and particles can hop into the chain (if the first site is empty)
+and out of the chain (if the last site is full). TASEP is a fundamental model in non-
+equilibrium statistical mechanics that has been used to model numerous naturaland
+artificial processes [55]. Analysis of TASEP is based on determining the probabil-
+ities of steady-state configurations using matrix products (see the excellent review
+paper [7]).
+The ribosome flow model (RFM) [51] is a deterministic model for translation-
+elongation that can be obtained via a mean-field approximation of TASEP (see,
+e.g.,[55,section4.9.7]and[7,p.R345]).TheRFMforachainwithnsitesincludesn
+first-order, nonlinear ordinary differential equations and n+1 positive parameters:
+the initiation rate λ , and elongation rates λ , i = 1,2,...,n, between every two
+consecutive sites.
+ThereareindicationsthatinsomegenesalltheelongationratesalongthemRNA
+chainare(approximately)equal[29].Thismaybemodeledbyassumingconstantelon-
+gationratesintheRFM.Thisyieldsthehomogeneousribosomeflowmodel (HRFM)[39]
+that includes only two positive parameters: the initiation rate λ and the constant
+elongation rate λ .
+In a previous study [67], we have shown that the steady-state protein translation
+rate in the HRFM, denoted R = R(λ ,λ ), is a concave function of the parame-
+ters λ ,λ . The proof of this result is based on analyzing the Hessian matrix H of R
+intheHRFM.NotethatH hasdimensions2×2foralln.However,theassumptionof
+equalelongationratesisoftentoostrong.Forexample,itwasshownthatfactorssuch
+astheadaptationofcodonstothetRNApool[13,33,11],foldingofthemRNA[62,11],
+and local amino acid charge [62,11,9] affect translation elongation speed. This in-
+duces variations between different elongation rates. In these cases, the HRFM is not
+a suitable model, and one must use the RFM. The steady-state translation rate in
+the RFM is a function ofn+1 parameters,i.e., R=R(λ ,...,λ ).In this paper,we
+show that R(λ ,...,λ ), is a strictly concave function of its n+1 positive parame-
+ters.Here the Hessianmatrixhas dimensions (n+1)×(n+1),andit seems that the
+Fig.1.Anexampleofastrictlyconcavescalarfunctiony=f(x)(solid-line).Alinesegment
+(dashed-line) between a pair of points (x1,y1) and (x2,y2) on the graph lies below the
+functionintheintervalbetweenthepair.Notethatthisfunctionadmitsauniquemaximum
+point.
+approach applied in [67] cannot be extended to handle the RFM. The proof of our
+main result is thus based on an entirely new technique.
+ToexplaintheimportanceofthestrictconcavityofR,considerFig.1thatdepicts,
+for simplicity, a scalar strictly concave function y = f(x). Strict concavity in this
+case means the following. Given any two different values x , x , with corresponding
+function values y =f(x ) and y =f(x ), let l =l(x) denote the line that connects
+thepoints(x ,y )and(x ,y ).Thenf(x)>l(x),forallx∈(x ,x ).Inotherwords,
+1 1 2 2 1 2
+the graph of the function lies above the line l(x).
+Concave functions have many useful and desirable properties. First, a concave
+function is differentiable almost everywhere. Second, recall that a point x is called
+a local maximum of a function f if the function values in some neighborhood of x
+are smaller than or equal to f(x ). It is a global maximum if the function values
+in its entire domain of definition are smaller than or equal to f(x ). For a concave
+function, any local maximum is also a global maximum. If the function is strictly
+concave then this maximum is unique.
+Furthermore,strict concavity implies that a simple “hill climbing” algorithm can
+be used to find the global maximum. In the depicted one dimensional function, this
+can be explained as follows. Select an arbitrary point x in the domain of definition
+of f as a candidate for a maximum point. Next, determine two points x − and x+
+that are “close” to x and satisfy x − < x < x+. Denote y = f(x ), y − = f(x − ),
+0 0 0 0 0 0 0 0
+and y+ = f(x+). If y ≥ y − and y ≥ y+ then x is a local, and thus global,
+0 0 0 0 0 0 0
+maximum of the function and the algorithm terminates. Otherwise, at least one of
+the two values y − , y+ is larger than y . The corresponding point, i.e., x − or x+,
+becomesthenewcandidateforamaximum,andthealgorithmisiterated.Undermild
+assumptions,this simplealgorithmisguaranteedtoconvergetothe globalmaximum
+of the concave function. More generally, there exist highly-efficient algorithms for
+finding the global maximum of multi-dimensional concave functions [8].
+A function g is called [strictly] convex if −g is [strictly] concave. Thus, the prob-
+lem of finding the maximumvalue ofa concavefunction is equivalent to the problem
+of finding the minimum value of a convex function. A famous quote by R. T. Rock-
+afellarstatesthat:“...the greatwatershedinoptimizationisn’tbetweenlinearityand
+nonlinearity, but convexity and nonconvexity.” [52] We note in passing that a linear
+function y(x)=ax+b is both concave and convex.
+Summarizing,ourmainresultimpliesthattheproblemofmaximizingtheprotein
+translation rate, under a simple constraint on the RFM parameter values, admits
+a unique solution, and that this solution can be found numerically using highly-
+efficient algorithms. It is important to note that many systems and processes have
+been modeled and analyzed using TASEP. These include translation, traffic flow,
+molecular motors, surface growth, the movement of ants, and more [55]. All these
+processes may also be modeled using the RFM, and the problem of maximizing R
+seems to be of importance in all of them.
+We now describe some possible applications of the main result in the context of
+translation.Arecentwork[20]studiedtheeffectoftheintracellulartranslationfactor
+abundance on the protein production rate. Abundance of the encoded translation
+factor was experimentally manipulated to a sub-wild-type level [20] using the tet07
+construct. The reported results suggest that the mapping from levels of translation
+factors to protein production rate is concave (see Fig. 1 in [20]). This may provide
+an experimental support to the results presented in this paper. Note that [20] used
+the model organism S. cerevisiae that is known to have non-constant elongation
+rates [62,13]. Thus, the RFM, and not the HRFM [67], is a better computational
+model for describing these experiments.
+Translation is known to consume most of the cell’s energy [47,60,1]. A reason-
+ableassumptionis thatinorganismsunder strongevolutionarypressurethe genomic
+machineryhasevolvedsothatitoptimizesthetranslationrategiventheavailablere-
+sources.ThisassumptioncanbestudiedinthecontextoftheRFMsincetheconcavity
+of the translation rate implies that one can easily determine the optimal parameter
+values,andthencomparethemtobiologicalfindings.Thismayhelpinunderstanding
+the level of selection pressure acting on the genomes of various organisms and the
+evolutionary changes in various micro-organisms[16].
+In synthetic biology, an important problem is to re-engineer a genetic system by
+manipulating the transcript sequence, and possibly other intra-cellular variables, in
+ordertoobtainanoptimaltranslationrate.UsingourresultsontheRFMcanprovide
+verifiable predictions on how this can be done efficiently. Another related problem is
+optimizing the translation efficiency and protein levels of heterologous genes in a
+new host [47,60,23,30]. These genes actually compete with endogenous genes for the
+available resources, e.g., initiation factors. Consuming too much resources by the
+heterologous gene may kill the host [47,60]. Thus, any optimization of the protein
+translation rate should not consume too many resources, as otherwise the fitness of
+the host may be significantly reduced. This seems to fit well with the constrained
+optimization problem that we pose here for the RFM.
+The remainder of this paper is organized as follows. Section 2 briefly reviews
+the RFM. Section3presentsthe mainresults.Section4 describesthe implications of
+ourresultsto systemsbiology,evolution,andsyntheticbiology,anddescribesseveral
+possible directionsfor further research.To streamline the presentation,allthe proofs
+are placed in the Appendix.
+2 Preliminaries
+The RFM [51] is a deterministic mathematical model for translation-elongation. In
+the RFM, mRNA molecules are coarse-grained into a unidirectional chain of n sites
+0 1 2 3 n−1 n
+Production
+1 2 3 Codon n
+Fig.2.TheRFM.Eachsitecontainsagroupofcodons.Thevariablexi(t)∈[0,1]denotesthe
+normalizedribosomeoccupancylevelinsiteiattimet.Theinitiationrateisdenotedλ0and
+λiisthetransitionratebetweensitesiandi+1.ProductionrateattimetisR(t):=λnxn(t).
+ofcodons.TheRFMisasetofnfirst-ordernonlinearordinarydifferentialequations:
+1 0 1 1 1 2
+2 1 1 2 2 2 3
+3 2 2 3 3 3 4
+.
+.
+.
+x˙ n =λ n−1 x n−1 (1−x n )−λ n x n . (1)
+Here,x (t)∈[0,1]istheoccupancylevelatsiteiattimet,normalizedsothatx (t)=
+0 [x (t) = 1] implies that site i is completely empty [completely full] at time t. The
+parameter λ > 0 is the initiation rate into the chain, and λ > 0,i ∈ {1,..,n}, is a
+parameter that controls the flow from site i to site i+1. In particular, λ controls
+the output rate at the end of the chain.5
+The rate of ribosome flow into the system is λ (1−x (t)). The rate of ribosome
+flow exiting the last site, i.e., the protein production rate, is λ x (t). The rate of
+ribosome flow from site i to site i+1 is λ x (t)(1−x (t)) (see Fig. 2). Note that
+thisrateincreaseswithx (t)(i.e.,whensiteiisfuller)anddecreaseswithx (t)(i.e.,
+whentheconsecutivesiteisbecomingfuller).Inthisway,theRFM,justlikeTASEP,
+takes into account the interaction between the ribosomes in consecutive sites.
+Weemphasizethatinthe RFMthe state-variablestakevaluesinthe closedinter-
+val[0,1]andarenotlimitedtothevalues{0,1}.ThisisdifferentfromTASEP,where
+a site can be either empty or full. Indeed, the x s in the RFM may be interpreted as
+time-averagedoccupancy levels in TASEP, and this average takes values in [0,1].
+Letx(t,a)denote the solutionof (1) attime t≥0 forthe initialconditionx(0)=
+a. Since the state-variables correspond to normalized occupation levels, we always
+assume that a belongs to the closed n-dimensional unit cube:
+Cn :={x∈Rn :x ∈[0,1],i=1,...,n}.
+Itisstraightforwardtoverifythatthisimpliesthatx(t,a)∈Cn forallt≥0.Inother
+words, Cn is an invariant set of the dynamics [40].
+Let int(Cn) denote the interior of Cn. It was shown in [40] that the RFM is
+a monotone dynamical system [58] and that this implies that (1) admits a unique
+equilibrium point e∈int(Cn). Furthermore,
+lim x(t,a)=e, for all a∈Cn.
+This means that all trajectories converge to the steady-state e.
+5 In previous papers on the RFM, the notation λ was used to denote the initiation rate.
+Here we useλ0, as this leads to a more consistent notation.
+We note in passing that monotone dynamical systems have recently found many
+applications in systems biology, see, e.g., [3,34,59] and the references therein.
+For x=e, the left-hand side of all the equations in (1) is zero, so
+.
+.
+.
+=λ e . (2)
+Denoting the steady-state translation rate by
+R:=λ e (3)
+where we define e :=0. Also,
+.
+.
+.
+Combining (5) and (6) provides a finite continued fraction [35] expression for R:
+...
+1−R/λ .
+Note that this equation has several solutions for R (and thus also several solutions
+for e = R/λ ), however, we are interested only in the unique feasible solution, i.e.
+the solution corresponding to e∈int(Cn).
+Eq.(7)maybe writtenasp(R)=0,wherepisapolynomialofdegree⌈(n+1)/2⌉
+in R with coefficients that are algebraic functions of the λ s. For example, for n =
+3, (7) yields
+0 2 1 2 1 3 0 1 2 0 1 3 0 2 3 1 2 3 0 1 2 3
+Recent biological findings suggest that in some cases the transition rate along
+the mRNA chain is approximately constant [29]. This may be also the case for gene
+transcription [17]. To model this, Ref. [39] has considered the RFM in the special
+case where
+that is, the transition rates λ , i = 1,2,...,n, are all equal, and λ denotes their
+common value. Since this homogeneous ribosome flow model (HRFM) includes only
+two parameters, λ and λ , the analysis is simplified. In particular, (7) becomes
+...
+where λ appears a total of n times.
+Severalrecent papers analyzed the RFM or HRFM. To model ribosome recycling
+(see,e.g.,[44]andthereferencestherein),Ref.[41]hasconsideredaclosed-loopRFM
+with a positivelinear feedbackfromthe outputR to the input λ .It hasbeen shown
+that the closed-loop system admits a unique globally asymptotically stable equilib-
+rium point. In [38], it has been shown that the state-variables (and thus the protein
+production rate) in the RFM entrain to periodically time-varying initiation and/or
+transition rates. This provides a computational framework for studying entrainment
+to aperiodic excitation(e.g.,the cellcycle)atthe translationlevel.The HRFM with
+aninfinitely-longchain,(i.e.withn→∞)wasconsideredinRef.[66].There,asimple
+closed-form expression for e∞ := lim n→∞e
+was derived, as well as explicit bounds
+| for all n≥2.
+IntheRFMthesteady-stateproductionrateRisafunctionofthepositiveparam-
+eters λ ,...,λ . In this paper, we study the dependence of R on these parameters.
+Ourresultsarebasedonanovel,linear-algebraicapproachlinkingtheproteintransla-
+tionratetothemaximumeigenvalueofasymmetric,non-negativetridiagonalmatrix
+whose components are functions of the λ s.
+3 Main Results
+3.1 Concavity
+Thenextresultisthemainresultinthissection.Recallthatallthe proofsareplaced
+in the Appendix. Let Rn+1 :={x∈Rn+1 :x ≥0, i=1,...,n+1}.
+Theorem 1 Consider the RFM with dimension n. The steady-state translation rate
+R=R(λ ,...,λ ) is a strictly concave function on int(Rn+1).
+The next example demonstrates Theorem 1.
+Example 1 Considerthe RFMwithn=1.Inthiscase,(5)and(6)yielde =R/λ
+and e =1−R/λ , so
+Fig. 3 depicts R(λ ,λ ) as a function of its arguments. It may be seen that this is
+indeed a strictly concave function on int(R2).
+Recall that a function f : Rk → R is called positively homogeneous of de-
+gree m if f(cx) = cmf(x) for all c > 0 and all x ∈ Rk. For example, the func-
+tion f(x ,x ) := x x + x2 is positively homogeneous of degree 2. The following
+result follows immediately from the fact that R always appears in (7) only in terms
+of the form R/λ .
+Fact 1 Consider the RFM with dimension n. The function R = R(λ ,...,λ ) is
+positively homogeneous of degree one.
+Fig.3. Steady-statetranslation rate R(λ0,λ1) in the RFMwith dimension n=1.
+In other words,
+R(cλ ,...,cλ )=cR(λ ,...,λ ), for all c>0. (10)
+From a biophysical point of view this means that multiplying the initiation rate
+and all the elongation rates by the same factor c > 0 increases of the steady-state
+production rate by a factor of c. This also means that the steady-state occupancy
+levels e , i=1,2,...,n, remain unchanged with respect to such a multiplication.
+Example 2 Consider the RFM with dimension n = 2. In this case, the feasible
+solution of (5) and (6) (i.e., the solution corresponding to a value e ∈ C2 for all λ ,
+R(λ ,λ ,λ )= 0 1 0 2 1 2 0 1 0 2 1 2 0 1 2 , (11)
+and clearly this implies that R(cλ ,cλ ,cλ )=cR(λ ,λ ,λ ).
+0 1 2 0 1 2
+Recall that a function f : Rk → R is called superadditive if f(x+y) ≥ f(x)+
+f(y) for all x,y ∈ Rk. It is well-known that for a positively homogeneous function,
+concavity is equivalent to superadditivity (see, e.g., [4]). Combining this with Fact 1
+and Theorem 1 yields the following result.
+Corollary 1 Consider the RFM with dimension n. The function R=R(λ ,...,λ )
+is superadditive.
+This means that
+0 0 n n 0 n 0 n
+for all λ ,...,λ ,λ¯ ,...,λ¯ > 0. From a biophysical point of view this means the
+following.ConsidertwoRFMs,onewithinitiationrateλ andtransitionratesλ ,λ ,
+...,λ ,andthesecondwithinitiationrateλ¯ andtransitionratesλ¯ ,λ¯ ,...,λ¯ .The
+sum of the production rates of these two RFMs is smaller or equalto the production
+rate of a single RFM with initiation rate λ +λ¯ and transition rates λ +λ¯ ,λ +
+λ¯ ,...,λ +λ¯ .Inotherwords,asingleRFMwithratesλ +λ¯ isatleastasefficient
+as the total of two separate RFMs, one with rates λ and the second with rates λ¯ ,
+for i=0,1,...,n.
+3.2 Constrained Maximization of the Protein Translation Rate
+Consider the problem of determining the parameter values λ ,...,λ that maxi-
+mize R (or, equivalently, that minimize −R) in the RFM. Obviously, to make this
+problem meaningful we must constrain the possible parameter values. This leads to
+the following constrained optimization problem.
+Problem 1 Giventheparametersw ,w ,...,w ,b>0,minimize−R=−R(λ ,...,λ ),
+with respect to its parameters λ ,...,λ , subject to the constraints:
+λ ,...,λ ≥0.
+In other words, given an affine constraint on the total rates, namely, the initiation
+rate λ and the transition rates λ ,...,λ , maximize the protein translation rate.
+The constraint on λ , i = 0,1,...,n, may be related to factors such as the abun-
+dance of intracellularribosomes,initiation factors,intracellular tRNA molecules and
+elongation factors. The values w , i = 0,1,...,n, can be used to provide different
+weighting to the different rates.
+It is not difficult to show that the optimal solution λ of Problem 1 always sat-
+isfies λ∗ ∈ int(Rn+1). Theorem 1 implies that Problem 1 is a convex optimization
+problem [8]. It thus enjoys many desirable properties.
+Thenextresultshowsthatincreasinganyoftheλ sincreasesthetranslationrate.
+Proposition 1 Consider the RFM with dimension n. Then ∂ R > 0 for i =
+0,1,...,n.
+In other words, increasing either the initiation rate or the elongation rate at any
+site improves the production rate.
+Remark 1 Proposition 1 implies that the first constraint in (12) can be replaced
+by n w λ =b.
+Example 3 ConsiderProblem1 for the RFM with dimensionn=2.In this case,R
+is given by (11). Let b =w =w =w =1, i.e., the constraint is λ +λ +λ =1.
+0 1 2 0 1 2
+Then λ =1−λ −λ , and substituting this in (11) yields
+0 1 0 1 0 1
+− 0 1 0 1 0 1 0 1 0 1 .
+Fig. 4 depicts this function. It may be seen that R=0 when either λ =0 or λ =0
+(as a zero initiation or elongation rate means of course zero production rate), and
+also when λ +λ = 1 (as then the elongation rate λ = 1−λ −λ = 0). The
+maximal value, R∗ = 0.1294, is obtained for λ∗ = 0.3008 and λ∗ = 0.3984, so λ∗ =
+1−λ∗−λ∗ =0.3008(all numbers are to four digit accuracy).Note that (11) implies
+that R(λ ,λ ,λ ) = R(λ ,λ ,λ ) for all λ ,λ ,λ > 0, and since the constraint
+0 1 2 2 1 0 0 1 2
+parameters satisfy w =w , we get λ∗ =λ∗.
+Itisclearfrom(11)thatingeneralanalgebraic expressionforRintermsofλ ,...,λ
+does not exist. It is possible howeverto give an algebraicexpressionfor the maximal
+value R∗ as a function of just two optimal parameter values, namely, λ∗ and λ∗, and
+the parameters in the affine constraint.
+Fig.4.Steady-statetranslationrateRintheRFMwithdimensionn=2asafunctionofλ0
+and λ1 undertheconstraint λ2=1−λ0 −λ1.
+Theorem 2 Consider Problem 1 for the RFM with dimension n. Then
+R ∗ = 0 . (13)
+Inotherwords,theoptimaltranslationrateR canbecomputedgiventheoptimal
+initiation rate and the first optimal elongationrate (and their correspondingweights
+in the affine constraint). This result holds regardless of the length of the transcript.
+It is interesting to note that severalbiologicalstudies showedthat varioussignals
+encoded in the 5’UTR and the beginning of the ORF can predict the protein levels
+of endogenous genes with relatively high accuracy [33,32,70,63,47].
+Example 4 Consider again Example 3. In this case w /w = 1, λ∗ = 0.3008 and
+λ∗ =0.3984, so (13) yields
+R = =0.1294,
+0.3008+0.3984
+and this agrees with the result in Example 3.
+Maximization with equal constraint weights It is interesting to consider the
+specific case where all the weights w in the constrained optimization problem are
+equal. Indeed, in this case the weights give equal preference to all the rates, so if the
+optimalsolutionsatisfiesλ >λ forsomei,j thenthis maybe interpretedassaying
+that, in the context of maximizing R, λ is “more important” than λ .
+Fig. 5 depicts the optimal values λ for the case where b=1 and w =1 for all i.
+In other words, the constraint is n λ = 1. Three cases are shown corresponding
+to n = 30, n = 10, and n = 4. The optimal values were found numerically using
+a simple search algorithm that is guaranteed to converge for convex optimization
+problems.
+It may be observed that the optimal transition rates are symmetric with respect
+to the index i = n/2. In general, the transition rate λ∗ is larger than all other
+rates and the optimal values decrease as we move towards any edge of the chain.
+0 5 10 15 20 25 30
+0 1 2 3 4 5 6 7 8 9 10
+Fig.5.Optimalelongationratesλ∗ i asafunctionofifortheconstraintP n i=0 λi=1.Upper
+figure: n=30; Middle figure: n=10; Lower figure: n=4.
+The difference between λ∗ and λ∗ (or λ∗) is always visible, but the difference
+between λ∗ and λ∗ , with i small, becomes negligible as n increases.
+Intuitively, these results may be interpreted as follows. The importance of an
+elongation rate (or the corresponding site) depends on its “centrality”, or the mean
+distance of this site to other sites in the chain. Site n/2 is thus always the most
+“important”siteinthechain.Asnincreases,thesitesnearthemiddlesitehavealmost
+the same mean distance to the other sites, and thus become almost as important.
+Fig. 6 depicts the optimal translation rate R∗ as a function of n for two different
+constraints: n λ =n and n λ =n1.03. The first case corresponds to the sce-
+i=0 i i=0 i
+nariowherethetotalavailableresourcesincreaseslinearlywithn(i.e.,b=n).Itmay
+beobserved P thatinthiscaseth P eoptimaltranslationrateR∗ decreasesmonotonically
+with n. On the other hand, increasing the total available resources by a rate which
+is slightly larger than a linear rate (i.e., b = n1.03) changes the behavior; R∗ in this
+case increases monotonically with n. This result suggests that in order to maintain
+the same optimal translation rate value as n increases, the total allocated resources
+should increase at a rate that is slightly higher than a linear rate in n.
+4 Discussion
+TheRFMisadeterministicmathematicalmodelfortranslation-elongation.Itcanbe
+derivedviaamean-fieldapproximationofafundamentalmodelfromnon-equilibrium
+statisticalmechanicscalledTASEP.TheRFMencapsulatesboththesimpleexclusion
+and the total asymmetry properties of the stochastic TASEP model. The RFM is
+characterized by an order n, corresponding to the number of sites along the mRNA
+strand, a positive initiation rate λ and a set of positive alongation rates λ ,...,λ .
+Inthispaper,weshowthatthesteady-stateproteintranslationrateR=R(λ ,...,λ )
+in the RFM is a strictly concave function of its (positive) parameters. This implies
+that:(1)alocalmaximumofRistheglobalmaximum(andthismaximumisunique);
+and (2) the problem of maximizing the steady-state protein translation rate under
+an affine constraint on the RFM parameters is a convex optimization problem. Such
+problems can be solved numerically using highly-efficient algorithms. The constraint
+here aims to capture the limited biosynthetic budget of the cell.
+5 10 15 20 25 30n 35 40 45 50 55 60
+5 10 15 20 25 30n 35 40 45 50 55 60
+Fig.6.OptimaltranslationrateR∗ asafunctionofnfortheconstraintP n
+λi=b.Upper
+figure: b=n; Lower figure: b=n1.03.
+We now describe the possible implications of these results in various disciplines
+including biology, synthetic biology, molecular evolution, and functional genomics.
+As mentioned above, the functional dependence of the translation rate on various
+variables canalso be examined experimentally.A recent paper [20] studied the effect
+of the intracellular translation factor abundance on protein synthesis. Experiments
+based on a tet07 construct were used to manipulate the production of the encoded
+translation factor to a sub-wild-type level, and measure the translation rate (or pro-
+tein levels) for each level of the translation factor(s). An analysis of Fig. 1 in [20]
+suggests that the mapping from levels of translation factors to the translation rate
+is indeed concave. Our results thus provide the first mathematical support for the
+observed concavity in these experiments.
+Insyntheticbiology,re-engineeringgeneexpressionisfrequentlyusedtosynthesize
+proteinsformedicalandagriculturalgoals[53,43,5,21,42].Forexample,ingenetically
+modified crops new genes are introduced to the genome of the host in order to im-
+prove its resistance to certain pests/diseases or for improving the nutrient profile
+of the crop [42]. Another example is the commercial production of human proteins
+in recombinant microorganisms for therapeutic use [53,43,5,21]. This is sometimes
+based on the natural ability of certain bacteria to efficiently secrete properly folded
+humanproteins(for example,insulin[21]). Inthis context,a fundamentalproblemis
+to maximize the translation rate of the heterologousgene (and thus the protein pro-
+ductionrate)underthegivenconstraints,e.g.,thelimitedavailabilityofintracellular
+components involved in translation. These constraints are needed also because very
+highinitiationandelongationratesmeanthattheexpressionoftheheterologousgene
+consumes too much resources of the translational machinery (e.g., ribosomes, tRNA
+molecules, etc), thus significantly deteriorating the fitness of the host. In addition,
+very high levels of protein abundance may eventually contribute to aggregation of
+proteins [45,31], leading to a decrease in the yield of heterologous protein produc-
+tion. All these aspects are encapsulated in the convex optimization problem that is
+addressed here for the RFM. We believe that this mathematical problem may thus
+be used to provide verifiable predictions on how to efficiently manipulate the various
+biological factors.
+Fig.7. Evolutionary convergence to optimal translational state via mutations is similar to
+thesimple “hill climbing” algorithm.
+There is a rich literature on using optimization theory, combined with evolu-
+tionary arguments, in biology (see, e.g., [54,46,2] and the references therein). This
+approach has been often criticized, but it has undoubtedly provided insight into the
+process of adaption under biological constraints, as well as helped to discriminate
+between alternative hypotheses for a suitable “fitness function” in various biologi-
+calmechanisms.Furthermore,laboratoryevolutionexperimentsshowedevolutionary
+adaptationofbiologicalprocessestowardsoptimaloperationlevels.Examplesinclude
+optimal metabolic fluxes in E. coli [26], and optimal protein expression levels from
+the lac operon [14]. We believe that the optimization problem posed here may lead
+to further progress in studying the evolution of the translation machinery.
+Thetranslationmachineryisaffectedbymutationssuchasduplication/deletionof
+a tRNA gene or synonymousmutationaffecting the codonbias usage.The concavity
+of the translation rate R may suggest that the selection of mutations that increase
+fitness indeed converges towards the optimal parameter values, as explained by the
+simple “hill climbing” argument described above (see Fig. 7).
+Recent studies have shown that in various organisms the ribosomal density at
+the5′ and3′ endsoftheORFishigherthaninthemiddleoftheORF(see,forexam-
+ple,[28,29,11,60]).Inaddition,thegenomicribosomaldensityisrelativelyconstantin
+the middle ofthe ORF (usually morethan 30 codonsawayfromthe twoORF ends).
+The elongation rate λ is negatively correlated with the ribosomal density (or the
+probabilitythatasiteisoccupied)atsitei.Indeed,ifλ ,thatcontrolstheelongation
+rate from site i, is small then there is a higher probability to see a ribosome in this
+site.Thus,thesebiologicalstudies suggestthatthe elongationratesatthe endofthe
+chain are lower than in the middle of the chain, and that the rates near the middle
+are approximately equal. This agrees well with the optimal elongation rates derived
+based on our analysis in the case of equal weighting in the constraint (see Fig. 5).
+Our results in the case of equal weights in the constraint also show that if the
+totalbiosyntheticbudgetb(n)isasub-linearorlinearfunctionofnthenR∗ decreases
+monotonically with n; however, when b(n) grows faster than a linear function in n
+then R∗ increases monotonically with n. The relation between expression levels and
+gene length has been studied experimentally. It has been shown that in some organ-
+isms,suchashumansandS.cerevisiae[18,12],expressionlevelstendtomonotonically
+decrease with gene length (shorter genes have higher expression levels). However, in
+other organisms,such as plants [50], an opposite relation was reported (longer genes
+have higher expression levels). Our analysis may suggest that one should take into
+accountnotonlythe difference ingenelength,butalsothe differenceinthe available
+resources of the translational machinery.
+Aninterestingquestionforfurtherresearchiswhetherthetranslationrateinother
+modelsoftranslation,includingvariousversionsofTASEP[41,62,60,56,10,48],isalso
+a concave function of its parameters.
+Another possible research direction is the design and implementation of biolog-
+ical experiments based on the analytical results described above. Such experiments
+should combine: (1) methods for manipulating the translation machinery and/or the
+transcript of certain gene(s); and (2) online estimation of ribosomal density along
+the mRNA (e.g. using ribosome profiling [27]). The elongation rate of each codon
+can be estimated based on a method described in [13]. Manipulation of the transla-
+tion machinery can include deletion of tRNA genes, and using the tet07 construct
+to down-regulate the initiation and elongation factors [20,6]. Techniques for local
+manipulation of a transcript include generating libraries of a certain heterologous
+non-functional gene (e.g., a GFP protein). In each of the variants a few mutations
+(relatively to the wild-type) are introduced either in the 5’UTR (corresponding to
+λ ) or the ORF (corresponding to λ ,λ ,...), and the protein levels and ribosomal
+densities are measured [33,65]. The fact that the heterologous gene is non-functional
+to the host assures that the observedchanges in translation efficiency are due to the
+introduced modifications.
+Asaspecificexample,onecanmeasuretheeffectofmodifyingtheelongationrates
+ofdifferentcodons(correspondingtoλ ,λ ,..)byintroducingsynonymousmutations
+in different parts of the ORF. We expect that a graph depicting the translation rate
+as a function of elongation rates will be concave (as in Fig. 4).
+Finally,the effect ofsingle mutations in differentparts of the transcriptontrans-
+lationrateisafundamentalquestionrelatedtovariousbiomedicaldisciplines.Specif-
+ically, it is known that codon substitutions in different parts of the coding sequence
+affectelongationandinitiationrates(i.e.theλ s)viavariousmechanisms(e.g.mRNA
+folding and adaptation to the tRNA pool [16,22,33,62]). Our result is based on link-
+ing R to the Perron root of a tridiagonal matrix that depends on the λ s. This can
+serveasastartingpointfor sensitivityanalysisofR,i.e.analyzingthe effect ofsmall
+changes in the λ s on R. This topic is currently under study.
+Appendix: Proofs
+Proof of Theorem 1. The proof consists of the following steps:
+1. Expressingthe termonthe right-handside of (7)as a ratio betweentwo polyno-
+mials p(R) and v(R).
+2. Linking the numeratorpolynomial p(R)to the determinantofa symmetric, non-
+negative tridiagonal matrix A whose entries depend on the λ s.
+3. Proving that R−1/2 is the largest eigenvalue of the matrix A.
+4. Usingthepropertiesofthelargesteigenvalueofasymmetric,non-negativematrix
+to show that R is a strictly concave function of its parameters.
+Step 1: Define
+...
+Then we can rewrite (7) as
+By the theory of convergents of continued fractions [35] it follows that
+p (z,λ ,...,λ )
+v (z,λ ,...,λ )
+where p and v are defined recursively by
+p−1 (z)=1,
+v−1 (z)=0,
+For example, for n=2 Eq. (14) yields
+= 0 2 0 1 2 ,
+whereas (17) and (18) yield
+3 0 2 0 1 2
+−1+λ −1)z.
+Notethat(17)and(18)implythatp k =p k (z,λ 0 ,...,λ k−1 ),v k =v k (z,λ 1 ,...,λ k−1 ),
+v k+1 (z,λ 1 ,...,λ k )=p k (z,λ 0 ,...,λ k−1 ). (19)
+Furthermore, (6) and (5) yield
+p k (R,λ 0 ,...,λ k−1 )
+e = , k =1,...,n, (20)
+p k−1 (R,λ 0 ,...,λ k−2 )
+p k p k−1 p 2 p 1
+p = ...
+p k−1 p k−2 p 1 p 0
+=e k e k−1 ...e 1 . (21)
+Since e ∈(0,1) it follows that p (R)∈(0,1) for all k =1,2,...,n.
+From (15) and (16) it follows that
+p (R,λ ,...,λ )
+v (R,λ ,...,λ )
+Supposeforamomentthatv n+1 (R,λ 1 ,...,λ n )=0.Then(19)yieldsp n (R,λ 0 ,...,λ n−1 )=
+0,andcombiningthis with(20)yieldse =0.Thisisacontradiction,ase∈int(Cn).
+We conclude that the denominator in (22) is not zero, so (22) is well-defined and so
+Step 2: It is well-known that there is a close connection between continued frac-
+tions and tridiagonal matrices [64]. To relate the polynomial p to a tridiagonal
+matrix, define the polynomials
+q (s):=sk+1p (s −2), k =−1,0,...,n+1, (24)
+where s∈R\{0}. Then (17) yields
+Define a (n+2)×(n+2) Jacobi matrix A=A(λ ,...,λ ) by
+0 0 ... 0 0
+ 0 0 0 ... λ
+ 0 0 0 ... 0 λ −1/2 0 
+Let I denote the (n+2)×(n+2) identity matrix. Then
+s −λ 0 0 ... 0 0
+ 0 0 0 ... 0 −λ −1/2 s 
+anditis straightforwardto verifythatthe determinantofthe (i+1)×(i+1)leading
+principal minor of sI −A is q (s). In particular, q (s)=det(sI −A). Com-
+n+2 i n+1 n+2
+bining (23) and (24) implies that q (R
+is an eigenvalue of the
+matrix A.
+Step3:Recallthatthespectral radius ofasquarematrixisthemaximumoverthe
+absolute values of its eigenvalue. The spectral radius of a non-negative matrix is an
+eigenvalueofthematrixcalledthePerronroot [19].ThenextresultshowsthatR −1/2
+is the largest eigenvalue of the non-negative matrix A.
+Proposition 2 The Perron root of the matrix A is R−1/2.
+ProofofProposition2.ItfollowsfromknownresultsonJacobimatrices(see,e.g.[19,
+Chapter 0]) that all the eigenvalues of the matrix A are realand distinct, and that if
+we order them as
+then the number of sign changes in the sequence
+isn+2−j.Letibetheindexsuchthatα =R−1/2.By(24),q (α )=R−(k+1)/2p (R),
+and (21) yields q (α ) > 0 for all k = 0,1,...,n. Thus, the number of sign changes
+in the sequence {q (α ),...,q (α ),1} is zero, so i=n+2, i.e. α =R−1/2. (cid:3)
+n i 0 i n+2
+Step 4: Given a vector x = x ... x ′ ∈ int(Rn+1), let T(x) denote the (n+
+2)×(n+2) tridiagonal matrix whose main diagonal is zero, and sub- and super-
+(cid:2) (cid:3)
+diagonals are the vector x. Note that this matrix is non-negative and irreducible.
+Let s =s (T(x)), i=1,...,n+2, denote the eigenvalues of T(x) ordered so that
+We already know that s (T(x
+−1/2(x).
+Note that the matrix A in (26)
+can be written as A=T(λ−1/2), where λ−1/2 := λ −1/2 ,...,λ −1/2 .
+Pick x,y ∈int(Rn+1), with x6=y, and k∈(0,h1). Let u:=kx+i(1−k)y. Then
+−1/2)).
+The function f(w):=w−1/2 is strictly convex on w ∈(0,∞), so
+where the inequality between the vectors should be interpreted component-wise.
+Since T(u−1/2) is irreducible, this implies that [25, Chapter 8]
+(cid:16) (cid:17)
+where Q:=T(kx
+Combining this with (27) yields
+Since Q is non-negative and symmetric, its induced 2-norm is equal to its spectral
+radius s (Q). Using the fact that a norm is always convex,it is straightforwardto
+see that the norm-squared s2 (Q) is also convex, so
+(cid:16) (cid:17) (cid:16) (cid:17)
+Combining this with (28) yields
+(cid:0) 1 (cid:1) 1(cid:0) (cid:1)
+≥min , .
+(cid:0) (cid:1) (cid:0) (cid:1)
+Now (27) implies that
+i.e. R is strictly quasi-concave on int(Rn+1).
+Pick t ∈ (0,1), and let µ := tR(x) . Then µ ∈ (0,1), so (29) and the
+homogeneity of R (see Fact 1 above) yield
+(cid:18) (cid:19) (cid:26) (cid:18) (cid:19) (cid:18) (cid:19)(cid:27)
+R >1.
+(cid:18) (cid:19)
+Using the homogeneity of R again gives
+and this completes the proof of Theorem 1. (cid:3)
+Proof of Proposition 1. Let v = v ... v ′ ∈ Rn+2 denote a Perron eigen-
+vector of the symmetric matrix A, i.e., an eigenvector corresponding to the Perron
+root R−1/2. It follows from known res (cid:2) ults (see, e.g (cid:3) ., [37]) that
+∂λ (cid:16) v′v (cid:17)
+(cid:16) (cid:17)
+and combining this with (26) yields
+R= v v . (30)
+Since all the components of the Perron eigenvector are strictly positive [25], this
+implies that ∂ R>0 for all i=0,...,n. (cid:3)
+Proof of Theorem 2. The proof is based on formulating the Lagrangian function
+associatedwithProblem1anddeterminingtheoptimalparametervaluesbyequating
+its derivatives to zero (see, e.g., [8]). The Lagrangianis
+0 n 0 n i i
+!
+where θ ∈ R is the Lagrange multiplier. Differentiating this with respect to λ and
+equating to zero yields
+(cid:18) i (cid:19)
+where |∗ means that the equation holds once the optimal values λ∗
+are substituted.
+This implies in particular that
+w 1 ∂ ∂ λ1 R!
+and combining this with (30) yields
+0 = 1 1, (31)
+where v∗ is the unique (up to scaling) Perron eigenvector of the non-negative and
+irreducible matrix A∗ :=A(λ∗,...,λ∗) [25, Ch. 8]. The equationA∗v∗ =(R∗)−1/2v∗
+.
+.
+.
+and substituting this in (31) and simplifying yields (13). (cid:3)

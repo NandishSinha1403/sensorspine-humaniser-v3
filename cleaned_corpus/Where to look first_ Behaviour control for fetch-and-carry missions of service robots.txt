@@ -1,0 +1,337 @@
+Where to look first? Behaviour control for fetch-and-carry missions of
+service robots
+Markus Bajones1, Daniel Wolf1, Johann Prankl1, Markus Vincze1
+Abstract—This paper presents the behaviour control of Our solution for this problem is to develop a flexible
+a service robot for intelligent object search in a domestic behaviour controller for fetch-and-carry tasks implemented
+environment.Amajorchallengeinserviceroboticsistoenable
+withSMACH,aPython-basedlibraryforbuildinghierarchi-
+fetch-and-carrymissionsthataresatisfyingfortheuserinterms
+cal concurrent state machines, as pictured for our proposed
+of efficiency and human-oriented perception. The proposed
+behaviour controller provides an informed intelligent search implementation in Fig. 1. We present a framework that is
+basedonasemanticsegmentationframeworkforindoorscenes able to generate locations on-the-fly without the need of
+and integrates it with object recognition and grasping. Instead pre-learned object-location relationship and show in a first
+of manually annotating search positions in the environment,
+experiment in an ambient-assistive-living lab to proof the
+theframeworkautomaticallysuggestslikelylocationstosearch
+robustness of our approach.
+for an object based on contextual information, e.g. next to
+tables and shelves. In a preliminary set of experiments we Theremainderofthispaperisstructuredasfollows:First,
+demonstrate that this behaviour control is as efficient as using we review related research on service robots performing
+manually annotated locations. Moreover, we argue that our fetch-and-carry tasks in Section II. We then outline how
+approach will reduce the intensity of labour associated with
+the SMACH framework works in Section III. Each of the
+programmingfetch-and-carrytasksforservicerobotsandthat
+modules and their integration in the behaviour controller is
+it will be perceived as more human-oriented.
+then described in Section IV with a focus on the modules,
+I. INTRODUCTION but not the individual methods. Finally, a first experiment in
+Theabilityofarobotautonomouslyinteractingwithahu- a living room setting is presented in Section V. A summary
+man requires sophisticated cognitive skills including percep- of lessons learned from the experiment and an outlook on
+tion, navigation, decision making and learning. Impressive future work conclude the paper.
+achievements have already been made in the research field
+of HRI considering robots as tour guides in museums [1],
+[2], shopping malls [3] and also for assistive robots in the
+care and domestic context [4].
+However,oneofthebiggestchallengesstillistheintegra- INIT
+tionofmethodsintooperationalautonomoussystemsforthe succeeded
+domestic context, which achieve satisfying results for their
+GET_ALL_POSITIONS
+end-users.Oftenamiss-matchbetweenuserexpectationsand
+robot performance can be observed in HRI studies [5], for succeeded
+instance because the robot behaviour is not legible to the GET_ROBOT_POSE wait for data
+users or is simply too slow. Imagine you command your
+succeeded next_room
+household robot to bring you your mug and the robot could
+aborted CLEAN_POSITIONS LOCATE_OBJECT
+onlysearchforitatpre-programmedplaces:Whatifthemug
+is at none of these places or the user rearranged the flat? aborted succeeded succeeded succeeded
+Another solution could be that the robot would navigate to
+GET_CURRENT_ROOM SET_SUCCESS POSE_ITERATOR
+the center of the room, rotate several times and then start a
+succeeded aborted succeeded aborted
+time-consuming brute-force object detection everywhere in
+the map. This behaviour would already increase flexibility, PLAN_PATH aborted succeeded preempted aborted succeeded
+but would still not be very legible for the user: Why getting
+an overview and then start a time-consuming search?
+failure MOVE_BASE_GO SEGMENTATION
+Would it not be much more intelligent and legible if the
+robot first gets an overview of the environment and then failure succeeded aborted succeeded
+looked at the most probable locations for the mug to be, CLEAN_UP LOCATION_REACHED aborted
+e.g. on tables or in the cupboard? One way to gain the
+information about this kind of relations is to extract it from
+Fig.1:Simplifiedstatemachinerepresentationofour“fetch-
+knowledge databases.
+and-carry”objecttaskapproach.Greystatesdenotesub-state
+1Faculty of Electrical Engineering and Information Technology, Vienna machines.
+University of Technology, 1040 Vienna, Austria {bajones, wolf,
+prankl, vincze}@acin.tuwien.ac.at
+1v45510.0151:viXra
+II. RELATEDWORK • Transitionsdefine,givenanoutcome,towhichstateor
+Object search and fetch-and-carry tasks represent one of container the execution chain should turn to.
+themostcommontasksofservicerobots.Intraditionalfetch- • Userdata is data which can be shared between mul-
+and-carry tasks the robot ”simply” has to pick up an object tiple states and containers, allowing to adapt the state
+fromaknownlocationanddeliverittotheuser.Forinstance, outcome based on accumulated data from previously
+intheRoboCup@Homecompetition2008/9[6]thishasbeen executed states.
+oneofthemajortasks.Thecomplexityofthistaskcanvary, For seamless integration SMACH provides interfaces to
+e.g. the robot has to identify the correct object from a set the three communication methods available in ROS, i.e.
+of objects or in a cluttered scene or the robot gets a very messages, services and Actionlib. Provided is the Moni-
+concrete instruction from where to fetch it, such as “Bring torStateforlistening topublishedtopics,executing aservice
+me the mug from the kitchen table”. Thus, fetch-and-carry representedasastatewithServiceState,callinganActionlib
+also includes object recognition and autonomous grasping, interface within SimpleActionState as well as the possibility
+popular examples are e.g. [7] and [8]. ofwrappingastatemachineinsideanActionlibserver.With
+Recently, the perception part has come more into the SMACH viewer, a tool to debug and visualize the running
+focus of fetch-and-carry tasks by adding the search for statemachine,theprovideduserdataaswellasthecurrently
+objectcomponents.ApopularexampleisGeorge,thecurios executed states and containers, is also integrated.
+attentivesemanticrobot[9].TheideaofGeorgeissimilarto
+thatpresentedinthispaper:Makearobot’ssearchbehaviour
+IV. IMPLEMENTATION
+more intelligent. An intelligent search procedure is more Forthefetch-and-carryscenariowecomparetwodifferent
+efficientandthereforethefetch-and-carrytaskbecomemore implementationswithinaROSenvironmentandtheSMACH
+satisfyingfortheend-user.[10]and[11]havealreadyshown state machine architecture. Both methods rely on a SLAM
+that there is the need to make robot’s behaviour more based2Dmapofourlaboratoryinwhichweannotatevirtual
+efficient and legible for the user. rooms as seen in Fig. 2 to create a multiple room scenario.
+Therefore, the aim of the work presented in the following
+A. Manual definition of search positions
+is to enable a domestic service robot to perform fetch-
+and-carry tasks in a user-satisfying manner. To that end, a Starting from the SLAM-based map we manually place
+cognitiveroboticsystemneedstointegratemultipledifferent “search positions” at user-defined locations inside the map.
+subsystems. Different tools, libraries and frameworks to To determine the pose at which the robot begins its task we
+develop robotic architectures already exist, such as Rob- define a cost function
+letRTechnology by Baier et al. [12], graphical tools such as
+ChoreographeandNAOqiforNaorobots[13],thebehaviour bat 1 prob 2 pen
+Markup Language (BML) [14] and the Robot Operating
+modelling the cost to search for a given object x at each
+system ROS [15]. A good overview and discussion on the
+possible search location y. c (y) represents the cost of
+advantagesanddisadvantagesofalltheseapproachesisgiven
+the battery usage estimated by the path length to the pose
+in [16].
+associated to search location y. c (x,y) is the probability
+InthefollowingwewillpresentSMACH,aPython-based
+of object x being found at location y transformed to a cost
+framework that allow ROS module integration, we used to
+andisinitializedwithauniformdistributionacrossallsearch
+develop a behaviour control combining intelligent object
+locations. The constant factors k and k are introduced to
+search, grasping objects, and bringing them to the user.
+normalizethecostlevels.c (y)isapenaltytermdepending
+III. SMACH on the room the user is currently in:
+SMACHisaPython-basedlibraryforbuildinghierarchical (cid:40)
+k y in same room as user
+concurrent state machines, which also provides a ROS inte- c pen (y)= pen (2)
+0 otherwise
+grated module to design and execute simple tasks as well as
+complex robot behaviours. SMACH provides the possibility The penalty term is based on the assumption that the user
+toquicklycreateprototypestatemachinesbyreusingPython does not ask the robot to look for objects which are in the
+design patterns. Within SMACH a task is defined by the same room as the user himself. It ensures that the robot
+following elements: does not search in this room unless the object has not been
+• State represents a blocking execution with pre-defined detected at the locations in all other possible rooms. During
+outcomes. The result of a state specifies the transitions the search task all the objects, which can be recognized, and
+to the next states. are localized at a certain position trigger the adaptation of
+• Container is a set of one or multiple states and defines c prob . Through this simple method Fig. 3 we will learn in
+theirfinaloutcomebasedontheintegratedstates.Espe- course of time where the user places objects and where the
+ciallyimportantandusefularetheStateMachineandthe robotshouldstartitssearch.Thisprovidesawaytolearnthe
+Concurrence containers. In the StateMachine container locationofspecificobjectsbasedontheuserspreferenceand
+all the states are executed one at a time, whereas in a does not leverage upon a pre-defined knowledge database or
+Concurrence multiple states are executed in parallel. data mining from online sources.
+B. On the fly extraction of search locations
+Our proposed approach automatically generates search
+positions on the fly after entering a room and executing
+the algorithm in Fig. 4 which uses semantic segmentation,
+returning at least 2 search positions or none at all (when no
+table planes were detected).
+Move to center pose in a room
+while rotation <360◦ do
+Rotate 30◦ ccw
+Call semantic segmentation service
+Receive possible search poses
+Remove poses from outside of the known map and
+outside the current room
+Fig. 4: Algorithm: obtain search poses
+Fig. 2: Virtual room arrangement in our ambient-assistive-
+Semantic segmentation: Our proposed point cloud pro-
+living lab.
+cessing pipeline consists of four steps, depicted in Fig. 5.
+First,wecreateanover-segmentationofthescene,clustering
+itintomanysmallhomogeneouspatches.Inthesecondstep,
+we compute a manifold but efficient-to-compute feature set
+foreachpatch.Theresultingfeaturevectoristhenprocessed
+while object located is FALSE do
+by a classifier, which yields a probability for each patch
+for all search positions do
+being assigned a specific label. To that end, we use a
+Calculate path length c
+obj randomized decision forest, a classifier which is intensively
+if available then
+discussed in [17]. We train the classifier on the publicly
+prob available NYU Depth V2 dataset [18], containing 1,449
+Look up search positions room r
+sp indoor frames, recorded by a Microsoft Kinect and densely
+labelled with more than 1,000 labels. In the last stage of
+if r (cid:54)=r then
+user sp our processing pipeline the classification results set up a
+penalty pairwise Markov Random Field (MRF), whose optimization
+yieldsthefinallabelling.Thislaststepsmoothesthelabelling
+penalty out to correct ambiguous classification results due to noisy
+localpatchinformation.Thefinallabellingthencorresponds
+if c <c then
+obj min to the Maximum-a-posteriori of the output of the MRF. In
+min obj particular, because our robot can only grasp objects located
+on tables, we only consider positions next to large clusters
+of points labelled “table” as suitable positions to detect (and
+Move to search position
+consequently grasp) objects. Therefore, after calculating the
+Remove location from list of search positions
+semanticlabelsofthecurrentscene,weusesimpleEuclidean
+Start object recognition
+clustering to obtain all tables in the scene. The resulting
+if object is recognized then
+searchpositionsarethendefinedbyasimpleheuristic,which
+Set object located to TRUE
+is explained in Fig. 6. For further details about our semantic
+Grasp object
+segmentation pipeline we refer to [19].
+From this method we gain the knowledge of search
+if Grasp succeeded then
+locations inside the map, which provide a horizontal plane
+Put object on tray
+in a certain height range (to filter out the floor and the
+lower surface of wall-mounted cupboards or the ceiling).
+Update probabilities of all recognized objects
+As these locations depend on the first and second principal
+Move to the user
+components derived from the segmented planes we have to
+Inform the user about the object location
+filter out positions which are not reachable (e.g. inside of
+another piece of furniture, or outside of the map) as well
+Fig. 3: Algorithm: locate object procedure as locations behind a wall. For this we first check if the
+detected table surfaces and the robot are within the same
+room boundaries and remove any search locations which do
+notfulfilthiscriteria.Secondlywedonotconsiderpositions
+that are inside of an occupied grid cell of the static map.
+C. Object recognition
+After the robot reaches a “search position” an attempt to
+recognize the object inside the scene and obtain the objects
+6-DOF pose (position and orientation). The recognizer is
+called with the RGB-D data collected by the Kinect on the
+robot’shead.Itcombinesthreedifferentrecognitionpipelines
+(2D and 3D) and merges the results during the verification
+stage. For details of the recognition process we refer to
+(a) (b) [20]. Results from successfully recognized objects are the
+names as well as the poses of all objects. Prerequisite for
+the recognition process is a trained model of every object
+which should be localized.
+D. Inform the user
+After the robot recognizes the object at a certain pose the
+user has to be informed about the current location, therefore
+the “search user” procedure is activated. This procedure will
+plan a path from the current room to the one in which the
+user has been detected the last time (either by the robot
+itself or by a motion detection system), move there and
+floor wall ceiling table attempt to detect the user by combining 2D face detection
+technique, introduced by Viola and Jones [21] as well as 3D
+chair cabinet object unknown
+detectionandtrackingofhumanbodyparts[22],[23].Ifthe
+user is not detected the search will continue until all rooms
+Fig. 5: Intermediate steps of our segmentation pipeline have been visited by the robot. After detection the user gets
+(a) input image (b) oversegmentation (c) conditional label informed about the location of objects, during which we use
+probabilities (here for label table, red=0, blue=1) (d) final theannotationoftheroomsinareverseordertogivetheuser
+result after MRF. (e) Colour code of final result a pose in human understandable form instead of the 6-DOF
+pose values.
+V. EXPERIMENTS
+All experiments were conducted on the first prototype of
+our custom made HOBBIT platform [24] Fig. 7. Its base is
+a mobile platform with two drive motors with an integrated
+gearandattachedwheelswithdifferentialdrive.Thepercep-
+tionsystemconsistsofoneRGB-Dcamera(ASUSXtionPro
+Live) mounted ground-parallel at a height of 40cm and one
+RGB-D camera (Kinect) mounted at 124cm height as part
+of the robot’s head on a pan-tilt unit. The lower camera is
+used for self-localization, the upper one for user and object
+detection, gesture and object recognition and both cameras
+contribute to the obstacle detection during navigation. For
+d manipulation PT1 is equipped with an IGUS Robolink arm
+with a 2-finger Finray-based gripping system. Further parts
+of the platform include a 15in tablet computer for touch
+input and speech recognition as well as a 7in display for
+the purpose of displaying the robot’s face. To stash away
+Fig. 6: Heuristic to define search positions for a table
+retrieved objects a tray is mounted behind the tablet and
+clusterprojectedontheground-plane(redpoints).Bluelines:
+above the robot arm.
+Principal axes of the cluster. The search positions (green
+To evaluate and compare the two implementations de-
+dots) are placed on the second principal axis, adhering a
+scribed in Section IV we conducted four tests, each consist-
+security distance d from the edge of the table.
+ing of one execution of both implementations. The object
+that had to be located was placed according to table I. As
+objectsweusedanAsusXtionProbox,abrownhandbagand
+cloud acquisition after the entrance of a room. As they both
+take almost the same time to complete (5sec and 4sec) we
+can save 48sec for each room. In our 5 virtual room set-up
+this would lead to a reduction of up to 4min, depending
+on the number of actually visited rooms. This leaves us
+room for future improvements for our proposed approach.
+The third culprit is the higher number of “search positions”
+(up to 20) that are inside of the desired room opposed to
+only one, which leads to a higher probability to find an
+object at the cost of increased search duration. To reduce
+this number of positions it is possible to cluster these poses
+together under the premise that they are close enough and
+the field of view will overlap at least a certain amount so
+that a possibly located table plane is not discarded. Fig. 8
+shows the result of search position calculations without the
+virtual room constraints and a number of poses which could
+be clustered together, especially on the left side and in the
+Fig. 7: HOBBIT platform - prototype 1 right handed lower corner.
+Another approach is to combine the semantic search
+algorithm with the pre-defined locations where the “search
+locations” are autonomously generated once instead of the
+an orange wallet, which were placed at the same locations
+manuallabelling.Thiswouldimprovethespeedofthewhole
+for the corresponding search runs. The robot was placed at
+search procedure but remove any flexibility towards changes
+the same start location before each pair of runs, with a total
+in the environment.
+of 4 different start locations. For each run we collected the
+following data:
+• The duration of the entire run until the robot detected
+the object or ended the search run.
+• The number of “search positions”. (Pre-defined, calcu-
+lated and with outliers removed)
+• The success rate of the search run. (Was the object
+recognized on the actual location?)
+object duration
+object start location #
+detected? [min]:[sec]
+Asusbox Kitchen room Y Y 7:12 16:31 9
+Living Bedroom
+Handbag N N* 9:52 12:15 17
+room nightstand
+Wallet room Y N 7:04 23:07 36
+hall shelf Fig. 8: Manual overlay of 12 search position calculations in
+Dining Kitchen our lab
+Asusbox N Y 8:51 10:45 17
+room cupboard
+TABLEI:Testrunset-upandresults.#...numberof“search
+positions”, N*...false positive recognition of the object, VII. CONCLUSION
+P...pre-defined locations, S...semantic segmentation-based In this paper we presented a SMACH-based behaviour
+control for more intelligent indoor fetch-and-carry tasks by
+the means of semantic segmentation. Our approach does not
+VI. DISCUSSIONANDOUTLOOK
+require manually annotated search positions and thereby in-
+At a first sight the results of our approach uses up to 2.5 creases flexibility and human-oriented perception. We could
+times the time of the pre-programmed search task, which show the feasibility of the approach by the means of a first
+wasexpectedduetothefactthattherobotnotonlysearches seriesofexperimentsandoutlinedsuggestionshowitcanbe
+on pre-defined tables but also on window sills, shelves, further improved. After implementing these improvements,
+etcetera. We further identified 3 major time-costing culprits we will perform a user study to assess how our approach
+in our system and set-up. First is the sequential order of the is evaluated in terms of perceived intelligence and overall
+semantic segmentation and the 30◦-rotation plus the point satisfaction by naive users.
+ACKNOWLEDGMENT [12] T. Baier, M. Huser, D. Westhoff, and J. Zhang, “A flexible software
+architecture for multi-modal service robots,” in Multiconference on
+This work has been partially funded by the European ComputationalEngineeringinSystemsApplications,IMACS.,vol.1.
+Commission under FP7-IST-288146 HOBBIT. IEEE,2006,pp.587–592.
+[13] E. Pot, J. Monceaux, R. Gelin, and B. Maisonnier, “Choregraphe:
+a graphical tool for humanoid robot programming,” in The 18th

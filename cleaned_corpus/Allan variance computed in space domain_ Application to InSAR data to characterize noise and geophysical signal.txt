@@ -1,0 +1,520 @@
+Allan variance computed in space domain:
+Application to InSAR data to characterize
+noise and geophysical signal
+Olivier Cavalie´ and Franc¸ois Vernotte
+Version 5 – June 4, 2015
+The Allan variance was introduced fifty years ago for analyzing the stability of frequency standards. Beside its
+metrologicalinterest,itmaybealsoconsideredasanestimatorofthelargetrendsofthepowerspectraldensity(PSD)
+of frequency deviation. For instance, the Allan variance is able to discriminate different types of noise characterized
+by different power laws in the PSD.
+The Allan variance was also used in other fields than time and frequency metrology: for more than 20 years, it
+hasbeenusedinaccelerometry,geophysics,geodesy,astrophysicsandeven...finances!However,itseemsthatupto
+now, it has been exclusively applied for time series analysis. We propose here to use the Allan variance onto spatial
+data.
+Interferometric synthetic aperture radar (InSAR) is used in geophysics to image ground displacements in space
+(overtheSARimagespatialcoverage)andintimethanktotheregularSARimageacquisitionsbydedicatedsatellites.
+Themainlimitationofthetechniqueistheatmosphericdisturbancesthataffecttheradarsignalwhiletravelingfrom
+the sensor to the ground and back. In this paper, we propose to use the Allan variance for analyzing spatial data
+from InSAR measurements. The Allan variance was computed in XY mode as well as in radial mode for detecting
+different types of behavior for different space-scales, in the same way as the different types of noise versus the
+integration time in the classical time and frequency application. We found that radial AVAR is the more appropriate
+way to have an estimator insensitive to the spatial axis and we applied it on SAR data acquired over eastern Turkey
+for the period 2003-2011. Space AVAR allowed to well characterize noise features, classically found in InSAR such
+as phase decorrelation producing white noise or atmospheric delays, behaving like a random walk signal. We finally
+applied the space AVAR to an InSAR time series to detect when the geophysical signal, here the ground motion,
+emerges from the noise.
+O. Cavalie´ is with Universite´ de Nice Sophia Antipolis, CNRS, IRD, Observatoire de la Coˆte d’Azur, Goazur UMR 7329, 250 rue Albert
+Einstein,SophiaAntipolis06560Valbonne,France(Email:ocavalie@geoazur.unice.fr).
+F.VernotteiswithUTINAM,ObservatoryTHETAofFranche-Comte´,UniversityofFranche-Comte´/CNRS,41bisavenuedel’observatoire
+-B.P.1615,25010Besanc¸onCedex-France(Email:francois.vernotte@obs-besancon.fr).
+]na-atad.scisyhp[
+1v22310.6051:viXra
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 1
+I Introduction 3
+II Choice of the variance 3
+II-A Expected properties . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+II-B XY-AVAR . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+II-B1 Definition . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+II-B1a Kernel . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+II-B1b Transfer function . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+II-B1c First feeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+II-B2 Responses of XY-AVAR . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+II-B2a Response to a 1-D sine . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+II-B2b Response to a 2-D sine . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+II-B2c Response to a drift . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+II-B2d Response to a Gaussian white noise . . . . . . . . . . . . . . . . . . . . . . . . 7
+II-B2e Response to a random walk . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+II-B2f Searching for a noise giving a flat horizontal response . . . . . . . . . . . . . . 7
+II-B3 Conclusion about XY-AVAR . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+II-C Radial AVAR: Allan’s hat . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+II-C1 Definition . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+II-C1a Kernel . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+II-C1b Transfer function . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+II-C1c First feeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+II-C2 Responses . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+II-C2a Response to a 1D sine . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+II-C2b Response to a 2D sine . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+II-C2c Response to a linear drift. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+II-C2d Response to a Gaussian white noise . . . . . . . . . . . . . . . . . . . . . . . . 11
+II-C2e Response to a Gaussian random walk . . . . . . . . . . . . . . . . . . . . . . . 11
+II-C3 Conclusion about radial AVAR . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+III Application to InSAR data 12
+III-A Data and method . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+III-B InSAR signal modeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+III-B1 Tectonic signal modeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+III-B2 Atmospheric noise modeling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 2
+III-C Real data . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+III-D Data Inversion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+III-D1 Inversion without smoothing . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+III-D2 Inversion with smoothing . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+III-D3 Times series results and spatial AVAR . . . . . . . . . . . . . . . . . . . . . . . . 24
+III-E Conclusion about InSAR application . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+IV Conclusion 26
+V Acknowledgements 27
+References 27
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 3
+I. INTRODUCTION
+The Allan variance was designed by David Allan 50 years ago for characterizing the time stability of atomic
+clocks [1]. This statistical tool quickly became a standard for researchers, engineers and manufacturers in the time
+and frequency field, to the extent that the Allan variance is not only considered as a stability estimator but as the
+stability itself! The use of this tool then spread to related fields such as inertial sensors [2], temperature [3] and
+voltage [4]. Since 2000’s, the Allan variance has been used in many other domain including geodesy, to measure
+absolutedisplacementofgeodeticstations[5],astrophysics,forselectingstableextragalacticcompactradiosources
+from the VLBI program [6], geophysics, by monitoring the elevation of a volcano station to detect a change in
+the Allan deviation signature as a symptom of an eruption threat [7]. The Allan variance is even used in finance
+for optimizing the financial returns [8]! However, all these applications of the Allan variance deal with time series
+analysis. To our knowledge, this statistical estimator was never used over two-dimensional spatial data. This is
+the aim of this paper: modifying the 1-D Allan variance to a 2-D space Allan variance for fulfilling the needs of
+geophysics in terms of Earth surface deformation monitoring.
+Earth surface deformation is one of the most important observation to infer earth interior properties [9]–[11],
+subduction zone activity [12] or natural hazard, including seismic hazard, landslide [13] or land subsidence [14].
+While looking at large wavelength phenomena, measuring accurately how Earth deforms is a challenging task. A
+veryeffectivewayhasbeendevelopedwithgeodetictechniquessuchasGlobalNavigationSatelliteSystem(GNSS)
+orradarinterferometry(InSAR).Inbothcases,measurementsusethetraveltimeofelectromagneticwavesbetween
+satellites and Earth’s surface to derive the ground displacements. As Earth’s atmosphere is not neutral, taking into
+account the wave travel in this media is a key parameter to get reliable measurement of surface deformation.
+Here,weinvestigatethenoisesignatureinInSARandinparticularthenoiseinducedbythewavepropagationinto
+the atmosphere. InSAR has proven to be a very powerful tool to measure Earth surface displacements [15]. Despite
+it measures the deformation in 1 dimension, this is the only technique offering large spatial coverage (hundreds
+of kilometers) and excellent spatial resolution (tens of meters). The main limitation is the atmospheric delays
+during the wave propagation in the atmosphere. Indeed, spatiotemporal variations of the air refractivity induce
+additional signal on the interferograms, that we called atmospheric phase screen (APS). Following atmospheric
+conditions during the SAR images acquisitions, APS on interferograms can reach up to 10 cm, or more in case of
+extreme meteorological events. It is thus potentially much larger than the geophysical signal. A method to model
+the structure and, eventually, correct the APS is then an important goal to fully exploit InSAR as an accurate
+method for displacement measurement. The extension of AVAR to 2-dimensional images could be a powerful tool
+for achieving this purpose.
+II. CHOICEOFTHEVARIANCE
+A. Expected properties
+TheAllanvarianceisdesignedforassessingthelargetrendsofthespectrum,notfordetectingfinespectrallines.
+On the other hand, it can easily distinguish different power-laws in the spectrum of a time signal. This is exactly
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 4
+Fig.1. Exampleofwhitenoise(left)andrandomwalk(right).
+what we need in the analysis of InSAR images.
+We expect that the noise may be modeled as a power law of the wave number k, where k is the dual variable of
+the radius in polar coordinate, exactly as the frequency f is the dual variable of the time t in time series. Like in
+time and frequency, we could encounter a Gaussian white noise, of electronic origin or due to phase decorrelation,
+andanatmosphericnoiseexhibitinglargescalecorrelation,likelywithapowerspectrumdecreasingask−2 (random
+walk). Figure 1 displays these two types of noise. Ideally, the response of Allan variance should be a plane with
+different slopes, depending on the type of noise: horizontal for the atmospheric noise and decreasing with the scale
+factor for white noise.
+This behavior should permit to separate the noise signature from the signal signature which depends on the
+topography of the images. The Allan variance must detect the large structure of the image signal. We ought then to
+identifytheresponseofspaceAVAR1 forvariousfeaturessuchaslinearslope,a1-dimensionalsine,a2-dimensional
+sine, with different orientations. Such patterns may be seen on Figure 2.
+Finally, on a time series of images covering the same area site over several years, we should be able to see the
+signal emerging from the noise as the date of the image increases.
+B. XY-AVAR
+The first attempt for extending the classical Allan variance from 1D to 2D was the XY-AVAR. This variance
+relies upon a duplication of the double-stepped shape of AVAR along the first dimension, i.e. X-axis, in the second
+dimension, i.e. Y-axis (see Figure 3).
+1) Definition:
+1SincetheclassicalAllanvarianceisoftendenotedAVAR,wewillrefertothe2-dimensionalspaceAllanvarianceasspaceAVAR.
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 5
+Fig.2. Exampleofan1-dimensionalsineimage(left)andof2-dimensionalsineimage(right).
+Fig.3. Fromclassical1DAllanvariancetoXY-AVAR.
+a) Kernel: If XY-AVAR is considered as a 2D-filter, the kernel is its impulse response h (x,y) which is
+the product of the kernel of classical AVAR along X by the kernel of classical AVAR along Y. Let us denote
+h (x) the kernel of AVAR along X:
+where λ is the scale factor along X.
+Similarly, let us denote h (y) the kernel of AVAR along Y:
+where λ is the scale factor along Y.
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 6
+Fig.4. SquaredmodulusofthetransferfunctionofXY-AVARforλX =4pixelsandλY =3pixels.
+The kernel of XY-AVAR is then:
+b) Transfer function: The transfer function is the Fourier transform of the kernel (i.e. the impulse response).
+Moreover, since the kernel is the product of one function depending only on x by a function depending only on y,
+its Fourier transform is the product of the Fourier transform of these functions (see [16] p. 139):
+where u and v are spatial frequencies in X and Y directions.
+Since the squared modulus of the transfer function of the classical Allan variance is given by [17]:
+the squared modulus of the transfer function of XY-AVAR is then:
+c) First feeling: Figure 4 shows the shape of this transfer function. This graph exhibits a grid of zeros since
+each time one of the functions H (u) or H (v) is equal to 0, it yields a line of 0 along the perpendicular axis.
+Therefore, XY-AVAR is strongly dependent on the axis orientation. This is clearly a disadvantage because the
+response of XY-AVAR may vary significantly versus the rotation of the image, although the image content is
+obviously the same.
+2) Responses of XY-AVAR: In order to test XY-AVAR, we applied it to the various noises and geometrical
+patterns defined in §II-A.
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 7
+Fig.5. XY-AVARofa1-Dsine(left)andofa2-Dsine(right).
+a) Response to a 1-D sine: The response of XY-AVAR to 1-D sine depends drastically on its orientation: if
+the sine is exactly in the direction of one axis, the XY-AVAR response is null; but this is no longer the case when
+the 1-D sine orientation is arbitrary as shown on Figure 5 (left).
+b) Response to a 2-D sine: Similarly, if the 2-D sine are in the direction of the axis, XY-AVAR yields a null
+response. Otherwise, we can see an example of XY-AVAR response on Figure 5 (right).
+c) Response to a drift: In this case also, the response may be null if the drift is oriented in the direction of
+one of the axis.
+d) Response to a Gaussian white noise: As expected, the response of XY-AVAR for a white noise is a plan
+decreasing proportionally to the scale factor. Figure 6 (left) shows this plane seen almost edge-on.
+e) Response to a random walk: On the contrary, the response of XY-AVAR for a random walk is not at all
+flat (see Figure 6, right): its curvature spans over 2 decades. Moreover, the surface exhibits a protruding central
+diagonal with flanged edges. This feature is not suitable because it could interfere with the signal signature.
+f) Searching for a noise giving a flat horizontal response: The only noise which could give a flat horizontal
+response by XY-AVAR must have a power spectrum which decreases as u−2v−2 rather than k−2 as a classical
+random walk. Figure 7 shows such a noise and the response of XY-AVAR for this noise. Firstly, we can see that
+this response is flat but not horizontal: it increases as the scale factor. Secondly, the response is only flat if the axis
+of the image are aligned to the axis of XY-AVAR. Moreover, the image of this noise is not at all natural: the X
+and Y axis are very marked as a raster image.
+3) Conclusion about XY-AVAR: As expected in section §II-B1c, XY-AVAR is not suitable because it is too
+much dependent on its axis orientation. This has two consequences:
+• some responses (for a drift, for a 1-D or 2-D sine) may completely vanish depending on the axis orientation
+• a random walk does not yield a flat and horizontal response but a complex feature which could be confused
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 8
+Fig.6. XY-AVARofawhitenoise(left)andofarandomwalk(right).
+Fig.7. Exampleofu−2v−2 noise(above)andtheresponseofXY-AVARforthisnoise(below).
+with the response for the signal.
+For these reasons, another space Allan variance algorithm must be sought.
+C. Radial AVAR: Allan’s hat
+We ought then to find a variance which does not depend too much on the orientation of the axis. Thus, we chose
+to define a kernel with a radial symmetry. The principle is to rotate the double-stepped shape of AVAR around
+the Z-axis (see Figure 8). In order to preserve the same surface for the central positive plateau and the peripheral
+negative one, it is necessary to respect a condition on the radii. Let us denote r , the radius of the central positive
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 9
+Fig.8. Fromclassical1DAllanvariancetoAllan’shat.
+step,r ,theradiusoftheperipheralnegativestep,S thesurfaceofthecentralpositiveplateau,andS ,thesurface
+of the peripheral negative plateau:
+S =πr2 =S =π (cid:0) r2−r2(cid:1) ⇒ r = 2r . (7)
+1 1 2 2 1 2 1
+This leads to a 2-D shape that resembles a hat which we named the “Allan’s hat”.
+1) Definition:
+a) Kernel: Considering the full radial symmetry of Allan’s hat, the kernel may be written in polar coordinates
+as:
+where r = x2+y2 and θ = arctany/x. Note that the factor 1/ 2 has been kept for the sake of homogeneity
+with the definition of classical AVAR. As defined by (8), radial AVAR is fully insensitive to θ. However, we must
+be able to detect the variations versus the scale factor λ along X-axis as well as the variations versus the scale
+factor λ along Y-axis. For this purpose, instead of r, we define ρ as:
+(cid:19)2 (cid:18)
+ρ= + . (9)
+The Allan’hat is now elliptical: the semi-major axis of the central plateau is max{λ ,λ }, its semi-minor axis is
+min{λ ,λ }, its surface is S =πλ λ , and its bounds are given by ρ<1. We can now rewrite the kernel in
+Cartesian coordinates:
+(cid:19)2 (cid:18)
+x (cid:19)
+y (cid:19)
+≥2.
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 10
+Fig.9. Squaredmodulusofthetransferfunctionofrad-AVARforλX =8pixelsandλY =6pixels.
+b) Transferfunction: Inoptics,itiswellknownthattheFouriertransformofacircularapertureoftransparency
+1 and of radius 1 is 2J (k)/k (the Airy pattern) where J (k) is the Bessel function of first kind and order 1 and
+k the wave number (see for example [18], pp. 395–396). Therefore, the squared modulus of the transfer function
+of radial AVAR is:
+(cid:34) √ (cid:35)2
+2 J (k) J ( 2k)
+rad (πλ X λ Y )2 k 2k
+Let us define the frequency variables u and v in such a way that k = λ2 u2+λ2v2. We can rewrite (11) as:
+ (cid:16)(cid:113) (cid:17) (cid:16)(cid:113) (cid:17)2
+J λ2 u2+λ2v2 J 2(λ2 u2+λ2v2)
+2 1 X y 1 X y
+The shape of this transfer function may be seen on Figure 9.
+c) First feeling: Rad-AVAR seems to be a promising algorithm. Let us study its responses for the various
+noises and geometrical patterns defined in §II-A.
+2) Responses:
+a) Response to a 1D sine: The response to a 1D-sine changes slightly with the axis orientation (basically, for
+a 90◦ rotation angle, the behavior along the X-scale factor is exchanged with the one along the Y-scale factor and
+conversely) but the response is never identically null (see Figure 10).
+b) Response to a 2D sine: Similarly, the response to a 2D-sine changes slightly with the axis orientation but
+the response is never identically null (see Figure 11).
+c) Responsetoalineardrift: TheresponsepassesfromaplaneincreasingproportionallytotheX-scalefactor
+when the slope of the drift is oriented along the X-axis to a plane increasing proportionally to the Y-scale factor
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 11
+Fig.10. ResponseofRad-AVARtoa1Dsinewithdifferentorientations.
+Fig.11. ResponseofRad-AVARtoa2Dsinewithdifferentorientations.
+when the slope is oriented along the Y-axis (see Figure 12). This is then an important property of Rad-AVAR.
+d) ResponsetoaGaussianwhitenoise: TheresponseofRad-AVARisaplanedecreasingwiththescalefactor
+as for XY-AVAR. Here also, it is almost seen edge-on.
+e) Response to a Gaussian random walk: For a random walk, Rad-AVAR gives a quasi flat and horizontal
+plane: the Z-amplitude ranges from -0.9 to -0.7 (from 0.13 to 0.20 on a linear scale) whereas the X and Y-
+scale factors range over 2 decades. The residual fluctuations of the response are due to the difference between the
+mathematical expectation of Rad-AVAR, which is exactly flat and horizontal, and the estimator of this variance
+which remains a χ2 random variable (as for the classical Allan variance). Nevertheless, its fluctuations are very
+limited and this tool is then entirely able to distinguish between a white noise, a random walk and a geophysical
+signal.
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 12
+Fig.12. ResponseofRad-AVARtoadriftwithdifferentorientations.
+Fig.13. ResponseofRad-AVARtowhitenoise(left)andtoarandomwalk(right).
+3) Conclusion about radial AVAR: Radial AVAR has exactly the expected properties defined in §II-A. It is then
+perfectly suitable for our purpose.
+III. APPLICATIONTOINSARDATA
+A. Data and method
+We worked with synthetic aperture radar (SAR) images acquired by Envisat, satellite from the European Space
+Agency(ESA).Thisdatasethasbeenprimarilyusedin[19]tomapthesurfacedeformationineasternAnatolia.SAR
+images are acquired in illuminating the ground with electromagnetic waves (microwave frequency) and collecting
+the reflected signal. This remote sensing technique uses the round trip travel time and amplitude of the waves to
+determine physical properties of the targets on the ground that reflected the signal. Two quantities are measured :
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 13
+(i)theamplitudeofthereflectedsignalthatcorrespondstotheenergysentbackinthesatellitedirectionand(ii)the
+phase of the reflected wave. Interferograms are generated in differentiating the phase of two SAR images acquired
+at different time [20]. Considering that the ground response are identical for both SAR images (i.e, these terms
+cancel each other out in the phase substraction operation), the observed interferometric phase ϕ can be written as
+thesumoffourterms[21].Weadd,here,onemoretermtodistinguishexplicitlybetweentwokindsofatmospheric
+delays and the other sources of noise :
+def orb strat turb noise
+where ϕ is the phase component related to ground movements, ϕ is the residual orbital phase, ϕ
+def orb tropo
+is the stratified atmospheric phase delay correlated with elevation, ϕ is the turbulent delays due to the 3-
+dimensional refractivity distribution of the atmosphere, and ϕ is the remaining term that includes instrument
+noise, DEM errors, or phase decorrelation. Phase decorrelation occurs when ground surface changes between two
+SAR acquisitions (vegetation growth, ground erosion) or by geometrical decorrelation when the perpendicular
+baseline between the two images is too large. When decorrelation happens, wrapped phase takes random values
+between −π and π, that can be assimilated as white noise. Figure 14 shows phase decorrelation. We obtain a white
+noise space AVAR signature as obtained in our previous test (Figure 13). Such interferograms are then discarded
+for ground displacement measurements.
+In our data processing we corrected interferograms for stratified tropospheric delay, ϕ , using ERAI, a global
+atmospheric model [22]. This correction is a key step to obtaining a successful measurement of tectonic signals
+by InSAR, although this correction is not always successful and relies on the accuracy of the global atmospheric
+model. [23] shows that ERAI does not predict properly the tropospheric delay for 10% of the case. ϕ is mostly
+caused by a drift in the local oscillator onboard the Envisat satellite [24]. This drift only causes a ramp in the
+across-track direction (range) of the interferograms and we therefore made no ramp corrections in the along-track
+direction(azimuth),toavoidremovingtectonicsignalsrelatedtothemotionoftheAnatolianandArabianplates,we
+estimate the residual orbital signal by an east-west ramp across each interferogram only on their Eurasian part that
+is considered as stable. Others sources of noise can be turbulent atmospheric delays ϕ , DEM errors or thermal
+noise, ϕ . Note that, for the selected interferograms, ϕ is much larger than ϕ . Figure 15 shows single
+noise turb noise
+interferograms containing both geophysical signal and noise. As the ground movement is small, noise dominates
+thescene.Turbulentatmospherepatternsdecorrelatewithin24hours[25].So,asSARimagesaretakenatdifferent
+dates (shortest repetitive acquisition is 35 days), interferograms that do not share common images, will exhibit
+different noise signal patterns (Figure 15).
+To derive ground displacement rates from noisy interferograms, [19] used small baseline time series analysis
+[26]. This method uses interferograms, computed with the same image dataset, to retrieve phase increment between
+two images acquired successively in time. As said previously, most of the remaining interferogram noise is high
+frequency in time. A smoothening operator is then applied to limit phase variations due to turbulent atmospheric
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 14
+Fig.14. Right:Interferogramwithphasedecorrelation(redsquare).ThisoccurswhenspatialbaselineistoolargebetweenbothSARimages
+or when surface properties (mostly vegetation and erosion) changed between both SAR images acquisition. Left : Space AVAR of the phase
+valueslocatedintheredsquare.Thisresponsecorrespondstypicallytoawhitenoise.
+delays. This step allows to estimate the surface displacement history of each coherent pixel from the set of small-
+baseline interferograms. For tectonic application, [19] computed the linear component of the time series result for
+eachpixel,toderivethesteadysurfacedisplacementvelocities.Thisresultcanbeexplainedbysimpleelasticmodel
+whereplatebordersarerepresentedbyburieddislocations,creepingatarateallowingtoaccommodaterelativeplate
+motions (i.e, here Eurasia, Anatolia and Arabia). Figure 16 shows observed (by InSAR) and modeled velocities
+maps. Note that maps are shown here in the geographic referential and the phase has been converted in centimeters
+(for Envisat satellite, 2π = 2.8 cm). For simplicity reasons, we will work with radar coordinates in the following
+and phase amplitudes will be in radian.
+We tested the Allan Variance on various InSAR items. First on synthetic tests, to see how the 2D-AVAR reacts,
+and then on the real InSAR data presented above.
+B. InSAR signal modeling
+1) Tectonic signal modeling: To have an idea of how the 2D-AVAR of the geophysical signal evolves with
+time, we modeled the tectonic signal in radar coordinates for each SAR image date. The spatial AVAR is then
+computed at each time step. The first SAR acquisition of the time series is our reference image. There is thus no
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 15
+Fig.15. Examplesofinterferogramsobtainedalongtrack493.Colorbarsindicatephasechangesinradians.a)Typicalatmosphericpatternsdue
+totheturbulentandspatialheterogeneitiesoftheairrefractivity.b)Ontopoftheatmosphericdelays,higherfrequencysignalissuperimposed
+duetophasedecorrelation.c)Exampleofmiscorrectedinterferogramwheretheeffectofthestratifiedatmosphereisstillvisible(blackcircle).
+d)Interferogramwithresidual“orbitalramp”alongtherangeaxis.
+deformation. We will then consider the deformation between the date of each other images and this reference. We
+assumethegrounddisplacementtobelinearintime.So,knowingtheplatevelocities,itisthenpossibletocompute
+the expected geophysical signal between each SAR image and the reference image (Figure 17a). As the tectonic
+signalhasalargespatialwavelengthcontentandincreaseslinearlywithtime,weexpecttheAVARtoincreasewith
+time and as the scale factor increases.
+Tectonic signal is mostly a large wavelength signal. Applying the spatial AVAR on the modeled signal, we see
+that the variance increases both in azimuth and range axis. However, du to the geometry and movement of the
+plates, AVAR reaches larger values along the azimuth axis (Figure 17b). As the signal grows in time, the shape and
+AVAR range do not change, but the maximum AVAR value, found for large scale factor, increases (Figure 17c).
+2) Atmospheric noise modeling: Based on Tatarski’s work [27], notably, Hanssen proposes a new atmospheric
+model for radar interferometry considering three regimes of atmospheric delays as observed by InSAR [28]. Each
+of these regimes corresponds to a particular scale factor and is characterized by an exponent of the power spectrum
+β:
+I scale-factor >2 km: P (k)∝k−5/3
+II 0.5< scale-factor <2 km: P (k)∝k−8/3
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 16
+Fig. 16. Observed and modeled ground velocities. (a) Observed horizontal velocities from InSAR time series analysis in mm/yr parallel to
+the satellite line of sight (LOS) direction (black and white arrows show the LOS and flight directions, respectively) and in an Eurasia-fixed
+referenceframe.Velocitiesareshownpositiveintheeast-southeastdirection(103N).(b)Elasticbackslipmodelmodeling.Theblackcrossin
+(a)pointsthelocationofthetimeseriesofFigure25.
+III 0.01< scale-factor <0.5 km: P (k)∝k−2/3
+where k is the wave number and P (k) the power spectrum. This model assumes isotropy and no ionospheric
+influences, that is a verified for C-band SAR data as used in this study. However, the model does not take into
+account topography related delays, ϕ , what might be a problem if this term is not properly removed.
+We can, thus, model the atmospheric noise by the following dependence on the wave number:
+k (cid:16) (cid:17)
+• k 12 is the cut-off wave number between regimes I and II: k 12 =0.5 km−1
+• h is a free parameter denoting the general level of atmospheric noise
+• h 3 istheleveloftheregimeIIIwhichvalueisfixedbythepreviousparameter:sincethelimitbetweenregimes
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 17
+Fig. 17. (a) Modelled tectonic signal in radar coordinates corresponding to the line of sight (LOS) ground displacement. (b) Space Allan
+variancecomputedfrom(a).(c)Evolutionoflog10(AVAR)maximumvalueforeachSARacquisitiondate.
+II and III corresponds to scale-factor of 0.5 km, i.e. k =2 km−1, it yields
+23 3 23 3 23
+The atmospheric noise model is then:
+where k is expressed in km−1.
+In our case, a pixel corresponds to 640 m and an image contains typically 600 pixels. Thus, k ranges between
+0.0025 and 0.8 km−1 (Nyquist frequency).
+Figure 18 shows the Hanssen’s model. It is very interesting to notice that this model remains close to a k−2
+asymptotewithinthek-rangewhichcorrespondstoourimages.Itmeansthattheresponseoftheatmosphericnoise
+to space AVAR should be very similar to a plan almost flat and horizontal which confirms our intuition of §II-A.
+This model may be used for simulating images of atmospheric noise. Such an image is displayed in Figure
+19. The space Allan variance of this sort of images may thus be computed. Figure 20 exhibits the average of
+the response of AVAR for 25 uncorrelated simulated atmospheric noises like Figure 19. Averaging 25 responses
+cancels out the deviation of each individual response from the theoretical variance of space AVAR. Thus, Figure
+20 is representative of the response of space AVAR for an atmospheric noise following the Hanssen’s model.
+As expected, taking into account the very thin range of Figure 20 z-scale, we can see that the response of space
+AVARisalmosthorizontalandflat.Moreprecisely,itlookslikeacupola:horizontalnearthecenteranddecreasing
+on the edges. For going further, we must analyze Figure 21 which shows the power spectrum of the atmospheric
+noise multiplied by k2, in order to identify the areas where the slope follows a k−2 asymptote rendered as an
+horizontal curve. Indeed, this figure shows that the atmospheric power spectrum follows exactly a k−2 asymptote
+around k =0.3 km−1, yielding a flat response of space AVAR for scale factors around 5 (0.7 on log10-scale). For
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 18
+Fig. 18. Model of atmospheric noise. The three regimes are visible: regime I at left (for k < 0.05 km−1, dashed red asymptote), regime
+II near the center (k ≈ 0.5 km−1, dashed green asymptote), regime III at right (for k > 5 km−1, dashed purple asymptote). However, the
+atmosphericnoisemodelremainsrelativelyclosetothek−2 asymptote(dash-dottedcyanline).
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 19
+Fig.19. SimulationofanatmosphericnoiseaccordingtotheHanssen’smodeldescribedbyrelationship(14).
+larger k, the curve of Figure 21 exhibits a decreasing slope: this means that the power-law of the power spectrum
+is lower than −2 yielding a positive slope for space AVAR at small scale-factors. On the other hand, for k smaller
+than 0.3, the curve of Figure 21 exhibits an increasing slope: the power-law of the power spectrum is then higher
+than −2 and space AVAR decreases as the scale factor increases.
+We can now compare this theoretical model with single interferograms acquired over the area presented on
+Figure 16. For that purpose, we chose interferograms with small temporal baseline (i.e small timespan between
+the two SAR acquisitions) in order that the tectonic signal is negligible with respect to the atmospheric delays.
+Space AVAR would thus reflect the atmospheric structure. Figure 23 shows that typical space AVAR pattern for
+a corrected interferogram (i.e ϕ and ϕ have been removed) differs from Hanssen’s model at large scale
+strat orbit
+factors. Space AVAR response of the digital elevation model (DEM) also displays a quasi-plane increasing with
+scale factors. So even, if DEM related components have been removed, residual of this component might still be
+strong enough to contaminate the space AVAR of the APS response. Space AVAR shows thus that in areas where
+strong elevation variations take place, like in Turkey, the influence of the topography cannot be neglected to model
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 20
+Fig.20. ResponseofspaceAVARforanatmosphericnoise.ThisresponseistheaverageoftheresponseofAVARfor25uncorrelatedsimulated
+atmospheric noises (Figure 19 is on these). It must be noticed that z-scale ranges from 10−3.5 to 10−3.15, i.e. from 3·10−4 to 7·10−4,
+whichprovesthatthisresponseisnearlyflat.
+the atmosphere for InSAR. However, this effect must be relativized since the magnitude of this increasing of space
+AVAR for high scale factors is limited to half a decade (from 10−4.5 to 10−4, i.e from 3·10−5 to 10−4).
+An empirical way has also been proposed to model the atmospheric topology for InSAR [29]. This method
+estimates directly the variances and autocovariances of interferograms. For this purpose, semi-variograms γ(h) is
+used to estimate the InSAR variances and covariograms C(h) is used to estimate the spatial correlation in the data
+[30]. They are defined as followed :
+1 (cid:88)
+where ϕ(i) and ϕ(j) are the interferometric phases of pixels i and j, respectively, d(i,j) is the distance beween
+i and j, and N is the number of pixel pairs such that d(i,j)=r. Similarly, one can define the covariogram as:
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 21
+Fig. 21. Power spectrum of the atmospheric noise model multiplied by k2 within the observable range. The k2 factor allows us to clearly
+identify that the power spectrum follows a k−2 power-law (horizontal asymptote) around k =0.3, a power-law with an exponent >−2 for
+lowerk,andapower-lawwithanexponent<−2forhigherk.
+1 (cid:88)
+Fromthesemi-variograms,onecanestimatethevarianceoftheinterferogramswhenthefunctionflattens(Figure
+22). Covariogram indicates the correlation length in the data and how fast it decorrelates. In case of white noise
+(i.e no correlation), covariogram function would be constant-zero function and semi-variogram would be a constant
+function at the variance value. Covariagram function can be estimated by a an exponential decay b·exp(−h/a).
+The exponential decay function is then used to generate random, similar spectral, noise (Figure 23).
+C. Real data
+We now applied the 2D-AVAR on data acquired from Envisat satellite over an area covering the eastern part of
+the Anatolian plate. We combined 18 SAR images into 32 interferograms. Figure 24 shows image acquisitions date
+as a function of their relative position (perpendicular baseline). Note that to keep a good phase coherence over the
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 22
+Fig. 22. (a) Interferogram computed with images acquired with a 35-day timespan. (b) Semi-variogram, γ(h) and (c) covariogram, C(h),
+computedforthisinterferogram.
+interferogram, perpendicular and temporal baseline between two images is limited. Based on this criteria, we find
+the best network that connect each image. Each interferogram is corrected for ϕ and ϕ [19]. We computed
+for each interferogram the spatial AVAR before and after the correction. We observe that the correction step clearly
+decreases the mean AVAR, confirming that large wavelength have been reduced. The next step is to inverse the set
+of interferograms to establish a time series of the phase evolution.
+D. Data Inversion
+1) Inversion without smoothing: Corrected interferograms are then inverted to solve for the incremental de-
+formation between two successive images using a least squares inversion method [31]. For each pixel, treated
+independently from its neighbours, we solve:
+d=G.m (17)
+wheredincludesN interferogramsobservations,mcorrespondstoM-1incrementaldisplacementsbetweentheM
+time steps, and G is a N by M−1 matrix containing zeros and ones, based on the stating that the interferometric
+phase, ϕ , is the sum of successive phase increments between image i and image j : ϕ =
+(cid:80)j−1m
+. Images are
+ij ij k=i k
+ordered by dates.
+Theinversionusestheredundantinformationofthe32interferogramstoreducesomeerrorsduetointerferogram
+formation.
+2) Inversion with smoothing: To decrease atmospheric delay or APS, noted ϕ in equation 13, we introduce
+temporalsmoothingintheinversionasanotherconstraint,byminimizingthecurvatureoftheinvertedphasetemporal
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 23
+Fig. 23. (a) Same interferogram as in Figure 22a (b) corresponding space AVAR diagram. (c) Modeled atmospheric noise based on the
+interferogramcovariogramand(d)correspondingspaceAVARdiagram.
+evolution [14]. The system becomes :
+d(cid:48) G(cid:48) (cid:16) (cid:17)
+d, G, and b are weighted by the matrix W (d(cid:48) =Wd, G(cid:48) =WG, and b(cid:48) =Wb). γ is the smoothing coefficient
+introduced to ponderate the minimum curvature constraints dm (where t is time). dm(cid:12) (cid:12) is evaluated with a 5 points
+finite difference scheme centered on each acquisition date i. The weight, W, applied on each interferogram is the
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 24
+Fig.24. DiagramofEnvisatimagesfordescendingtrack493.Relativeperpendicularbaselinesareplottedasafunctionofacquisitiondates.
+The18SARimagesarecombinedinto32interferograms(greysegments).
+product of two terms : (1) the first term equalizes the weight of all images in the inversion, (2) the second term
+characterizes the interferograms “quality”, q , defined as the inverse sum of both images i and j APS amplitudes.
+3) Times series results and spatial AVAR: Figure 25 shows the time series of the ground displacement in the
+satellite line of sight (LOS) with or without smoothing in the inversion. We see that after smoothing, ground
+displacement rate becomes steady. However, it does not mean that all the high frequency APS have been removed.
+Actually, if it seems so in time for one pixel, the resulting smoothed displacement rate may change from one pixel
+to another due to different APS conditions. Spatially, APS are thus not fully removed, but its amplitude clearly
+decreased.
+As the tectonic signal contains long wavelength, to characterize it, we took the maximum value of the AVAR,
+max obtained at largest scale factor. We did that for the non-smoothed and smoothed times series. Figure 26
+shows the evolution max with time (as a reminder, in times series, APS component amplitude is decorrelated
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 25
+Fig. 25. Example of ground displacement times series for a pixel located on the Anatolian plate (see the cross in Figure 16 for location).
+Blackandredlinesrepresentthegrounddisplacementbetween2003and2011withoutorwithsmoothing,respectively.
+from one to another SAR image, and depends on specific atmospheric conditions during the image acquisition,
+while tectonic signal grows steadily with time). We see that when no smoothing is applied, no particular behavior
+of max shows up with time. It seems then that APS dominates the time series signal. On the other hand, for
+the smoothed time series, max increases linearly with time after 2 years. It seems then that the geological signal
+emerges from the noise after 2 years. Earlier, plate motion signal is in competition with the APS. Figure 27 shows
+the time series signal after 1 year, where the small geophysical signal is lost in the noise, and the final signal over
+the ∼7-year period of observation.
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 26
+Fig. 26. Maximum of log10(AVAR) value found at each incremental time step for ground displacement time series computed (a) without
+smoothingor(b)withsmoothing.On(a),APSclearlydominatesthelog10AVARmaximumvalue.Onthecontrary,on(b),after2years,when
+thetectonicsignalstartstobestrongenough,log10AVARmaximumvaluesincreasesproportionallywithtime,asforthemodel(Figure17c).
+E. Conclusion about InSAR application
+Space AVAR allows to distinguish between classical signals that one can deal with : white noise, random walk
+and others. In InSAR, different signals sum up and it can be difficult to observe the geophysical signal, typically
+here ground surface displacement due to plate tectonics, among noise sources such as atmospheric delays or phase
+decorrelation. We saw that the phase decorrelation is easily identifiable and responds as white noise. Based on
+theoretical, model atmospheric signature is also characteristic and differs significantly from other signals. However,
+in analyzing our data, we noted that atmospheric delays had additional large wavelength signal. This could be due
+to large topographic variations that would induce a correlated elevation component, not taking into account in the
+atmospheric model. Moreover, knowing the geophysical signal, we were able to compute its space AVAR signature
+which one feature is the larger AVAR values at large scale factors. As the tectonic signal is linear in time, it is
+easily verifiable if the time series has this characteristic. However, it is more difficult to assess the geophysical
+signal in space when it is mixed with different type of noise. In taking the space AVAR value for large scale factor,
+we were then able to identify when the geophysical signal emerged distinctly from the noise.
+IV. CONCLUSION
+This study shows an original way to compute and use the Allan variance in the space domain. It turns out
+that radial AVAR, called here Allan’s hat, is the best way to obtain a stable AVAR solution, insensitive to the axis
+orientation.AfastalgorithmhasbeenelaboratedincomputingtheFouriertransformtransferfunctionoftheAllan’s
+hat, that corresponds to a sum of two Bessel functions divided by the radial wave number (a sum of two Airy
+patterns).
+IEEETRANSACTIONSONULTRASONICS,FERROELECTRICS,ANDFREQUENCYCONTROL,2011 27
+We then applied this formalism to compute the space AVAR for InSAR data. It allowed to retrieve the main
+characteristics of noises that contaminate the ground displacement measurements obtained by computing the phase
+difference of two SAR images. We could clearly observe white noise due to phase decorrelation or quasi-planar
+AVAR features due to atmospheric delays. To distinguish between noises and geophysical signal, we extracted the
+AVAR value for large scale factors, where the geophysical signal is the strongest. It showed great stability and
+revealed the ongoing geophysical signal that emerged from noise after a period where noise and tectonic signal
+were of comparable amplitude.
+Through InSAR data, we showed that space AVAR can be useful to detect noise and characterize 2-D signals.
+It can thus be used to a multiple of other domains that deal with spatial data. Compared to classical AVAR, space
+AVAR may give more complicated features to analyze, especially when occasionally the AVAR surface is bumpy
+and not planar, but seems very efficient for distinguishing noises from signal. Space AVAR could certainly be used
+more generally for image processing in other fields or even for other 2-D signals (surface analysis,...). Moreover,
+the technique used here to go from 1-D to 2-D can also be extended to 3-D. We can imagine applications like
+volume temperature monitoring in a room, 3-D atmospheric evolution, etc.
+V. ACKNOWLEDGEMENTS
+We wish to thank Michel Lenczner (Femto-ST, Besanc¸on, France) for his valuable help concerning the radial
+AVAR.

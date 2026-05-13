@@ -1,0 +1,663 @@
+]MQ.oib-q[
+3v3753.1131:viXra
+Improved design and screening of high bioactivity
+peptides for drug discovery
+S´ebastien Gigu`ere∗1, Franc¸ois Laviolette1, Mario Marchand1,
+Denise Tremblay2, Sylvain Moineau2, E´ric Biron3, and Jacques
+1Department of Computer Science and Software Engineering,
+Universit´e Laval, Qu´ebec, Canada
+2Department of Biochemistry, Microbiology and Bioinformatics,
+Universit´e Laval, Qu´ebec, Canada
+3Faculty of Pharmacy, Universit´e Laval, Qu´ebec, Canada
+4Department of Molecular Medicine, Universit´e Laval, Qu´ebec,
+April 7, 2019
+The discovery of peptides having high biological activity is very chal-
+lenging mainly because thereisan enormous diversityof compoundsand
+only a minority have the desired properties. To lower cost and reduce
+the time to obtain promising compounds, machine learning approaches
+can greatly assist in the process and even replace expensive laboratory
+experiments by learning a predictor with existing data. Unfortunately,
+selecting ligands havingthegreatest predicted bioactivity requiresa pro-
+hibitive amount of computational time. For this combinatorial problem,
+heuristicsandstochasticoptimizationmethodsarenotguaranteedtofind
+adequate compounds.
+We propose an efficient algorithm based on De Bruijn graphs, guar-
+anteed tofind thepeptidesof maximal predicted bioactivity. Wedemon-
+stratehowthisalgorithm canbepartofaniterativecombinatorialchem-
+istry procedure to speed up the discovery and the validation of peptide
+leads. Moreover,theproposedapproachdoesnotrequiretheuseofknown
+ligandsforthetargetproteinsinceitcanleveragerecentmulti-targetma-
+chine learning predictors where ligands for similar targets can serve as
+initialtrainingdata. Finally,wevalidatedtheproposedapproachinvitro
+with thediscovery of new cationic anti-microbial peptides.
+∗sebastien.giguere.8@ulaval.ca
+1 Introduction
+Drugdiscoveryfacesimportantchallengesintermsofcost,complexityandinthe
+rapid discovery of promising compounds. A valuable drug precursor must have
+high affinity with the target protein while minimizing interactions with other
+proteins, in order to avoid side effects. Unfortunately, only a few compounds
+havesuchpropertiesandthese haveto be identifiedfromanastronomicalnum-
+ber of candidate compounds. Other factors, such as bio-availability, stability,
+among many others have to be considered; but this combinatorial search prob-
+lem by itself is very challenging (MEE et al., 1997). The process of discovering
+novelcompounds with both high bioactivity and low toxicity must therefore be
+optimized.
+Fortunately,inthelastdecade,machinelearningandkernelmethods(Scho¨lkopf and Smola,
+2002;Shawe-Taylorand Cristianini,2004)havebeenextremelyeffectiveatpro-
+viding efficient learning algorithms for a wide range of application domains.
+These methods provide novel way to find patterns in biological and chemical
+data. Theseinclude the predictionofmutagenicity,toxicityandthe anti-cancer
+activity of small molecules (Swamidass et al., 2005). They are also used in the
+prediction of protein-protein interactions (Ben-Hur and Noble, 2005), protein-
+ligand interactions and the in silico screening of novel targets (Jacob et al.,
+2008). Thissuccesscanbemainlyattributedtothe inclusionofsimilarityfunc-
+tions,knownaskernels (Shawe-Taylor and Cristianini,2004;Scho¨lkopf and Smola,
+2002). Thekernelsincorporatevaluablebiologicalandchemicalknowledgepro-
+posed by biologists and, consequently, provide a natural and efficient way to
+improve the accuracy of learning algorithms. However, the use of state-of-
+the-art learning algorithms to design and enhance the pharmaceutical proper-
+ties of known compounds have remained largely unexplored and unexploited
+(Schneider, 2010; Damborsky and Brezovsky, 2009).
+In the context of drug design, knowing if a ligand will interact with a par-
+ticular protein is helpful. However, most potential ligands have low activity
+and would not represent valid drug precursors. To predict more valuable in-
+formation,recent work has addressedthe task of predicting the bioactivity and
+bindingaffinitybetweenligandsandatargetprotein(Gigu`ere et al.,2013a). For
+instance, starting with a training set containing approximately 50−100 pep-
+tides with their corresponding quantified activity (bioactivity, binding affinity,
+etc) one can expect that a state-of-the-art kernel method will give a bioactiv-
+ity predictor which is accurate enough to find additional peptides with higher
+activity than the best ones in the original . This is possible, since each peptide
+thatpossessesasmallbinding affinitycontainsinformationaboutsubsequences
+of residues that can bind to the target.
+For novel and less studied targets, screening libraries remain the method of
+choice for rapid ligand development. To fully exploit the great conformational
+and functional diversity that is accessible with peptides, combinatorial chem-
+istryiscertainlythemostpowerfultool. Amajorassetofcombinatorialpeptide
+libraries over classic combinatorial libraries, where the scaffold is fixed, is the
+possibility to generate enormous conformational diversity as well as functional
+diversity using a randomized synthesis procedure. This chemical diversity and
+functionality can be further enhanced by the inclusion of non-natural amino
+acids. Furthermore,havinga peptide scaffoldcanbe veryinformativeto screen
+for similarities in peptidomimetics libraries. However, it is important to note
+thatcombinatorialpeptide chemistrycannotcoverasignificantpartofthepep-
+tide diversity when using more than a few amino acids. For example, 2g of a
+one-beadone-compoundcombinatoriallibrarycomposedofrandomly-generated
+peptides of nine residues will generate a maximum of six million compounds,
+representing a vanishingly small fraction (less than 0.0016%) of the set of all
+209 peptides. Consequently, it is almost certain that the best peptides will not
+be present in the initial screening and most synthesized peptides will have low
+bioactivity.
+The drug discovery challenge is a complex combinatorial problem which
+unfortunately cannot be solved using combinatorial chemistry alone. Many
+have proposed to use combinatorial chemistry or existing databases to learn a
+machine learning predictor to tackle this problem. The main motivation was
+that,in silico predictionisfastandinexpensiveandwouldultimatelyaccelerate
+this costly process. Unfortunately, this effectively transformsthe combinatorial
+drugdiscoveryproblemintoaequallyhardoptimizationtaskwhichissometime
+know to be NP-Hard (Cortes et al., 2005). Indeed, predicting the bioactivity
+of all possible ligands, then selecting the most promising ones, would require a
+prohibitive amount of computational time. Heuristics and stochastic optimiza-
+tion are generally the methods of choice when facing such tasks (Jamois, 2003;
+Pickett et al., 2000). However,these time andresourceconsuming methods are
+not guaranteed to find the optimal solution. In fact, because of the size of the
+searchspace,stochasticoptimizationislikelytofindapoorsolution. Theprob-
+lem of finding the most active and specific ligand is still an open algorithmic
+problem.
+We propose, for a large class of machine learning predictors, an efficient
+algorithm based on De Bruijn graphs to find the peptide of maximal predicted
+bioactivity. This algorithm can be part of an iterative combinatorial chemistry
+procedurethatcouldspeedupthediscoveryandthevalidationofpeptideleads.
+Moreover, the proposed approach can be executed without known ligands for
+the target protein, since it can leverage recent multi-target machine learning
+predictors where ligands for similar targets can serve as an initial training set.
+Finally, we demonstrate the effectiveness and validate our approachin vitro by
+providing an example of how anti-microbial peptides with proven activity were
+selected.
+2 Approach
+2.1 The Generic String kernel
+String kernels are similarity functions between strings, which are arbitrary se-
+quences of characters. In our context, strings are composed of amino acids
+or nucleotides. Such kernels have been widely used in applications of machine
+learningtobiology. Forexample,thelocal-alignmentkernel(Saigo et al.,2004),
+closely related to the well known Smith-Waterman alignment algorithm, was
+used for protein homology detection. It was observed that kernels for large
+molecules such as proteins were not suitable for smaller amino acids sequences
+such as peptides. Indeed the idea of gaps in the local-alignment kernel or the
+Smith-Waterman algorithm is well suited for protein homology, but a gap of
+only a few amino acids in a peptide would have important consequence on the
+binding affinity with a target protein.
+Many recently proposed string kernels have emerged from the original idea
+of the spectrum kernel (Leslie et al., 2002) were each string is represented by
+the set of all k-mers that are present. For example, PALI can be represented
+by it’s set of 2-mers {PA,AL,LI}. As defined by the spectrum kernel, the
+similarity score between two strings is simply the number of k-mers that they
+have in common. For example, the spectrum similarity between PALI and
+LIPAT would be 2, because they have two 2-mers in common (PA and LI).
+To characterizethe similarity between peptides, two different k-mer criteria
+were found to be important. First, two k-mers should only contribute to the
+similarity if they are in similar positions in the two peptides (Meinicke et al.,
+2004). Second, the two k-mers should share common physico-chemical proper-
+ties (Toussaint et al., 2010).
+Meinicke et al. (2004) proposed to weight the contribution of identical k-
+mers with a term that decays exponentially rapidly with the distance between
+their positions. If i and j denote the positions of the k-mers in their respective
+strings, the contribution to the similarity is given by
+where σ is a parameter that controls the length of the decay.
+Toussaint et al. (2010) proposedto considerproperties of amino acids when
+comparing similar k-mers. This was motivated by the fact that amino acids
+with similar physico-chemical properties can be substituted in a peptide while
+maintaining the binding characteristics. To capture the physicochemical prop-
+erties of amino acids, they proposed to use an encoding function ψψψ : Σ −→Rd
+where ψψψ(a) = (ψ 1(a),ψ 2(a),...ψ d(a)), to map every amino acids a ∈ Σ to a
+vector where each component ψ (a) encodes one of the d properties of amino
+acida. Ina similarway,we candefineψψψk :Σk −→Rdk asanencodingfunction
+for k-mers, where
+1 2 k 1 2 k
+by concatenning k physico-chemical property vectors, each having d compo-
+nents. It is now possible to weight the contribution of two k-mers a and a′
+according to their properties:
+where k·k denotes the Euclidean distance.
+Morerecently,theGenericString(GS)kernelwasproposedforsmallbiolog-
+icalsequencesandpseudo-sequencesofbindinginterface(Gigu`ere et al.,2013a).
+The GS kernel is defined by
+GS(x,x′,k,σ ,σ )d=ef e 2σ p 2 !
+X l=1 X i=0 X j=0 (4)
+,..,x j+l)k2
+ 2σ c 2 
+×e .
+Hence, the similarity between string x and x′, as defined by the GS kernel, is
+givenbycomparingtheir1-mers,2-mers,...uptotheirk-merswiththeposition
+penalizing term of Equation (1) and the physico-chemical contribution term of
+Equation(3). k, σ , σ arehyper-parametersusedfortuning theGSkerneland
+are generally chosen by cross-validation.
+This Generic String kernel is very versatile since, depending on the chosen
+hyper-parameters, it can be specialized to eight known kernels (Gigu`ere et al.,
+2013a): theHammingkernel,theDiracdelta,theBlendedSpectrum(Shawe-Taylor and Cristianini,
+2004),theRadialBasisFunction(RBF),theBlendedSpectrumRBF(Toussaint et al.,
+2010),theOligo(Meinicke et al.,2004),theWeighteddegree(Ra¨tsch and Sonnenburg,
+2004), and the Weighted degree RBF (Toussaint et al., 2010).
+In a recent study (Gigu`ere et al., 2013a), the GS kernel was used to learn a
+universal peptide-protein binding affinity predictor capable of predicting, with
+reasonableaccuracy,thebindingaffinityofanypeptidetoanyproteinusingthe
+PepX database as the training set. The GS kernel has also outperformed the
+currentstate-of-the-artmethodsforpredictingpeptide-proteinbindingaffinities
+on single-target and pan-specific Major Histocompatibility Complex class II
+benchmarkdatasetsandthreeQuantitativeStructureAffinityModelbenchmark
+datasets. Recently, the GSkernelwonthe 2012Machine LearningCompetition
+in Immunology (Gigu`ere et al., 2013b). External validation determined that
+an SVM classifier equipped with the GS kernel was the overall best method to
+identify,givenunpublishedexperimentaldata,newpeptidesnaturallyprocessed
+by the major histocompatibility complex (MHC) Class I pathway. The proven
+effectiveness of this kernel made it ideal to tackle the present problem.
+2.2 The machine learning approach
+In a binary classification setting, the learning task is to predict whether an
+examplehasaspecificpropertysuchasbindingtoatargetmolecule. Inthiscase,
+thetrainingsetconsistsofpositiveexamples,thosehavingthedesiredproperty,
+and negative examples, those who do not. In a regression setting, the learning
+taskistopredictarealvaluethatquantifiesthequalityofapeptide,forexample,
+itsbioactivity,inhibitoryconcentration,bindingaffinity,orbioavailability. Such
+values are generally obtained from in vitro or in vivo experiments.
+In this paper, each example will be of the form ((x,y),e), where x repre-
+sents a peptide and y the drug target, which is typically a protein (but other
+biomolecules could be considered). In the present regression context, e ∈ R
+is a real number representing the bioactivity of the peptide x with the target
+y. In classification, e ∈ {+1,−1} denotes if (x,y) has the desired property or
+not. Since predicting real values is strictly more generalthan predicting binary
+values, we focused on the more general case of real-valued predictors.
+A predictor can be a function h that returns an output h(x,y) when given
+any input (x,y). In our setting, the output h(x,y) is a real number that es-
+timates the “true” bioactivity e between x and y. Such a predictor is said to
+be multi-target since it’s output depends on the ligand x and the target y. A
+multi-targetpredictorisgenerallyobtainedbylearningfromnumerouspeptides,
+binding to various proteins, for example, a protein family. For this reason, it
+can predict the bioactivity of any peptide with any protein of the family even
+if some proteins are not present in the training data.
+Incontrast,apredictorh (x)issaidtobetarget-specificwhenitisdedicated
+to predict the bioactivity of a specific (fixed) protein y and any peptide x. A
+target-specificpredictoris obtainedbylearningonlyfrompeptides bindingtoa
+specificproteiny. Forthisreason,itcanonlypredictthebioactivityofpeptides
+forthetargety. Inthispaper,wefocusonthemoregeneralcaseofmulti-target
+predictors.
+Givenatrainingset{((x ,y ),e ),...,((x ,y ),e )},alargeclassoflearn-
+1 1 1 m m m
+ingalgorithms,producemulti-targetpredictorshwiththe outputh(x,y) onan
+arbitrary example (x,y) given by
+where k and k are, respectively, the similarity functions between proteins
+and peptides, and α is the weight on the i-th training example. The weight
+vector ααα d=ef (α ,...,α ) depend on the learning algorithm used, but many
+algorithms produce prediction functions given by Equation (5), including the
+SupportVectorMachine,the SupportVectorRegression,the Ridge Regression,
+GaussianProcesses,...Thismakesoursolutionfordrugdesigncompatiblewith
+these learning algorithms1.
+Since we use the GS kernel, we have
+1Note that all these learning methods require both kernels to be symmetric and positive
+semi-definite. ThisisthecasefortheGSkernel.
+2.3 The combinatorial search problem
+The general motivation for learning a predictor from training data is that once
+an accurate predictor is obtained, finding druggable peptides would be greatly
+facilitated. It is true that replacing expensive laboratory experiments by an in
+silico prediction will reduce cost. However, peptides having an average bioac-
+tivitydonotqualifyasdrugprecursors. Instead,weshouldfocusonidentifying
+the most bioactive compounds. The computational problem is thus to identify
+and rank peptides according to a specific biological function.
+LetAbethesetofallaminoacids,andAl bethesetofallpossiblepeptides
+of length l. Then, finding the peptide x⋆ ∈ Al that, according to h, has the
+maximal bioactivity with y, amounts at solving
+x⋆ =argmaxh(x,y). (7)
+Thispre-imageproblemisknowntobeNP-Hardforseveralkernels(G¨artner and Vembu,
+2009). Since the number ofpossiblepeptides, growsexponentiallyfastwith the
+length l of the peptide, a brute force algorithm has an intractable complexity
+ofO(|A|l·O(h)) whereO(h) is the time complexity ofcomputingthe outputof
+the predictor h. Such an algorithm becomes impractical for any long peptides,
+such as stapled peptides known to have up to 35 amino acids.
+Stochastic methods such as Metropolis-Hasting are often used to optimize
+such functions h. These methods are time consuming, highly dependent on
+optimization parameters and have no guarantee on the solution found.
+In the next section, we present an efficient algorithm to find the exact solu-
+tion to the GS kernelpre-image problem. The time complexity of the proposed
+algorithmislinearlydependentonl,yieldingtractableapplicationsforpeptides
+and proteins.
+3.1 Finding the peptide of maximal bioactivity
+Inthissubsection,weassumethatwehaveinhandapredictionfunctionh(x,y)
+intheformofEquation(6). Inthiscase,wewillshowhowtheproblemoffinding
+the peptide x⋆ ∈ Al of maximal bioactivity reduces to the problem of finding
+the longestpath in a directed acyclic graph(DAG). To do so,we will construct
+a graph with a source and a sink vertex such that for all possible peptides
+x∈Al, thereexistsonlyonepath, whichhaslengthh(x,y), thatgoesfromthe
+source to the sink. If the size of the constructed graph is polynomial in l, any
+algorithm that efficiently solves the longest path problem in a DAG will also
+efficiently solve the pre-image problem of the GS kernel.
+A bipartite graph G=((U,V),E) is a graph whose vertices can be divided
+into two disjoint sets U and V such that every edge in E connects a vertex in
+U to one in V. For any integer i, let G = ((U ,V ),E ) be the i-th De Bruijn
+directedbipartitegraphofsomeset. Thismeansthatforeverysequences∈Ak,
+there is a vertex in U with the tuple (s,i) as label and a vertex in V with the
+tuple (s,i+1) as label. Moreover, there is a De Bruijn edge ((u,i),(v,i+1))
+from (u,i) ∈ U to (v,i+1) ∈ V if and only if the last k−1 amino acids of
+u are the same as the first k−1 amino acids of v. Note that ∀i ∈ N, directed
+edges in G only go from vertices in U to vertices in V . There are exactly |A|
+edges that leave eachvertex in U and there are exactly |A| edges that point to
+each vertex in V . Moreover, for any chosen integer k, |U | = |V | = |Ak| and
+|E | = |Ak+1|. Consequently, for each sequence in Ak+1, there is a single edge
+going from a vertex in U to a vertex in V .
+The union between bipartite graph G = ((U ,V ),E ) and bipartite graph
+G =((U ,V ),E ) is defined to be the 3-partite graph
+i+1 i+1 i+1 i+1
+G ∪G d=ef((U ,V ∪U ,V ),E ∪E ),
+i i+1 i i i+1 i+1 i i+1
+where vertices with the same label in V ∪U are merged.
+Moregenerallywe define an-partitegraphasthe consecutiveunionofn−1
+bipartite graphs:
+Gn d=efG ∪...∪G
+d=ef((U ,V ∪U ,...,V ∪U ,V ),E ∪...∪E ).
+1 1 2 n−2 n−1 n−1 1 n−1
+Consequently, there is a one-to-one correspondence between each sequence
+of Ak+n−1 and each path u,...,v :u∈U ,v ∈V of length n in Gn.
+Finally,weaddtoGnasourcevertex,labeled(λ,0),connectedtoallvertices
+inU andasinkvertextconnectedtoallverticesinV (λistheemptystring).
+The set of all possible paths going from the source (λ,0) to the sink t give rise
+to all sequences in Ak+n−1.
+Using the definition of the GS kernel given at Equation (4) and the general
+class of predictors given by Equation (6), we can rewrite the generic prediction
+function as
+q=1 p=1 i=0 j=0
+×e 2σc 2 !.
+For any string s of length k and any i∈{1,...,n}, we define
+X q=1 X p=1 X j=0 (8)
+×e 2σc 2 !
+as the weight on edges ((s′,i − 1),(s,i)) where s′ ∈ Ak ∪ λ, s ∈ Ak, and
+i ∈ {1,...,n} i.e. all edges of Gn except edges heading to the sink vertex t.
+When k >1, edges ((s,n),t), heading to the sink vertex t, are weighted by the
+W (s,i),t = W(s ...s ,n+j), (9)
+(cid:0) (cid:1) X
+otherwise, W (s,i),t =0 when k =1.
+For n=|x|−k+1, we can now write h(x,y) as
+(cid:0) (cid:1)
+W (x ,..,x ,n),t + W(x ,..,x ,i).
+t n |x| i i+k−1
+(cid:0) (cid:1) X
+Therefore,everypathfromthe sourcetothe sinkinGn buildsauniquepeptide
+suchthatthe estimated bioactivityofthat peptide is givenby the lengthof the
+path.
+The problem of finding the peptide of highest activity thus reduces to the
+problem of finding the longest path in Gn. Despite being NP-hard in the gen-
+eral case, the longest path problem can be solved by dynamic programming
+in O(|V(G)| + |E(G|) for a directed acyclic graph given a topological order-
+ing of it’s vertices. By construction, Gn is clearly acyclic and its vertices
+can always be topologically ordered by visiting them in the following order:
+(λ,0),U ,...,U ,V ,t. Since Gn has (n|A|k + 2) ∈ O(n|A|k) vertices and
+(2|A|k +(n−1)|A|k+1) ∈ O(n|A|k+1) edges, the complexity of the algorithm
+will thus be dominated by the number of edges.
+We propose an algorithm in O(n|A|k+1)=O((l−k+1)|A|k+1) for solving
+the pre-image problem of the GS kernel. Recall that k is a constant and l is
+the length of the peptide we are trying to identify. Thus n = l−k+1. Small
+values of k are motivated by the fact that k ψψψk(a ,..,a ) −ψψψk(a′,..,a′) k2
+is a monotonically increasing function of k such that Equation (3) vanishes
+exponentially fast as k increases. Long k-mers will have negligible influence on
+the dot product and the estimated bioactivity, explaining why small values of
+k ≤6≪l arechosenby cross-validation. Therefore,the time complexityof the
+proposedalgorithmisordersofmagnitudelowerthanthe bruteforcealgorithm
+which is in O(|A|l) since k ≤ 6 ≪ l in practice. The pseudo-code to find the
+longest path in Gn is given by Algorithm 1 (supplementary material).
+3.2 Ranking peptides by bioactivity
+Ranking peptides according to their bioactivity will provide valuable informa-
+tionwith the potential ofacceleratingfunctional peptide discovery. Indeed, the
+best peptide candidates can be synthesized quickly by an automated peptide
+synthesizer and then tested in vitro. Such a procedure will allow quick in vitro
+feedback and minimize turnaround time. Also, the best predicted candidates
+canbeutilizedtopredictabindingmotifforanewtargetprotein. Suchamotif
+should assist researchers in the early study of a target and for the design of
+peptidomimetic compounds by providing residue preferences.
+In the previous section, we have shown how the problem of finding the pep-
+tide ofgreatestbioactivityreducedto theproblemoffinding apathofmaximal
+length in the De Bruijn graph Gn. By using the same arguments, finding the
+peptide with the second greatest activity reduces to the problem of finding the
+second longest path in Gn. By induction, it follows that the problem of find-
+ing the K peptides of maximal activity reduces to the problem of finding the
+K-longest paths in Gn.
+Unfortunately, this problem has not been studied much since the longest
+path problem is generally NP-Complete. The closely related K-shortest paths
+problem was first studied in 1957, but attracted most attention following the
+work of Yen et al. (1989); Yen (1971). Yen’s algorithm was later improved
+by Lawler (1972). Both algorithms are relatively simple as they use existing
+shortest path algorithms such as Dijkstra’s algorithm to solve the K-shortest
+paths problem.
+ByexploitingsomerestrictivepropertiesofGn,weshowhowYen’salgorithm
+for the K-shortest paths can be adapted to find the K-longest paths in Gn.
+The time complexity of the resulting algorithm, given in Section 6.2 of the
+supplementarymaterial,iscompetitivewiththelatestworkonK-shortestpaths
+algorithms (Eppstein, 1998; Brander and Sinclair, 1995).
+3.3 From K-longest paths to motif
+Itis easyto use the K-longestpaths algorithmto efficiently predicts a motifby
+simply feeding the K peptides to an existing motif tool. Here, the motif is a
+property of the learned model h(x,y) as opposed to a consensus among known
+binding sequences.
+When the learned model h(x,y) is a multi-target model, it is then possible
+to predict affinities for proteins with no known ligand by exploiting similarities
+with relatedproteins. In this case, it is feasible to predict a binding motif for a
+targetwithnoknownbinders. Toourknowledge,thishasneverbeenattempted
+successfully.
+3.4 Protocol for split and pool peptide synthesis
+Split and pool combinatorial peptide synthesis is a simple but efficient way
+to synthesize a very wide spectrum of peptide ligands. To synthesize several
+peptides of length l using the 20 natural amino acids, the standard approach
+is to use 20 reactors for natural amino acids and a pooling reactor. At every
+step of the experiment, all reactorsare pooled into the pooling reactorwhich is
+then split in equal proportions back into the 20 amino acids reactors. Within
+this standard approach, each peptide in Al has an equal probability of being
+synthesized. Since the number of polystyrenebeds (used to hosteverypeptide)
+isgenerallyordersofmagnitudesmallerthan|A|l,thereisonlyavanishingsmall
+fraction of the peptides in Al that can be synthesized in each combinatorial
+experiment.
+Clearly, not every peptide has an equal probability of binding to a target.
+More restrictive protocols have been proposed to increase the hit ratio of this
+combinatorial experiment. For example, one could fix certain amino acids at
+specific positions or limit the set of possible amino acids at this positions (for
+example, only use hydrophobic amino acids). Such practice will impact the
+outcome of the combinatorial experiment. One can probably increase the hit
+ratio by modifying (wisely) the proportionof amino acids that can be found at
+different positions in the peptides. To explore more thoroughly this possibility,
+let us define a (combinatorialchemistry)protocol P by a l-tuple containing,for
+eachpositioniinthepeptideoflengthl,anindependentdistributionP (a)over
+the 20 amino acids a∈A. Hence, we define a protocol by
+P d=ef(P ,...,P ). (10)
+Consequently,thepeptides producedbythisprotocolwillbedistributedfollow-
+ing the joint distribution P ×...×P . Hence, the probability of synthesizing
+a peptide is given by
+This family of protocols is easy to implement in the laboratory since, at each
+stepi,it only requiressplitting the contentofthe pooling reactorinproportion
+equal to the distribution P over amino acids.
+3.5 Expected outcome of a library given a protocol
+Wepresentamethodforefficientlycomputingexactstatisticsontheoutcomeof
+a protocol P. More precisely, we present an algorithm to compute the average
+bioactivity and its variance over all peptides that a protocol can synthesize.
+Note that we cannot compute these statistics by simply predicting the activity
+of each peptide since the set of all possible peptides of length l is simply too
+large.
+Such statistics will assistchemists in designing a protocolwith a greater hit
+ratioandavoidsuperfluousexperimentsincreasingcost. Indeed,thecountofall
+possible peptides will help to choose the right amount of peptide-coated beads
+in the assay. Moreover, the average bioactivity will help designing a protocol
+that synthesizes as many potential active candidates as possible. Finally, the
+bioactivity variance will allow to control the exploration/exploitation trade off
+of the experiment.
+The proposed approach makes use of the graph Gn, the protocol P, and a
+dynamic programming algorithm that exploits recurrences in the factorization
+of first and second order polynomials to efficiently compute the following two
+Figure 1: Iterative process for the design of peptide ligand.
+quantities:
+Indeed, the average and variance bioactivity of peptides synthesized by the
+protocol are then respectively given by τ and β −τ2. The algorithm and its
+details are given in Section 6.3 (supplementary material).
+3.6 Application in combinatorial drug discovery
+Weproposeaniterativeprocesstoacceleratethediscoveryofbioactivepeptide.
+TheprocedureisillustratedinFigure1. First,aninitialsetofrandompeptides
+is synthesized, typically using a split and pool approach. Then peptides are
+assayedinlaboratorytomeasuretheirbioactivities. Atthispointmostpeptides
+arepoorcandidates. Theyarethenusedasatrainingsettoproduceapredictor
+h. Then h is used for the generation of K bioactive peptides by finding the K-
+longest paths in Gn as described previously. After, a protocol that consists of
+usingforeachposition,aminoacidswithequalproportioninwhichtheyappear
+in the K lead compounds is used to synthesize a large array of potential active
+peptides. The algorithm described in Section 3.5 is then used to predict the
+statistics of the assay. This ensures that the protocol meets the expectations
+in terms of quality (average bioactivity) and diversity (bioactivity variance).
+To lower the cost, we proceed to synthesize and test the peptides only if the
+expectationsaremet. Thisprocesscanberepeateduntilthedesiredbioactivity
+is achieved.
+3.7 Peptide synthesis, bacterial strains and minimal in-
+hibitory concentration assay
+Peptides were synthesized ona Prelude Peptide Synthesizer (ProteinTechnolo-
+giesInc,AZ)usingstandardFmocsolidphasepeptidechemistry(Wellings and Atherton,
+1997). Briefly, the synthesis was performed on Rink Amide AM resin and the
+amino acid couplings achieved with HCTU/NMM. The peptides were cleaved
+from the resin using a mixture of 95% trifluoroacetic acid, 5% triisopropylsi-
+lane, 5% water for 3h at room temperature and precipitated in cold diethyl
+ether. After triturating for 2 min, the peptides were collected upon centrifuga-
+tion and decantation of the ether. The peptides were purified on a Vydac C18
+reversed-phase HPLC column (22×250 mm, 5µm) over 20 min using a linear
+gradientof 10−90%acetonitrile with 0.1%trifluoroaceticacidata flow rate of
+10 mL/min with optical density monitoring at 220 nm. The collected fractions
+were lyophilised and the identity and purity of the peptides assessed by ana-
+lytical HPLC and MALDI-TOF mass spectrometry. Peptides were obtained in
+good yields and with purity greater than 90%.
+EscherichiacoliK12MG1655andStaphylococcusaureus68(HER1049)were
+obtainedfromtheF´elixd’H´erelleReferenceCenterforBacterialVirusesofUni-
+versit´e Laval (www.phage.ulaval.ca). Both strains were grown in Trypticase
+soy broth with agitation at 37◦C. The minimal inhibitory concentration assay
+was performed as described in Wiegand et al. (2008). The broth microdilution
+protocolperformedin96-wellplates. Thebacterialstrainsweregrownovernight
+at 37◦C with aeration and diluted to a final concentration of 5×105 cfu/ml in
+the assay. The peptides were diluted in sterile water andwere tested atthe fol-
+lowing concentrations: 0,1,2,4,8,16and 32 µg/ml. The optic density (600nm)
+wasfollowedevery30 minutes for 24 hours in a Synergy2 plate reader (BioTek
+Instruments, Inc.).
+4 Result and Discussion
+Two public datasets were used to test and validate our approach. The first
+dataset consisted of 101 cationic antimicrobial pentadecapeptides (CAMPs)
+from the SAPD database (Wade and Englund, 2002). Peptide antibacterialac-
+tivities are expressed as the logarithm bactericidal potency which is the aver-
+age potency over 24 bacteria such as Escherichia coli, Bactero¨ıdes fragilis, and
+Staphylococcus aureus. The averageantibacterialactivity was0.39andthe best
+peptide had an activity of 0.824.
+The second dataset consisted of 31 bradykinin-potentiating pentapeptides
+(BPPs) reported by Ufkes et al. (1982). The bioactivities are expressed as the
+logarithm of the relative activity index compared to the peptide VESSK. The
+averagebioactivity was 0.71 and the best peptide had an activity of 2.73.
+Figure2: The K-longestpathalgorithmwasusedto rankthe 100,000peptides
+with highestanti-microbialactivity. We observeda smoothpowerlaw with few
+exceptional peptides.
+0 20000 40000 60000 80000
+k-th best peptide
+lairetcabitnA
+4.2 Improving the bioactivity of peptides
+To assessthe capability of our approachto improve upon known peptides, that
+is, to predict peptides with superior biological activities to the known ones,
+we carried out the following experiment using the CAMPs and BPPs peptide
+datasets. First, a predictor of biological activity was learned by kernel ridge
+regression (KRR) for both datasets. Hyper-parameters for the GS kernel and
+the KRR were chosen by standard cross-validation. Then, using the K-longest
+path algorithm and the learned predictor, we generated the K peptides (of
+the same length as those of the training data) having the greatest predicted
+biological activity.
+On the CAMPs dataset, our approach predicted that the peptide WWK-
+WWKRLRRLFLLVshouldhaveanantibacterialpotencyof1.09,alogarithmic
+improvement of 0.266 over the best peptide in the training set (GWRLIKKIL-
+RVFKGL, 0.824), and a substantial improvement over the average potency of
+that dataset (average of 0.39). The anti-microbial activity of the top 100000
+peptides are showed in Figure 2. As expected, we observe a smooth power law
+with only a few peptides having outstanding biological activity.
+OntheBPPsdataset,ourapproachpredictedthatthepentapeptideIEWAK
+shouldhaveanactivityof2.195,slightlylessthanthebestpeptideofthetraining
+set (VEWAK, 2.73, predicted as 2.192). However, the predicted activity of
+IEWAK is much better than the average peptide activity of the dataset, which
+is 0.71. One can ask why IEWAK has a lower biologicalactivity than VEWAK
+which was part of the training data? Machine learning algorithm are known
+to be resistant to errors and noise in the data. A possible explanation for this
+discrepancyisthatthebiologicalactivityofVEWAKcouldbeslightlyerroneous
+asthelearningalgorithmcouldnotfindasimplepredictorgivensuchanoutlier.
+In addition, VEWAK was predicted an activity of 2.192 in spite of been seen
+during training with an activity of 2.73. It seems that, given the data, the
+activity of IEWAK is more easily justified than of VEWAK.
+4.3 Application in drug discovery
+When facing a new target, there is typically none to little information on pep-
+tides that could bind to the target protein. To gather some information, the
+standard approach is to synthesize a library of random peptides and measure,
+foreachcandidate,the desiredbiologicalactivity. Typically,this will onlyyield
+a few candidates. The proposed approach has the capability of extracting rel-
+evant information from weak candidates and in an iterative manner, predict
+stronger ones.
+Asaproofofconcept,weproposetoreplacethelaboratoryexperimentinthe
+proposed procedure by a predictor learned on available datasets. We will refer
+to this predictor as the “expert”, since it encapsulates the current knowledge
+about the studied problem. The expert predictor is only used to determine the
+activities of the peptides generated in the initial random screening phase and
+those generated by our approach. To prevent bias, once the expert predictor
+is learned, the dataset is hidden from the process. Then, we randomly draw
+peptides and, instead of testing them in lab, we use the expert predictor to
+determinetheiractivities. Atthispointmostpeptidesareveryweakcandidates.
+A student predictor is learned with the weak peptides serving as the training
+data. We then use the K-longest path approach and the student predictor to
+predictimprovedcompounds. Tovalidatethatpeptidespredicted(orgenerated)
+by this student predictor are indeed relevant, we then validate them with the
+expert predictor. Recall that the expert predictor was only used to determine
+the activity of the randomly generated peptides.
+This proof of concept was conducted twice on both the CAMPs and the
+BPPs datasets. Once by drawing 100 random peptides, and then by drawing
+1000 random peptides at the initial screening stage. The results are shown in
+Table 1. As expected, the number of drawn peptides had no significant effect
+on the average activity on both datasets. On both datasets, the number of
+randompeptideshadnosignificanteffectonthebestpeptide found,supporting
+the development of new techniques to facilitate the discovery of high activity
+compounds.
+Using the proposed approach and the same 100 random peptides to train
+the student predictor, we were able to reach an antimicrobial potency of 0.83,
+similartothebestpeptideoftheCAMPsdataset. Byincreasingto1000training
+peptides,we foundapeptide havingapredictedpotency of1.09,surpassingthe
+bestknownpeptide. OntheBPPsdataset,theproposedapproachconsiderably
+outperformedthe randompeptides methodonboththe bestpeptide foundand
+the average bioactivity. Finally, on both datasets, increasing the number of
+initialpeptides from100to1000hadastrongerpositiveeffectthanthe random
+approach: 0.26 increase in potency for CAMPs and 0.16 increase for BPPs.
+4.4 Binding motifs results
+To demonstrate the ability of the proposed approach to predict potential func-
+tional motifs, we took further the proof of concept proposed in the previous
+Table 1: Results from the drug discovery simulation. Comparison between the
+standardcombinatorialscreening(randompeptides)andtheproposedapproach
+(longest paths).
+Random peptides Longest Paths
+Dataset # of peptides Average Max. Average Max.
+CAMPs 100 −0.58 0.17 0.76 0.83
+1000 −0.59 0.18 1.07 1.09
+BPPs 100 0.31 1.39 1.50 2.04
+1000 0.26 1.36 1.66 2.20
+section. Aspreviously,welearnedanexpertpredictorfromtheCAMPsdataset
+which was then hidden for the rest of the procedure. Using the expert predic-
+tor, we predicted the best 103 peptides and produced a bioactivity motif using
+theses candidates (top panel of Figure 3). Our goal was to assess how much of
+that reference motif could we rediscover if we were to hide all of the CAMPs’
+dataset. Next, we drew 1000 random peptides and use the expert predictor to
+determine their activities. Theses peptides have, as illustrated in Table 1, on
+average, very weak antimicrobial potency. As previously, we learned a student
+predictor using the random peptides as training data and generated, according
+to the student predictor, the best 1000 candidates. The motif obtained from
+theses candidates is shown in the middle panel of Figure 3.
+Wewereabletorecoverallofthereferencemotifsignalusingonlyweaklyac-
+tivepeptides. Thisprovidesevidencethattheproposedapproachcoulduncover
+complexsignalsfornew,poorlyunderstood,proteins. Topushtheanalysiseven
+further, we decreased the number of peptides used to train the student predic-
+tor to 100 training examples. Even then, for 12 residue positions, we were able
+to correctly identify the dominant amino acid property (polar, neutral, basic,
+acidic, hydrophobic). This is achieved since the GS kernel encodes amino acids
+physico-chemicalproperties.
+To put these results in perspective,we took the same peptides used to train
+the student predictor and generated a motif from them. The resulting signal
+was very poor, generating a meaningless motif. We had to draw 106 random
+peptides and select the best 103 to produce a motif with minimal information
+(Figure 3 bottom panel). This clearly illustrates the potential of the proposed
+approachfor accelerating the discovery of potential peptidic effectors.
+4.5 In vitro antimicrobial assay
+A total of 12 peptides were synthesized. The two most active peptides of the
+CAMPs dataset (Peptide #5 and #6) were used for comparison. We also se-
+lected one peptide with poor activity (Peptide #7) as a control. The proposed
+machine learning approach was used to generate a list of 1000 putative candi-
+dates with the highest predictedactivity. Fromthis list, we selected three com-
+pounds in a way to maximize the chemical diversity among chosencompounds.
+Figure 3: CAMP bioactivity motifs. Top motif: obtained from the 103 best
+candidates generated by the expert predictor. Middle motif: obtained from
+the 103 best candidates generated by the student predictor. Bottom motif:
+obtained from the best 103 candidates out of 106 random peptides.
+✭✫✪✩★✧✦ ☛☛
+Table 2: Minimal inhibitory concentration (MIC) resulting from the in vitro
+CAMPs assay.
+# Peptide sequence E. coli S. aureus
+1 YWKKWKKLRRIFMLV 2 8
+2 WWKRWKKLRRIFLML 4 4
+3 WWKRWKRIRRIFMMV 4 8
+4 WWKWWKRLRRLFLLV 16 16
+5 KWKLFKGIRAVLKVL 4 8
+6 GWRLIKKILRVFKGL 4 4
+7 KWKLFLGILAVLKVL >32 >32
+We then tested these peptides (Peptide #2, #3, #4) with a high throughput
+growth inhibitory assay as described in Section 3.7. Results from the minimal
+inhibitory concentration assay are shown in Table 2. Two of the three candi-
+dates have activities equal to the best candidate of the CAMPs dataset. We
+were intriguedby the failure of Peptide #4 andafter investigationverifiedthat
+the poor performance was due to poor water solubility. In a second series, we
+ensured that a filter for water solubility was employed. In this second series of
+tests, Peptide #1 showed (at least against E. coli) better activity than any of
+the original candidates from the CAMPs dataset, demonstrating that, in this
+limited biological experiment, we could improve the putative candidates using
+the proposed machine learning methodology.
+5 Conclusion and Outlook
+We proposedanefficient graph-theoreticalalgorithmthat predicts the peptides
+with the highest biological activities for machine learning predictors using the
+GSkernel. We showedhow this algorithmcanalsobe usedto predictthe bind-
+ing motif for a target with no known ligands. This is feasible thanks to the
+multi-target model which is capable of exploiting similarities with related pro-
+teins that share common structures. To increase the hit ratio of combinatorial
+libraries,we havedemonstratedhow a combinatorialchemistry protocolrelates
+toamotifdistribution. Thisallowedustocomputetheexpectedbioactivityand
+its variance that can be exploited by a combinatorial chemistry protocol such
+as a one bead one compound protocol. These steps can be part of an iterative
+drugdiscoveryprocessthatwillhaveimmediateuseinboththepharmaceutical
+industry and academia. This methodology will reduce costs and the time to
+obtain lead compounds as well as facilitating their optimization. Finally, the
+proposed approach was validated in a real world test for the discovery of new
+antimicrobial peptides. These in vitro experiments confirmed the effectiveness
+of the new compounds uncovered.
+The K-best peptides were shown to be valuable for the design of split and
+pool libraries of compounds. However, in such libraries, it is unclear how we
+should prioritize high activity candidates (average) over the chemical diversity
+(variance). This exploration/exploitation trade-off could be examine in future
+work. Moreover,recent advances in domain-adaptation machine learning could
+possiblyimprovetheaccuracyofthelearnedpredictorsincethedatagenerating
+and the testing distributions are both known. Finally, the method could be
+expanded to cyclic peptides and chemical entities (building blocks) of common
+structure found in clinical compounds.
+Acknowledgement
+JC is the Canada Research Chair in Medical Genomics.
+ThisworkwassupportedinpartbytheFondsderechercheduQu´ebec-Nature
+et technologies (FL, MM & JC; 2013-PR-166708) and the NSERC Discovery
+Grants (FL; 262067,MM; 122405).

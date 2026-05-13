@@ -1,0 +1,1327 @@
+F ACULTY OF SCIENCE
+UNIVERSITY OF COPENHAGEN
+PhD Thesis
+Anders S. Christensen
+Protein Structure Determination
+Using Chemical Shifts
+Academic supervisor: Jan H. Jensen
+November 13, 2017
+]hp-mehc.scisyhp[
+1v2463.5041:viXra
+Acknowledgements
+This thesis represents the work I have carried out as a PhD student under the supervision of
+ProfessorJanH.JenseninhisgroupofBiocomputationalChemistry. Thankyoutoallwhohave
+supported me during my work at the third floor of C-building at the H.C. Ørsteds Institute.
+I would especially like to thank the following people:
+• Thank you to my supervisor, Jan ”Yoda”Jensen for introducing me to the exciting fields of
+quantum chemistry and biocomputational chemistry, teaching me everything I know (and
+more), for your patience, and the inspiration you bring to everyone around you.
+• ThankyoutoJensBreinholtatNovoNordiskforsupportingmewithmywork–Isincerely
+hope, that my work will very soon become practically useable. And thank you to the Novo
+Nordisk STAR PhD program for financial support, and for giving me the opportunity to
+carry out this study.
+• ThankyoutoallofourcollaboratorsattheBiocenter, whoalwayshavebeenverysupport-
+ive. Especially, Thomas Hamelryck (in the presence of whom everything is trivially solved
+using Bayes’ theorm) for helping me out with Bayesian theory, your great ideas and more,
+WouterBoomsmaforbeingseeminglyall-knowinginwhatconcernsPHAISTOSandalways
+being exceptionally helpful, Simon Olsson for helping out with the implementation of the
+Jeffrey’s prior code, and Kresten Lindorff-Larsen for always being encouraging and sharing
+your knowledge in this field.
+• Thankyoutomyofficemates,CasperSteinmann,JimmyKromannandLarsBratholm,for
+the invaluable company, our office pranks, and endless number of energy drinks consumed,
+aswellasthehighlyvaluablescientificdiscussionswecontinuetosharedaily(notforgetting
+the virtual monster we’ve slayed).
+Also thank you to those close colleagues who came by for coffee and friendly conversations;
+Jonas Elm, Jacob Lykkebo, Nini Reeler, Frederik Beyer (and many, many more!).
+• Thank you to everyone at the Department of Chemistry, especially Kurt V. Mikkelsen,
+Stephan P. A. Sauer and Sten Rettrup for always being so helpful with everything from
+bureaucraticprocedures,tocoupledclustertheory,toderivationoftheSlater-Klostertables.
+• Thank you to all the students in the courses I’ve taught, and especially the very talented
+students who have carried out Master’s, Bachelor’s and various research projects under my
+supervision. Of those not already mentioned (and in no particular order): Maher Channir,
+Anders Larsen, Rie Nielsen, Christine Skibsted, Cecilie Lindholm.
+• Thank you to everyone I forgot to mention, including all the unnamed developers of the
+free, open source software I use in my daily work – the Open Babel project in particular.
+Lastly, an even bigger thanks goes to my IRL family and friends, whom I have been seeing much
+less than I should since I undertook my PhD studies. Thanks, everyone!
+This work is published under the terms of the Creative Commons Attribution 4.0 International
+list of license terms. This work, and all figures and scripts to compile them is available from
+Dansk Resum´e
+Kemien af et protein er tæt forbundet med dens tre-dimensionelle struktur. Af denne grund, er
+proteinstruktur bestemmelse grundlaget for rationel forst˚aelse af kemien af biologiske processer,
+der involverer proteiner.
+Fortidenerflestkendteproteinstrukturerblevetløstvedrøntgenkrystallografi. Kravettilløs-
+ningafenstrukturp˚adennem˚adeer,atproteinetkrystalliserer. Modernekrystaliserings-metoder
+dogkunharensuccesratep˚a5%[Warke and Momany, 2007]. Idissetilfældekankernemagnetisk
+resonans(NMR)metoderanvendesmedenvissucces. IøjeblikketindeholderProteinDataBank
+90.000strukturerløstvedrøntgen-og9.000strukturerløstvedNMR-metoder,ogomkring10.000
+røntgen- og 500 NMR-strukturer bliver indsendt hvert˚ar [Berman et al., 2000].
+KonventionelleNMR-metodertilbestemmelseafproteinstruktureroptageretflerdimensionelt
+spektrum, som korrelerer resonansfrekvenser flere kerner p˚a samme tid. Fra dette spektrum er
+først problem at tilordne de kemiske skift af hver kerne. Denne proces er i vid udstrækning au-
+tomatiseretforhovedkædeatomer, menermereinvolveretforsidekædeatomer. Disseoplysninger
+bruges til at identificere toppe i spektret, der svarer til afstandsbegrænsninger (NOE begræn-
+sninger)mellemparafatomer. Dissedistancebegrænsningererdetbrugestilatgenerereensem-
+bler af strukturer, der tilfredsstiller det givne sæt af begrænsninger. Protein NMR-spektroskopi
+har imidlertid flere begrænsninger. Store proteiner har meget overfyldte spektre , hvilket kom-
+plicerer opgaven - hovedsagelig p˚a grund af brede toppe og resulterende spektraloverlapning.
+Dette er en væsentlig hindring for tilordningen af de kemiske skift og dermed for at finde de
+værdifuld NOE begrænsninger. Følgeligt har omkring 95 % af alle NMR- strukturer i PDB-
+databasen s˚aledes har en størrelse p˚a kun 200 aminosyrer eller mindre. Dette kan sammenlignes
+med de gennemsnitlige størrelser af proteiner i mennesker og E. coli, som er henholdsvis omkring
+400-600 og 200-400. Problemet kan mindskes ved deuterering som imidlertid falder til num-
+mer NOE-begrænsninger, der kan findes. Isotopmærkningsmetoder som selektivt mærker visse
+sidekæder er blevet udviklet som en effektiv strategi for s˚adanne problemer.
+Computerberegningsmetoder
+En anden tilgang til at løse en proteinstruktur fra aminosyresekvensen er simulering af en-
+ergilandskabet af proteinet. Dette kaldes ogs˚a proteinfoldning. I denne tilgang, er de mulige
+konformationer samplet og scoret med en beskrivelse af proteinernes fysik, uden ekstra viden
+fra eksperimenter. S˚adanne ab initio tilgange har været anvendet til at bestemme strukturer,
+typisk med en præcision ned til 3 ˚A, via Monte Carlo simuleringer i ROSETTA-programmet
+[Rohl et al., 2004]. Et andet næveværdigt eksempel er den samtidige bestemmelse af struktur og
+dynamik flere sm˚a proteiner via meget lange molekylær dynamik (MD) simuleringer med Anton
+computer [Lindorff-Larsen et al., 2005].
+Selv om disse metoder ikke kræver noget eksperimentelt arbejde, er det ekstremt krævende
+i forhold til de edb-ressourcer, der er nødvendige. Desuden er de normalt ikke nemme at kon-
+vergere for systemer >100 aminosyrer [Lange and Baker, 2012]. ROSETTA-metoden er (i øjeb-
+likket) velsagtens den mest succesfulde metode til at bestemme en proteinstruktur via computer
+beregninger. For nylig viste Baker gruppen, at optagelsen af hovedkæde kemiske skift og RDC
+data forbedrer ROSETTA-protokollen og tillader bestemmelse af strukturer op til 150 rester
+[Raman et al., 2010, Lange and Baker, 2012].
+GrundlagetforROSETTAerfragment-samlingaflokaleproteinstrukturmodeller, kombineret
+medraffineringvedhjælpafenenergifunktion,dererblevetp˚avistatfungerebemærkelsesværdigt
+godt. Kort beskrevet best˚ar fuldatom-ROSETTA-energifunktion af flere additive temer som
+Lennard-Jones potentialer, termer for eksponering solvent, hydrogenbindinger, elektrostatiske
+par-interaktioner og dispersion-iteraktioner, og endelig torsions potentialer for hovedkæde- og
+sidekædevinkler.
+Nøjagtighedenafenergifunktionenkommerdogp˚abekostningafberegningsmæssigehastighed
+og ufuldstændig i den konformationelle prøvetagning, som synes at være den uoverkommelige
+forhinding for yderligere succes for ROSETTA. Denne protokol er for nylig blevet forbedret
+yderligere med inddragelse af meget sparsomme mængder NOE-data [Lange et al., 2012].
+Dette gav 7 strukturer omkring 200 aminosyrer, der blev bestemt med en nøjagtighed p˚a
+mellem2,5og3,9˚Afradetilsvarendeeksperimentellerøntgen-strukturer,ogdesudenblevengod
+struktur for det 376 aminosyrer store maltosebindingsprotein endda fundet, men dette krævede
+væsentligt flere NOE oplysninger. Disse simuleringer krævede en 512-kerner supercomputer som
+kørte i flere dage, for hvert protein.
+Et andet nævneværdigt eksempel p˚a protein strukturbestemmelse metoder, der beskæftiger
+NMR-data, ererCHESHIRE-metoden[Cavalli et al., 2007]. CHESHIRE-metodenvardenførste
+metodesomløstestrukturerkunvedbrugafkemiskeskift,ogbrugerenfragmentsamlingstilgang,
+efterfulgt af en Monte Carlo raffinering ved hjælp af et all-atom kraft-felt og en energi-funktion,
+der inkluderer kemiske skift. Denne metode blev anvendt til at bestemme proteinstrukturer fra
+kemiske skift, og fandt strukturer for 11 proteiner mellem 54 og 123 aminosyrer i størrelse, til en
+nøjagtighed p˚a omkring 1,5 ˚A fra de tilsvarende eksperimentelle røntgen-strukturer.
+I det følgende afsnit, er PHAISTOS-programmet introduceret, og formalisme for inkludering
+af kemiske skift i simuleringer i PHAISTOS er udledt. Dette er et forsøg p˚a at løse to centrale
+udfordringer i proteinfoldning: (1) Fuldstændig konformationel prøveudtagning og (2) nøjagtig
+energi-scoringafkonformationelleprøver. Disseudfordringerermødtsomfølger: (1)vedhjælpaf
+en nyudviklet forudindtaget konformationel prøveudtagningsmetode og (2) ved at parametrisere
+en nøjagtig kemisk skift forudsigelsesmetode, brut med en energifunktion baseret p˚a Bayesiansk
+statistik,somtillader,atdettekombineresmedeksisterendeenergifunktioneriPHAISTOS.Denne
+kombineredefremgangsm˚adevilblivedemonstreretp˚afoldningssimuleringerp˚aettestsætafpro-
+teiner med kendte strukturer spænder fra 55 til 269 rester.
+Publication list
+List of publications:
+1. Anders S. Christensen, Stephan P. A. Sauer, Jan H. Jensen (2011) Definitive benchmark
+study of ring current effects on amide proton chemical shifts. Journal of Chemical Theory
+and Computation, 7:2078-2084.
+2. Wouter Boomsma, Jes Frellsen, Tim Harder, Sandro Bottaro, Kristoffer E. Johansson,
+Pengfei Tian, Kasper Stovgaard, Christian Andreetta, Simon Olsson, Jan B. Valentin,
+LubomirD.Antonov,Anders S. Christensen,MikaelBorg,JanH.Jensen,KrestenLindorff-
+Larsen, Jesper Ferkinghoff-Borg, Thomas Hamelryck (2013) PHAISTOS: A framework for
+Markov chain Monte Carlo simulation and inference of protein structure. Journal of Com-
+putational Chemistry, 34:1697-1705.
+3. Anders S. Christensen,TroelsE.Linnet,MikaelBorg,WouterBoomsma,KrestenLindorff-
+Larsen,ThomasHamelryck,JanH.Jensen(2013)ProteinStructureValidationandRefine-
+ment Using Amide Proton Chemical Shifts Derived from Quantum Mechanics. PLoS ONE
+8:e84123.
+4. Anders S. Christensen, ThomasHamelryck, JanH.Jensen(2014)FragBuilder: Anefficient
+Pythonlibrarytosetupquantumchemistrycalculationsonpeptidesmodels. PeerJ 2:e277.
+List of public code:
+fmo-rhf-mp2/
+List of other publications:
+1. Casper Steinmann, Kristoffer L. Blædel, Anders S. Christensen, Jan H. Jensen (2013) In-
+terface of the polarizable continuum model of solvation with semi-empirical methods in the
+GAMESS program. PLoS ONE 8:e67725.
+2. Anders S. Christensen,CasperSteinmann,DmitriG.Fedorov,JanH.Jensen(2013)Hybrid
+RHF/MP2geometryoptimizationswiththeEffectiveFragmentMolecularOrbitalMethod.
+PLoS ONE 9:e88800
+3. Jimmy C. Kromann, Anders S. Christensen, Casper Steinmann, Martin Korth, Jan H.
+Jensen (2014) A third-generation dispersion and third-generation hydrogen bonding cor-
+rected PM6 method: PM6-D3H+. PeerJ PrePrints 2:e353v1.
+Acknowledgements ii
+Dansk Resum´e (Danish Summary) iv
+Publication list vi
+1 Introduction 3
+1.1 Computational methods . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+2 Introduction to PHAISTOS 5
+2.1 Markov Chain Monte Carlo . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+2.1.1 Metropolis-Hastings . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+2.1.2 Generalized Ensembles . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+2.2 Monte Carlo Moves Using Generative Probabilistic Models. . . . . . . . . . . . . . 7
+2.2.1 Monte Carlo Moves . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+3 Chemical shifts in a probabilistic framework 11
+3.1 Hybrid energy schemes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+3.2 Defining an energy function from Bayes’ theorem . . . . . . . . . . . . . . . . . . . 12
+3.2.1 Gaussian error model . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+3.2.2 Cauchy error model . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+3.2.3 Marginalization of Weighting parameter . . . . . . . . . . . . . . . . . . . . 16
+3.2.4 Soft Square-Well Energy Function . . . . . . . . . . . . . . . . . . . . . . . 16
+3.3 Sampling strategy for weight parameters . . . . . . . . . . . . . . . . . . . . . . . . 17
+3.3.1 Molecular mechanics force field . . . . . . . . . . . . . . . . . . . . . . . . . 17
+3.4 Results. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+3.4.1 Results – sampling of weight parameters . . . . . . . . . . . . . . . . . . . . 17
+3.4.2 Performance of energy functions . . . . . . . . . . . . . . . . . . . . . . . . 18
+4 Graphical User Interface for PHAISTOS 22
+5 Prediction of Protein Chemical Shifts 25
+5.1 Initial Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+6 Determined protein structures 28
+6.1 Barley Chymotrypsin Inhibitor II . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+6.1.1 Computational methodology . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+6.1.2 Folding results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+6.2 Folding of small proteins (<100 AA) . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+6.3 Folding of larger proteins (>100 AA) . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+6.3.1 Folding protocol . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+6.3.2 Refinement protocol . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+6.4 Evolutionary distance constraints . . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+7 Conclusion and Outlook 41
+Introduction
+The chemistry of a protein is tightly linked to its 3-dimensional structure. For this reason,
+proteinstructuredeterminationisthebasisofrationalunderstandingofthechemistryofbiological
+processes involving proteins.
+Most currently known protein structures have been solved by X-ray crystallography. One
+requirement for solving a structure this way is that the protein will crystallize. Modern crystal-
+lization methods, however, only have a success rate of 5% [Warke and Momany, 2007]. In these
+cases, nucleic magnetic resonance (NMR) methods may be used with some success. Currently
+the Protein Data Bank contain 90,000 structures solved by X-ray and 9,000 structures solved by
+NMR methods, and around 10,000 X-ray and 500 NMR structures are being submitted each
+year [Berman et al., 2000].
+ConventionalNMRproteinstructuredeterminationmethodsrecordsamultidimensionalspec-
+trum that correlate the resonance frequencies of several nuclei at the same time. From this spec-
+trum, the common work flow is to first assign the chemical shifts of each nuclei. This process
+is largely automated for backbone nuclei, but is more involved for side chain atoms. This as-
+signment information is used to identify peaks in the spectrum which correspond to distance
+restraints (NOE restraints) between pairs of atoms. These distance restraints are the used to
+generate ensembles of structures that satisfy the given set of restraints.
+ProteinNMRspectroscopy,however,hasseverallimitations. Largeproteinshaveverycrowded
+spectra,whichcomplicatesassignment,mostlyduetobroadpeaksandresultingspectraloverlap.
+This is a substantial hindrance to assignment of the chemical shifts, and therefore obtaining the
+valuable NOE restraints. Consequently, around 95% of all NMR structures in the PDB database
+thus have a size of only 200 amino acids or less. This can be compared to the average sizes
+of proteins in humans and E. coli, which are around 400-600 and 200-400, respectively. These
+problem can be somewhat alleviated by deuteration which, however, decreases to number NOE
+restraintsthatcanbeobtained. Isotopelabelingschemeswhichselectivelylabelonlycertainside
+chains have been invented, as an efficient strategy for such problems.
+1.1 Computational methods
+A different approach to solving a protein structure from the amino acid sequence is simulation of
+the energy landscape of the protein. This practice is also referred to as protein folding. In this
+approach, the possible conformations are sampled and scored using a description of the physics
+of the proteins, with no extra knowledge from experiments. Such ab initio approaches have been
+used to determine structures up to an accuracy of typically 3 ˚A using Monte Carlo simulations
+the ROSETTA program [Rohl et al., 2004]. Another notable example is the simultaneous deter-
+mination of structure and dynamics of several small proteins via very long molecular dynamics
+(MD) simulations using the Anton computer [Lindorff-Larsen et al., 2005].
+1.1. COMPUTATIONAL METHODS
+While these methods do not require any experimental input, the are extremely demanding in
+termsofthecomputationalresourcesthatarerequired. Furthermore,theyusuallyfailtoconverge
+for structures >100 amino acids [Lange and Baker, 2012].
+TheROSETTAmethodologyis(currently)arguablythemostsuccessfulmethodtodetermine
+aproteinstructurecomputationally. Recently,theBakergroupshowed,thatinclusionofbackbone
+chemical shifts and RDC data vastly improved the ROSETTA protocol and allowed structures
+up to 150 residues to be determined [Raman et al., 2010, Lange and Baker, 2012]. The basis of
+ROSETTA fragment-assembly of local protein structure, combined with refinement using an en-
+ergyfunctionthathasbeendemonstratedtoworkremarkablywell. Brieflydescribed,theall-atom
+ROSETTA energy function consists of several additive terms such as Lennard-Jones potentials,
+terms for solvent exposure, hydrogen bonding, electrostatic pair-interactions and dispersion in-
+teractions, andfinallytorsionalpotentialsforbackboneandsidechainangles. Thedemonstrated
+accuracyoftheenergyfunctiondoescomeatthecostofcomputationalspeedandincompletecon-
+formationalsamplingseemstobetheprohibitiveforfurthersuccessforROSETTA.Thisprotocol
+has recently been further improved with inclusion of very sparse NOE data [Lange et al., 2012].
+Thisallowed7structuresaround200aminoacidstobedetermined,toanaccuracyofbetween
+2.5and3.9˚AfromthecorrespondingexperimentalX-raystructuresFurthermore,agoodstructure
+for the 376 amino acids maltose binding protein could even be determined, but this required
+substantially more NOE data. These simulations, however required a 512-cores super computer
+for running several days, for each protein.
+AnothernotableexampleofproteinstructuredeterminationmethodsthatemployNMRdata
+isistheCHESHIREmethod[Cavalli et al., 2007]. TheCHESHIREmethodwasthefirstmethod
+which solved structures using only chemical shifts, and uses a fragment-assembly approach fol-
+lowed by a Monte Carlo refinement using an all-atom force-field and an energy function that
+includes chemical shifts. This method was used to determine the protein structures from chem-
+ical shifts, and was demonstrated on 11 proteins between 54 and 123 amino acids in size to an
+accuracy of around 1.5 ˚A from the corresponding experimental X-ray structures.
+In the following section, the PHAISTOS program is introduced, and the formalism for inclu-
+sion of chemical shifts in simulations in PHAISTOS is derived. This is an attempt to address the
+two central challenges in protein folding: (1) complete conformational sampling and (2) accurate
+energy scoring of conformational samples.
+These challenges are met as follows: (1) using a recently developed biased conformational
+sampling method and (2) by parametrizing an accurate chemical shift predictor and deriving an
+energy function based rigorously on Bayesian statistics, which allows this to be combined with
+existing energy functions in PHAISTOS.
+The combined approach will be demonstrated on folding simulations on a test-set of protein
+with known structures ranging from 55 to 269 residues.
+Introduction to PHAISTOS
+ThissectionserversasanintroductiontothePHAISTOSprogram,anda(very)briefintroduction
+to the theory behind PHAISTOS [Boomsma et al., 2013]. This will give the relevant background
+to read the next chapters. PHAISTOS is also published and discussed in detail in paper #2 in
+this the appendix.
+2.1 Markov Chain Monte Carlo
+OneoftheprimarygoalsofsimulationsinPHAISTOSistoconstructtheBoltzmanndistribution
+of a protein via Markov chain Monte Carlo (MCMC) sampling for a given potential energy
+surface at a given temperature. The Boltzmann distribution of a protein structure, X, at a given
+temperature, T, is given by:
+(cid:18) (cid:19)
+p(X)= exp , (2.1)
+where k T is Boltzmann’s constant and Z(T) is the partition function at the given temperature.
+InMarkovchainMonteCarlothetargetdistributionobtainedbyrepeatedlyproposingupdates
+tothecurrentstate,andacceptingorrejectingtheseupdateswithacertainacceptanceprobability.
+It can be shown, that for an infinitely sampled distribution to converge to the correct target
+distribution, i.e. p (X)=p(X), the Monte Carlo moves that are used to propose updates must
+satisfy the principle of detailed balance. That is, the transition from the current state X to the
+proposed new state X(cid:48) fulfills:
+wherep(X→X(cid:48))istheprobabilitytoofmovingfromthestateXtoX(cid:48) usingagivenmove. Ifwe
+further factorize p(X→X(cid:48)) into an acceptance probability p and a move transition probability
+p , Eqn. 2.2 gives:
+a = m (2.3)
+MostofthemovesinPHAISTOSaresymmetric,thatisthemovebiasratiop (X(cid:48) →X)/p (X→
+X(cid:48))=1,butforsomemovesthisisnottrue. Thesebiasedmovescanbeexploitedtovastlyspeed
+up convergence or bias the simulation, and are discussed later in Section 2.2.
+2.1.1 Metropolis-Hastings
+ThesimplestMonteCarlomethodthatsatisfiesEqn.2.3istheMetropolis-Hastingsmethod. Here
+a transition X→X(cid:48) is accepted using the Metropolis-Hastings acceptance criterion:
+(cid:18) p(X(cid:48))p (X(cid:48) →X) (cid:19)
+p (X→X(cid:48))=min 1, m (2.4)
+2.1. MARKOV CHAIN MONTE CARLO
+Evaluation of the partition function is thus not necessary. The Metropolis-Hastings method is
+efficient when exploring native states, and simulations near the critical temperature. Unfortu-
+natelytheMetropolis-Hastingsmethod,comparedtootherMCmethods,oftengetsstuckinlocal
+minima, and is therefore generally inefficient when simulating protein folding from an extended
+strand.
+2.1.2 Generalized Ensembles
+ToavoidtheslowconvergenceproblemadvancedMCmethodsareavailableinPHAISTOS,which
+emphasize sampling at low energies, which is generally of higher interest in protein structure
+determination. These”generalizedensemble”methodsareverysimilartotheMetropolis-Hastings
+method, and the main difference in the acceptance criterion is that the target distribution p(X)
+has been replace by a generalized weight function w(X). The acceptance criterion then becomes:
+(cid:18) w(X(cid:48))p (X(cid:48) →X) (cid:19)
+p (X→X(cid:48))=min 1, m (2.5)
+Through reweighting, samples from a converged simulation in a generalized ensemble can be
+reweighted to correspond to the Boltzmann distribution at a given temperature.
+PHAISTOSoffertwogeneralizedensemblemethods. Inthemulticanonicalensemblemethod,
+the weight function is w (X) = 1/g(E(X)), where E(X) is the energy of the structure X
+and g is the associated density of states. In the inverse-k ensemble, the weight function is given
+by w (X) = 1/k(E(X)) where k(E(X)) = (cid:82)E(X) g(E(cid:48))dE(cid:48). The since the density of states is
+generally unknown, the weight-function is estimated during the simulation. PHAISTOS uses the
+MUNINN library to collect histograms of the energy and efficiently provide an estimate of w(X)
+on-the-fly [Ferkinghoff-Borg, 2002].
+2.2. MONTE CARLO MOVES USING GENERATIVE PROBABILISTIC MODELS
+2.2 Monte Carlo Moves Using Generative Probabilistic Mod-
+PHAISTOS proposes new structure samples using a weighted set of difference MC moves, which
+each randomly changes the current protein structure in a certain way. Briefly, these are divided
+in side chain moves and backbone moves. Side chain moves update the rotamer-conformation
+of a amino-acid single side chain by rotating the dihedral angles on the side chain. Backbone
+moves either perform a local perturbation to a strand of a only a few amino acids, or rotates one
+dihedral angle on the backbone.
+Using random moves which re-sample angles from a uniform distribution, and then constructing
+a target distribution via an acceptance criterion is a perfectly valid strategy. However, sam-
+pling from a uniform distribution usually lead to slow convergence. A common approach to
+alleviate this problem is using fragment assembly, in which small fragments of peptides are as-
+sembled from a library of common fragment motifs, such as beta-strands, helices and loops.
+This approach, however, introduces a move bias, which must be divided out if the simulation
+has to obey detailed balance. Furthermore, it is not clear, how to evaluate the move bias ratio
+p (X(cid:48) →X)/p (X→X(cid:48)) when sampling from a fragment library.
+A related approach to obtain a similar speed up is biased sampling. PHAISTOS supports
+samplingofbothsidechainandbackboneanglesfromsuchgenerativeprobabilisticmodels. Inthis
+approach,anglesaresampledfromdistributionsthatareconditionedonpriorknowledge. Twoall-
+atomgenerativeprobabilisticmodelsaresupportedinPHAISTOS.TorusDBNwhichisahidden-
+Markov model of backbone angles [Boomsma et al., 2008], and BASILISK [Harder et al., 2010]
+which is a similar model of side chain rotamer-conformations. Both work are continuous models
+intorsion-anglespace. ThemodelthatisusedinthisworkisTorusDBN,whichisisamodelthat
+samples backbone dihedral angles conditioned on the amino acid sequence from a distribution
+thatresemblestheRamachandran-plot. Thiseffectivelyspeedsupconvergenceofsampling,since
+uninteresting parts of conformational space in only sampled very rarely. The importance of the
+TorusDBN model is discussed in chapter 6.
+Using models such as TorusDBN and BASILISK introduces a move bias, which compensated
+forinEqn.2.3bymultiplyingbytheratiop (X(cid:48) →X)/p (X→X(cid:48)). Itispossibletodetermine
+this ratio, because the likelihood of sampled values can be calculated in the TorusDBN model. It
+isthuspossibletorecoverthetargetdistribution(e.g.theBoltzmanndistributionorageneralized
+ensemble), despite using only biased moves.
+Effectively,thisturnsthetargetdistributionintoaneffectivetargetdistribution. Forsampling
+fromtheBoltzmanndistribution(e.g.usingamolecularmechanicsforcefield),theeffectivetarget
+distribution becomes
+wherep (X|I)istheprobabilitydistributionfromthegenerativemodel,conditionedontheprior
+information I available to the model. This is approach is formally equivalent to adding the term
+ln(p (X|I)) to the physical energy (although this term does not scale with the temperature):
+(cid:18) (cid:19)
+(cid:18) (cid:19)
+In other words, biased sampling can be regarded as simply use of a better force field, while the
+convergence of the simulation is vastly improved.
+TorusDBNisimplementedintwoversions;standardTorusDBNwhich,inbrief,isconditioned
+ononlytheamino-acidsequence,andTorusDBN-CSwhichisfurthermorebasedonbackboneand
+2.2. MONTE CARLO MOVES USING GENERATIVE PROBABILISTIC MODELS
+Figure 2.1: Sampling densities from TorusDBN (left/blue) and TorusDBN-CS (right/green) for
+the residues 29, 44 and 60 in Ubiquitin. Values from the experimental structure 1UBQ are
+marked with a red dot. Residue 29 (lysine) is located in the middle of an alpha-helix. Residue
+44 (isoleucine) is located in a beta-sheet motif, and finally residue 60 (aspargine) is located in a
+loop region.
+2.2. MONTE CARLO MOVES USING GENERATIVE PROBABILISTIC MODELS
+beta-carbon chemical shifts. The default TorusDBN model is trained on a set of 1,447 proteins
+of 180 different SCOP-fold classifications. The default TorusDBN-CS model is trained on 1349
+proteins and corresponding chemical shifts from the RefDB training set.
+Effectively, proposing structures from TorusDBN biases the simulation towards likely angles
+within the Ramachandran-plot, and furthermore also towards a certain secondary structure type
+that is likely for the particular amino acid sequence. The effect of TorusDBN-CS is similar, but
+the effect is much more pronounced.
+Fig. 2.1 shows an example of three different, but typical cases from Ubiquitin. These are
+alpha-helix, beta-sheet and loop regions. Residue 29 (lysine) is in a typical alpha helix and
+this corresponds to the most often sampled cluster from both TorusDBN and TorusDBN-CS.
+TorusDBN-CS, however, very precisely locates the center of the cluster to within around ±15
+degrees. TorusDBN, in contrast, has some sampling density in the regions typical for beta-sheet
+and left-handed alpha-helices.
+For residue 44 (isoleucine) which is in a typical alpha-helix region of Ubiquitin, TorusDBN-
+CS accurately pinpoints the distribution of samples around the experimental values. TorusDBN,
+however, managestoruleoutleft-handedhelices, buthasahighersamplingdensityinthealpha-
+helix region than the beta-sheet region.
+The last residue in the examples, residue 60 (aspargine), is located in a loop-region with
+backboneanglesthatcorrespondtoaleft-handedhelix. Bothmodelssampleinthecorrectregion,
+butTorusDBNfavoraregularalpha-helix. WhileTorusDBN-CSheavilyfavorsthecorrectregion,
+angles that are usually not favored in the Ramachandran plot are also frequently sampled in this
+particular case. This is presumably due to less fold-diversity in the training set, compared to
+the set used to train TorusDBN. Generally, however, the TorusDBN-CS distribution is more
+restrictive than standard TorusDBN.
+2.2.1 Monte Carlo Moves
+PHAISTOSexplorestheconformationalspacebyapplyinglocalMonteCarlomovestotheprotein
+structure. Moves are divided into backbone and side chain moves. All moves work by perturbing
+one or more internal coordinates. In principle, all internal coordinates are degrees of freedom.
+However,sincebondanglesandbondlengthsarenottreatedexplicitlybythePROFASIforcefield,
+these are constrained by the MC moves to standard values [Engh and Huber, 1991]. Effectively,
+only dihedral angles are degrees of freedom in the simulations presented here.
+This constraint can of course be lifted if the force field include appropriate terms to describe
+bond angles and bond lengths. For instance this is supported by the OPLS-AA/L force field
+included in PHAISTOS, which was used in Paper #3.
+Threedifferentmove-typesareusedinthesimulationspresentedlaterinthiswork. Theseare
+introduced below. An overview is displayed in Fig. 2.2.
+Pivot Move
+The pivot move re-samples one dihedral angle of the protein backbone. This usually cause large
+perturbations since two parts of the protein are rotated relative to each other. As demonstrated
+later, it is, however, very efficient guiding a folding simulation when biased re-sampling is carried
+out through TorusDBN or TorusDBN-CS [Boomsma et al., 2008].
+CRISP Move
+In the CRISP move, a number of consecutive residues are selected (default is 7), and the back-
+bone angles of these are perturbed under the constraint that the end-points are fixed in space
+[Bottaro et al., 2011]. This move is particularly efficient at exploring dense states, such as native
+andnear-nativestates. ThismovealsosupportsbiasedsamplingfromTorusDBNandTorusDBN-
+CS.
+2.2. MONTE CARLO MOVES USING GENERATIVE PROBABILISTIC MODELS
+(a)Backbonedihedralangles (b)Sidechaindihedralangles
+Figure2.2: ThedegreesoffreedomsinasimulationsusingthePROFASIforcefield. Theω,φand
+ψ dihedral angles on the backbone are shown in (a) for an alanine residue, and the χ dihedral
+angle for a valine residue is shown in (b).
+Side chain Move
+SidechainmovescaneithersamplenewanglesuniformlyorbiasedfromviaBASILISK[Harder et al., 2010].
+Additionally,sidechainconformationscanbedrawnfromtheDunbrack-rotamerlibrary[Dunbrack and Cohen, 1997].
+Chemical shifts in a probabilistic
+This section introduces the formalism for Monte Carlo simulations which includes both physical
+energy terms as well as a probabilistic energy terms based on experimentally observed chemical
+shifts. The method presented is not new but has not been published in the form presented here.
+Workinginaprobabilisticframeworkisapowerfulstrategyforestimationofunknownparam-
+eters, and the intention is to present the equations in the form in which they are implemented in
+PHAISTOS, so that they can easily be re-implemented in other programs by others. Simulations
+using the CamShift and ProCS chemical shifts predictors presented later in this thesis employ
+the equations presented in this chapter.
+3.1 Hybrid energy schemes
+There are several ways to include experimental observations in simulations, and combine these
+with known laws of physics. A simplistic approach to this problem is to is to define a hybrid
+energy by defining a penalty function that describes the agreement between experimental data
+and data calculated from a proposed model with a physical energy (such as from a molecular
+mechanics force field). A structure can then be determined, for instance, by minimizing
+E =w E +E . (3.1)
+hybrid data data physical
+where w is the weight that quantifies the belief in the energy-model E which defines the
+agreement between the proposed structure and the experimental data relative to the physical
+energy.
+This concept of using a hybrid energy to determine a protein structure was pioneered by
+Jack and Levitt who simultaneously minimized a molecular mechanics force field energy and the
+experimentalR-factorfortheBPTIprotein[Jack and Levitt, 1978]. Thisapproach,however,does
+not uniquely define neither shape nor weightof E , and the resulting structure will necessarily
+depend on these (ill-defined) choices.
+Consequently, chemical shifts have been combined with physical energies in a multitude of
+ways, e.g., weighted RMSD values or harmonic constraints. The groups of Bax and Baker
+added the chi-square agreement between SPARTA predicted chemical shift values and exper-
+imental chemical shifts with an empirical weight of 0.25 to the ROSETTA all-atom energy
+[Shen et al., 2008]. Thismethodologywasusedtodeterminethestructureof16smalltomedium
+sized proteins.
+TheCHESHIREmethod[Cavalli et al., 2007]usesahybridenergyfunction,whereaclassical
+energy term is divided by the logarithm of a sum of weighted correlation-coefficients between
+3.2. DEFINING AN ENERGY FUNCTION FROM BAYES’ THEOREM
+SHIFTXcalculatedchemicalshiftsandexperimentalvalues. Herealpha-hydrogenchemicalshifts
+are weighted by a factor of 18 relative nitrogen and carbon chemical shifts which carry a weight
+of1. ThishybridenergyisusedintherefinementstepoftheCHESHIREprotocol, andwasused
+to determine the structure of 11 proteins to a backbone RMSD of 1.21 to 1.76 ˚A relative to the
+corresponding X-ray or NMR structures.
+Vendruscolo and co-workers implemented a ”square-well soft harmonic potential”, and corre-
+sponding molecular gradients and were able to run a chemical shift-biased MD simulation using
+theCamShiftchemicalshiftpredictor[Robustelli et al., 2010]. Subsequently,thetrajectorysnap-
+shots were re-weighted by multiplying the chemical shift energy term by an empirical weight of
+5. Using the empirically optimized balance between energy terms, the native state could be
+determined from the trajectories for 11 small proteins.
+InallcasestheparametersandweightsofE hadtobecarefullytweakedbyhand,anditis
+not clear how to choose optimal parameters. For instance, different types of chemical shifts may
+(for optimal results) require different weighting, and a brute-force optimization of all parameters
+is not straight-forward.
+3.2 Defining an energy function from Bayes’ theorem
+Theinferentialstructuredetermination(ISD)principlesintroducedbyRieping,HabeckandNigles
+[Rieping et al., 2005] defines a Bayesian formulation of Eq. 3.1. The ISD approach rigorously
+defines the shape and weight of the E term from the definition of an error model, and allows
+for the weights to be determined automatically as well. In the following section the equations for
+an ISD approach are derived for combining the knowledge of experimental chemical shifts with a
+physical energy.
+First remember Bayes’ theorem which relates a conditional probability (here A given B) with
+its inverse:
+p(B|A)p(A)
+Now consider a set of chemical shifts {δ }, the weight for each chemical shift restraint {w } in
+the simulation, and finally the structure to be determined, X. This introduces an additional
+parameter, the weights, which must be determined. These weights describe the belief in the
+model that relates a structure to a chemical shift. In this case, the most likely structure, X, and
+optimal choice of {w } given the set of experimental chemical shifts {δ } (via Bayes’ theorem)
+can for instance be found by maximizing:
+(cid:16) (cid:12) (cid:17) (cid:16) (cid:17)
+(cid:16) (cid:12) (cid:17) p {δ i }(cid:12) (cid:12) X,{w i } p X,{w i }
+i (cid:12) i (cid:16) (cid:17)
+(cid:16) (cid:12) (cid:17) (cid:16) (cid:17)
+i (cid:12) i i
+Here, the marginal distribution of p({δ }) merely serves as a normalizing factor, and can be ne-
+(cid:16) (cid:12) (cid:17)
+glected. The likelihood distribution p {δ }(cid:12)X,{w } describes the likelihood of the experimental
+i (cid:12) i
+chemical shifts, given a structure, X, and the weights {w }. This requires (1) a forward model to
+calculate chemical shifts from given structure and (2) an error model that relates the degree of
+beliefintheforwardmodel(thatis,theweights)toaprobability,basedonthedifferencebetween
+experimentalandcalculatedvalues. Laterinthischapter,GaussianandCauchydistributionsare
+discussed as error models. The forward model here is a chemical shift predictor, e.g. CamShift,
+ProCS, etc.
+3.2. DEFINING AN ENERGY FUNCTION FROM BAYES’ THEOREM
+(cid:16) (cid:17)
+If we assume conditional independence, the prior p X,{w } can be separated as
+(cid:16) (cid:17) (cid:16) (cid:17) (cid:16) (cid:17)
+p X,{w } =p X p {w } . (3.4)
+(cid:16) (cid:17) (cid:16) (cid:17)
+The two priors, p X and p {w } , in brief, describe the distribution of a priori meaning-
+ful structures (i.e. usually the Boltzmann distribution), and the probability distribution of the
+weights, respectively. In the following p(X) is simply the Boltzmann distribution, i.e.
+(cid:18) (cid:19)
+where E(X) is the (physical) potential energy of the protein structure, most often calculated
+usingamolecularmechanicsforcefield. k istheBoltzmannconstantandT isthetemperatureof
+interest. Weneednotcalculatethepartitionfunction,Z(T),becausetherelativeenergylandscape
+is invariant under choice of normalization constant. Note that p(X) also can be introduced via
+conformationalsamplingfromabiaseddistribution,suchasforexampleTorusDBNorBASILISK
+(mimicking the Ramachandran plot and side chain rotamer distributions, respectively). This is
+discussed later in this chapter.
+(cid:16) (cid:17)
+The prior distribution of the weight parameter p {w } is inherently unknown, except that
+it is some real number. One such uninformative prior could for instance be a flat distribution
+overthepositiverealline. Thisdistribution,however,maybebiasedtowardsverylargenumbers.
+A standard method is to use the Jeffreys’ prior, which is a generalization of flat priors, and can
+be used to model such unknown distributions while introducing only minimal bias. In the one
+parameter case the Jeffrey’s prior is given as
+where I(θ) is the Fisher information defined (in the one parameter case) as
+(cid:42)(cid:18)
+(cid:19)2 (cid:43)
+The corresponding priors for the Gaussian and Cauchy distributions are discussed in the next
+sections.
+3.2.1 Gaussian error model
+Selecting an error model is the basic assumption that difference (the error) between a chemical
+shift calculated from a structure and the corresponding experimentally measured chemical shift,
+(cid:12) (cid:12)
+given as ∆δ (X) = (cid:12)δpredicted(X)−δexperimental(cid:12), is distributed according to some defined distri-
+i (cid:12) i i (cid:12)
+bution. Followingtheprincipleofmaximumentropy,theGaussiandistributionistheleastbiasing
+distribution, and is the least biasing choice of error model. In this case, the weight parameter
+introduced in the previous section corresponds to the standard deviation, σ of the Gaussian dis-
+tribution. Forsimplicity,itisassumedthatthemeanoftheGaussianiszero. Thetotallikelihood
+is then the product of the probability of each ∆δ (X):
+(cid:16) (cid:12) (cid:17) (cid:89) n
+i (cid:12) i i i
+∝ (cid:89) n 1 exp (cid:32) − ∆δ i (X)2 (cid:33) (3.8)
+3.2. DEFINING AN ENERGY FUNCTION FROM BAYES’ THEOREM
+Next we derive Jeffreys’ prior for the uncertainty of a generic Gaussian distribution of the form
+(cid:18) (cid:19)
+Via Eqn. 3.6, this immediately gives us the Jeffreys’ prior:
+(cid:42)(cid:18)
+(cid:19)2 (cid:43)
+(cid:42)(cid:18)
+(cid:19)(cid:21)(cid:19)2 (cid:43)
+= (cid:116) ln √ exp
+= (cid:116)
+= ∝ (3.10)
+Practically, it is impossible to have a separate weight for each individual chemical shift, and the
+chemicalshiftofnucleiofthesametypethuscarrythesameweight. Theforwardmodelissimilar
+for all nuclei of the same type, so this is somewhat well-justified.
+In the following equations, j runs over atom types (e.g. Cα or Hα, etc), and i over residue
+number. Inserting Eqn. 3.8 and Eqn. 3.10 into Eqn. 3.3, we arrive at a total probability of:
+(cid:16) (cid:12) (cid:17) (cid:16) (cid:12) (cid:17) (cid:16) (cid:17) (cid:16) (cid:17)
+j (cid:12) ij ij (cid:12) j j
+∝ (cid:89) m (cid:89) n 1 exp (cid:32) − ∆δ ij (X)2 (cid:33) exp (cid:18) − E(X) (cid:19) (cid:89) m 1
+σ 2σ2 k T σ
+j=0i=0 j j B j=0 j
+= (cid:89) m (cid:18) 1 (cid:19)n exp (cid:32) (cid:88) n − ∆δ ij (X)2 (cid:33) exp (cid:18) − E(X) (cid:19) (cid:89) m 1
+σ 2σ2 k T σ
+j=0 j i=0 j B j=0 j
+= (cid:89) m (cid:18) 1 (cid:19)n+1 exp (cid:32) (cid:88) n − ∆δ ij (X)2 (cid:33) exp (cid:18) − E(X) (cid:19) (3.11)
+j=0 j i=0 j B
+This can be converted to the corresponding hybrid-energy:
+(cid:16) (cid:16) (cid:12) (cid:17)(cid:17)
+hybrid B i (cid:12) ij
+= E(X)+k T (cid:88) m (n+1)ln(σ )+k T (cid:88) m (cid:88) n ∆δ ij (X)2 (3.12)
+j=0 j=0i=0 j
+Thisexpression,exceptfortheterm(n+1)ln(σ),isessentiallyanenergyfunctionusingharmonic
+constraints. Itis, however, thebalancebetweenthetwotermswhichincludeσ thatmakesthings
+work. Theterm(n+1)ln(σ)yieldsthelowestenergyforsmallvaluesofσ,whiletheterm
+is lower for large values of σ.
+Furthermore, the effect of the prior is minute: Using Jeffreys’ prior this term is (n+1)ln(σ),
+whereas using a uniform prior the same term is nln(σ). Since n is the number of measured
+chemical shifts of a certain type, the value is usually in the order of ∼100.
+3.2. DEFINING AN ENERGY FUNCTION FROM BAYES’ THEOREM
+3.2.2 Cauchy error model
+Due to numerical instabilities in simulation using the Gaussian error model, a similar model was
+derived, using a Cauchy distribution as error model. The most notable difference between the
+Gaussian and Cauchy distributions is that the Cauchy distribution has fatter tails, and thus al-
+lows for larger outliers. The differences are discussed in further detail in the Results section in
+this chapter.
+Similarly to Eqn. 3.8, we assume that the location parameter of the Caucy-distribution is zero,
+and use the scale-parameter, γ as the weight. The total likelihood is then:
+(cid:16) (cid:12) (cid:17) (cid:89) n
+i (cid:12) i i i
+(cid:89) 1
+(cid:20) (cid:16) (cid:17)2 (cid:21)
+And for the γ parameter of the generic Cauchy distribution of the form
+0 (cid:20) (cid:16) (cid:17)2 (cid:21)
+πγ 1+ x−x0
+we obtain the following Jeffreys’ prior:
+(cid:42)(cid:18)
+(cid:19)2 (cid:43)
+(cid:117)(cid:42) (cid:43)
+= (cid:117) (cid:117) (cid:117) (cid:116)   ∂ ∂ γ ln    πγ (cid:20) 1+ (cid:16) 1 x−x0 (cid:17)2 (cid:21)      
+= (cid:117) (cid:117) (cid:116) (cid:42)(cid:18) − γ2−(x−x 0 )2 (cid:19)2 (cid:43)
+(cid:90) ∞ (cid:18) γ2−(x−x )2 (cid:19)2
+= ∝ (3.15)
+Again, it is practically impossible to have a separate weight for each individual chemical shift,
+and the chemical shift of nuclei of the same type thus carry the same weight. In the following
+equations, j runs over atom types (e.g. Cα or Hα, etc), and i over residue number. Assembling
+3.2. DEFINING AN ENERGY FUNCTION FROM BAYES’ THEOREM
+the Eqn. 3.13 and Eqn. 3.15 into Eqn. 3.3, we arrive at the total probability of:
+(cid:16) (cid:12) (cid:17) (cid:16) (cid:12) (cid:17) (cid:16) (cid:17)
+j (cid:12) ij ij (cid:12) j j
+m n (cid:18) (cid:19) m
+(cid:89)(cid:89) 1 E(X) (cid:89) 1
+(cid:20) (cid:16) (cid:17)2 (cid:21) k T γ
+m (cid:18)
+(cid:19)n+1
+= exp − (3.16)
+j=0 γ j i=01+ (cid:16) ∆δij(X) (cid:17)2 k B T
+The associated hybrid energy is then given as:
+(cid:16) (cid:16) (cid:12) (cid:17)(cid:17)
+hybrid B i (cid:12) ij
+(cid:19)2 (cid:35)
+j=0 j=0i=0
+3.2.3 Marginalization of Weighting parameter
+A third option also explored here, is the removal of the weight parameter by projection. This
+procedure is known as marginalization, and is carried out by integrating over all values of the
+weightparameter. Whileintegrationisstraight-forwardfortheGaussianerror-model,thesimilar
+expression for the Cauchy distribution does not integrate easily, and the Cauchy-model was not
+investigated here. From the joint probability distribution in Eqn. 3.11 we obtain the following:
+(cid:16) (cid:12) (cid:17) (cid:90) ∞ (cid:16) (cid:12) (cid:17) (cid:16) (cid:17) (cid:16) (cid:17)
+marginal (cid:12) ij ij (cid:12) j j
+= (cid:90) ∞ (cid:89) m (cid:18) 1 (cid:19)n+1 exp (cid:32) (cid:88) n − ∆δ ij (X)2 (cid:33) exp (cid:18) − E(X) (cid:19) dσ
+0 j=0 j i=0 j B
+m (cid:32) n (cid:33)n/2 (cid:18) (cid:19)
+(cid:89) (cid:88) E(X)
+The hybrid energy associated with the marginalized probability is then given as:
+(cid:16) (cid:16) (cid:12) (cid:17)(cid:17)
+E = −k T ln p X(cid:12){δ }
+hybrid B marginal (cid:12) ij
+n(cid:88) (cid:88)
+3.2.4 Soft Square-Well Energy Function
+Thelasttypeofhybridenergytermexploredhere,isapotentialdesignedspecifiallyformolecular
+dynamicssimulationsbiasedbytheCamShiftpredictor[Robustelli et al., 2009,Robustelli et al., 2010].
+In this case, the hybrid-energy is given as:
+hybrid CS ij
+where E (X,{δ }) is an empirically derived penalty function that has been demonstrated
+through simulations to work well for protein structure determination. α is a weight parame-
+terwhichwassetto1duringsimulation. Thispenaltyfunctionistermeda”soft-squareharmonic
+well”, and given by:
+3.3. SAMPLING STRATEGY FOR WEIGHT PARAMETERS
+(cid:88)(cid:88)
+if n(cid:15) j
+n(cid:15)j
+ij(X)−x0) if x
+(X).
+where the parameters, n(cid:15) ,x ,β and γ have been empirically adjusted. The potential has a flat
+bottom, with the width of n(cid:15) . The flat bottom corresponds to the expected standard deviation
+of CamShift, to avoid overfitting in the simulation. The penalty function grows harmonically
+until a cut-off of x and follows a somewhat flat hyperbolic tangent function after this. While
+there is no substantial theoretical backing
+3.3 Sampling strategy for weight parameters
+Since the nuisance parameters of the energy functions are unknown, they too must be sampled.
+The move used to update the value of the nuisance parameters must obey detailed balance:
+The simplest Monte Carlo move is simply adding a number from a normal distribution with
+µ = 0, this clearly obeys detailed balance, since the distribution is symmetric. For the weight
+parameters,γ andσ,oftheCauchyandGaussiandistributions,respectively,wefoundavariance
+of 0.05 in the normal distributed move to converge quickly and stably.
+3.3.1 Molecular mechanics force field
+Onereasonablepriordistributionforproteinstructure, p(X), istheBoltzmanndistribution, e.g.:
+(cid:18) (cid:19)
+where E is the energy of the structure, X and k and T are Boltzmann’s constant and the
+temperature, respectively. The energy of the structure is in this context usually approximated
+by a molecular mechanics force field that is taylor-made for protein simulations. PHAISTOS
+currently supports two different protein force field: The OPLS-AA/L force field with a GB/SA
+solvent term, and the coarse-grained PROFASI force field. The OPLS-AA/L is an all-atom force
+field with an additional solvation. The PROFASI force field is a coarse-grained force-field which
+assumes fixed bond-lengths and angles and furthermore has a very aggressive 4.5 ˚A cut-off of
+long-range interaction terms.
+3.4 Results
+3.4.1 Results – sampling of weight parameters
+Figure 3.1 show a histogram of 100,000 sampled values of γ and σ for the NMR structure of
+ProteinG(PDB-id: 2OED).Nostructuralmoveswereused,andtheresultsarethustemperature
+independent since the physical energy is constant. A total of 55 Cα experimental chemical shifts
+were used in this example (RefDB-id: 2575), and CamShift was used to calculate the chemical
+shifts. The initial values of σ and γ was 10.0, in order to demonstrate the stable convergence
+using the simple move.
+3.4. RESULTS
+00 1 2 3 4 5
+(n+1)ln(σ) Samples 700
+0 0 1 2 3 4 5
+(a)Gaussiandistribution
+(b)Cauchydistribution
+Figure 3.1: Sampling of σ and γ for 2OED for Ca-chemical shifts. In this example n = 55 and
+χ2 = 69.7. Sampled values of the weight parameters clearly cluster around the minimum of the
+energy function.
+In both simulations, the sampling algorithm converges sampling around the minimum of the
+energy function. In both cases, these minima are in very good agreement with the values calcu-
+latedbythetestsetthatwasusedtovalidatetheperformanceofCamShift. Thelargestsampled
+bins are centered on σ = 1.26 ppm and γ = 0.63 ppm for the Gaussian and Cauchy distribu-
+tions, respectively. These number can be compared to the maximum likelihood estimates (MLE)
+obtained on the 7 protein benchmark set used to determine the accuracy of Camshift. Here the
+valuesareσ =1.3ppmandγ =0.7ppmfortheGaussianandCauchydistributions,respectively.
+3.4.2 Performance of energy functions
+Herefoldingsimulationusing11differentvariationsoftheenergyfunctionderivedandmentioned
+previouslyarecompared. AllenergyfunctionshavebeenimplementedintheCamShiftmodulein
+PHAISTOS, which was also used to run all simulations. The test were carried out on Protein G
+andtheengrailedhomeodomain(ENHD).Thereferencestructureswerethestructures2OEDand
+1ENH. An overview of the different simulation types can be found in Table 3.1. For each energy
+function, 20 independent simulations were carried out for a total of 50,000,000 MC steps each.
+Each simulation was initialized from a different random, extended strand. Maximum likelihood
+estimated (MLE) values of the σ and γ weight parameters estimated take from the 7-protein
+test set reported in reference [Kohlhoff et al., 2009]. For simulations where the weight parameter
+was sampled, an additional 500,000 Monte Carlo steps were carried out corresponding to the
+extra moves required to sample this weight (the computational overhead of these 500,000 moves
+is negligible). Chemical shifts were calculated using the CamShift module. All simulations used
+the PROFASI force field and sampling from either TorusDBN or TorusDBN-CS.
+In two simulations, the bias was removed from the simulation, which corresponds to an un-
+biased simulation. Two reference simulations were carried out with no chemical shift energy-
+function,inordertoanalyzetheeffectofsamplingfromTorusDBNandtheeffectofthePROFASI
+forcefield. Thesimulationsusedamixof40%biasedCRISP-moves,10%biasedpivotmovesand
+50%uniformsidechainmoves. Thesimulationwascarriedoutinthemulticanonicalensemblevia
+MUNINN. Minimum and maximum β-values were set to 0.3 and 1.05, and the temperature was
+setto300K.Inallsimulations,thenumberofthreadswhichhadsamplesbelowthresholdsof5,3,
+2 and 1 ˚A CA-RMSD from the crystal structure was recorded. Similarly, the number of threads
+inwhichthelowestenergystructurewasbelowthresholdsof5, 3, 2and1 ˚ACA-RMSDfromthe
+crystalstructurewasrecorded. Thesefiguresareusedtoanalyzewhethersamplingorcorrecten-
+ergyscoringisarelimitingfactorsintheparticularsimulations. Theenergywascalculatedasthe
+3.4. RESULTS
+Table 3.1: Protocols used in the comparison of energy functions and success rates.
+Energy type Weight TorusDBN-mode Sampling Bias Correct samplinga Correct scoringb
+Gauss Fixed/MLE Torus Biased 20/20 2/6
+Gauss Sampled Torus Biased 0/0 0/0
+Cauchy Fixed/MLE Torus Biased 20/12 7/4
+Cauchy Sampled Torus Biased 20/5 6/1
+Cauchy Sampled Torus-CS Biased 20/20 4/2
+Cauchy Sampled Torus No bias 0/0 0/0
+Cauchy Sampled Torus-CS No bias 0/0 0/0
+Square-well Fixed Torus Biased 1/2 1/0
+Marginalized N/A Torus Biased 7/17 1/8
+No CS N/A Torus Biased 0/0 0/0
+No CS N/A Torus-CS Biased 8/10 2/0
+aNumber of threads with a CA-RMSD of < 5 ˚A (using all residues). Listed as xx for Protein G and yy
+for ENHD, i.e. xx/yy.
+bNumber of threads where the lowest energy sample has a CA-RMSD of < 3 ˚A (using all residues).
+Listed as xx for Protein G and yy for ENHD, i.e. xx/yy.
+PROFASI energy multiplied by k T plus the chemical shift energy term plus the log-likelihood
+calculatedfromTorusDBN.AnoverviewoftheseresultscanbeseeninFig.3.2(onlysimulations
+that had any samples below 5 ˚A CA-RMSD from the crystal structure are shown).
+For both proteins, using a Gaussian model and sampling the σ uncertainty does not lead to
+meaningfulvaluesforσ. Inshort, PHAISTOSisabletogenerateastructurewhichhasnodiffer-
+ence between experimental and calculated chemical shifts for a certain atom type. Consequently,
+the value of σ converges to zero, which effectively freezes the structure in the simulation. The
+simulations in which the move-bias from TorusDBN and TorusDBN-CS was removed did not
+sample any structures below
+For simulations using Gaussian or Cauchy types of energy function all thread had samples
+below5˚ACA-RMSDfromthecrystalstructureforProteinGandbetween5-20forENHDInthe
+simulationusingthesquare-wellpotentialonly1threadhadsamplesbelow5˚AforProteinGand
+only2forENHD.Forthesimulationwithmarginalizedweightparameters, thesamefigureswere
+7 and 17, respectively. The reference simulations with no chemical shift in the energy function
+had no samples below 5 ˚A for biased sampling from TorusDBN, but 8 and 10 threads below 5
+˚A for biased sampling from TorusDBN-CS.
+Comparing the number of threads for which the lowest energy sample was below 3 ˚A CA-
+RMSDfromthecrystalstructure. Forbothproteins,usingfixedweightsissomewhatbetterthan
+using sampled weights with the Cauchy distribution. The result for the square-well potential
+cannot be interpreted to a statistical significance because only one and two threads were close to
+the correct fold, but one thread correctly identified the folded state below 3 ˚A CA-RMSD as the
+lowest energy for Protein G.
+Inconclusion, the Gauss and Cauchyerrormodels perform wellinsampling andscoring. The
+fixed MLE weights seem to be work equally well to sampling weights for the cauchy distribu-
+tion, with no substantial differences. The performance of the energy with marginalized weights
+generally performed worse in guiding the sampling, but well in scoring samples for ENHD. The
+square-wellpotentialdidnotimprovethesamplingmuch. Thereasonwhyithaspreviouslybeen
+showntoworkwell,mightbethatitwascombinedwithabetterforce-field(AMBER03)towhich
+it was specifically designed. One clear conclusion is that it is useful to not remove the bias from
+TorusDBN, and keeping the TorusDBN-CS bias seems guide folding significantly more. Even
+3.4. RESULTS
+though this formally constitutes is double-counting of effect of knowledge about chemical shifts,
+this practice seemingly has no adverse effects.
+3.4. RESULTS
+CA-RMSD[angstrom]
+Gauss Fixed Sigma Square Well
+Cauchy Fixed Gamma Marginalized Weight
+Cauchy Variable Gamma No CamShift/TorusCS
+Cauchy Variable Gamma*
+(a) Protein G, Profasi + Camshift
+CA-RMSD[angstrom]
+(b) ENDH, Profasi + Camshift
+CA-RMSD[angstrom]
+Protein G, E += Torus
+CA-RMSD[angstrom]
+(c) ENHD, E += Torus
+CA-RMSD[angstrom]
+(c) Protein G, Min. RMSD
+CA-RMSD[angstrom]
+(d) ENHD, Min. RMSD
+Figure3.2: Overviewoffoldingsimulationsusing7differentchemicalshiftenergytypes. Sampling
+was biased by TorusDBN and the PROFASI energy term was used as well. In (a) and (b) the
+number of threads where the lowest energy samples are under thresholds of 1, 2, 3 and 5 ˚A CA-
+RMSD from the crystal structure is plotted. The energy here is calculated as the PROFASI
+energy multiplied by k T plus the chemical shift energy term. In (c) and (d), the log-likelihood
+from TorusDBN has been added to the total energy. In (e) and (f), the number of threads in
+which samples are found below under thresholds of 1, 2, 3 and 5 ˚A CA-RMSD from the crystal
+structure is plotted. *In this simulation TorusDBN-CS is used instead of TorusDBN.
+Graphical User Interface for
+Setting up simulations in PHAISTOS requires expert knowledge about the program. Firstly,
+while all modules and settings have reasonable default settings, there are still many things that
+cannot be specified via default alone, and secondly, the complete list of settings in PHAISTOS is
+around 2500 options that must be set or taken as default values.
+In order to make PHAISTOS more attractive to new users, I wrote a GUI can set up most
+simulations for most of the simulations covered by this thesis. The GUI for PHAISTOS is aptly
+named Guistos and is written in Python 2.x using TkInter.
+Using the GUI the user is only presented with the three most basic choices for setting up the
+simulation. These are (1) choice of energy terms, (2) type of Monte Carlo simulation and finally
+(3)aselectionofMonteCarlo moves. AscreenshotofGuistoscanbeseeninFig.4.1. Setting up
+these via Guistos is discussed below.
+Energy Options
+Firstly, the Energy Options section allows the user to select the molecular mechanics force field.
+Currently two force fields are supported in PHAISTOS, which are the OPLS-AA/L force field
+with a GB/SA solvent model, and the PROFASI coarse grained force field. Use of the PROFASI
+force field requires the Monte Carlo moves to restraint the bond angle and lengths in the protein
+toEngh-Huberstandardvalues. ThisisautomaticallydoneifthePROFASIforcefieldisselected.
+Conversely, the OPLS-AA/L force field includes energy terms for bond angles and lengths and
+these are degrees of freedom in the simulation if the OPLS-AA/L force field is selected.
+Additionally, the Energy Options section allows the user to add restrains from one type spec-
+troscopicdata. CurrentlyenergytermsbasedonCamShift1.35andProCSaresupported. These
+options requires a NMR-STAR formatted file containing experimental chemical shifts.
+Monte Carlo Options
+ThissectionallowstheusertoselectthefourtypesofMonteCarlosimulationofferedbyPHAIS-
+TOSandtheonlythemostbasicoptionstosetupthatparticularsimulation: Metropolis-Hastings
+offers the choice of a constant temperature (in Kelvin). Muninn and Simulated Annealing offer
+thechoiceofatemperaturerange(inKelvin), andadditionallyMuninnoffersthechoicebetween
+multicanonical or 1/k sampling. Greedy Optimization does not offer any customizable option.
+Figure 4.1: Screenshot of Guistos
+Monte Carlo Move Sets
+Selecting a good mix of the different Monte Carlo moves offered by PHAISTOS can significantly
+speed up convergence of a simulation, compared to using an inferior move set. Choosing a good
+set of moves is in the opinion of this author currently somewhere in between black art and sheer
+luck, and requires a good deal of experience with simulations in PHAISTOS.
+To make it easier for new users, three move sets have been predefined using the experience of
+this author. These are named ”small”, ”medium”and ”large”. The ”small”move set is intended
+forusessuchasrefinementorsamplingaroundacompactnativestate, whilethe”medium”move
+set is intended for folding simulations that start from extended, but are expected to also sample
+a native state, and finally the ”large” move set is intended for sampling conformational space
+quickly, but will have problems with sampling compact structures. All move sets sample from
+TorusDBN (backbone angles) and BASILISK (side chain angles), and an option to remove this
+bias is also present.
+Using Guistos
+Guistos is freely released under the open source two-clause BSD-license, and can be downloaded
+tos window, a configuration-file is saved by pressing the ”Save Config”button. A simulation in
+PHAISTOS can the be executed via the following command:
+1 ./phaistos --config-file my_simulation.config
+Prediction of Protein Chemical
+While the relationship between NOE restraints and the underlying protein structure is clear, the
+relationship between chemical shifts and the structure is less clear. Several programs, however,
+existswhichareabletopredictproteinchemicalshiftsgivenaproteinstructure. Typically, these
+chemicalshiftpredictorsareparametrizedfromempiricalfitsbetweenexperimentalcrystalstruc-
+tures of proteins to their corresponding measured NMR chemical shifts. Popular programs that
+employ such empirical include SHIFTX, SPARTA+, SHIFTS and CamShift [Neal et al., 2003,
+Shen and Bax, 2010, O¨sapay and Case, 1991, Kohlhoff et al., 2009]. These programs use func-
+tional forms that decompose the chemical shift into additive, independent terms. The accuracy
+of these fits are inherently limited by the availability and accuracy of empirical data. A similar
+program, CheShift, exists, in which the functional forms are interpolated from a large database
+of QM calculation on representative peptide conformations [Vila et al., 2009]. The authors, how-
+ever,havenotbeenwillingtosharethecode,butexistsasaweb-servicewhichallowaplha-carbon
+and beta-carbon chemical shift calculations.
+We have recently explored using quantum mechanics to derive chemical shifts from protein
+structures. Our amide-proton chemical shift predictor is discussed in our paper #3 in Appendix
+A.Briefly,intheamideproton-onlyversionofProCS[Christensen et al., 2013],thechemicalshift
+is calculated as a sum of several independent terms [Parker et al., 2006]:
+H BB HB rc
+whereδ (φ,ψ)chemicalshiftdependenceonthebackboneangles,∆δ isasumover3different
+contributions due to hydrogen bonding and ∆δ is the perturbation due to magnetic field from
+aromatic side chains [Christensen et al., 2011]. All terms are parametrized by QM methods by
+fitting the terms to QM calculations on model systems. The ring current contribution term is
+discussed in detail in publication #1 in the appendix.
+As we show in the publication, structures generated using amide-proton chemical shift re-
+straints from ProCS have hydrogen bonding geometries that are in substantially better agree-
+ment with experimental X-ray structures and back-calculated experimentally measured spin-spin
+coupling constants, compared to using CamShift as predictor or no chemical shifts in the simula-
+tion. Theaccuracyoftheamideproton-onlyversionofProCSislowerthanSHIFTX,SPARTA+,
+SHIFTS or CamShift, when experimental protein structures are used as input, but we show that
+this is likely due to inaccuracies in the experimental coordinates.
+Similar to the approximation above, we have made a predictor for all backbone and beta-
+carbon. In the backbone atom version of ProCS, the chemical shift is calculated as:
+5.1. INITIAL RESULTS
+where δ is due to dihedral bond angles in the residue and the neighboring residues, and ∆δ
+and ∆δ are implemented similarly to those of the amide proton-only version of ProCS. To
+accurately calculate the dependence of angles and neighboring residues on carbon and nitrogen
+chemical shift, we found an accurate description to be:
+BB i i i i i−1 i−1 i−1 i−1 i+1 i+1 i+1 i+1
+where δ takes into account, the chemical shift due to the φ ,ψ and {χ } angles on the i’th
+residue,and∆δ and∆δ takesintoaccounttheperturbationduetotheneighboringresidue
+conformation and residue type.
+The three terms in δ are interpolated through exhaustive scans over all possible conforma-
+tions of tri-peptides. To set up the massive number of QM calculations, the FragBuilder Python
+API was created (see Paper #4). FragBuilder is an Python API that makes it possible to easily
+generatepeptideconformations,eitherviamanualdefinitionofdihedralanglesorsamplingviathe
+BASILISKlibrary[Harder et al., 2010]. UsingtheOpenBabelPythonAPI[O’Boyle et al., 2011],
+itisfurthermorepossibletoperformmolecularmechanicsoptimizationsandwritecoordinatefiles
+in nearly 100 different formats. FragBuilder provides convenient wrappers and classes for such
+operations, and only few lines of code are generally needed for generating an input-file.
+TheFragBuilderPythonAPIwasusedtogeneratethemorethan2,000,000peptidestructures
+used to generate the database. The peptide structures were optimized using the PM6 semi-
+empirical QM method, and QM chemical shifts were calculated at the OPBE/6-31G(d,p) level
+usingapolarizablecontinuummodeltomodelanembeddingenvironment. Theresultingtablesof
+chemical shifts were collected and stored in files in Numpy’s binary .npz-format [Oliphant, 2006].
+ThepredictorisprogrammedintoaseparatemoduleforPHAISTOS(inC++). Theprogram
+loads the Numpy-arrays into the memory and uses existing code to read coordinates and angles.
+These tables are roughly 10GB for each nucleus, so the current version of ProCS requires about
+64GB of RAM for predicting backbone atom and beta-carbon chemical shifts efficiently.
+5.1 Initial Results
+The code is currently not ready for use in simulations, other than for testing purposes, due to
+the massive memory requirements, and parallelization is not yet complete, so no results in this
+respect can be presented here.
+Initial test show that calculating chemical shifts via the ProCS module is about 5 times
+faster than the CamShift energy term in PHAISTOS and roughly same speed as the PROFASI
+energyterm. Note,thattheCamShiftandPROFASIenergytermsuseacachingalgorithmwhich
+effectivelymeansthatonlytermsthatdependonatomsthataremoveduringaMonteCarlomove
+have to be re-calculated each move. An initial cached version of ProCS is around 5 times faster
+than the non-cached version, and thus faster than the coarse-grained PROFASI force field. Fast
+evaluation of chemical shifts is crucial for including the chemical shift predictor in the energy
+function when simulating folding of larger proteins (> 100 amino acids), where the CamShift
+predictor is currently too slow for our purpose.
+We have assessed the accuracy of ProCS for alpha-carbon and beta-carbon atoms by com-
+parison to benchmark QM calculations on an entire proteins. The experimental structures of
+ProteinGandUbiquitin(PDB-codes: 2OEDand1UBQ,respectively)wereprotonatedusingthe
+PDB2PQRwebinterface[Dolinsky et al., 2004,Dolinsky et al., 2007]. Additionalstructureswere
+generatedbyminimizing the X-raystructures in Tinker with the AMBER, CHARMM22/CMAP
+and AMOEBA force fields with a GB/SA solvent model. The chemical shifts of the resulting
+structures were calculated in GAUSSIAN 09 [Frisch et al., 2009] at the OPBE/6-31G(d,p) level
+with a polarizable continuum solvent model. The results are summarized in table 5.1.
+The QM calculations on Ubiquitin are in slightly better agreement with the ProCS predicted
+number, than the CheShift and CamShift predicted values, based on RMSD and r2 values. For
+5.1. INITIAL RESULTS
+Protein G CheShift are and CamShift RMSD values are slightly lower for alpha-carbon, while
+ProCShasalowerRMSDforbeta-carbon. Thegeneraltrendisthatthepredictorsarecomparable
+in accuracy.
+Table 5.1: Comparison of agreement between QM calculation of alpha-carbon and beta-carbon
+chemical shifts and predicted chemical shifts, for X-ray structures of Ubiquitin and Protein G,
+and structures minimized with the AMBER, CHARMM22/CMAP and AMOEBA force fields.
+ProCS CheShift CamShift
+CA/Ubiquitin r2 RMSD r2 RMSD r2 RMSD
+1UBQ (X-ray) 0.754 2.54 0.697 3.63 0.666 2.97
+AMBER 0.815 1.93 0.789 3.19 0.763 2.41
+CHARMM22/CMAP 0.897 2.78 0.775 2.12 0.827 2.68
+AMOEBA N/A N/A 0.851 3.94 0.886 2.26
+CA/Protein G r2 RMSD r2 RMSD r2 RMSD
+2OED (X-ray) 0.894 2.37 0.883 1.66 0.887 2.21
+AMBER 0.824 3.02 0.883 1.87 0.883 1.87
+CHARMM22/CMAP 0.907 2.60 0.814 2.13 0.839 2.82
+AMOEBA 0.914 1.90 0.866 3.84 0.755 2.82
+CB/Ubiquitin r2 RMSD r2 RMSD r2 RMSD
+1UBQ (X-ray) 0.947 3.44 0.945 3.90 0.941 3.58
+AMBER 0.983 1.91 0.965 2.85 0.964 2.54
+CHARMM22/CMAP 0.980 2.76 0.971 5.22 0.970 3.34
+AMOEBA N/A N/A 0.957 6.34 0.950 4.30
+CB/Protein G r2 RMSD r2 RMSD r2 RMSD
+2OED (X-ray) 0.992 2.87 0.983 2.2 0.983 3.10
+AMBER 0.974 2.91 0.982 2.63 0.982 2.63
+CHARMM22/CMAP 0.991 2.68 0.979 4.95 0.985 3.08
+AMOEBA 0.984 3.83 0.977 6.29 0.977 4.06
+Determined protein structures
+This section describes all test-targets which I have attempted to fold using the methodologies
+presented in the previous chapters. All protein structures, chemical shift and NOE data used in
+6.1 Barley Chymotrypsin Inhibitor II
+An especially interesting target in this study is the barley chymotrypsin inhibitor II (CI-2). CI-2
+is a 63 residue protein which consists of an α-helix which connects via a very flexible handle to a
+small β-sheet region.
+The chemical shifts data supplied by Kaare Theilum (personal communication) was obtained
+using a fully automated procedure. The ADAPT-NMR [Bahrami et al., 2012] protocol was used
+to record all necessary NMR data and automatically assign the chemical shifts. Data collection
+andassignmentwascompletedinonly11hourswithminimalhumanintervention. Aswedemon-
+strate, a structure could be determined computationally from these chemical shifts in only two
+days running on 12 cores.
+6.1.1 Computational methodology
+Several folding protocols were tried for this protein. All runs were performed as 72 independent
+trajectories which ran for 50 mio MC steps (iterations). Sampling was carried out using either
+TorusDBNorTorusDBN-CStobiasthebackbonemovesandthePROFASIforcefieldwasusedin
+allsimulations. OnesimulationsusedanexperimentalversionofTorusDBN-CS,suppliedbyLars
+//github.com/andersx/cs-proteins/). Three simulations used an energy function based on
+CamShift using a cauchy distribution with variable γ-weight as energy function. Additionally,
+three simulations used a potential on the radius of gyration to restrict the sampling to only
+compact structures [Borg et al., 2009]. Sampling was performed in the multicanonical ensemble
+withathermodynamicbeta-rangefrom0.6to1.1, correspondingtoatemperaturerangeof272K
+to 500K. The MC move set was comprised of 40% CRISP moves, 10% pivot moves and 50%
+uniform side chain moves.
+6.1.2 Folding results
+Threeofthe7attemptedsimulationtypessamplestructuresclosetotheexperimentalX-raystruc-
+ture1YPA(herelooselydefinedasaCA-RMSD<5˚AforallCAatoms. Resultsaresummarized
+in table 6.1. Only simulations using chemical shift biased sampling through TorusDBN-CS are
+able to sample the correct fold.
+6.1. BARLEY CHYMOTRYPSIN INHIBITOR II
+Table 6.1: Protocols used in the folding of the CI-2 protein and success rates.
+Sampling Force Field CS Energy Correct folda Iterations/dayb
+TORUS-CS + RGc PROFASI CamShift 13 10×106
+TORUS-CS PROFASI CamShift 15 11×106
+TORUS PROFASI CamShift 0 11×106
+TORUS-CS + PPc PROFASI None 4d 49×106
+TORUS-CSe+ RGc PROFASI None 0 49×106
+TORUS-CS PROFASI None 0 49×106
+TORUS PROFASI None 0 49×106
+aNumber of threads with a CA-RMSD of <5 ˚A (using all residues).
+bNumbers are per thread.
+cRG denote the use of an additional radius of gyration potential.
+dStructures with the lowest energy did not correspond to the native structure in
+this run.
+eThis run was carried out using TorusDBN-CS trained using only high-quality
+X-ray structures.
+Furthermore,itwasnoted,thatsimulationsthatsamplefromeitherTorusDBNorTorusDBN-
+CS with only the PROFASI force field as energy function do not generate compact structures.
+To overcome this deficiency, additional simulations were carried out using a radius of gyration
+potential. In the case of sampling from TorusDBN-CS, the radius of gyration potential is enough
+togetafewsampleswiththecorrectfold. Herefourof72threadswouldgeneratethecorrectfold,
+but unfortunately the lowest energy structures were found around 8-11 ˚A CA-RMSD. Evidently,
+thePROFASIforcefieldaloneisnotaccurateenoughtodescribethenativeCI-2structure. Three
+simulations were performed with an energy term based on CamShift in addition the PROFASI
+force field. Demonstrably, the increased accuracy from a better energy function cause increased
+sampling around the native state.
+DuetoaveryflexibleregionofCI-2(residues33to42),andsomewhatflexibletailstheresidue
+range used to calculate CA-RMSD values is restricted to residue 4-34,43-63 in the following. All
+runs were carried out on 3 24-core AMD Opteron 6172 servers running at 2.1 GHz.
+Arunsimilartothemostsuccessfulwasalsoruncarriedoutonafastera12-coreIntelX5675
+node running at 3.07 GHz (using new random seeds). PHAISTOS input to reproduce these
+folding simulation is given below.
+1 ./phaistos --aa-file ci2.aa \
+2 --iterations 50000000 \
+3 --threads 12 \
+4 --monte-carlo-muninn 1 \
+5 --monte-carlo-muninn-min-beta 0.6 \
+6 --monte-carlo-muninn-max-beta 1.1 \
+7 --monte-carlo-muninn-independent-threads 1 \
+8 --monte-carlo-muninn-weight-scheme multicanonical \
+9 --backbone-dbn-torus-cs 1 \
+10 --backbone-dbn-torus-cs-initial-nmr-star-filename ci2.str \
+11 --energy-profasi-cached 1 \
+12 --energy-camshift-cached 1 \
+13 --energy-camshift-cached-star-filename ci2.str \
+14 --energy-camshift-cached-energy-type 11 \
+15 --move-backbone-dbn 1 \
+16 --move-backbone-dbn-weight 0.1 \
+6.1. BARLEY CHYMOTRYPSIN INHIBITOR II
+(a)NMRstructure(red) (b)LowestRMSDstructure(blue)(c)Lowestenergystructure(green)
+Figure 6.1: Structures compared to the X-ray structure 1YPA. All structures are aligned using
+the residues 12-32,43-52. (a) shows the 3CI2 structure NNR structure. Note the flexible domain
+which is excluded from the fit-range. (b) Shows the lowest RMSD structure (1.113 ˚ARMSD). (c)
+shows the lowest energy sample (2.76 ˚ARMSD).
+17 --move-backbone-dbn-implicit-energy 1 \
+18 --move-crisp-dbn-eh 1 \
+19 --move-crisp-dbn-eh-weight 0.4 \
+20 --move-sidechain-uniform 1 \
+21 --move-sidechain-uniform-weight 0.5
+This simulation took two days, with a total of 2 out of 12 threads successfully identifying the
+native structure as having the lowest energy. This simulation yielded a lowest energy structure
+a 2.76 ˚A CA-RMSD from the X-ray structure, and a lowest RMSD structure at 1.11 ˚A. Later,
+this lowest energy sample was further refined by Lars Bratholm to a CA-RMSD of only 1.1
+˚A using an additional multibody-multinomial potential of mean force in the energy function
+[Johansson and Hamelryck, 2013]. This refinement simulation took 24 hours on 8 cores. This
+structure is displayed in Fig. 6.2.
+Inconclusion,thedataforCI-2wasrecordedinmerely11hoursviaafullyautomatedprocess.
+AstructurecomparabletoconventionalNMRstructurescouldthenbedeterminedafter36hours.
+After an additional 24 hours, a structure that rivals X-ray structures was further determined by
+Lars Bratholm.
+6.1. BARLEY CHYMOTRYPSIN INHIBITOR II
+Figure 6.2: The CI-2 structure refined to 1.1 ˚A by Lars Bratholm. The refinement was carried
+out by including a multibody-multinomial poteintial of mean force in the simulation.
+6.2. FOLDING OF SMALL PROTEINS (<100 AA)
+Table 6.2: The five small proteins folded using the setup presented in this section, and their
+RMSD for the lowest energy sample.
+Name Lengh Type PDB RefDB RMSD-range Final RMSD
+Protein G 56 a/b 2OED 2575 All 1.0
+Engrailed Homeodomain 61 B 1ENH 15536 8-53 1.1
+FF Domain 71 a/b 1UZC 5537 11-67 10.2
+Ubiquitin 76 a/b 1UBI 17769 1-70 3.8
+CI-2 63 a/b 1YPA N/Aa 4-34,43-63 2.6b
+aUsing automatically assigned data obtained from Kaare Theilum (personal communication –
+section 6.1.2.
+6.2 Folding of small proteins (<100 AA)
+A test set of 5 small proteins were folded using the code. The results are summarized in table
+6.2. Thetestsetisadiversesetofstructureswithdifferentcontentsofalpha-helixandbeta-sheet
+conformations. The settings are similar to the ones used to fold the CI-2 structure mentioned
+in the previous section, except that the Protein G, Ubiquitin, FF Domain and Engrailed Home-
+odomain(ENHD)simulationsusedachemicalshiftenergybasedonaGaussiandistributionwith
+fixed weights (–energy-camshift-cached-energy-type 3), and not based on a Cauchy distribution
+(–energy-camshift-cached-energy-type 11). Total energy was calculated as the PROFASI force
+field energy plus the CamShift energy term based on a Gaussian distribution with fixed weights
+plus the likelihood from TorusDBN-CS. Protein G and ENHD structures could be determined
+very reliably to CA-RMSDs of 1.0 ˚A and 1.1 ˚A from the experimental structures, respectively.
+The lowest energy structures are presented in Fig. 6.3a and 6.3b.
+For the FF Domain, a folded state with a lower energy than the native state was located. A
+state corresponding to the correct fold was consistently being sampled in most threads, but the
+lowestenergystatwasamisfold,whereanalpha-helixtowardstheC’-endispackedwrongly. This
+result suggests, that the combination of the PROFASI force field and the chemical shift energy
+fromCamShiftandTorusDBN-CSdoesnotalwaysdiscriminatethepotentialenergysurfacewith
+sufficient accuray. The energy from CamShift (and thus the chemical shift RMSD values, since
+the energy function was a Gaussian distribution) was comparable between samples around the
+correct fold and the lowest energy mis fold. The lowest RMSD structre (3.2 ˚A) had a CamShift
+energyof803kcal/mol,whilethelowestenergystructurehadaCamShiftenergyof797kcal/mol.
+The lowest energy misfold is displayed in Fig. 6.3c. In the Ubiquitin simulations, the lowest
+energy conformations were not in exceptional agreement with the experimental structure with
+a CA-RMSD of 3.8 ˚A- see Fig. 6.3d. Again, this must be attributed to lack of ”funneling”of
+the energy landscape around the native state, since sampling evidently is performed close to this
+state.
+Collectively, these result show, that sampling from TorusDBN-CS in PHAISTOS is indeed
+very efficient, but better energy functions are required in some cases. In one case, the CamShift
+energyterm hada lowerenergy by6 kcal/mol fora misfold, than for a sampleclose to the native
+state. Another option would be using a better molecular mechanics force-field. PHAISTOS
+already supports the OPLS-AA/L but using this would increase simulation times by more than
+one order of magnitude, and would be unacceptable for simulations on larger structures.
+6.2. FOLDING OF SMALL PROTEINS (<100 AA)
+(a)ProteinG,1.0˚A. (b)EngrailedHomeodomain,1.1˚A.
+(c)FFDomain,misfold. (d)Ubiquitin,3.8˚A
+Figure 6.3: The lowest energy structures found for four different proteins (red). Superimposed
+on corresponding X-ray structures (grey). The FF Domain structures in (c) is aligned using only
+residues 1-40 to emphasize the misfold.
+6.3. FOLDING OF LARGER PROTEINS (>100 AA)
+6.3 Folding of larger proteins (>100 AA)
+This section presents folding results on a set of larger proteins (>100 AA) with known struc-
+tures. It is worth to note, that using sparse NMR data, only three structures >200 residues
+have been determined: Alg13 (201 AA), Rhodopsin (225 AA) and MBP (376 AA) using the
+ROSETTAprogramwiththe”resolution-adaptedstructuralrecombination”(RASREC)protocol
+[Lange and Baker, 2012, Lange et al., 2012].
+Alg13wassolvedusingbackbonechemicalshifts,andonly52NOErestraints,toanCA-RMSD
+of4˚AtotheexperimentalNMRstructure. RhodopsinwasfoldedtoanCA-RMSDof1.9˚Atothe
+X-ray structure using 215 NOE restraints, backbone chemical shifts chemical shifts and RDCs.
+The MBP protein is a two-domain protein of 376 residues. MBP was folded to an RMSD of 3.6
+˚A using 1235 NOE restraints, backbone chemical shifts chemical shifts and RDCs. The NOEs
+correspondedto55%yieldofrestraints,which,forthemostpart,werenotautomaticallyassigned.
+An attempt to use only automatically assigned NOEs yielded 455 restraints, which corresponds
+to a yield of 20%. Using these, however, the MBP structure could only be determined to a total
+CA-RMSDof12.3˚A.TheN-terminaldomainwasconvergedto2.7˚A,buttheC-terminaldomain
+and the angle between the two domains was incorrectly folded.
+Langeretal. havedemonstratedthatbyusingaspecialside-chainlabelingschemeafewNOE
+restraints(around150-250)canbeautomaticallyassigned,andthesearegenerallyenoughtofold
+the structures using a ROSETTA protocol[Lange et al., 2012]. The scheme is a ”ILV-labeling”
+scheme,wherethemethylgroupsofisoleucine,leucineandvalineside-chainsareselectivelylabeled
+with 13C and 1H isotopes. These groups are commonly found in the core region of the protein
+and these methyl groups will generally be in contact with each other, thus being able to provide
+valuableNOEdistancerestraints. Thiscorrespondstoonlyassigning10-20%ofthefullspectrum.
+From the structures in the study by Langer et al., only five structures consist of one chain
+only, and only those could be simulated in PHAISTOS. These five structures were selected into
+the test-set used here, and additionally Prolactin and the Top7 proteins were added. The ILV-
+data used by Langer et al. could only be obtained through correspondence with the authors
+for Rhodopsin. For all other proteins, synthetic NOE contacts were generate by simulating a
+syntheticspectrum. AnoverviewoftheproteinsandthenumberofsyntheticNOErestraintscan
+be found in Table 6.3.
+Table 6.3: Folded structure.
+Name Lengh Type PDB BMRB RMSD-range #NOEs RMSD [˚A]
+Top7 120 a/b 2MBL 19404 5-104 62 2.1
+MSRB 151 a/b 3E0O 17008 36-105 170 N/A
+WR73 183 a/b 2LOY 16833 1-36,66-181 215 N/A
+HR4660B 174 a/b 2LMD 1870 16-162 68 N/A
+Rhodopsin 219 B 2KSY 16678 All 195 2.5
+Prolactin 199 B 1RWS 5599 6-183 68 3.5
+Savinase 269 a/b 1WVN Notea,bNoteb 270 2.9
+MBP 376 a/b 1EZ9 6807 All 1054 N/A
+aEvolutionary distance constraints from the EVFold were used in this case.
+6.3.1 Folding protocol
+Thefoldingsimulationsettingsweresimilartothoseusedtofoldsmallproteins,withtheexception
+thattheCamShiftenergytermwastooslowtobeusedinpractice. TheadditionalNOEdistance
+6.3. FOLDING OF LARGER PROTEINS (>100 AA)
+restraint term used a flat-bottom potential with a width of 4 ˚A around the equilibrium distance,
+and a quadratic potential outside this range. This was done using the existing NMR inference
+module in PHAISTOS.
+However, using this potential turned out to be quite problematic. Once a distance restraint
+wasfulfilled, thesimulationwouldinmostcasesneverbreakthecontactagain. Consequently, an
+empirical factor of 1/128 was multiplied onto the NOE energy. This factor was determined by
+running simulations on the Top7 structure with weights from 1/21 to 1/210 Unfortunatly, due to
+this problem, no good structures for MSRB, WR73, HR4660B and MBP could be located. After
+a few 1,000,000 steps the structures located local minima which fulfilled a number of distance
+restraints, butitwasimpossibletoescapetheseminima. TheTop7structurefoldedtoanRMSD
+of 2.1 ˚A. This result, however, is not surprising, since Top7 has been shown to fold using only
+the PROFASI force field. The Prolactin and Rhodopsin structures converged to structures at 8.5
+and 7.8 ˚A RMSD from the X-ray structures.
+The settings to run the simulations are displayed below:
+1 ./phaistos --aa-file rhodopsin.aa \
+2 --iterations 50000000 \
+3 --threads 72 \
+4 --monte-carlo-muninn 1 \
+5 --monte-carlo-muninn-min-beta 0.6 \
+6 --monte-carlo-muninn-max-beta 1.1 \
+7 --monte-carlo-muninn-independent-threads 1 \
+8 --monte-carlo-muninn-weight-scheme multicanonical \
+9 --backbone-dbn-torus-cs 1 \
+10 --backbone-dbn-torus-cs-initial-nmr-star-filename \
+11 rhodopsin.str \
+12 --energy-profasi-cached 1 \
+13 --energy-isd-dist 1 \
+14 --energy-isd-dist-likelihood square_well \
+15 --energy-isd-dist-data-filename noe_ilv.txt \
+16 --energy-isd-dist-sample-gamme 0 \
+17 --energy-isd-dist-sample-sigma 0 \
+18 --energy-isd-dist-weight 0.0078125 \
+19 --move-backbone-dbn 1 \
+20 --move-backbone-dbn-weight 0.08 \
+21 --move-backbone-dbn-implicit-energy 1 \
+22 --move-crisp-dbn-eh 1 \
+23 --move-crisp-dbn-eh-weight 0.42 \
+24 --move-sidechain-uniform 1 \
+25 --move-sidechain-uniform-weight 0.5
+6.3.2 Refinement protocol
+Due to the low efficiency of the NOE code for large structures, a new NOE module was written
+for PHAISTOS. In this module, the potential from the ROSETTA RASREC protocol was used
+[Lange et al., 2012]. Inbrief,thisisalsoaflat-bottompotential,butwithalinearpenalty,rather
+than quadratic, outside the flat area. This was done in order to allow more contacts to be
+broken throughout the simulation in order to enhance conformational sampling. Additionally,
+themoduleonlyhasacertainfractionofallrestraintsactiveatatime. AMonteCarlomovewas
+createdwhichturnedoffonerandom,activeNOErestraintandactivatedonerandom,deactivated
+restraint. Theresultingenergydifferencewassubtractedasamove-bias,inordertoforcea100%
+acceptance rate for this move. This was done, because the energy difference between and active
+6.3. FOLDING OF LARGER PROTEINS (>100 AA)
+restraint(whichisusuallyclosetozero)andaninactiverestraint(usuallyalargenumber)caused
+this move to have a low acceptance rate.
+Using the new NOE module, a refinement on the lowest energy structures in the Prolactin
+and Rhodopsin simulations were carried out.
+The new module proved very efficient in further minimizing the energy. Fig. 6.4 shows the
+resulting structures and energy/RMSD landscapes from the refinements and folding simulations
+on Rhodopsin. The final RMSD after refinement was 2.5 ˚A for Rhodopsin, compared to 7.8
+˚A before refinement. For Prolactin, the same numbers were 3.5 ˚A and 8.5 ˚A, respectively. The
+reason for the higher RMSD for Prolactin, compared to Rhodopsin is a flexible handle with no
+NOE restraints. The structure of this handle is thus determined by the PROFASI force field and
+TorusDBN-CS,whichapparentlydoesnotagreewellwiththeexperimentalstructureinthiscase
+- this can be seen from Fig. 6.5.
+The command line to run the refinement is given below:
+1 ./phaistos --pdb-file rhodopsin_lowest_energy1.pdb \
+2 --init-from-pdb 1 \
+3 --iterations 5000000 \
+4 --threads 4 \
+5 --monte-carlo-muninn 1 \
+6 --monte-carlo-muninn-min-beta 0.6 \
+7 --monte-carlo-muninn-max-beta 1.1 \
+8 --monte-carlo-muninn-independent-threads 1 \
+9 --monte-carlo-muninn-weight-scheme multicanonical \
+10 --monte-carlo-muninn-weight-scheme-use-energy2 1 \
+11 --backbone-dbn-torus-cs 1 \
+12 --backbone-dbn-torus-cs-initial-nmr-star-filename \
+13 rhodopsin.str \
+14 --energy-profasi-cached 1 \
+15 --energy2-noe 1
+16 --energy2-noe-active-restraints 140
+17 --energy2-noe-seamless 1
+18 --energy2-noe-contact-map-filename noe_ilv.txt
+19 --move-none 1\
+20 --move-none-weight 0.005 \
+21 --move-crisp-dbn-eh 1 \
+22 --move-crisp-dbn-eh-weight 0.5 \
+23 --move-semilocal-dbn-eh 1 \
+24 --move-semilocal-dbn-eh-weight 0.25 \
+25 --move-sidechain-rotamer 1 \
+26 --move-sidechain-rotamer-weight 0.25
+6.3. FOLDING OF LARGER PROTEINS (>100 AA)
+(a)Energy-scoringduringfoldingstage. (b)Energy-scoringduringrefinementstage.
+(c) Folding stage lowest energy sample (blue). (d) Refinement stage lowest energy sample
+7.8˚ACA-RMSD. (blue). 2.5˚ACA-RMSD.
+Figure 6.4: (a) displays the energy scoring during the folding stage of Rhodopsin, and (b) the
+same statistics during the refinement stage. (c) displays the lowest energy structure after the
+folding stage, and (d) the lowest energy structure after the refinement stage.
+6.3. FOLDING OF LARGER PROTEINS (>100 AA)
+Figure 6.5: The lowest energy sample (red) for Prolactin after refinement. Note the flexible part
+which is not in agreement with the experimental X-ray structure (grey).
+6.4. EVOLUTIONARY DISTANCE CONSTRAINTS
+2.0 2.5 3.0 3.5 4.0
+CA-RMSD[angstrom]
+(a)LowestRMSDsample
+]lom/lack[ygrenElatoT
+(b)Lowestenergysample
+Figure 6.6: Refinement stage of the savinase simulation. The lowest energy sample has a CA-
+RMSD of 2.9 ˚A.
+6.4 Evolutionary distance constraints
+Asdiscussedpreviously,itisincreasinglydifficulttoobtainsufficientdistancerestraintsasthesize
+oftheproteinincreases. Arecentlydevelopedmethodologyusessequenceanalysistoinferresidue
+contacts in 3D space [Marks et al., 2011]. In brief, the method works by identifying sequence co-
+variation, which retains favorable contacts between residues. This way, pair of residues which
+are probable to be close in 3D space can be identified. The procedure is briefly summarized in
+Fig. 6.7, and is implemented in the EVfold program.
+Inthisproof-of-conceptstudy,270contactswereobtainedamultiple-sequencealignmentusing
+the EVfold program (Wouter Boomsma, personal communications) for the 269 residue protein
+Savinase. TherestraintsweresimplytreatedasNOErestraintsusingtheoldNOEcodementioned
+in the previous section. A similar simulation to that which folded Rhodopsin was adopted. In
+terms of computational resources, these were increased to 100 threads and 75×106 iterations,
+compared to only 72 threads and 50×106 iterations for the Rhodopsin simulation. One thread
+identified a native-like structure.
+Thefoldingsimulationyieldedalowestenergystructurearound7.5˚ACA-RMSDfromnative.
+AfurtherrefinementwiththenewNOEcodefromthisstructure,yieldedalowestRMSDstructure
+at 2.9 ˚A CA-RMSD from the X-ray structure. The structure and an energy/RMSD plot for the
+refinement is shown in Fig. 6.6.
+6.4. EVOLUTIONARY DISTANCE CONSTRAINTS
+Figure6.7: Briefoverviewoftheprocessfromwhichevolutionaryconstraintsareinferred. Corre-
+latedsequencevariationthatretainsfavorableinteractionsisidentifiedandconvertedtodistance
+constraints. Figure from Marks et al., 2011.
+Conclusion and Outlook
+Duringtheprojectdescribedinthisthesisandtheattachedpapers,Ihaveimplementedamethod
+todeterminethestructureofseveralsmallproteinsusingtheirexperimentalchemicalshifts. The
+structure of the CI-2 protein was solved rapidly, using only computer resources that are available
+in any lab, with only chemical shift data that was automatically recorded and assigned.
+Lastly, I have attempted to fold several protein structures around 200 amino acids. Out of
+8 proteins greater than 100 residues, a good structure was located in four cases, out of which
+two were larger than 200 residues. The last four likely failed due to inefficient use of the NOE
+restraints. SincetheexistingcodetohandleNOErestraintsinPHAISTOSdidnotperformwellon
+largestructures,IimplementedanewNOEenergyterm,andthiswasusedtofoldtheRhodopsin
+structure(225aminoacids)toaCA-RMSDof2.5˚AfromtheexperimentalX-raystructureusing
+a set only 195 NOE restraints and assigned backbone chemical shifts, NMR data which had been
+assigned through automated processes. The same code was able to fold the Savinase structure
+(269 amino acids) to a CA-RMSD of 2.9 ˚A from the experimental X-ray structure using only
+distance restraints derived from evolutionary data and assigned chemical shifts.
+This required implementing a version of CamShift, from scratch, in PHAISTOS, and imple-
+mented useful energy function rigorously founded in Bayesian statistics. To aid the setup of
+calculations, a graphical user interface for PHAISTOS was created. I have parametrized and
+implemented a version of ProCS to calculate amide proton chemical shifts, and shown that this
+parametrizationyieldsstructurethatareinbetteragreementwithexperimentaldatathansimula-
+tions using a chemical shift predictor parametrized from experimental data. Furthermore, I have
+parametrizedpartsofthebackboneatomProCSchemicalshiftpredictorandimplementedthisin
+a PHAISTOS module. This required the implementation of FragBuilder Python API which was
+used to automatically setup, run, and collect data from more than 2,000,000 QM calculations.
+The speed of the cached version of the backbone atom ProCS chemical shift predictor will
+allow an energy function based on chemical shifts to be included in simulations on proteins
+> 200 residues. Based on results obtained on the ENHD, Protein G and CI-2 proteins, this will
+dramatically increase the accuracy of the energy functions that can be used to determine protein
+structures.
+A newly developed NOE energy function shows encouraging results on folding of large struc-
+tures, and further development of this module is promising.
+In conclusion, I have demonstrated, that chemical shifts and sparse NOE data can, in some
+cases, be used with higher computational efficiency in PHAISTOS, than any other competing
+method. Ihavedeterminedaproteinstructureinlessthantwodaysusingautomaticallycollected
+chemical shift data with computational resource available to any lab. Lastly, I have folded some
+of the larges protein structures ever folded using similar approaches, while using only modest
+amount computational resources, compared to current state-of-the-art methods.

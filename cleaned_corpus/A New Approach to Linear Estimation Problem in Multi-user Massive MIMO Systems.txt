@@ -1,0 +1,953 @@
+TELKOMNIKA Indonesian Journal of Electrical Engineering
+Vol. 13, No. 2, February 2015, pp. 337 ~ 351
+A New Approach to Linear Estimation Problem in Multi-
+user Massive MIMO Systems
+Muhammad Ali Raza Anjum
+Army Public College of Management and Sciences, Rawalpindi, Pakistan
+E-mail: ali.raza.anjum@gmail.com
+A novel approach for solving linear estimation problem in multi-user massive MIMO systems is
+proposed. In this approach, the difficulty of matrix inversion is attributed to the incomplete definition of the
+dot product. The general definition of dot product implies that the columns of channel matrix are always
+orthogonal whereas, in practice, they may be not. If the latter information can be incorporated into dot
+product, then the unknowns can be directly computed from projections without inverting the channel
+matrix. By doing so, the proposed method is able to achieve an exact solution with a 25% reduction in
+computational complexity as compared to the QR method. Proposed method is stable, offers an extra
+flexibility of computing any single unknown, and can be implemented in just twelve lines of code.
+Keywords: estimation, large, massive, MIMO, multi-user
+Copyright © 2015 Institute of Advanced Engineering and Science. All rights reserved.
+1. Introduction
+Multiple Input Multiple Output (MIMO) systems incorporate multiple antennas at the
+transmitter and the receiver to improve the data rate of wireless communication systems [1, 2].
+However, the ever growing desire for the increased data rates can hardly be satiated and there
+is a demand to increase the data rates even further. As a result, the researchers are aiming to
+achieve the asymptotic limits in capacity. Recently, it has been demonstrated that very high
+capacities are achievable on forward and reverse links as the number of transmit antennas
+approaches infinity [3]. Such systems in which a relatively large number of base station
+antennas serve a large number of users are known as Massive MIMO systems (M-MIMO) [4].
+M-MIMO systems provide various advantages over the traditional MIMO systems.
+These systems promise higher data rates, higher antenna resolution, lower error probabilities,
+lower thermal noise, and lower transmit power per antenna. These advantages can be attributed
+to an overall averaging behavior of these systems. But these advantages become even more
+impressive in the multi-user scenario where the base station transmits to several users
+simultaneously. However, multi-user M-MIMO systems incur costs of their own: including
+increase in hardware, increase in power consumption, and increase in physical spacing.
+Eventually, the transceiver becomes complex as well [3-6].
+Transceiver complexity is currently an issue of great concern in M-MIMO systems. It
+has been shown that for the point to point scenario, the decoding complexity of the receiver
+alone grows exponentially with increase in the number of transmit antennas [7]. In case of a
+multi-user scenario, the transmitter becomes complex as well because the transmitter now
+requires advanced coding schemes to manage simultaneous transmission of information to
+multiple users. Former operation, known as decoding, and the latter one, called precoding,
+generally comprise the transceiver operation [8].
+For a large number of transmit antennas, linear decoders and precoders have proven
+almost optimal [9-11]. These linear precoders/decoders require the inversion of a potentially
+large channel matrix. For example, a practical precoding method is the Zero-forcing (ZF)
+precoding method which computes the precoding matrix by forming the pseudoinverse of the
+channel matrix [9]. Similar to linear precoding, a simple linear decoder is the MMSE decoder
+which computes the decoding matrix by again forming the pseudoinverse of the channel matrix
+[12]. If the dimensions of a system are very large, inverting the channel matrix becomes a
+cumbersome task [4].
+Received September 5, 2014; Revised November 9, 2014; Accepted December 6, 2014
+3 3 8  ISSN: 2302-4046
+Therefore, there is a need to eliminate the outright inversion. Various methods for
+approximate matrix inversion have been proposed in literature: including Cayley-Hamilton
+theorem method, Neumann series expansion method, QR decomposition method, random
+matrix methods, and methods based on polynomial and truncated polynomial filters [13-21].
+These methods still require a lot of computational effort and some of them have proven to be
+even more complex than the direct inversion. However, it is important to note that the challenge
+is fundamentally different in at least three possible ways. To begin with, the channel matrix does
+not have a structure. Secondly, instead of being deterministic, it is random. Finally, there is no
+guarantee of sparsity. So we can dispense with the traditional methods for solving the linear
+estimation problem [22].
+With this in view, we propose a novel method to solve such large linear systems. The
+proposed method treats the linear estimation problem as a coordinate transformation problem.
+By doing so, the method is able to achieve zero norms in error and residue in contrast to the
+state of the art iterative methods for large systems – LSQR, LSMR, and Kaczmarz that achieve
+much higher norms - and a 25% reduction in computation complexity when compared to the QR
+method, the leading protagonist in exact methods [23-25]. Also by employing the proposed
+method, a particular unknown, which may be the only information required by a single user, can
+be computed without evaluating the entire solution vector while no such flexibility is available in
+the traditional methods. Furthermore, the method is stable and light on computation as well as it
+only relies on multiplication with simple rank-one projection matrices for obtaining the solution.
+Finally, the method can be programmed in just ten lines of codes.
+Rest of the article is organized as follows. Section 2 begins with a system model and
+defines the underlying problem. Basic idea behind the proposed method is explored in Section
+3. The method is then explained in Section 4. Section 5 contains its complete proof. Section 6
+provides the proof of the choice of reflection matrices. A complete algorithm for step by step
+solution of the linear estimation problem according to the proposed method is outlined in
+Section 7. This section also includes a user-friendly code for the algorithm. Comparison of the
+proposed method with QR decomposition is carried out in section 8. The process of generation
+of inverse vectors is also discussed in this section. Computational complexity of the proposed
+algorithm is analyzed in Section 9 which is followed by its stability analysis in Section 10.
+Section 11 concludes the article in which the comparison of the proposed method is carried out
+with the state of the art methods available in literature for solving large systems.
+2. Problem
+A narrowband memoryless MIMO channel with (cid:1866) transmit and (cid:1865) receive antennas can
+be modeled as a system of linear equations [13].
+(cid:2157) (cid:2206)(cid:3404)(cid:2184) (1)
+(cid:2196)
+(cid:1741)
+(cid:2183)(cid:2176)
+(cid:2778)(cid:1744)
+(cid:2176) (cid:1876)
+(cid:2869)
+(cid:1854)
+(cid:2869)
+(cid:2157) (cid:3404)(cid:1742) (cid:2183)(cid:2176) (cid:2779)(cid:1745) (cid:2206)(cid:3404)(cid:3430) (cid:1876) (cid:2870) (cid:3434) (cid:2184)(cid:3404)(cid:3430) (cid:1854) (cid:2870)(cid:3434)
+(cid:2196) (cid:1742) ⋮ (cid:1745) ⋮ ⋮
+(cid:1743)(cid:2183)(cid:2176) (cid:2196) (cid:1746) (cid:1876) (cid:3041) (cid:1854) (cid:3040)
+(cid:2157) is a large, random and non-sparse matrix. (cid:2206) is the input vector. (cid:2184) is the output vector. Zero
+(cid:2196)
+Forcing (ZF) estimate (cid:2206)(cid:3549) of the input vector is:
+(cid:2206)(cid:3549)(cid:3404)(cid:3435)(cid:2157) (cid:2176)(cid:2157) (cid:3439) (cid:2879)(cid:2869) (cid:2157) (cid:2176)(cid:2184) (3)
+(cid:2196) (cid:2196) (cid:2196)
+Recovery of (cid:2206) requires the inversion of a potentially large matrix (cid:2157) (cid:2176)(cid:2157) .
+(cid:2196) (cid:2196)
+TELKOMNIKA Vol. 13, No. 2, February 2015 : 337 – 351
+TELKOMNIKA ISSN: 2302-4046  339
+3. Basic Idea
+Linear estimation problem presented by Equation (3) can be viewed as a coordinate
+transformation problem. (cid:2184) can be envisaged as the vector that undergoes the coordinate
+transformation, (cid:2206) represents its coordinates in the new coordinate system, and (cid:2157) contains the
+(cid:2196)
+basis vectors for the new coordinate system [26]. The basis vectors can be orthogonal or non-
+orthogonal. For the first case, we are lead to the classic Least Squares (LS) solution depicted in
+Figure 1.
+Figure 1. Computation of unknowns in an orthogonal coordinate system
+In this case, the estimates (cid:1876) ,(cid:1876) ,…,(cid:1876) are the projections of (cid:2184) on the respective basis vectors.
+(cid:2869) (cid:2870) (cid:3041)
+(cid:2183)(cid:2176) (cid:2184)
+(cid:1741)(cid:1876) (cid:3404) (cid:2778) (cid:1744)
+(cid:1742) (cid:2869) (cid:2183)(cid:2176) (cid:2778) (cid:2183) (cid:2778)(cid:1745)
+(cid:1742) (cid:2183)(cid:2176) (cid:2184) (cid:1745)
+(cid:2779)
+(cid:1742)(cid:1876) (cid:2870) (cid:3404) (cid:2183)(cid:2176) (cid:2183) (cid:1745) (4)
+(cid:1742) (cid:2779) (cid:2779)(cid:1745)
+(cid:1742) (cid:1745)
+(cid:2183)(cid:2176) (cid:2184)
+(cid:1742) (cid:2196) (cid:1745)
+(cid:1876) (cid:3404)
+(cid:1743) (cid:3041) (cid:2183)(cid:2176) (cid:2183) (cid:1746)
+(cid:2196) (cid:2196)
+When the basis vectors are not orthogonal, (cid:2206) is computed by forming the inverse of (cid:2157)
+(cid:2196)
+matrix. This is precisely what we desire to avoid. We would like to compute (cid:2206) from the direct
+estimate of the projections. In order to do so, we focus our attention on Figure 2 for the case of
+non-orthogonal basis vectors. As can be observed from figure, employing the definition of dot
+product in Equation (4) will yield much longer estimates than the actual ones. Reason for these
+incorrect estimates can be attributed to the presence of identity matrix in the general definition
+of the dot product. We demonstrate this fact by re-writing the first term in Equation (4).
+Figure 2. Computation of first unknown in a non-orthogonal coordinate system
+A New Approach to Linear Estimation Problem in Multi-user … (Muhammad Ali Raza Anjum)
+3 4 0  ISSN: 2302-4046
+(cid:1876) (cid:3404)
+(cid:2183)(cid:2176) (cid:2778)(cid:2165)(cid:2184)
+(cid:2869) (cid:2183)(cid:2176) (cid:2778)(cid:2165)(cid:2183)(cid:2778)
+Identity matrix (cid:2165) depicts a set of orthogonal basis vectors. As they are not, we can
+replace the (cid:2165) matrix in Equation (5) by another matrix, say (cid:2159) .
+(cid:2778)
+(cid:1876) (cid:3404)
+(cid:2183)(cid:2176) (cid:2778)(cid:2159)(cid:2778)(cid:2184)
+(cid:2869) (cid:2183)(cid:2176) (cid:2778)(cid:2159)(cid:2778)(cid:2183)(cid:2778)
+To solve for (cid:1876) , we re-arrange Equation (6) a bit.
+(cid:2869)
+(cid:2183)(cid:2176) (cid:2159) (cid:2183) (cid:1876) (cid:3404)(cid:2183)(cid:2176) (cid:2159) (cid:2184) (7)
+(cid:2778) (cid:2778) (cid:2778) (cid:2869) (cid:2778) (cid:2778)
+(cid:2159) (cid:2183) (cid:1876) (cid:3404)(cid:2159) (cid:2184) (8)
+(cid:2778) (cid:2778) (cid:2869) (cid:2778)
+Equation (8) requires the vectors (cid:2183) (cid:1876) and (cid:2184) to have equal projections on a plane
+(cid:2778) (cid:2869)
+spanned by the column space of (cid:2159) . We observe from Figure 2 that (cid:2183) (cid:1876) and (cid:2184) have equal
+(cid:2778) (cid:2778) (cid:2869)
+projections on a plane orthogonal to the second basis vector (cid:2183) . (cid:2183) (cid:1876) and (cid:2184) can be projected on
+(cid:2779) (cid:2778) (cid:2869)
+such plane by a projection matrix of the form:
+(cid:2159) (cid:3404)(cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2779)(cid:2183)(cid:2779) (cid:2176)
+(cid:4675) (9)
+(cid:2778) (cid:2183)(cid:2779) (cid:2176)(cid:2183)(cid:2779)
+We can substitute (cid:2159) in Equation (5) to solve for (cid:1876) .
+(cid:2778) (cid:2869)
+(cid:1876) (cid:3404)
+(cid:2183)(cid:2176) (cid:2778)(cid:4680)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2779)
+(cid:2779)
+(cid:2183)
+(cid:2176)
+(cid:2779)
+(cid:2183)
+(cid:2176)
+(cid:2779)
+(cid:4681)(cid:2184)
+(cid:2869) (cid:2183)(cid:2176) (cid:2778)(cid:3428)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2779)
+(cid:2779)
+(cid:2183)
+(cid:2176)
+(cid:2779)
+(cid:2183)
+(cid:2176)
+(cid:2779)
+(cid:3432)(cid:2183)(cid:2778)
+Similarly for (cid:1876) ,
+(cid:2870)
+(cid:1876) (cid:3404)
+(cid:2183)(cid:2176) (cid:2779)(cid:4680)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2778)
+(cid:2778)
+(cid:2183)
+(cid:2176)
+(cid:2778)
+(cid:2183)
+(cid:2176)
+(cid:2778)
+(cid:4681)(cid:2184)
+(cid:3404) (cid:2183)(cid:2176) (cid:2779)(cid:2159)(cid:2779)(cid:2184) (11)
+(cid:2870) (cid:2183)(cid:2176) (cid:2779)(cid:3428)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2778)
+(cid:2778)
+(cid:2183)
+(cid:2176)
+(cid:2778)
+(cid:2183)
+(cid:2176)
+(cid:2778)
+(cid:3432)(cid:2183)(cid:2779) (cid:2183)(cid:2176) (cid:2779)(cid:2159)(cid:2779)(cid:2183)(cid:2779)
+(cid:2159) will project (cid:2183) (cid:1876) and (cid:2184) on a plane orthogonal to (cid:2183) . Using Equation (10) and (11), we can
+(cid:2779) (cid:2779) (cid:2870) (cid:2778)
+directly solve for (cid:1876) without inverting the matrix (cid:2157) . Equation (10) and (11) also have a
+(cid:2869) (cid:2196)
+connotation that (cid:1876) can be solved independently of (cid:1876) .
+(cid:2869) (cid:2870)
+Now we present the method for solving the general problem of the form (cid:2157) (cid:2206)(cid:3404)(cid:2184). We
+(cid:2196)
+begin by expanding Equation (3),
+(cid:4670)(cid:2183)
+(cid:2778)
+(cid:2183)
+(cid:2779)
+… (cid:2183)
+(cid:2196)(cid:2879)(cid:2778)
+(cid:2183)
+(cid:2196)
+(cid:4671)(cid:2206)(cid:3404)(cid:2184) (12)
+Multiplying Equation (12) by a matrix (cid:2174) ,
+(cid:2196)
+(cid:4670)(cid:2174) (cid:2183) (cid:2174) (cid:2183) … (cid:2174) (cid:2183) (cid:2174) (cid:2183) (cid:4671)(cid:2206)(cid:3404)(cid:2174) (cid:2184) (13)
+(cid:2196) (cid:2778) (cid:2196) (cid:2779) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2196) (cid:2196)
+In order for (cid:2174) (cid:2183) to be zero,
+(cid:2196) (cid:2196)
+(cid:2174) (cid:3404)(cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2196)(cid:2183)(cid:2196) (cid:2176)
+(cid:4675) (14)
+(cid:2196) (cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196)
+TELKOMNIKA Vol. 13, No. 2, February 2015 : 337 – 351
+TELKOMNIKA ISSN: 2302-4046  341
+Equation (13) becomes,
+(cid:4670)(cid:2174) (cid:2183) (cid:2174) (cid:2183) … (cid:2174) (cid:2183) (cid:2777)(cid:4671)(cid:2206)(cid:3404)(cid:2174) (cid:2184) (15)
+(cid:2196) (cid:2778) (cid:2196) (cid:2779) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+Multiplying Equation (15) by a matrix (cid:2174) ,
+(cid:2196)(cid:2879)(cid:2778)
+(cid:4670)(cid:2174) (cid:2174) (cid:2183) (cid:2174) (cid:2174) (cid:2183) … (cid:2174) (cid:2174) (cid:2183) (cid:2777)(cid:4671)(cid:2206)(cid:3404)(cid:2174) (cid:2174) (cid:2184) (16)
+(cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+In order for (cid:2174) (cid:2183) to be zero,
+(cid:2196) (cid:2196)(cid:2879)(cid:2778)
+(cid:2174) (cid:3404)(cid:4674)(cid:2165)(cid:3398)
+(cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)(cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)(cid:2176)
+(cid:4675) (17)
+(cid:2196)(cid:2879)(cid:2778) (cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)(cid:2176)(cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)
+Equation (16) becomes,
+(cid:4670)(cid:2174) (cid:2174) (cid:2183) (cid:2174) (cid:2174) (cid:2183) … (cid:2777) (cid:2777)(cid:4671)(cid:2206)(cid:3404)(cid:2174) (cid:2174) (cid:2184) (18)
+(cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+Continuing in the same fashion,
+(cid:4670)(cid:2174) …(cid:2174) (cid:2174) (cid:2183) (cid:2777) … (cid:2777) (cid:2777)(cid:4671)(cid:2206)(cid:3404)(cid:2174) …(cid:2174) (cid:2174) (cid:2184) (91)
+(cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2778) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+(cid:2174) …(cid:2174) (cid:2174) (cid:2183) (cid:1876) (cid:3404)(cid:2174) …(cid:2174) (cid:2174) (cid:2184) (20)
+(cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2778) (cid:2869) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+Multiplying both sides by (cid:2183) (cid:2176),
+(cid:2778)
+(cid:2183) (cid:2176)(cid:2174) …(cid:2174) (cid:2174) (cid:2183) (cid:1876) (cid:3404)(cid:2183) (cid:2176)(cid:2174) …(cid:2174) (cid:2174) (cid:2184) (21)
+(cid:2778) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2778) (cid:2869) (cid:2778) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+(cid:1876) (cid:3404)
+(cid:2183)(cid:2778) (cid:2176)(cid:2159)(cid:2778)(cid:2184)
+(cid:2869) (cid:2183)(cid:2778) (cid:2176)(cid:2159)(cid:2778)(cid:2183)(cid:2778)
+(cid:2159) (cid:3404)(cid:2174) …(cid:2174) (cid:2174) (23)
+(cid:2778) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+For the (cid:1863)-th unknown,
+(cid:1876) (cid:3404)
+(cid:2183)(cid:2193) (cid:2176)(cid:2159)(cid:2193)(cid:2184)
+(cid:3038) (cid:2183)(cid:2193) (cid:2176)(cid:2159)(cid:2193)(cid:2183)(cid:2193)
+(cid:2159) (cid:3404)(cid:2174) (cid:2174) …(cid:2174) …(cid:2174) (cid:2174) ∃ (cid:2191)(cid:3405)(cid:2193) (25)
+(cid:2193) (cid:2778) (cid:2779) (cid:2191) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+In this section, we provide the proof of the proposed method. We begin the proof by
+writing the basic least squares problem.
+(cid:2157)(cid:2176) (cid:2157) (cid:2206)(cid:3404)(cid:2157)(cid:2176) (cid:2184) (26)
+(cid:2196) (cid:2196) (cid:2196)
+A New Approach to Linear Estimation Problem in Multi-user … (Muhammad Ali Raza Anjum)
+3 4 2  ISSN: 2302-4046
+Expanding Equation (26),
+(cid:2183)(cid:2176) (cid:2183)(cid:2176)
+(cid:1741) (cid:2778) (cid:1744) (cid:1741) (cid:2778) (cid:1744)
+(cid:2183)(cid:2176) (cid:2183)(cid:2176)
+(cid:1742) (cid:2779) (cid:1745) (cid:1742) (cid:2779) (cid:1745)
+(cid:1742) ⋮ (cid:1745) (cid:4670)(cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:4671)(cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (cid:2184) (27)
+(cid:1742)(cid:2183)(cid:2176)
+(cid:2196)(cid:2879)(cid:2778)(cid:1745)
+(cid:1742)(cid:2183)(cid:2176)
+(cid:2196)(cid:2879)(cid:2778)(cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:1746)
+(cid:2196) (cid:2196)
+(cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) … (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2184)
+(cid:1741) (cid:2778) (cid:2778) (cid:2778) (cid:2779) (cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2778) (cid:2196) (cid:1744) (cid:1741) (cid:2778) (cid:1744)
+(cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) … (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2184)
+(cid:1742) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2779) (cid:2196) (cid:1745) (cid:1742) (cid:2779) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (28)
+(cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2778) (cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2779) … (cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2184)(cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) … (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) (cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:2184) (cid:1746)
+(cid:2196) (cid:2778) (cid:2196) (cid:2779) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2196) (cid:2196)
+If columns of (cid:2157) are orthonormal, then Equation (28) becomes,
+(cid:2196)
+(cid:2778) (cid:2777) … (cid:2777) (cid:2777) (cid:1741) (cid:2183)(cid:2176) (cid:2778) (cid:2184) (cid:1744)
+(cid:1741) (cid:2777) (cid:2778) … (cid:2777) (cid:2777) (cid:1744) (cid:2183)(cid:2176) (cid:2184)
+(cid:1742) (cid:1745) (cid:1742) (cid:2779) (cid:1745)
+(cid:1742)⋮ ⋮ ⋱ ⋮ ⋮(cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (29)
+(cid:1742)(cid:2777) (cid:2777) … (cid:2778) (cid:2777)(cid:1745) (cid:1742)(cid:2183)(cid:2176)
+(cid:2196)(cid:2879)(cid:2778)
+(cid:2184)(cid:1745)
+(cid:1743)(cid:2777) (cid:2777) … (cid:2777) (cid:2778)(cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:2184) (cid:1746)
+(cid:2196)
+(cid:2183)(cid:2176) (cid:2184)
+(cid:1741) (cid:2778) (cid:1744)
+(cid:2183)(cid:2176) (cid:2184)
+(cid:1742) (cid:2779) (cid:1745)
+(cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (30)
+(cid:1742)(cid:2183)(cid:2176)
+(cid:2196)(cid:2879)(cid:2778)
+(cid:2184)(cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2184) (cid:1746)
+(cid:2196)
+If columns of (cid:2157) are orthogonal, then Equation (28) becomes,
+(cid:2196)
+(cid:2183)(cid:2176) (cid:2183) (cid:2777) … (cid:2777) (cid:2777) (cid:2183)(cid:2176) (cid:2184)
+(cid:1741) (cid:2778) (cid:2778) (cid:1744) (cid:1741) (cid:2778) (cid:1744)
+(cid:2777) (cid:2183)(cid:2176) (cid:2183) … (cid:2777) (cid:2777) (cid:2183)(cid:2176) (cid:2184)
+(cid:1742) (cid:2779) (cid:2779) (cid:1745) (cid:1742) (cid:2779) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (31)
+(cid:1742) (cid:2777) (cid:2777) … (cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2777) (cid:1745) (cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2184)(cid:1745)
+(cid:1743) (cid:2777) (cid:2777) … (cid:2777) (cid:2183)(cid:2176) (cid:2183) (cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:2184) (cid:1746)
+(cid:2196) (cid:2196) (cid:2196)
+(cid:2183)(cid:2176) (cid:2778)(cid:2184)
+(cid:1741) (cid:1744)
+(cid:1742)
+(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)
+(cid:1745)
+(cid:1742)
+(cid:2183)(cid:2176) (cid:2779)(cid:2184)
+(cid:1745)
+(cid:1742) (cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779) (cid:1745)
+(cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (32)
+(cid:1742) (cid:2183)(cid:2176) (cid:2196)(cid:3127)(cid:2778)(cid:2184) (cid:1745)
+(cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:3127)(cid:2778)(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:1745)
+(cid:1742) (cid:2183)(cid:2176) (cid:2196)(cid:2184) (cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2196)(cid:2183)(cid:2196) (cid:1746)
+If columns of (cid:2157) are neither orthonormal nor orthogonal, then the off-diagonal terms in
+(cid:2196)
+Equation (28) prevent the direct solution. If we can somehow eliminate these terms, then a
+direct solution of the form (32) is possible. In order to do that, we insert a block matrix (cid:1777) matrix
+in Equation (26) and re-write it as:
+(cid:2157)(cid:2176) (cid:1777)(cid:2157) (cid:2206)(cid:3404)(cid:2157)(cid:2176) (cid:1777)(cid:2184) (33)
+(cid:2196) (cid:2196) (cid:2196)
+Expanding (33),
+TELKOMNIKA Vol. 13, No. 2, February 2015 : 337 – 351
+TELKOMNIKA ISSN: 2302-4046  343
+(cid:2183)(cid:2176) (cid:2159) (cid:2183)(cid:2176) (cid:2159)
+(cid:1741) (cid:2778) (cid:1744)(cid:1741) (cid:2778) (cid:1744) (cid:1741) (cid:2778) (cid:1744)(cid:1741) (cid:2778) (cid:1744)
+(cid:2183)(cid:2176) (cid:2159) (cid:2183)(cid:2176) (cid:2159)
+(cid:1742) (cid:2779) (cid:1745)(cid:1742) (cid:2779) (cid:1745) (cid:1742) (cid:2779) (cid:1745)(cid:1742) (cid:2779) (cid:1745)
+(cid:1742) ⋮ (cid:1745)(cid:1742) ⋮ (cid:1745) (cid:4670)(cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:4671)(cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745)(cid:1742) ⋮ (cid:1745) (cid:2184) (34)
+(cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778)(cid:1745)(cid:1742)(cid:2159) (cid:2196)(cid:2879)(cid:2778)(cid:1745) (cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778)(cid:1745)(cid:1742)(cid:2159) (cid:2196)(cid:2879)(cid:2778)(cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2196) (cid:1746)(cid:1743) (cid:2159) (cid:2196) (cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:2196) (cid:1746)(cid:1743) (cid:2159) (cid:2196) (cid:1746)
+(cid:2183)(cid:2176) (cid:2159) (cid:2183) (cid:2159) (cid:2183) … (cid:2159) (cid:2183) (cid:2159) (cid:2183) (cid:2183)(cid:2176) (cid:2159) (cid:2184)
+(cid:1741) (cid:2778) (cid:1744)(cid:1741) (cid:2778) (cid:2778) (cid:2778) (cid:2779) (cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2778) (cid:2196) (cid:1744) (cid:1741) (cid:2778) (cid:1744)(cid:1741) (cid:2778) (cid:1744)
+(cid:2183)(cid:2176) (cid:2159) (cid:2183) (cid:2159) (cid:2183) … (cid:2159) (cid:2183) (cid:2159) (cid:2183) (cid:2183)(cid:2176) (cid:2159) (cid:2184)
+(cid:1742) (cid:2779) (cid:1745)(cid:1742) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2779) (cid:2196) (cid:1745) (cid:1742) (cid:2779) (cid:1745)(cid:1742) (cid:2779) (cid:1745)
+(cid:1742) ⋮ (cid:1745)(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745)(cid:1742) ⋮ (cid:1745) (35)
+(cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778)(cid:1745)(cid:1742)(cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2778) (cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2779) … (cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778)(cid:1745)(cid:1742)(cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2184)(cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2196) (cid:1746)(cid:1743) (cid:2159) (cid:2196) (cid:2183) (cid:2778) (cid:2159) (cid:2196) (cid:2183) (cid:2779) … (cid:2159) (cid:2196) (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2159) (cid:2196) (cid:2183) (cid:2196) (cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:2196) (cid:1746)(cid:1743) (cid:2159) (cid:2196) (cid:2184) (cid:1746)
+(cid:2159) (cid:2183) (cid:3405)(cid:2777) ∃ (cid:2191)(cid:3405)(cid:2192) (36)
+(cid:2191) (cid:2192)
+Then Equation (35) takes the form,
+(cid:2183)(cid:2176) (cid:2159) (cid:2183) (cid:2777) … (cid:2777) (cid:2777) (cid:2183)(cid:2176) (cid:2159) (cid:2184)
+(cid:1741) (cid:2778) (cid:2778) (cid:2778) (cid:1744) (cid:1741) (cid:2778) (cid:2778) (cid:1744)
+(cid:2777) (cid:2183)(cid:2176) (cid:2159) (cid:2183) … (cid:2777) (cid:2777) (cid:2183)(cid:2176) (cid:2159) (cid:2184)
+(cid:1742) (cid:2779) (cid:2779) (cid:2779) (cid:1745) (cid:1742) (cid:2779) (cid:2779) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (37)
+(cid:1742) (cid:2777) (cid:2777) … (cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2777) (cid:1745) (cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778) (cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2184)(cid:1745)
+(cid:1743) (cid:2777) (cid:2777) … (cid:2777) (cid:2183)(cid:2176) (cid:2159) (cid:2183) (cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:2159) (cid:2184) (cid:1746)
+(cid:2196) (cid:2196) (cid:2196) (cid:2196) (cid:2196)
+And the solution becomes,
+(cid:2183)(cid:2176) (cid:2778)(cid:2159)(cid:2778)(cid:2184)
+(cid:1741) (cid:1744)
+(cid:1742)
+(cid:2183)(cid:2176) (cid:2778)(cid:2159)(cid:2778)(cid:2183)(cid:2778)
+(cid:1745)
+(cid:1742)
+(cid:2183)(cid:2176) (cid:2779)(cid:2159)(cid:2779)(cid:2184)
+(cid:1745)
+(cid:1742) (cid:2183)(cid:2176) (cid:2779)(cid:2159)(cid:2779)(cid:2183)(cid:2779) (cid:1745)
+(cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (38)
+(cid:1742) (cid:2183)(cid:2176) (cid:2196)(cid:3127)(cid:2778)(cid:2159)(cid:2196)(cid:3127)(cid:2778)(cid:2184) (cid:1745)
+(cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:3127)(cid:2778)(cid:2159)(cid:2196)(cid:3127)(cid:2778)(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:1745)
+(cid:1742) (cid:2183)(cid:2176) (cid:2196)(cid:2159)(cid:2196)(cid:2184) (cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2196)(cid:2159)(cid:2196)(cid:2183)(cid:2196) (cid:1746)
+For Equation (38) to hold, we can choose (cid:2159) to be:
+(cid:2191)
+(cid:2159) (cid:3404)(cid:2174) (cid:2174) …(cid:2174) …(cid:2174) (cid:2174) ∃ (cid:2192)(cid:3405)(cid:2191) (39)
+(cid:2191) (cid:2778) (cid:2779) (cid:2192) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+(cid:2174) is a projection matrix.
+(cid:2174)(cid:3404)(cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2183)(cid:2176)
+(cid:4675) (40)
+(cid:2183)(cid:2176)(cid:2183)
+(cid:2174) projects a vector on an axis that is orthogonal to the plane defined by (cid:2183). An important
+property of (cid:2174) matrix is that the product (cid:2174)(cid:2183) is zero. This is because the projection of any vector
+on an axis orthogonal to itself is always zero. Hence, the product (cid:2174)(cid:2183) is always zero.
+(cid:2174)(cid:2183)(cid:3404)(cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2183)(cid:2176)
+(cid:4675)(cid:2183)(cid:3404)(cid:2183)(cid:3398)
+(cid:2183)(cid:2183)(cid:2176)(cid:2183)
+(cid:3404)(cid:2183)(cid:3398)(cid:2183)(cid:3404)(cid:2777) (41)
+(cid:2183)(cid:2176)(cid:2183) (cid:2183)(cid:2176)(cid:2183)
+This property of (cid:2174) matrix can be can be used to eliminate the off-diagonal entries in
+Equation (1).
+(cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:2184)
+(cid:1741)(cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:1744) (cid:1741) (cid:2184) (cid:1744)
+(cid:1742) (cid:1745) (cid:1742) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742)⋮(cid:1745) (42)
+(cid:1742)(cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742)(cid:2184)(cid:1745)
+(cid:1743)(cid:2183)
+(cid:2778)
+(cid:2183)
+(cid:2779)
+… (cid:2183)
+(cid:2196)(cid:2879)(cid:2778)
+(cid:2183)
+(cid:2196)
+(cid:1746) (cid:1743)(cid:2184)(cid:1746)
+A New Approach to Linear Estimation Problem in Multi-user … (Muhammad Ali Raza Anjum)
+3 4 4  ISSN: 2302-4046
+Starting with the last term in first row on the left hand side of Eq. (42), we multiply the
+top row with (cid:2174) .
+(cid:2196)
+(cid:2174) (cid:2183) (cid:2174) (cid:2183) … (cid:2174) (cid:2183) (cid:2174) (cid:2183) (cid:2174) (cid:2184)
+(cid:1741) (cid:2196) (cid:2778) (cid:2196) (cid:2779) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2196) (cid:1744) (cid:1741) (cid:2196) (cid:1744)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (43)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1743) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:1746) (cid:1743) (cid:2184) (cid:1746)
+(cid:2174) (cid:3404)(cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2196)(cid:2183)(cid:2176)
+(cid:2196)(cid:4675) (44)
+(cid:2196) (cid:2183)(cid:2176) (cid:2196)(cid:2183)(cid:2196)
+Equation (43) becomes,
+(cid:2174) (cid:2183) (cid:2174) (cid:2183) … (cid:2174) (cid:2183) (cid:2777) (cid:2174) (cid:2184)
+(cid:1741) (cid:2196) (cid:2778) (cid:2196) (cid:2779) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:1744) (cid:1741) (cid:2196) (cid:1744)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (45)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1743) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:1746) (cid:1743) (cid:2184) (cid:1746)
+Similarly, to eliminate (cid:2174) (cid:2183) we multiply the top row in Equation (45) with (cid:2174) ,
+(cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2778)
+(cid:2174) (cid:2174) (cid:2183) (cid:2174) (cid:2174) (cid:2183) … (cid:2777) (cid:2777) (cid:2174) (cid:2174) (cid:2184)
+(cid:1741) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2779) (cid:1744) (cid:1741) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:1744)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (46)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1743) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:1746) (cid:1743) (cid:2184) (cid:1746)
+Such that,
+(cid:2174) (cid:3404)(cid:4674)(cid:2165)(cid:3398)
+(cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)(cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)(cid:2176)
+(cid:4675) (47)
+(cid:2196)(cid:2879)(cid:2778) (cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)(cid:2176)(cid:4666)(cid:2174)(cid:2196)(cid:2183)(cid:2196)(cid:3127)(cid:2778)(cid:4667)
+We continue this multiplication in this manner until all the off diagonal entries in the first
+row are removed.
+(cid:2159) (cid:2183) (cid:2777) … (cid:2777) (cid:2777) (cid:2159) (cid:2184)
+(cid:1741) (cid:2778) (cid:2778) (cid:1744) (cid:1741) (cid:2778) (cid:1744)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (48)
+(cid:1742) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:1745) (cid:1742) (cid:2184) (cid:1745)
+(cid:1743) (cid:2183) (cid:2778) (cid:2183) (cid:2779) … (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196) (cid:1746) (cid:1743) (cid:2184) (cid:1746)
+With (cid:2159) ,
+(cid:2778)
+(cid:2159) (cid:3404)(cid:2174) …(cid:2174) …(cid:2174) (cid:2174) (49)
+(cid:2778) (cid:2779) (cid:2192) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+(cid:2176)
+(cid:2174) (cid:3404)(cid:4680)(cid:2165)(cid:3398)
+(cid:3435)(cid:2174)(cid:2192)(cid:3126)(cid:2778)(cid:2174)(cid:2192)(cid:3126)(cid:2779)…(cid:2174)(cid:2196)(cid:2183)(cid:2192)(cid:3439)(cid:3435)(cid:2174)(cid:2196)(cid:3127)(cid:2192)(cid:3126)(cid:2778)…(cid:2174)(cid:2196)(cid:3127)(cid:2778)(cid:2174)(cid:2196)(cid:2183)(cid:2192)(cid:3439)
+(cid:4681) (50)
+(cid:2192) (cid:2176)
+(cid:3435)(cid:2174)(cid:2196)(cid:3127)(cid:2192)(cid:3126)(cid:2778)…(cid:2174)(cid:2196)(cid:3127)(cid:2778)(cid:2174)(cid:2196)(cid:2183)(cid:2192)(cid:3439) (cid:3435)(cid:2174)(cid:2196)(cid:3127)(cid:2192)(cid:3126)(cid:2778)…(cid:2174)(cid:2196)(cid:3127)(cid:2778)(cid:2174)(cid:2196)(cid:2183)(cid:2192)(cid:3439)
+Following the same procedure to remove off diagonal entries for the remaining rows of
+Equation (48), it becomes:
+TELKOMNIKA Vol. 13, No. 2, February 2015 : 337 – 351
+TELKOMNIKA ISSN: 2302-4046  345
+(cid:2159) (cid:2183) (cid:2777) … (cid:2777) (cid:2777) (cid:2159) (cid:2184)
+(cid:1741) (cid:2778) (cid:2778) (cid:1744) (cid:1741) (cid:2778) (cid:1744)
+(cid:2777) (cid:2159) (cid:2183) … (cid:2777) (cid:2777) (cid:2159) (cid:2184)
+(cid:1742) (cid:2779) (cid:2779) (cid:1745) (cid:1742) (cid:2779) (cid:1745)
+(cid:1742) (cid:1745) (cid:1742) (cid:1745)
+(cid:1742) (cid:2777) (cid:2777) … (cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2777) (cid:1745) (cid:1742)(cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2184)(cid:1745)
+(cid:1743) (cid:2777) (cid:2777) … (cid:2777) (cid:2159) (cid:2183) (cid:1746) (cid:1743) (cid:2159) (cid:2184) (cid:1746)
+(cid:2196) (cid:2196) (cid:2196)
+(cid:2159) (cid:3404)(cid:2174) (cid:2174) …(cid:2174) …(cid:2174) (cid:2174) ∃ (cid:2192)(cid:3405)(cid:2191) (52)
+(cid:2191) (cid:2778) (cid:2779) (cid:2192) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+Multiplying both sides of Equation (52) with (cid:2157)(cid:2176) to revert back to our least squares solution as in
+(cid:2196)
+Equation (35),
+(cid:2183)(cid:2176) (cid:2159) (cid:2183) (cid:2777) … (cid:2777) (cid:2777) (cid:2183)(cid:2176) (cid:2159) (cid:2184)
+(cid:1741) (cid:2778) (cid:1744)(cid:1741) (cid:2778) (cid:2778) (cid:1744) (cid:1741) (cid:2778) (cid:1744)(cid:1741) (cid:2778) (cid:1744)
+(cid:2183)(cid:2176) (cid:2777) (cid:2159) (cid:2183) … (cid:2777) (cid:2777) (cid:2183)(cid:2176) (cid:2159) (cid:2184)
+(cid:1742) (cid:2779) (cid:1745)(cid:1742) (cid:2779) (cid:2779) (cid:1745) (cid:1742) (cid:2779) (cid:1745)(cid:1742) (cid:2779) (cid:1745)
+(cid:1742) ⋮ (cid:1745)(cid:1742) ⋮ ⋮ ⋱ ⋮ ⋮ (cid:1745) (cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745)(cid:1742) ⋮ (cid:1745) (53)
+(cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778)(cid:1745)(cid:1742) (cid:2777) (cid:2777) … (cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2183) (cid:2196)(cid:2879)(cid:2778) (cid:2777) (cid:1745) (cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:2879)(cid:2778)(cid:1745)(cid:1742)(cid:2159) (cid:2196)(cid:2879)(cid:2778) (cid:2184)(cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2196) (cid:1746)(cid:1743) (cid:2777) (cid:2777) … (cid:2777) (cid:2159) (cid:2196) (cid:2183) (cid:2196) (cid:1746) (cid:1743) (cid:2183)(cid:2176) (cid:2196) (cid:1746)(cid:1743) (cid:2159) (cid:2196) (cid:2184) (cid:1746)
+Solving for (cid:2206) in Equation (53), we obtain Equation (38).
+(cid:2183)(cid:2176) (cid:2778)(cid:2159)(cid:2778)(cid:2184)
+(cid:1741) (cid:1744)
+(cid:1742)
+(cid:2183)(cid:2176) (cid:2778)(cid:2159)(cid:2778)(cid:2183)(cid:2778)
+(cid:1745)
+(cid:1742)
+(cid:2183)(cid:2176) (cid:2779)(cid:2159)(cid:2779)(cid:2184)
+(cid:1745)
+(cid:1742) (cid:2183)(cid:2176) (cid:2779)(cid:2159)(cid:2779)(cid:2183)(cid:2779) (cid:1745)
+(cid:2206)(cid:3404) (cid:1742) ⋮ (cid:1745) (Repeat)
+(cid:1742) (cid:2183)(cid:2176) (cid:2196)(cid:3127)(cid:2778)(cid:2159)(cid:2196)(cid:3127)(cid:2778)(cid:2184) (cid:1745)
+(cid:1742)(cid:2183)(cid:2176) (cid:2196)(cid:3127)(cid:2778)(cid:2159)(cid:2196)(cid:3127)(cid:2778)(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:1745)
+(cid:1742) (cid:2183)(cid:2176) (cid:2196)(cid:2159)(cid:2196)(cid:2184) (cid:1745)
+(cid:1743) (cid:2183)(cid:2176) (cid:2196)(cid:2159)(cid:2196)(cid:2183)(cid:2196) (cid:1746)
+6. Proof of the Choice of (cid:2159) Matrix
+In this section, we will provide a novel factorization of LS solution which confirms our
+choice of (cid:2159) matrix. For the sake of brevity, we will provide the proof for (cid:1865)(cid:3404)2. The proof can be
+similarly extended to any dimension. Substituting (cid:1865)(cid:3404)2 in Equation (26) and expanding,
+(cid:2183)(cid:2176) (cid:2183)(cid:2176)
+(cid:3428) (cid:2183)(cid:2176) (cid:2778)(cid:3432)(cid:4670)(cid:2183) (cid:2778) (cid:2183) (cid:2779) (cid:4671)(cid:2206)(cid:3404)(cid:3428) (cid:2183)(cid:2176) (cid:2778)(cid:3432)(cid:2184) (cid:2779) (54)
+(cid:2779) (cid:2779)
+(cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2184)
+(cid:3428) (cid:2778) (cid:2778) (cid:2778) (cid:2779)(cid:3432)(cid:2206)(cid:3404)(cid:3428) (cid:2778) (cid:2779)(cid:3432) (55)
+(cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2183) (cid:2183)(cid:2176) (cid:2184)
+(cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2779) (cid:2779)
+Proceeding directly for the solution,
+(cid:2206)(cid:3404) (cid:2869) (cid:3428) (cid:2183)(cid:2176) (cid:2779) (cid:2183) (cid:2779) (cid:3398)(cid:2183)(cid:2176) (cid:2778) (cid:2183) (cid:2779)(cid:3432)(cid:3428) (cid:2183)(cid:2176) (cid:2778) (cid:2184) (cid:2779)(cid:3432) (56)
+(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:2879)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2779)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2778)(cid:3439) (cid:3398)(cid:2183)(cid:2176)
+(cid:2779)
+(cid:2183)
+(cid:2778)
+(cid:2183)(cid:2176)
+(cid:2778)
+(cid:2183)
+(cid:2778)
+(cid:2183)(cid:2176)
+(cid:2779)
+(cid:2184)
+(cid:2779)
+This would yield,
+(cid:2206)(cid:3404) (cid:2869) (cid:3428) (cid:4666)(cid:2183)(cid:2176) (cid:2779) (cid:2183) (cid:2779) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2778) (cid:2184) (cid:2779) (cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176) (cid:2778) (cid:2183) (cid:2779) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2779) (cid:2184) (cid:2779) (cid:4667) (cid:3432) (57)
+(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:2879)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2779)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2778)(cid:3439) (cid:4666)(cid:2183)(cid:2176)
+(cid:2778)
+(cid:2183)
+(cid:2778)
+(cid:4667)(cid:4666)(cid:2183)(cid:2176)
+(cid:2779)
+(cid:2184)
+(cid:2779)
+(cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176)
+(cid:2779)
+(cid:2183)
+(cid:2778)
+(cid:4667)(cid:4666)(cid:2183)(cid:2176)
+(cid:2778)
+(cid:2184)
+(cid:2779)
+(cid:4667)
+(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2184)(cid:2779)(cid:3439)(cid:2879)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2779)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2184)(cid:2779)(cid:3439) (cid:2183)(cid:2176) (cid:2183)
+(cid:2206)(cid:3404)
+(cid:2869)
+(cid:3430)
+(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779) (cid:2779) (cid:2779)
+(cid:3434) (58)
+(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:2879)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2779)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2778)(cid:3439) (cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2184)(cid:2779)(cid:3439)(cid:2879)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2778)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2184)(cid:2779)(cid:3439) (cid:2183)(cid:2176) (cid:2183)
+(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778) (cid:2778) (cid:2778)
+A New Approach to Linear Estimation Problem in Multi-user … (Muhammad Ali Raza Anjum)
+3 4 6  ISSN: 2302-4046
+(cid:2183)(cid:2176) (cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2779)(cid:2183)(cid:2176)
+(cid:2779)(cid:4675)(cid:2184) (cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)
+(cid:2206)(cid:3404)
+(cid:2869)
+(cid:3430)
+(cid:2778) (cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779) (cid:2779) (cid:2779) (cid:2779)
+(cid:3434) (59)
+(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:2879)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2779)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2778)(cid:3439) (cid:2183)(cid:2176) (cid:4674)(cid:2165)(cid:3398) (cid:2183)(cid:2778)(cid:2183)(cid:2176) (cid:2778)(cid:4675)(cid:2184) (cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)
+(cid:2779) (cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778) (cid:2779) (cid:2778) (cid:2778)
+The term (cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667) can be in written two ways. Firstly, multiply
+(cid:2778) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2778)
+and divide it by (cid:2183)(cid:2176) (cid:2183) ,
+(cid:2779) (cid:2779)
+(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3404) (cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:2879)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2779)(cid:3439)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2778)(cid:3439) (cid:2183)(cid:2176) (cid:2183)
+(cid:2778) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779) (cid:2779) (cid:2779)
+(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3404)(cid:2183)(cid:2176) (cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2779)(cid:2183)(cid:2176)
+(cid:2779)(cid:4675)(cid:2183) (cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667) (60)
+(cid:2778) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2778) (cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779) (cid:2778) (cid:2779) (cid:2779)
+Secondly, multiply and divide it by (cid:2183)(cid:2176) (cid:2183) ,
+(cid:2778) (cid:2778)
+(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)
+(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3404) (cid:2778) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2183)(cid:2176) (cid:2183)
+(cid:2778) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2183)(cid:2176) (cid:2183) (cid:2778) (cid:2778)
+(cid:2778) (cid:2778)
+(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3398)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667)(cid:3404)(cid:2183)(cid:2176) (cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2778)(cid:2183)(cid:2176)
+(cid:2778)(cid:4675)(cid:2183) (cid:4666)(cid:2183)(cid:2176) (cid:2183) (cid:4667) (61)
+(cid:2778) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2779) (cid:2779) (cid:2778) (cid:2779) (cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778) (cid:2779) (cid:2778) (cid:2778)
+Opting Equation (60) and Equation (61) for first and second rows of Equation (59) respectively,
+(cid:1741)(cid:2183)(cid:2176) (cid:2778)(cid:4680)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2779)
+(cid:2176)
+(cid:2183)
+(cid:2779)
+(cid:2176)
+(cid:2183)
+(cid:2779)
+(cid:2779)
+(cid:4681)(cid:2184)(cid:2779)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:1744)
+(cid:2206)(cid:3404) (cid:1742) (cid:1742) (cid:2183)(cid:2176) (cid:2778)(cid:3428)(cid:2165)(cid:2879) (cid:2183) (cid:2183) (cid:2779) (cid:2176) (cid:2183) (cid:2779) (cid:2176) (cid:2183) (cid:2779) (cid:2779) (cid:3432)(cid:2183)(cid:2778)(cid:3435)(cid:2183)(cid:2176) (cid:2779)(cid:2183)(cid:2779)(cid:3439)(cid:1745) (cid:1745) (62)
+(cid:1742) (cid:1742) (cid:2183)(cid:2176) (cid:2779)(cid:4680)(cid:2165)(cid:2879) (cid:2183) (cid:2183) (cid:2778) (cid:2176) (cid:2183) (cid:2778) (cid:2176) (cid:2183) (cid:2778) (cid:2778) (cid:4681)(cid:2184)(cid:2779)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:1745) (cid:1745)
+(cid:1742) (cid:1745)
+(cid:1743)(cid:2183)(cid:2176) (cid:2779)(cid:3428)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2778)
+(cid:2176)
+(cid:2183)
+(cid:2778)
+(cid:2176)
+(cid:2183)
+(cid:2778)
+(cid:2778)
+(cid:3432)(cid:2183)(cid:2779)(cid:3435)(cid:2183)(cid:2176) (cid:2778)(cid:2183)(cid:2778)(cid:3439)(cid:1746)
+Terms (cid:2183)(cid:2176) (cid:2183) and (cid:2183)(cid:2176) (cid:2183) are scalars. Cancelling and simplifying Equation (62),
+(cid:2778) (cid:2778) (cid:2779) (cid:2779)
+(cid:1741)(cid:2183)(cid:2176) (cid:2778)(cid:4680)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2779)
+(cid:2176)
+(cid:2183)
+(cid:2779)
+(cid:2176)
+(cid:2183)
+(cid:2779)
+(cid:2779)
+(cid:4681)(cid:2184)(cid:2779)(cid:1744)
+(cid:2206)(cid:3404) (cid:1742) (cid:1742) (cid:2183)(cid:2176) (cid:2778)(cid:3428)(cid:2165)(cid:2879) (cid:2183) (cid:2183) (cid:2779) (cid:2176) (cid:2183) (cid:2779) (cid:2176) (cid:2183) (cid:2779) (cid:2779) (cid:3432)(cid:2183)(cid:2778)(cid:1745) (cid:1745) (cid:3404)(cid:3430) (cid:2183) (cid:2183) (cid:2176) (cid:2176) (cid:2778) (cid:2778) (cid:2159) (cid:2159) (cid:2778) (cid:2778) (cid:2184) (cid:2183) (cid:2779) (cid:2778)(cid:3434) (63)
+(cid:1742) (cid:1742) (cid:1742) (cid:2183)(cid:2176) (cid:2779)(cid:4680)(cid:2165)(cid:2879) (cid:2183) (cid:2183) (cid:2778) (cid:2176) (cid:2183) (cid:2778) (cid:2176) (cid:2183) (cid:2778) (cid:2778) (cid:4681)(cid:2184)(cid:2779) (cid:1745) (cid:1745) (cid:1745) (cid:2183) (cid:2183) (cid:2176) (cid:2176) (cid:2779) (cid:2779) (cid:2159) (cid:2159) (cid:2779) (cid:2779) (cid:2184) (cid:2183) (cid:2779) (cid:2779)
+(cid:1743)(cid:2183)(cid:2176) (cid:2779)(cid:3428)(cid:2165)(cid:2879) (cid:2183)
+(cid:2183)
+(cid:2778)
+(cid:2176)
+(cid:2183)
+(cid:2778)
+(cid:2176)
+(cid:2183)
+(cid:2778)
+(cid:2778)
+(cid:3432)(cid:2183)(cid:2779)(cid:1746)
+The factorization process reveals the same (cid:2159) matrix we employed in Equation (38) as
+the solutions obtained by Equation (38) and (63) are exactly same. This confirms our choice of
+(cid:2159) matrix in Equation (38).
+7. Algorithm
+In this section, we present an algorithm for proposed method. We will start with an
+example, say computation of (cid:1876) , and onwards build a generic algorithm. We begin by re-writing
+(cid:2869)
+Equation (15),
+(cid:2174) (cid:2157) (cid:2206)(cid:3404)(cid:2174) (cid:2184) (64)
+(cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+(cid:2157) is generated from (cid:2157) by removing its last column. This last column is used to construct (cid:2174)
+(cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2196)
+which is then multiplied w(cid:2157) .
+(cid:2196)(cid:2879)(cid:2778)
+(cid:2174) (cid:2157) (cid:3404)(cid:4674)(cid:2165)(cid:3398) (cid:2183)(cid:2196)(cid:2183)(cid:2196) (cid:2176) (cid:4675)(cid:2157) (cid:3404)(cid:4674)(cid:2157) (cid:3398) (cid:2183)(cid:2196) (cid:2183) (cid:2176)(cid:2157) (cid:4675)(cid:3404)(cid:4674)(cid:2184)(cid:3398) (cid:2183)(cid:2196) (cid:2183) (cid:2176)(cid:2184)(cid:4675) (65)
+(cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196) (cid:2196)
+(cid:2157) and (cid:2184) are then updated.
+(cid:2196)(cid:2879)(cid:2778)
+TELKOMNIKA Vol. 13, No. 2, February 2015 : 337 – 351
+TELKOMNIKA ISSN: 2302-4046  347
+(cid:2157) (cid:3404)(cid:4674)(cid:2157) (cid:3398) (cid:2183)(cid:2196) (cid:2183) (cid:2176)(cid:2157) (cid:4675) (66)
+(cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196) (cid:2196) (cid:2196)(cid:2879)(cid:2778)
+(cid:2184)(cid:3404)(cid:4674)(cid:2184)(cid:3398) (cid:2183)(cid:2196) (cid:2183) (cid:2176)(cid:2184)(cid:4675) (67)
+(cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196) (cid:2196)
+This step can be achieved in a single line of code. It would eliminate the need of extra
+variables to store their previous values of (cid:2157) and (cid:2184). Similarly, (cid:2157) is generated from (cid:2157) by
+(cid:2196)(cid:2879)(cid:2779) (cid:2196)(cid:2879)(cid:2778)
+removing its last column from which (cid:2174) is constructed for subsequent multiplication by (cid:2157)
+(cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2779)
+and (cid:2184) and then the update.
+(cid:2174) (cid:2157) (cid:2206)(cid:3404)(cid:2174) (cid:2184) (68)
+(cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2779) (cid:2196)(cid:2879)(cid:2778)
+(cid:4674)(cid:2157) (cid:3398) (cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2183) (cid:2176)(cid:2157) (cid:4675)(cid:2206)(cid:3404)(cid:2184)(cid:3398) (cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2183) (cid:2176)(cid:2184) (69)
+(cid:2196)(cid:2879)(cid:2779) (cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2176)(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2779) (cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2176)(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2196)(cid:2879)(cid:2778)
+(cid:2157) (cid:3404)(cid:2157) (cid:3398) (cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2183) (cid:2176)(cid:2157) (70)
+(cid:2196)(cid:2879)(cid:2779) (cid:2196)(cid:2879)(cid:2779) (cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2176)(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2779)
+(cid:2184)(cid:3404)(cid:2184)(cid:3398) (cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2183) (cid:2176)(cid:2184) (71)
+(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2176)(cid:2183)(cid:2196)(cid:3127)(cid:2778) (cid:2196)(cid:2879)(cid:2778)
+Continuing in same fashion,
+(cid:2183) (cid:3404)(cid:2183) (cid:3398) (cid:2183)(cid:2779) (cid:2183) (cid:2176)(cid:2183) (72)
+(cid:2778) (cid:2778) (cid:2183)(cid:2779) (cid:2176)(cid:2183)(cid:2779) (cid:2779) (cid:2778)
+(cid:2157) will just be a single column at this step so we have replaced it by (cid:2183) .
+(cid:2778) (cid:2778)
+(cid:2184)(cid:3404)(cid:2184)(cid:3398) (cid:2183)(cid:2779) (cid:2183) (cid:2176)(cid:2184) (73)
+(cid:2183)(cid:2779) (cid:2176)(cid:2183)(cid:2779) (cid:2779)
+To compute (cid:1876) , it would be appear from Equation (24) and (25) that there would be a need to
+(cid:2869)
+store the original (cid:2157) matrix.
+(cid:2196)
+(cid:1876) (cid:3404)
+(cid:2183)(cid:2778) (cid:2176)(cid:2184)
+(cid:2869) (cid:2183)(cid:2778) (cid:2176)(cid:2183)(cid:2778)
+But this would be unnecessary. In ordinary least squares,
+(cid:2183) (cid:2176)(cid:2187)(cid:3404)(cid:2183) (cid:2176) (cid:4666)(cid:2184)(cid:3398)(cid:2183) (cid:2176)(cid:1876) (cid:4667)(cid:3404)0 (75)
+(cid:2778) (cid:2778) (cid:2778) (cid:2869)
+(cid:2183) is orthogonal to (cid:2187) which makes the dot product in Equation (75) equal to zero. In our
+(cid:2778)
+case, it is the (cid:2159) matrix that makes the dot product equal to zero.
+(cid:2778)
+(cid:2183) (cid:2176)(cid:2159) (cid:2187)(cid:3404)(cid:2183) (cid:2176) (cid:2159) (cid:4666)(cid:2184)(cid:3398)(cid:2183) (cid:2176)(cid:1876) (cid:4667)(cid:3404)0 (76)
+(cid:2778) (cid:2778) (cid:2778) (cid:2778) (cid:2778) (cid:2869)
+Hence, multiplication by (cid:2183) can be avoided. Here, ordinary summation will do the job.
+(cid:2778)
+(cid:1876) (cid:3404)
+∑(cid:3288)
+(cid:3284)(cid:3128)(cid:3117)
+(cid:3029)(cid:3284)
+(cid:2869) ∑(cid:3288)
+(cid:3284)(cid:3128)(cid:3117)
+(cid:3028)(cid:3284)
+Equation (77) represents the desired solution. A stepwise algorithm for computing any
+arbitrary unknown is given in Table 1.
+A New Approach to Linear Estimation Problem in Multi-user … (Muhammad Ali Raza Anjum)
+3 4 8  ISSN: 2302-4046
+Table 1. Stepwise recursive algorithm for the proposed method
+1. Initialize a variable (cid:1863) that represents the (cid:1863)-th unkown to be determined.
+2. Initialize a variable (cid:1868) such that (cid:1868)(cid:3404)(cid:1866) and ensure (cid:1868)(cid:3405)(cid:1863).
+Generate (cid:2157) from (cid:2157) by separating (cid:2183) and update the (cid:2157) matrix using:
+(cid:2198)(cid:2879)(cid:2778) (cid:2198) (cid:2198) (cid:2198)(cid:2879)(cid:2778)
+(cid:2183)
+3. (cid:2157) (cid:3404)(cid:4680)(cid:2157) (cid:3398) (cid:2198) (cid:2183) (cid:2176)(cid:2157) (cid:4681)
+(cid:2198)(cid:2879)(cid:2778) (cid:2198)(cid:2879)(cid:2778) (cid:2183) (cid:2176)(cid:2183) (cid:2198) (cid:2198)(cid:2879)(cid:2778)
+(cid:2198) (cid:2198)
+Update the (cid:2184) vector using:
+4. (cid:2184)(cid:3404)(cid:4680)(cid:2184)(cid:3398) (cid:2183) (cid:2198) (cid:2183) (cid:2176)(cid:2184)(cid:4681)
+(cid:2183) (cid:2176)(cid:2183) (cid:2198)
+(cid:2198) (cid:2198)
+5. Decrement (cid:1868).
+6. Move back to step 3 and keep iterating until (cid:1868)(cid:3404)1.
+Compute the unknown using:
+7. (cid:1876) (cid:3404) ∑(cid:3040) (cid:3036)(cid:2880)(cid:2869) (cid:1854) (cid:3036)
+(cid:3038) ∑(cid:3040) (cid:1853)
+(cid:3036)(cid:2880)(cid:2869) (cid:3036)
+8. Generation of Inverse Vectors and Comparison with Qr Decomposition
+In this section, we will demonstrate that the first run of the algorithm described in
+section 7 will generate the first inverse vector [27], the first unknown (cid:1876) , and the complete (cid:2173)
+(cid:2869)
+matrix,. We begin by considering Equation (65). In that equation, we removed the last column of
+(cid:2157) to form (cid:2157) , constructed (cid:2174) from the removed column, multiplied (cid:2174) with (cid:2157) , and then
+(cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196) (cid:2196) (cid:2196)(cid:2879)(cid:2778)
+finally disposed off that last column. We proceeded in the similar fashion until we arrived at (cid:2183) in
+(cid:2778)
+Equation (72). But during the entire process, we disposed off the columns that have been used
+to construct (cid:2174) matrices at each stage. If these columns are kept instead, then they would
+(cid:2196)(cid:2879)(cid:2191)
+constitute the (cid:2173) matrix and the last column (cid:2183) will ultimately be the inverse vector [27]. This can
+(cid:2778)
+be explained as follows.
+Removal of the (cid:1866)-th column from (cid:2157) will form (cid:2157) as in Equation (65). Removed
+(cid:2196) (cid:2196)(cid:2879)(cid:2778)
+column is kept as (cid:2183) . Multiplying (cid:2174) with (cid:2157) removes the projections of the columns of (cid:2157)
+(cid:2196) (cid:2196) (cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2778)
+that lie along (cid:2183) as described in Equation (65). Last column of the resulting matrix is removed to
+(cid:2196)
+generate (cid:2157) in Equation (68). This column is kept as (cid:2183) . (cid:2183) will be orthogonal to (cid:2183) . This
+(cid:2196)(cid:2879)(cid:2779) (cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2196)
+is because the projection of (cid:2183) that lies along (cid:2183) has been removed after multiplication with
+(cid:2196)(cid:2879)(cid:2778) (cid:2196)
+(cid:2174) . Continuing in the same fashion, projection of every removed column will be subtracted from
+(cid:2196)
+the remaining columns of (cid:2157) matrix due to multiplication with (cid:2174) matrix. In the end, we
+(cid:2196)(cid:2879)(cid:2191) (cid:2196)(cid:2879)(cid:4666)(cid:2191)(cid:2878)(cid:2778)(cid:4667)
+obtain (cid:2183) in Equation (72) from which all its components that lie parallel to separated columns
+(cid:2778)
+have been removed. As a result, (cid:2183) will be orthogonal to all the remaining columns. This is
+(cid:2778)
+precisely the definition of inverse vector [27]. Hence, (cid:2183) is the first inverse vector and the
+(cid:2778)
+desired solution to the first unknown (cid:1876) .
+(cid:2869)
+Now we will explain the generation of (cid:2173) and (cid:2174) matrices. From (cid:2183) , all its projections that
+(cid:2778)
+lie along the separated (cid:4666)(cid:1866)(cid:3398)1(cid:4667) columns have been removed. Hence, (cid:2183) will generate (cid:4666)(cid:1866)(cid:3398)1)
+(cid:2778)
+zeros when multiplied with the (cid:2157) matrix on the left hand side. This will form the first row of a
+(cid:2196)
+lower triangular matrix with (cid:4666)(cid:1866)(cid:3398)1(cid:4667) zeros. From (cid:2183) , all the projections that lie along the last
+(cid:2779)
+(cid:4666)(cid:1866)(cid:3398)2(cid:4667) columns have been removed. This will generate the second row of the lower triangular
+matrix with (cid:4666)(cid:1866)(cid:3398)2(cid:4667) zeros. Continuing in the same fashion, we arrive at (cid:2183) from which no
+(cid:2196)
+projection has been removed. This will generate the last row of the lower triangular matrix that is
+full and does not contain any zeros. Given that the removed columns are stored row-wise in a (cid:2173)
+matrix, multiplying it with (cid:2157) will produce a lower triangular matrix. As we have started from the
+(cid:2196)
+(cid:1866)-the column and the moved backwards to the first column, the matrix generated will be lower
+triangular. If instead we start from the first column and then move forward to the (cid:1866)-th column,
+the resulting matrix will be upper triangular. This matrix is termed as (cid:2174) matrix in (cid:2173)(cid:2174)
+TELKOMNIKA Vol. 13, No. 2, February 2015 : 337 – 351
+TELKOMNIKA ISSN: 2302-4046  349
+decomposition. So (cid:2173)(cid:2164)(cid:2157) will be equal to (cid:2174) or (cid:2157)(cid:3404)(cid:2173)(cid:2174). This completes the (cid:2173)(cid:2174) decomposition
+process.
+9. Computational Complexity
+We begin the analysis of the computational complexity of the algorithm by examining
+Equation (66) and (67).
+(cid:2157) (cid:3404)(cid:2157) (cid:3398) (cid:2183)(cid:2196) (cid:2183) (cid:2176)(cid:2157) Repeat
+(cid:2196)(cid:2879)(cid:2778) (cid:2196)(cid:2879)(cid:2778) (cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196) (cid:2196) (cid:2196)(cid:2879)(cid:2778)
+(cid:2184)(cid:3404)(cid:2184)(cid:3398) (cid:2183)(cid:2196) (cid:2183) (cid:2176)(cid:2184) Repeat
+(cid:2183)(cid:2196) (cid:2176)(cid:2183)(cid:2196) (cid:2196)
+The term (cid:2183) (cid:2176)(cid:2157) will require the largest number of multiplications which is (cid:4666)(cid:1866)(cid:3398)1(cid:4667)(cid:1865). In
+(cid:2196) (cid:2196)(cid:2879)(cid:2778)
+the next step, multiplication by (cid:2174) will require (cid:4666)(cid:1866)(cid:3398)2(cid:4667)(cid:1865) multiplications. Continuing in same
+(cid:2196)(cid:2879)(cid:2778)
+fashion to (cid:2174) , there will be a total of (cid:4670)1(cid:3397)⋯(cid:3397)(cid:4666)(cid:1866)(cid:3398)3(cid:4667)(cid:3397)(cid:4666)(cid:1866)(cid:3398)2(cid:4667)(cid:3397)(cid:4666)(cid:1866)(cid:3398)1(cid:4667)(cid:4671)(cid:1865) multiplications. The
+(cid:2778)
+(cid:3041)(cid:4666)(cid:3041)(cid:2878)(cid:2869)(cid:4667)
+series (cid:4670)1(cid:3397)⋯(cid:3397)(cid:4666)(cid:1866)(cid:3398)3(cid:4667)(cid:3397)(cid:4666)(cid:1866)(cid:3398)2(cid:4667)(cid:3397)(cid:4666)(cid:1866)(cid:3398)1(cid:4667)(cid:4671) can be summed up using Gauss’s formula for
+(cid:2870)
+the sum of first (cid:1866) numbers. Since the last number is (cid:4666)(cid:1866)(cid:3398)1(cid:4667), the sum of the series becomes
+(cid:3041)(cid:4666)(cid:3041)(cid:2879)(cid:2869)(cid:4667) (cid:3041)(cid:4666)(cid:3041)(cid:2879)(cid:2869)(cid:4667)
+, resulting in (cid:1865) multiplications. So the order of complexity for the computation of a
+(cid:2870) (cid:2870)
+(cid:3041)(cid:3119)
+single unknown would be (cid:1841)(cid:4672) (cid:4673) for a large system. It is tempting to think that the computation
+(cid:2870)
+of all (cid:1866)-unknowns would require the order of complexity to rise to (cid:1866)(cid:2872) but this is not the case.
+Once an unknown is computed, say (cid:1876) , it can be substituted backwards which requires only (cid:1865)
+(cid:2869)
+additional multiplications. Now for the second unknown, the reduced system does not have to
+be solved all over again as all the (cid:2174)’s and (cid:2184)’s that are required for its calculation have been
+computed in the first phase, i.e., the phase in which (cid:1876) was calculated. Leaving aside the first
+(cid:2869)
+and the last unknowns which do not require any back substitution, a total of (cid:4666)(cid:1866)(cid:3398)2(cid:4667)(cid:1865) extra
+multiplications will be required for computing all unknowns. Therefore, the order of the
+complexity will not rise above (cid:1866)(cid:2871). Therefore, the total cost of the algorithm will be
+(cid:3041)(cid:3119)
+. Comparing
+(cid:2870)
+(cid:2870)(cid:3041)(cid:3119)
+it with the QR algorithm which has the cost of [22],
+(cid:2871)
+(cid:3118)(cid:3289)(cid:3119) (cid:3289)(cid:3119) (cid:3289)(cid:3119)
+(cid:3119) (cid:2879) (cid:3118) (cid:3404) (cid:3122) (cid:3404) (cid:2869) (cid:3404).25
+(cid:3118)(cid:3289)(cid:3119) (cid:3118)(cid:3289)(cid:3119) (cid:2872)
+(cid:3119) (cid:3119)
+There is a 25% reduction in the total computational cost.
+10. Stability
+In this section we analyze the stability of the proposed method. For this purpose, we
+determine its spectral radius. Spectral radius is defined as the absolute value of the largest
+eigenvalue of the controlling matrix. It should be less than or equal to one for a stable operation
+[22]. In the proposed method, matrices that control the solution are rank one-projection
+matrices. These matrices have a single largest eigenvalue of one whereas all the remaining
+eigenvalues are zero. Their spectral radius is 1. This means that if an arbitrary vector (cid:2206) is
+multiplied with these matrices, its length will not be inflated.
+‖(cid:2174)(cid:2206)‖(cid:2779) (cid:3404)(cid:2206)(cid:2176)(cid:2174)(cid:2176)(cid:2174)(cid:2206)(cid:3404)(cid:2206)(cid:2176)(cid:2174)(cid:2206)(cid:3404)(cid:2206)(cid:2176)(cid:4674)(cid:2165)(cid:3398)
+(cid:2183)(cid:2183)(cid:2176)
+(cid:4675)(cid:2206)(cid:3404)(cid:2206)(cid:2176)(cid:2206)(cid:3398)
+(cid:3630)(cid:2183)(cid:2176)(cid:2206)(cid:3630) (cid:2779)
+(cid:2183)(cid:2176)(cid:2183) (cid:2183)(cid:2176)(cid:2183)
+(cid:2174)(cid:2176)(cid:2174)(cid:3404)(cid:2165)(cid:3398)(cid:2779)
+(cid:2183)(cid:2183)(cid:2176)
+(cid:3397)
+(cid:2183)(cid:2183)(cid:2176)
+(cid:3404)(cid:2165)(cid:3398)
+(cid:2183)(cid:2183)(cid:2176)
+(cid:3404)(cid:2174)
+(cid:2183)(cid:2176)(cid:2183) (cid:2183)(cid:2176)(cid:2183) (cid:2183)(cid:2176)(cid:2183)
+When (cid:2183)(cid:2176)(cid:2206)(cid:3404)(cid:2777), Eq. (78) becomes ‖(cid:2174)(cid:2206)‖(cid:2779) (cid:3404)‖(cid:2206)‖(cid:2779) . In case (cid:2183)(cid:3404)(cid:2206), ‖(cid:2174)(cid:2206)‖(cid:2779) (cid:3404)(cid:2777). In general:
+A New Approach to Linear Estimation Problem in Multi-user … (Muhammad Ali Raza Anjum)
+3 5 0  ISSN: 2302-4046
+‖(cid:2174)(cid:2206)‖(cid:2779) (cid:3409)‖(cid:2206)‖(cid:2779) (79)
+Therefore, there is no risk of explosion in the length of (cid:2206) after repeated multiplications.
+11. Results/Discussion
+We now present the simulation results of the algorithm. The components of the channel
+matrix are chosen to be independent and identically distributed (IID) Gaussian random variables
+with a zero mean and unity variance. (cid:1865) is selected equal to (cid:1866) as this refers to multi-user case in
+M-MIMO systems because both the number of transmitting and receiving antennas become
+very large. Also when (cid:1865)(cid:3404)(cid:1866), an exact solution is possible and the residue and hence the error
+in the estimate can be zero. Various matrix sizes have been selected and the results obtained in
+terms of the norm of residue, norm of the error in estimate and the computational time taken are
+displayed in Table 2 against the state of the art algorithms available in literature. Codes required
+for simulation of LSMR and LSQR algorithms have been adopted from the website of Stanford
+University’s System Optimization Laboratory [28] and were used as is. As the proposed method
+is exact, it achieves zero norms in all the cases. Its columns for residue and error norms are not
+included in the table. Simulation results demonstrate that LSMR, LSQR, and Kaczmarz
+algorithms yield much higher norms for both the residue and the error for large matrix sizes.
+Due to these higher norms, the estimate becomes practically useless despite the fact that
+LSMR and LSQR are much faster than the proposed algorithm. On the other hand, QR being an
+exact method achieves zero error/residue norms. But it takes more computation time than the
+proposed method. Hence, the proposed method is a much better choice in this scenario. It has
+higher speed as compared to QR method and lower error/residue norms when compared to
+LSMR, LSQR, and Kaczmarz algorithms.
+Table 2. Comparison of the proposed algorithm with the state of the art methods
+Proposed QR LSMR LSQR
+(cid:1839) 100 iterations
+(cid:3404)(cid:1840)
+time time ‖(cid:1870)‖ ‖(cid:1857)‖ Time ‖(cid:1870)‖ ‖(cid:1857)‖ time ‖(cid:1870)‖ ‖(cid:1857)‖ time
+(cid:1840)
+0 0 0.0804 0.6418 0 0.1596 1.3585 0 0.5191 1.2066 0.0630
+(cid:3404)20
+(cid:1840)
+0 0 0.1116 1.7462 0 0.1960 1.6275 0 1.3482 1.3463 0.1260
+(cid:3404)40
+(cid:1840)
+0.0156 0.0211 0.1589 2.0725 0 0.5782 1.8263 0 1.5294 2.3033 0.2200
+(cid:3404)60
+(cid:1840)
+0.0469 0.0627 0.1896 2.1318 0.0150 1.2171 2.3114 0 2.5787 3.0479 0.4070
+(cid:3404)80
+(cid:1840)
+0.0781 0.1045 0.2144 2.3678 0.0151 1.6671 3.0958 0 3.2469 4.3231 0.5010
+(cid:3404)100
+(cid:1840)
+0.1094 0.1459 0.2186 2.4746 0.0153 1.8697 3.5757 0 3.8631 5.2422 0.7050
+(cid:3404)120
+(cid:1840)
+0.1563 0.2083 0.2320 2.4962 0.0159 2.3005 3.6616 0 4.5234 9.3310 0.9870
+(cid:3404)140
+(cid:1840)
+0.2188 0.2916 0.2540 2.6058 0.0160 2.4816 3.7103 0 4.7671 11.7761 1.2980
+(cid:3404)160
+(cid:1840)
+0.3281 0.4375 0.3468 2.8010 0.0310 3.2124 3.7700 0.0320 5.6000 14.2675 1.6420
+(cid:3404)180
+(cid:1840)
+0.4375 0.5833 0.3862 2.8263 0.0780 3.4337 3.8408 0.1870 5.1865 23.5984 2.0490
+(cid:3404)200
+Acknowledgements
+Author is grateful to Professor Dianne O'Leary for her valuable comments about the
+manuscript. Prof. O’Leary is currently serving as a Professor of Computer Science at the
+Institute for Advanced Computer Studies, University of Maryland at College Park. Her
+suggestions regarding the reduction in computational complexity of the algorithm were
+especially invaluable for this manuscript.
+TELKOMNIKA Vol. 13, No. 2, February 2015 : 337 – 351
+TELKOMNIKA ISSN: 2302-4046  351

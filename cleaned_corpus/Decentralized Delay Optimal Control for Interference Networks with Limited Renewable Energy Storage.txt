@@ -1,0 +1,682 @@
+1v3112.2021:viXra
+Decentralized Delay Optimal Control for
+Interference Networks with Limited
+Renewable Energy Storage
+Huang Huang Member, IEEE, Vincent K. N. Lau, Fellow, IEEE
+In this paper, we consider delay minimization for interference networks with renewable energy
+source,wherethe transmissionpowerofa nodecomesfromboththeconventionalutilitypower(AC
+power)andtherenewableenergysource.Weassumethetransmissionpowerofeachnodeisafunction
+of the local channel state, local data queue state and local energy queue state only. In turn, we
+considertwodelayoptimizationformulations,namelythedecentralizedpartiallyobservableMarkov
+decisionprocess(DEC-POMDP)and Non-cooperativepartiallyobservablestochasticgame(POSG).
+In DEC-POMDP formulation, we derive a decentralized online learning algorithm to determine
+the control actions and Lagrangian multipliers (LMs) simultaneously, based on the policy gradient
+approach.Undersomemildtechnicalconditions,theproposeddecentralizedpolicygradientalgorithm
+convergesalmostsurelytoalocaloptimalsolution.Ontheotherhand,inthenon-cooperativePOSG
+formulation, the transmitter nodes are non-cooperative.We extend the decentralized policy gradient
+solution and establish the technical proof for almost-sure convergenceof the learning algorithms. In
+both cases, the solutions are very robust to model variations. Finally, the delay performance of the
+proposed solutions are compared with conventionalbaseline schemes for interference networks and
+it is illustrated that substantial delay performance gain and energy savings can be achieved.
+TheauthorsarewiththeDepartment of Electronicand Computer Engineering (ECE),HongKong Universityof Science
+and Technology (HKUST), Hong Kong.
+May31,2018 DRAFT
+I. INTRODUCTION
+Recently, there have been intense research interests to study the interference channels. In [1], [2],
+the authors show that interference alignment (using infinite dimension symbol extension in time or
+frequency selective fading channels) can achieve optimal Degrees-of-freedom (DoF) and the total
+capacity of the K-user interference channels is given by K log(SNR) + o(log(SNR)). In [3], [4].
+the authors consider joint beamforming to minimize the weighted sum MMSE or maximize the
+SINR of K-pairs MIMO interference channels using optimization approaches.In [5], [6], the authors
+considereddecentralizedbeamformingdesignforMIMO interferencenetworksusingnon-cooperative
+gamesandstudiedthesufficientconditionsfortheexistenceandconvergenceoftheNashEquilibrium
+(NE). However, all of these works have assumed that there are infinite backlogs at the transmitters,
+and focused on the maximization of physical layer throughput. In practice, applications are delay
+sensitive, and it is critical to optimize the delay performance in the interference network.
+The design framework taking into consideration of queueing delay and physical layer performance
+is not trivial as it involves both queuing theory (to model the queuing dynamics) and information
+theory (to model the physical layer dynamics) [7]. The simplest approach is to convert the delay
+constraints into an equivalent average rate constraint using tail probability (large derivation theory),
+and solve the optimization problem using a purely information theoretical formulation based on the
+equivalentrateconstraint[8].However,thecontrolpolicythusderivedisafunctionofthechannelstate
+information (CSI) only, and it fails to exploit data queue state information (DQSI) in the adaptation
+process. The Lyapunov drift approach is also widely used in the literature [9] to study the queue
+stability region of different wireless systems and to establish the throughput optimal control policy
+(in stability sense). A systematic approach in dealing with delay-optimal resource control in general
+delay regime is based on the Markov decision process (MDP) technique [7], [10], [11]. However,
+brute-force solution of MDP is usually very complex (owing to the curse of dimensionality) and
+extension to multi-flow problems in interference networks is highly non-trivial.
+Another interesting dimension that has been ignored by most of the above works is the inclusion
+of renewableenergysourceon the transmit nodes. For instance, there are intense research interests in
+exploiting renewable energy in communication network designs [12]–[15]. In [12], [13], the authors
+presented an optimal energy management policy for a solar-powered device that uses a sleep and
+wake up strategy for energy conservation in wireless sensor networks. In [14], the authors developed
+a solar energy prediction algorithm to estimate the amount of energy harvested by solar panels to
+deploy power-efficient task management methods on solar energy-harvested wireless sensor nodes.
+In [15], the author proposed a power management scheme under the assumption that the harvested
+energy satisfies performance constraints at the application layer. However, in all these works, the
+May31,2018 DRAFT
+delay requirement of applications have been completely ignored. Furthermore, the renewable energy
+source can act as low cost supplement to the conventional utility power source in communication
+networks. Yet, there are various technical challenges regarding delay optimal design for interference
+networks with renewable energy source.
+• Randomness of Renewable Energy Source: Recent developments in hardware design have
+made energy harvesting possible in wireless communication networks [16], [17]. For example,
+we have solar-powered base stations available from various telecommunication vendors [17].
+Whiletherenewableenergysourcemayappeartobecompletelyfree,therearevariouschallenges
+involved to fully capture its advantage. For instance, the renewable energy sources are random
+in nature and energy storage is needed to buffer the unstable supply of renewable energy. Yet,
+the cost of energy storage depends heavily on the associated capacity [18]. For limited capacity
+energystorage,thetransmissionpowerallocationshouldbeadaptivetotheCSI,theDQSIaswell
+as the energy queue state information (EQSI). The CSI, DQSI and EQSI provide information
+regardingthetransmissionopportunity,theurgencyofthedataflows,andtheavailablerenewable
+energy, respectively. It is highly non-trivial to strike a balance among these factors in the
+optimization.
+• Decentralized Delay Minimization: The existing works for the throughputor DoF optimization
+in the interference network [1-6] requires global knowledge of CSI, which leads to heavy
+backhaul signaling overhead and high computational complexity for the central controller. For
+delay minimization with renewable energy source, the entire system state is characterized by
+the global CSI (CSI from any transmitter to any receiver), the global QSI (data queue length
+of all users), and the global EQSI (energy queue length of all users). Therefore, the centralized
+solution (which requires global CSI, DQSI and EQSI) will also induce substantial signaling
+overhead, which is not practical. It is desirable to have decentralized control based on local
+observations only. However, due to the partial observation of the system state in decentralized
+designs, existing solutions of the MDP approach cannot be applied to our problem.
+• Algorithm Convergence Issue: In conventional iterative solutions for deterministic network
+utilitymaximization(NUM)problems,theupdatesintheiterativealgorithms(suchassubgradient
+search) are performed within the coherence time of the CSI (i.e., the CSI remains quasi-static
+during the iteration updates) [5], [6]. When we consider delay minimization, the problem is
+stochastic and the control actions are defined over ergodic realizations of the system states
+(CSI, DQSI and EQSI). Furthermore, the restriction of partial observation of system states in
+decentralized control further complicates the problem. As a result, the convergence proof of the
+decentralized stochastic algorithm is highly non-trivial.
+May31,2018 DRAFT
+In this paper, we consider delay minimization for interference networks with renewable energy
+source. The transmitters are capable of harvesting energy from the environment, and the transmission
+power of a node comes from both the conventional utility power (AC power) and the renewable
+energy source. For decentralized control, we assume the transmission power of each node is adaptive
+to the local system states only, namely the local CSI (LCSI), the local DQSI (LDQSI) and the local
+EQSI (LEQSI). We consider two delay optimization formulations, namely the decentralized partially
+observable MDP (DEC-POMDP), which corresponds to a cooperative stochastic game setup (where
+each user cooperatively share a common system utility), and non-cooperative partially observable
+stochastic game (POSG), which corresponds to a non-cooperative stochastic game setup (where
+each user has a different (and selfish) utility. In DEC-POMDP formulation, the transmitters are fully
+cooperative and we derive a decentralized online learning algorithm to determine the control actions
+and the Lagrangian multipliers (LMs) simultaneously based on the policy gradient approach [11],
+[19]. Under some mild technical conditions, the proposed decentralized policy gradient algorithm
+converges almost surely to a local optimal solution. On the other hand, in the non-cooperative POSG
+formulation, the transmitters are non-cooperative1 and we extend the decentralized policy gradient
+algorithm and establish the technical proof for almost-sure convergenceof the learning algorithms. In
+both cases, the solutions do not require explicit knowledge of the CSI statistics, random data source
+statistics as well as the renewable energy statistics. Therefore, the solutions are very robust to model
+variations. Finally, the delay performance of the proposed solutions are compared with conventional
+baseline schemes for interference networks and it is illustrated that substantial delay performance
+gain and energy savings can be achieved by incorporating the CSI, DQSI and EQSI in the power
+control design.
+II. SYSTEM MODEL
+We consider K-pair interference channels sharing a common spectrum with bandwidth WHz as
+illustrated in Fig. 1. Specifically, each transmitter maintains a data queue for the random traffic flow
+towards the desired receiver in the system. Furthermore, the transmitters are fixed base stations but
+the receiver can be mobile. The time dimension is partitioned into scheduling frames (that lasts for
+τ seconds). In the following subsections, we shall elaborate the physical layer model, the random
+data source model as well as the renewable energy source model.
+1Non-cooperative nodes means that each transmitter shall optimize itsown utility in a selfish manner.
+May31,2018 DRAFT
+A. Physical Layer Model
+The signal received at the k-th receiver is given by:
+y = P L H x + P L H x +z , (1)
+k k kk kk k n kn kn n k
+p desiredsignal X p
+interference
+where L and H are the lo|ng term{zpath lo}ss and the microscopic channelfading gain respectively,
+kn kn | {z }
+fromthen-thtransmittertothek-threceiver.P isthetotaltransmissionpowerofthek-thtransmitter.
+x is the information symbol sent by the n-th transmitter, and z is the additive white Gaussian
+noise with variance N . For notation convenience, we define the global CSI as H = {H ,∀k,n}.
+Furthermore, the assumption on channel model is given as follows.
+Assumption 1 (Channel Model): We assume that the global CSI H is quasi-static in each frame.
+Furthermore, H (t) is i.i.d. over the scheduling frame according to a general distribution Pr{H }
+with E[H ] = 1 and H is independent w.r.t. {n,k}. The path loss L remains constant for the
+duration of the communication session.
+Given transmission powers {Ptx}, the transmit data rate is given by:
+R ≤ W log 1+ k kk kk , (2)
+k 2 P L H +N W
+n6=k n kn kn 0 !
+where ξ ∈ (0,1] is a constant. Note that (2) cPan be used to model both uncoded and coded systems
+[20]. For example, ξ = 0.5 for QAM constellation at BER= 1% and ξ = 1 for capacity achieving
+coding (in which (2) corresponds to the instantaneous mutual information).
+B. Random Data Source Model and Data Queue Dynamics
+Let A(t) = {A (t),··· ,A (t)} be the random new arrivals (number of bits) at the K transmitters
+at the end of the t-th scheduling frame.
+Assumption 2 ( Random Data Source Model): The arrival process A (t) is i.i.d. over the schedul-
+ing frame and is distributed according to a general distribution Pr{A } with average arrival rate
+λ = E[A ]. Furthermore, the random arrival process {A } is independent w.r.t. k.
+Let Q(t) = {Q (t),··· ,Q (t)} denote the global DQSI in the system, where Q (t) represents
+the numberofbits atthe queueoftransmitter k atthe beginningof frame t. N Q denotesthe maximal
+buffer size (number of bits) of user k. When the buffer is full, i.e., Q = N Q, new bit arrivals will
+be dropped. The cardinality of the global QSI is I = (1+N Q )K. Given a new arrival A (t) at the
+end of frame t, the queue dynamics of transmitter k is given by:
+(cid:2) (cid:3)
+where R (t) is the achievable data rate for receiver k at frame t given in (2), and [x] =
+min(x,N Q ).
+May31,2018 DRAFT
+C. Power Consumption Model with Renewable Energy Source
+The transmission power of each node comes from both the AC power source and the renewable
+energy source. Specifically, the transmitter is assumed to be capable of harvesting energy from the
+environment,e.g.,usingsolarpanels[17], [21]. However,theamountofharvestableenergyina frame
+is random. Let X(t)= {X (t),··· ,X (t)} be the harvestable energy (Joule) by the K transmitters
+during the t-th scheduling frame. Note that the harvestable energy X(t) can be interpreted as the
+energy arrival at the t-th frame.
+Assumption 3 (Random Renewable Energy Model): The random process X (t) ≥ 0 is i.i.d. over
+the scheduling frame and is distributed according to a general distribution Pr{X } with mean
+renewable energy X = E[X ]. Furthermore, the random process {X } is independent w.r.t. k.
+Let E(t)= {E (t),··· ,E (t)} denote the global EQSI in the system, where E (t) represents the
+renewable energy level at the energy storage of the k-th transmitter at the beginning of frame t. Let
+NE denote the maximum energy queue buffer size (i.e., energy storage capacity in Joule) of user
+k. When the energy buffer is full, i.e., E = NE, additional energy cannot be harvested. Given an
+energy arrival of X (t) at the end of frame t, the energy queue dynamics of transmitter k is given
+by:
+(cid:2) (cid:3)
+where Ptx(t) is the renewable power consumption that must satisfy the following energy-availability
+constraint2:
+The power consumption is contributed by not only the transmission power of the power amplifier
+(PA) but also the circuit power of the RF chains (such as the mixers, synthesizers and digital-to
+analog converters). Furthermore, the circuit power P is constant irrespective of the transmission
+data rate. Therefore, the total power consumption of user k at the t-th frame is given by
+(cid:0) (cid:1)
+Note that in practice, due to the random nature of the renewable energy and the limited renewable
+energy storage capacity, it can be used only as a supplementaryform of powerrather than completely
+replacing the AC utility power. To support a total power consumption of P (t), we can have power
+2 We consider a discrete time system with fixed time step τ. Hence, E (t) represents the energy level at the renewable
+energystorageofthek-thtransmitteratthebeginningofframet,andPtx(t)τ istherenewableenergyconsumption. Asa
+result, Ptx(t)τ (energy consumed from the renewable energy storage) cannot be larger than E (t) (total energy available
+from the renewable energy storage).
+May31,2018 DRAFT
+circuitry [12], [13] to control the contributions from AC utility P (t) as well as the renewable
+energy storage P (t) as illustrated in Fig. 1. This is similar in concept to hybrid cars where the
+power is contributed by both the gas engine and the battery. As a result, the total power consumption
+P (t) is given by: P (t) = P (t) +P (t). Given P (t) and P (t), the transmission power
+k k k,ac k,e k,ac k,e
+Ptx(t) is given by:
+k k,ac k,e cct k
+(cid:16) (cid:17)
+(cid:0) (cid:1)
+III. DELAY OPTIMAL POWER CONTROL
+A. Control Policy and Resource Constraints
+We define χ = {H,Q,E} as the global system state, and χ = {{H ,∀n},Q ,E } as the local
+system state for the k-th transmit node, where {H ,∀n} is the LCSI3, Q is the LDQSI and E
+is the LEQSI. Based on the local system state χ , transmitter k determines the power consumption
+P = {P ∈ A ,P ∈ A } using a control policy defined below, where A = {a1 ,··· ,aN}
+k k,ac ac k,e e ac ac ac
+and A = {a1,··· ,aN} are the AC power allocation space and the renewable power allocation space
+(both with cardinality N), respectively.
+Definition 1 (Stationary Randomized Decentralized Power Control Policy): A stationary random-
+ized power control policy for user k, Ω : χ → P(A ,A ), is a mapping from the local system
+state χ to a probability distribution over the power allocation space {A ,A }, i.e., Ω (χ ) = p =
+k ac e k k
+{p ,··· ,p } ∈ P(A ,A ), where P(A ,A ) = {p : p = 1 and p ≥ 0,∀i,j} is the
+1,1 N,N ac e ac e i,j i,j i,j
+space of joint probability distribution over the power allocatiPons, and p
+denotes the probability of
+transmission powers {P =ai ,P = a j }.
+k,ac ac k,e e
+For simplicity, denote the joint control policy as Ω = {Ω ,∀k}. Note that the power allocation
+policyΩ shouldsatisfytheenergy-availabilityconstraintgivenin(5),i.e.,givenχ = {H ,Q ,E },
+k k kk k k
+the probability p of transmission powers {P = ai ,P = a j } satisfy
+i,j k,ac ac k,e e
+p = 0, if aj > E /τ. (8)
+Furthermore, Ω should meet the requirement of circuit power P consumption, i.e.,
+p = 0, if 0 < ai +aj < P (9)
+i,j ac e cct
+Finally, Ω should also satisfy the per-user average AC power consumption constraint:
+k T k,ac k
+3We denote the local CSI at the k-th transmit node as {H ,∀n}. However, in practice, the k-th transmit node only
+needs to observe H kk and the total interference P n6=k PnL kn H kn .
+May31,2018 DRAFT
+where the expectation in (10) is taken w.r.t. the induced probability measure from the policy Ω.
+Remark 1 (Formulation with two optimization variables {P ,P }): Whilethe“reward”ofthesys-
+tem dynamics (the transmission rate in (2)) depends on the total transmission power P only, it does
+not mean the problem can be formulated with just one variable (total transmission power). We also
+have to look at the “cost” side. While the total power consumption P = P +P , P and P
+total ac e ac e
+have different cost structure (and different constraints) as in (10) and (5), respectively. Hence, the
+problem with P and P as variables cannot be transformed or reduced into a problem with P
+ac e total
+as one variable only (due to the constraints).
+B. Parametrization of Control Policy and Dynamics of System State
+In this paper, we consider the parameterized stationary randomized policy, which is widely used in
+the literature [19], [22]–[24]. Specifically,the randomizedpolicy Ω can be parameterizedby Θ . For
+example, when a local system state realization χ is observed, the power consumption of transmit
+node k is P = {P ,P } with probability µ (Θ ,P ) given by [23]:
+k k,ac k,e χ k k
+if P = P = 0 or
+exp(θ χk,P
+) k,e k,ac
+µ χ k (Θ k ,P k ) =   P i,j exp(θ χk,(ai ac,aj e) )1(aj e ≤E k /τ) if P k,e ≤ E k /τ and P k,e +P k,ac ≥ P cct (11)
+0 otherwise,
+where1(·) is the   indicatorfunction, and Θ k ={θ χ ,P ∈R,∀χ k ,P k }. As a result, the control policy
+Ω is now parameterized by Θ and is denoted by ΩΘ k. Another possible parameterization is to use
+neural network [19], [22] where the probability is given by:
+exp θ k1 +Pα i=2 θ ki f ki (χ k ,P k ) if P k,e = P k,ac = 0 or
+µ χ k (Θ k ,P k ) =   P i,j exp θ k1 + (cid:0) Pα i=2 θ ki f ki (χ k ,(ai ac ,aj e)) (cid:1) 1(aj e ≤E k /τ) if P k,e ≤ E k /τ and P k,e +P k,ac ≥ P cct
+ 0 (cid:0) (cid:1) otherwise,
+where Θ = {θ ∈ R,i = 1,··· ,α} is the parameter and f (χ ,P ) is the prior basis function.
+k ki ki k k
+Note that the dimension of the parameter Θ is reduced to α in this case.
+For a given stationary parameterized control policy ΩΘ (Θ = {Θ ,∀k}), the induced random
+process {χ(t)} is a controlled Markov chain with transition probability
+where the joint data and energy queue transition probability is given by
+= k k k χ k k k E k (t+1)=Eˆ k
+Q0 otherwise,
+May31,2018 DRAFT
+k k k,e k k k k k k
+is the achievha(cid:2)ble data rate of r(cid:3)eceiver k giiven in (2) uhn(cid:2)der the power a(cid:3)llocation Pi = {P (t),∀k}.
+Note that it is not sufficient to specify the evolution of the joint process (χ (t),··· ,χ (t)) by just
+describingthemeasureofindividuallocalprocessesχ (t).Thisisbecausetheindividualstateprocess
+χ (t) are not independent and there are mutual coupling.
+Given a unichain policy ΩΘ, the induced Markov chain {χ(t)} is ergodic and there exists a unique
+steady state distribution π , where π (χ) = lim Pr{χ(t) = χ} [11]. The average delay utility
+of user k, under a unichain policy ΩΘ, is given by:
+where f(Q ) is a monotonic increasing utility function of Q . For example, when f(Q )= Q /λ ,
+using Little’s Law [11], T (Ω) is the average delay4 of user k. When f(Q )= 1(Q ≥ Q0), T (Θ)
+is queue outage probability5. Since λ is a constant, the average delay T (Θ) is proportional to the
+average queue length.
+C. Problem Formulation
+Note that the stochastic dynamics of the K data queues and energy queues are coupled together
+via the control policy ΩΘ. In this paper, we consider two different decentralized control problems:
+1) DEC-POMDP Problem: In this case, all the transmitter nodes are cooperative and we seek to
+find an optimal stationary control policy ΩΘ to minimize a common weighted sum delay utility in
+(15). Since the control policy ΩΘ k is only a function of the local system state χ , the problem is a
+partially observed MDP, which is summarized below:
+Problem 1 (Delay Optimal DEC-POMDP): For some positive constants β = {β ,∀k}, find a
+stationary control policy ΩΘ that minimizes:
+Θ β k k k T→∞ T t=1
+subject to PP(ΩΘ) = P (Θ) ≤ P0,∀k P h (cid:0) (cid:1) i , (16)
+where g χ(t),ΩΘ(χ(t)) = β f(Q ) is the joint per-stage utility. The positive constants β
+indicate(cid:0)the relative impo(cid:1)rtancePof the users, and for the given β, the solution to (16) corresponds to
+a Pareto optimal point of the multi-objective optimization problem: min T (Θ),∀k.
+4 Since the buffer size is finite, T (Ω) is the average delay when f(Q ) = Q /(λ (1−P )), where P is the
+k k k k loss loss
+packet drop rate due to buffer overflow. However in practice our target P ≪ 1, and hence f(Q ) = Q /(λ ) is a
+loss k k k
+good approximation for the average delay. Furthermore, this approximation is asymptotically tight as the data buffer size
+increases. In practice, the approximation error will not be significant since the system will have reasonable P (e.g.
+0.1%).
+5The probability that the queue state exceeds a threshold Q0, i.e., Pr{Q ≥Q0}.
+May31,2018 DRAFT
+Note that the average AC power constraint is commonly used in a lot of existing studies [7], [10]
+andisveryrelevantin practice(becausethe electricbillis chargedbyaverageAC powerconsumption
+× time of usage). The motivation of Problem 1 is to optimize the delay performance under average
+cost constraint (AC power) by fully utilizing the free renewable energy. Problem 1 is also equivalent
+to minimizing the average AC power consumption subject to average delay constraint because they
+have the same Lagrangian function.
+2) Non-Cooperative POSG Problem: In this case, the K transmitter nodes are non-cooperative
+and we formulate the delay utility minimization problem as a non-cooperative partially observable
+stochastic game (POSG), in which the user k competes against the others by choosing his power
+allocation policy ΩΘ k, to maximize his average utility selfishly. Specifically, the non-cooperative
+POSG is formulated as Problem 2
+Problem 2 (Delay Optimal Non-Cooperative POSG): For transmitter k, we try to find a stationary
+control policy ΩΘ k that minimizes:
+min Θ k T k (Θ k ,Θ −k ) = limsup T→∞ T 1 T t=1 EΩΘ k k,Ω − Θ− k k [f(Q k (t))]
+subject to P k (Θ k ,Θ −k )≤ P k 0, P ,∀k (17)
+where Θ ={ΘK }, and Ω Θ−k = {Ω Θ q}K is the set of all the users’ policies except the
+−k q=1,q6=k −k q q=1,q6=k
+k-th user.
+The local equilibrium solutions of the non-cooperativePOSG (17) are formally defined as follows.
+Definition 2 (Local Equilibrium of Non-Cooperative POSG): Aprofileofthepowerallocationpol-
+K} is the local equilibrium of the game (17) if it satisfies the following
+fixed point equations for some γ∗ = {γ∗ ≥ 0,∀k},
+Θ k k k −k k Θ k Θ k k k −k k ∀k,
+k k −k k k k k −k k
+k k −k k k k −k k k k −k k
+Remark 2 (Interpretation of the Local Equilibrium): ψ (Θ ,Θ ,γ ) can be regarded as the La-
+grange function for user k (given the policies of the other users Θ ) in the non-cooperative POSG
+problem (17). From the Lagrangian theory [25], a local equilibrium
+that given Ω
+k is the local optimal solution for the non-cooperative POSG problem (17).
+Remark 3 (Comparison between the DEC-POMDP and Non-Cooperative POSG Problems): InProb-
+lem 1 (DEC-POMDP), the controller is decentralized at the K transmitters and they have access to
+the local system state only. Yet, the K controllers are fully cooperative in the sense that they are
+designedto optimize a common objectivefunction wherethe per-stageutility is assumedto be known
+May31,2018 DRAFT
+globally through message passing. As a result, they interact in a decentralized cooperative manner.
+On the other hand, in the non-cooperative POSG formulation, the K controllers are non-cooperative
+in the sense that each controller is interested in optimizing its own delay utility function. Hence, they
+interact in a decentralized non-cooperative manner.
+Note that the policies {Ω ,∀k} are reactive or memoryless in that their choice of action is based
+only upon the current local observation. Furthermore, the DEC-POMDP and the non-cooperative
+POSG problem are NP-hard [26]. Instead of targeting at global optimal solutions, we shall derive
+low complexity iterative algorithms for local optimal solutions in the following sections.
+IV. DECENTRALIZED SOLUTION FOR DEC-POMDP
+In this section, we shall propose a decentralized online policy gradient update algorithm to find
+a local optimal solution for problem (16). The proposed solution has low complexity and does not
+require explicit knowledgeof the CSI statistics, randomdata sourcestatistics as well as the renewable
+energy statistics.
+A. Decentralized Stochastic Policy Gradient Update
+We first define the Lagrangian function of problem (16) as
+X(cid:0) (cid:1)
+where γ = {γ ∈ R+,∀k} is the LM vector w.r.t. the average power constraint for all the users.
+The local optimal solution Θ∗ for problem (16) should satisfy the following first-order necessary
+conditions given by [25]
+Define a reference state6 {QI,EI} = {{QI,··· ,QI },{EI,··· ,EI }} and using perturbation
+analysis [11], [22], the gradient7 ∇ ψ(Θ,γ) is given in the following lemma.
+Lemma 1 (Gradient of the Lagrangian Function): ThegradientoftheLagrangianfunctionisgiven
+6For example, we can set {QI
+I =NE,∀k} without loss of optimality.
+7NotethatachangeofΘwillaffectthefunctionψ(Θ,γ)viatheprobabilitymeasurebehindtheexpectationinψ(Θ,γ)
+and hence, deriving the gradient is highly non-trivial.
+May31,2018 DRAFT
+whereπ(χ;Θ)isthesteadystateprobabilityofstateχunderthepolicyΩΘ,µ (Θ,P) = µ (Θ ,P )
+χ k χ k k k
+is the probability that joint action P is taken, and ∇ Θ µ k χ µ k χ (Θ k ( k Θ ,P k , k P ) k ) , 0, if µ χ k (Θ k ,P k ) =Q0,
+h X t=0 (cid:0) (cid:1) i
+where g (χ,P) = β f(Q )+γ (P −P0). TI = min{t > 0|Q(t) = QI,E(t) = EI} is the
+ψ k k k k k,ac k
+first future time thaPt the reference state {QI,EI} is visited.
+Proof: Please refer to Appendix A.
+Note that the brute force solution of (19) requires huge complexity and knowledge of the CSI
+statistics, random data source statistics as well as the renewable energy statistics. Based on Lemma
+1, we shall propose a low complexity decentralized online policy gradient update algorithm to obtain
+a solution of (19). Specifically, the key steps for decentralized online learning is given below.
+• Step 1, Initialization: Each transmitter initiates the local parameter Θ k .
+• Step 2, Per-user Power Allocation: At the beginning of the t-th frame, each transmitter
+determines the transmission power allocation according to the policy ΩΘ k based on the local
+system state χ , and transmit at the associated achievable data rate given in (2).
+• Step 3, Message Passing among the K Transmitters8: At the end of the t-th frame, each
+transmittersharestheper-userper-stageutilityg = β f(Q )+γ (P −P0)andthereference
+L,k k k k k,ac k
+state indication ζ , where ζ = 1 if {Q = QI,E = EI}, and ζ = 0 otherwise.
+k k k k k k k
+• Step 4, Per-user Parameter Θ k Update: Based on the current local observation, each of the
+transmitters updates the local parameter Θ according to Algorithm 1.
+• Step 5, Per-user LM Update: Based on the current local observation, each of the transmitters
+updates the local LMs {γ ,∀k} according to Algorithm 1.
+Fig.2illustratestheaboveprocedurebyaflowchart.Thedetailedalgorithmforthelocalparameters
+and LMs update in Step 4 and Step 5 is given below:
+Algorithm 1 (Online Learning Algorithm for Per-user Parameter and LM): Letχ = {H ,Q ,E }
+be the current local system state, P be the current realization of power allocation, g = g
+be the current realization of the per-stage utility and ζ =
+be the current realizationPof the
+reference state indication. The online learning algorithm at tQhe k-th transmitter is given by
+k k k,ac e k
+(cid:2) (cid:0) (cid:1)(cid:3)
+8 Notethattheper-userper-stageutilityincludesnotonlythepacketbufferstatesbutalsothecontrolaction.Asaresult,
+justbroadcastingnodes’bufferstatesisnotenoughtoreplacetheper-userper-stageutility.Furthermore,ifeachuserwants
+to have complete state information, they need to share both the buffer states and the CSI states. As a result, it will cause
+much information exchanges compared with the per-user per-stage utility sharing. Table I summarizes the communication
+overhead by exchanging the per-stage utility and sharing the buffer states and the CSI states.
+May31,2018 DRAFT
+where Lt+1 = Lt+1−a(t) g −Lt , and
+(cid:16) (cid:17)
+e e e Θk χk k k if ζ = 1
+k  zt + ∇ Θk µ χk (Θt k ,P k ) otherwise.
+Stepsizes{a(t),b(t)}arenon-increasingpositivescalarssatisfying a(t) = b(t) = ∞, (a(t)2+
+b(t)2) < ∞, b(t) → 0. P P P
+Remark 4 (Feature of the Learning Algorithm 1): The learning algorithm only requires local ob-
+servations only, i.e., local system state {H ,Q ,E } at each transmit node, and limited message
+passing of {ζ ,g }, where the overhead is quite mild [27]. Both the per-user parameter and the
+LMs are updated simultaneously and distributively at each transmitter. Furthermore, the iteration is
+online and proceed in the same timescale as the CSI and QSI variations in the learning algorithm.
+Finally, the solution does not require knowledge of the CSI distribution or statistics of the arrival
+process or renewable energy process, i.e., robust to model variations.
+B. Convergence Analysis
+In this section, we shall establish the convergence proof of the proposed decentralized learning
+algorithm 1. Since we have two different stepsize sequences {a(t)} and {b(t)} with b(t)= o(a(t)),
+e.g., a(t) = 1 and b(t) = 1. the per-user parameter updates and the LM updates are done
+simultaneously but over two different timescales. During the per-user parameter update (timescale
+I), we have γt+1 −γt = O(b(t)) = o(a(t)),∀k. Therefore, the LMs appear to be quasi-static [28]
+during the per-user parameter update in (22), and the convergence analysis can be established over
+two timescales separately. We first have the following lemma.
+Lemma 2 (Convergence of Per-user Parameter Learning (Timescale I)): The iterations of the per-
+user parameter Θt in the proposed learning algorithm 1 will converge almost surely to a stationary
+point, i.e., lim Θt = Θ∞(γ), and Θ∞(γ) satisfies
+Proof: Please refer to Appendix B.
+Ontheotherhand,duringtheLMupdate(timescaleII), wehavelim |Θt−Θ∞(γt)| = 0almost
+surely. Hence, during the LM update in (22), the per-user parameter is seen as almost equilibrated.
+The convergence of the LMs is summarized below.
+Lemma 3 (Convergence of LM over Timescale II): The iterations of the LMs lim γt = γ∞
+almost surely, where γ∞ satisfies the power constraints of all the users in (10).
+Proof: Please refer to Appendix C.
+Based on the above lemmas, we can summarize the convergence performance of the proposed
+learning algorithm in the following theorem.
+May31,2018 DRAFT
+Theorem 1 (Convergence of Online Learning Algorithm 1): In the learning algorithm 1, we have
+(Θt,γt) → (Θ∞,γ∞) almost surely, where Θ∞ and γ∞ satisfy the KKT condition given in (19),
+and the power constraints of all the users in (10). Furthermore, if ∇2 ψ(Θ∞,γ∞) ≻ 0 (positive
+definite matrix), then Θ∞ is a local optimal solution for the constrained DEC-POMDP problem in
+(16).
+Note that ∇2 ψ(Θ∞,γ∞) ≻ 0 is a very mild condition that is usually satisfied [28].
+V. DECENTRALIZED SOLUTION FOR NON-COOPERATIVE POSG PROBLEM
+In this section, we shall propose a decentralized online policy gradient update algorithm to find
+a local equilibrium of the non-cooperative POSG problem. The proposed solution also has low
+complexityanddoesnotrequire explicitknowledgeof the CSIstatistics, randomdatasourcestatistics
+as well as the renewable energy statistics.
+A. Decentralized Stochastic Policy Gradient Update
+From (18), the Lagrangian function for user k is given by
+k k −k k k k −k k k k −k k
+whereγ ∈ R+ istheLMw.r.t.theaveragepowerconstraintforuserk.Followingsimilarperturbation
+analysis as in Lemma 1, the gradient ∇ ψ (Θ ,Θ ,γ ) is given in the following lemma.
+Θ k k −k k
+Lemma 4 (Gradient of the Lagrangian Function): The gradientof the Lagrangian function in (26)
+is given by
+k k k k k,ac k k k −k k
+h X t=0 (cid:0) (cid:1) (28) i
+Based on the Lemma 4, we shall propose a low complexity decentralized online policy gradient
+update algorithm to obtain a local equilibrium. Specifically, the key steps for decentralized online
+learning is given below.
+• Step 1, Initialization: Each transmitter initiates the local parameter Θ k .
+May31,2018 DRAFT
+• Step 2, Per-user Power Allocation: At the beginning of the t-th frame, each transmitter
+determines the transmission power allocation according to the policy ΩΘ k based on the local
+system state χ , and transmit at the associated achievable data rate given in (2).
+• Step 3, Message Passing among the K Transmitters: At the end of the t-th frame, each
+transmittersharestheonebitreferencestateindicationζ ,whereζ = 1if{Q = QI,E = EI},
+k k k k k k
+and ζ = 0 otherwise.
+• Step 4, Per-user Parameter Θ k Update: Based on the current local observation, each of the
+transmitters updates the local parameter Θ according to Algorithm 2.
+• Step 5, Per-user LM Update: Based on the current local observation, each of the transmitters
+updates the local LMs {γ ,∀k} according to Algorithm 2.
+Fig.3illustratestheaboveprocedurebyaflowchart.Thedetailedalgorithmforthelocalparameters
+and LMs update in Step 4 and Step 5 is given below:
+Algorithm 2 (Online Learning Algorithm for Per-user Parameter and LM): Letχ = {H ,Q ,E }
+be the current local system state, P be the current realization of power allocation, ζ = ζ be
+the current realization of the reference state indication. The online learning algorithm atQthe k-th
+transmitter is given by
+k k k k k k,ac k k k
+k k k,ac k e
+where Lt+1 = Lt −a(t) f (Q (cid:2) )+γt(P (cid:0) −P0)− (cid:1) L (cid:3) t , and
+k k k k k k,ac k k
+(cid:16) (cid:17)
+e e ∇ Θk µ χk (Θt k ,P k ) e if ζ = 1
+k  zt + ∇ Θk µ χk (Θt k ,P k ) otherwise.
+Remark 5 (Features of the Learning Algorithm 2): The learning algorithm only requires local ob-
+servations, i.e., local system state {H ,Q ,E } at each transmit node, and one bit message passing
+of ζ . Both the per-user parameter and the LMs are updated simultaneously and distributively at
+each transmitter. Furthermore, the iteration is online and proceed in the same timescale as the CSI
+and QSI variations in the learning algorithm. Finally, the solution does not require knowledge of the
+CSI distribution or statistics of the arrival process or renewable energy process, i.e., robust to model
+variations.
+B. Convergence Analysis
+In this section, we shall establish the convergence proof of the proposed decentralized learning
+algorithm2.Specifically,letη = max
+kn,andletF∗ = {Θ∗}bethesetofthelocalequilibrium
+May31,2018 DRAFT
+of the game (17), i.e., Θ∗ satisfies the fixed point equations in (18). The convergence performance
+of the proposed learning algorithm is given in the following theorem.
+Theorem 2 (Convergence of Online Learning Algorithm 2): Suppose F∗ is not empty. The itera-
+tions of the per-user parameter Θt in the proposed learning algorithm 2 will converge almost surely
+to an invariant set given by
+as t → ∞, for some positive constant δ = O(η2) and some Θ∗ ∈ F∗.
+Proof: Please refer to Appendix D
+Remark 6 (Interpretation of Theorem 2): From(31), the error betweenthe convergedsolution Θ∞
+and the local equilibrium of the POSG Θ∗ decreasesin the order of η2 where η represents the degree
+of coupling among the transmitters.
+VI. SIMULATIONS
+In this section, we shall compare the performances of the proposed decentralized solutions against
+various existing decentralized baseline schemes.
+• Baseline 1, Orthogonal Transmission: The transmissions between the K pairs are coordinated
+using TDMA so that there is no interferenceamong the users.Both the AC and renewablepower
+consumption are adaptiveto LCSI and LEQSI only by optimizing the sum throughputas in [16].
+• Baseline 2, LCSI and LEQSI Only Strategy: The K transmitters send data to their desired
+receiversimultaneouslysharing the samespectrum.Both the AC andrenewablepowerconsump-
+tion are adaptive to LCSI and LEQSI only by optimizing the sum throughput as in [16].
+• Baseline 3, Greedy Strategy: The K transmitters send data to their desired receiver simulta-
+neously sharing the same spectrum. The transmitters will consume all the available renewable
+energy source at each frame (emptying the renewable energy buffer at each frame), and the AC
+power consumption is adaptive to LCSI only by optimizing the sum throughput.
+In the simulation, we consider a symmetric system where L ki = 0.1,∀k,n 6=k as in [6]. The long
+term path loss for the desired link is 15dB, which corresponds to a cell size of 5.6km [29]. The static
+circuit poweris P = 40 (Watt) [30]. We assumePoissonpacketarrival9 with averagearrivalrate λ
+(packet/s) and exponentially distributed random packet size with mean N = 2Mbits. The scheduling
+framedurationτ is50ms,andthetotalBWisW =1MHz.ThemaximumdataqueuebuffersizeN Q is
+5 (packets).Furthermore, we considerPoissonenergyarrival with averagearrivalrate X (Watt) as in
+[16], andthe renewableenergy is stored in a 1.2V20Ah lithium-ion battery. The AC powerallocation
+9NotethattheproposedalgorithmworksforgenericpacketandrenewableenergyarrivalmodelsasdepictedinDefinition
+2 and Definition 3. The Poisson model is used for simulation illustration only.
+May31,2018 DRAFT
+spaceandtherenewablepowerallocationspaceisgivenbyA = A = [0,300,600,900,1200,1500]
+(Watt). The average delay is considered as our utility (f(Q )= Q /λ ), and the randomized policy
+Ω is parameterized in the form given by (11).
+A. Delay Performance w.r.t. the AC power consumption
+Fig. 4 illustrates the average delay per user versus the AC power consumption P0. The average
+data arrival rate is λ = 1.1, and the energy arrival rate is X = 800. The average delay of all
+the schemes decreases as the AC power consumption increase, and the proposed schemes achieve
+significant performance gain over all the baselines. This gain is contributed by the DQSI and EQSI
+aware dynamic power allocation. Furthermore, it can also be observed that the solution to the non-
+cooperative POSG problem has similar performance as the solution to the DEC-POMDP problem.
+B. Delay Performance w.r.t. Number of Power Control Levels
+Fig. 5 illustrates the average delay per user versus the number of power control levels that lie
+between 0 and 1.5kW. The average data arrival rate is λ = 1.1, the energy arrival rate is X = 800,
+and the average AC power consumption is P0 = 800. The average delay of the proposed schemes
+decreases as the number of power control levels increases, yet the performance improvement is
+marginal. Itcanalsobeobservedthatthere issignificantperformancegainwith the proposedschemes
+compared with all the baselines, and the solution to the non-cooperative POSG problem has similar
+performance as the solution to the DEC-POMDP problem.
+C. Delay Performance w.r.t. Renewable Energy Buffer Size
+Fig.6illustratestheaveragedelayperuserversustherenewableenergybuffersizeNE.Specifically,
+we consider the lithium-ion battery given from 1.2V 10Ah to 40Ah. The average data arrival rate is
+λ = 1.1, the energy arrival rate is X = 800, and the average AC power consumption is P0 = 500.
+It can also be observed that the proposed schemes achieve significant performance gain over all the
+baselines at any given renewable energy buffer size.
+D. Convergence Performance
+Fig. 7 illustrates the convergenceproperty of the proposedschemes.We plot the randomizedpower
+control policy µ (Θ ,P ) versus the scheduling frame index for the POMDP and non-cooperative
+POSG problems, respectively. The average data arrival rate is λ = 1.1, the energy arrival rate is
+X = 800, and the average AC power consumption is P0 = 1100. It can be observed that the
+convergence rate of the online algorithm is quite fast. For example, the delay performance of the
+proposedschemesalreadyout-performsallthebaselinesatthe2500-thschedulingframe.Furthermore,
+May31,2018 DRAFT
+the delayperformanceat the 2500-thschedulingframe is alreadyquite closeto the convergedaverage
+delay.
+VII. CONCLUSION
+In this paper, we consider the decentralized delay minimization for interference networks with
+limited renewable energy storage. Specifically, the transmitters are capable of harvesting energy from
+the environment, and the transmission power of a node comes from both the conventional utility
+power(ACpower)andtherenewableenergysource.Weconsidertwodecentralizeddelayoptimization
+formulations, namely the DEC-POMDP and the non-cooperative POSG, where the control policy is
+adaptive to local system states (LCSI, LDQSI and LEQSI) only. In the DEC-POMDP formulation,
+the controllers interact in a cooperative manner and the proposed decentralized policy gradient
+solution converges almost surely to a local optimal point under some mild technical conditions.
+In the non-cooperative POSG formulation, the transmitter nodes are non-cooperative. We extend the
+decentralizedpolicygradientsolutionandestablishthe technicalprooffor almost-sureconvergenceof
+the learning algorithms. In both cases, the solutions are very robust to model variations. Finally, the
+delay performance of the proposed solutions are compared with conventional baseline schemes for
+interference networks and it is illustrated that substantial delay performance gain and energy savings
+can be achieved by incorporating the CSI, DQSI and EQSI in the power control design.
+APPENDIX A
+PROOF OF LEMMA 1
+From the perturbation analysis [11], [22] in MDP, the gradient ∇ ψ(Θ)10 is given by
+where V(χ) satisfies the following Bellman (Possion) equation
+Since µ (Θ,P) = 1 for every Θ, we have
+Substituting (34) into (32), we have P
+10The notation of γ is ignored in this section for simplicity.
+May31,2018 DRAFT
+Takingtheconditionalexpectation(conditionedon{Q,E})onbothsidesof(33),wehavefollowing
+equivalent Bellman equation
+Q X ′,E′ h i
+where V(Q,E)= E[V(χ|Q,E)]. It can be verified that the following differential utility V(Q,E) of
+state (Q,E) satisfying the above equivalent Bellman equation
+where TI = min{t > 0|Qt = QI,Et = EI} is the first future time that reference state (QI,EI) is
+visited. Therefore, we have
+which finishes the prooPf. (cid:0) (cid:1)
+APPENDIX B
+PROOF OF LEMMA 2
+In timescale I, we can rewrite the update equations in (22) as follows
+where rt = (Θt,Lt), and
+e R(χt,Pt,rt) = ψ k . (41)
+Define t the m-th time that the recurrent state (QI,EI) is visited, and we have
+where a(m) = t m+1 −1 a(t), εm = t m+1 −1 a(t)(R(χt,Pt,rt)−eh(rt m)), and
+we shall show that the following holds almost surely. (cid:2)P (cid:3)
+May31,2018 DRAFT
+Specifically, ∞ a(m) = ∞ a(t) = ∞. Furthermore, since a(t) is non-increasing and
+(QI,EI) is a rePcurrent state, wePhave
+m=1 m=1 m m+1 m m=1 m m+1 m
+Therefore, ∞ [a(m)]2 hasfiniteexpectationandisfinitealmostsurely.Followingthesameway,
+it is easy to iPnfer that εm has finite expectation and is finite almost surely, and hence εm
+converges almost surelyP. Since ε
+and a(m) converges to zero almost surely, and h(rt m) is boPunded,
+lim (rt m+1 −rt m) = 0. (46)
+Then, similar to the proof of [22, Lemma 11], we can show that ψ(Θt m) and Lt m converge to a
+common limit. Since ψ(Θt m)−Lt m convergesto zero, the algorithm of the per-user parameterupdate
+is given by
+where em converges to zero and εm is a
+summable sequence. This is a gradient method with
+diminishing errors. Therefore, by following the same way as in [28] and [31], we can conclude
+that the learning algorithm will converges to a equilibrium Θ∞ almost surely, given by
+APPENDIX C
+PROOF OF LEMMA 3
+Due to the separation of timescale, the primal update of the per-user parameter can be regarded
+as converged to Θ∗(γt) w.r.t. the current LMs γt. Specifically, for timescale II, we can rewrite the
+update equations in (22) as follows
+k k k k k,ac k
+h (cid:0) wt+1 (cid:1) i
+Let Ft = σ(γl,wl,l ≤ t) be the σ-algebra generated by|{γl,wl{,zl ≤ t}. N}ote that E[wt+1|Ft] =
+0, and E[||wt+1||2|Ft] ≤ C (1 + ||γ||) for a suitable constant C . Using the standard stochastic
+approximation argument [28], the dynamics of the LMs learning equation in (22) for user k can be
+represented by the following ordinary differential equation (ODE):
+where Θ∗(γ(t)) is the converged per-user parameter under the LM γt. Define
+X(cid:0) (cid:1)
+May31,2018 DRAFT
+By the chain rule and ∇ Θ ψ(Θ∗(γ),γ) = 0, we have ∂G ∂γ (
+0. Therefore, we show that the ODE in (50)Pcan be expressed(cid:12)
+∂G(γ(t)). As a result, the ODE in (50) will either converge to P (Θ∗(γ))−P0 = 0 or { ∂G(γ(t)) <
+0,γ = 0} which satisfies the average power constraints in (10) .
+APPENDIX D
+PROOF OF THEOREM 2
+Note that when η = 0, i.e., the interference is zero for each user, we have T (Θ ,Θ ;η =
+0) = T (Θ ) and P (Θ ,Θ ;η = 0) = P (Θ ) in problem (17). In other words, the other users’
+k k k k −k k k
+control policies Ω
+do not influence the average delay utility T and AC power consumption
+P for user k, since there is no interference. Specifically, denote T (Θ ) = T (Θ ,Θ ;η =
+k k k k k −k
+k k k k −k k k k k k −k k
+convergenceanalysisinSectionIV-B,theper-userparameterandLMwillconvergestotheequilibrium
+point Θ0 = Θ∗ given by
+Θ k k k −k k Θ k Θ k k k −k k
+and γ0 satisfies the AC power constraint.
+Let λ = [Θ ;γ ] and Λ = [λ ,··· ,λ ]. From [28], we can rewrite the update algorithm as the
+following ODE
+" P 0 1 (Θ 1 )−P 1 0 P 0 K (Θ K )−P K 0 #
+Note that f0(Λ0) = 0, i.e., Λ0 is the equilibrium point for the above ODE. The Jacobian matrix
+Df0(Λ0) at the equilibrium point Λ is given by
+Θ 1 Θ 1 1 1 1 Θ 1 1 1 ···
+Df0(Λ0) = Θ 1 1 1 .
+Since ∇2 ψ0 (Θ ,γ ) ≻ 0, it has been shown in [25] that all eigenvalues of Df0(Λ0) have
+strictly negative real parts. Therefore, Λ0 is exponentially stable. By converge of Lyapunov Theorem
+[32], there exists a Lyapunov function V(Λ) for Λ˙(t) = f0(Λ(t)), s.t. C ||Λ − Λ0||2 ≤ V(Λ) ≤
+2 dΛ 3 1 2 3
+May31,2018 DRAFT
+When η 6= 0, let η
+L ki, and from Taylor expansion we have
+k k k k k L ∂L /L k
+k k k k k L ∂L /L k
+Therefore, we can rewrite the update algorithm as the following ODE
+dt dΛ dΛ 3 2 . (58)
+Λt converges almost surely to an invariant set given by S , Λ :||Λ−Λ0||2 −δ ≤0 . Furthermore,
+from V˙(Λ∗) = 0, we have ||Λ∗ − Λ0||2 − δ ≤ 0, and he(cid:8)nce the invariance set is(cid:9)also given by
+S , Λ: ||Λ−Λ∗||2−δ ≤ 0 . Finally, we can concludethat the iterations of the per-user parameter
+Θt in(cid:8)the proposed learning a(cid:9)lgorithm 2 will converge almost surely to an invariant set given by
+as t → ∞, for some positive constant δ = O(η2) and some Θ∗ ∈ F∗.

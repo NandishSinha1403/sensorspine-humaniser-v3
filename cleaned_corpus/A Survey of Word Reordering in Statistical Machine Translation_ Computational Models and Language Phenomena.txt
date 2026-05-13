@@ -1,0 +1,2213 @@
+A Survey of Word Reordering in Statistical
+Machine Translation: Computational Models
+and Language Phenomena
+AriannaBisazza∗ MarcelloFederico∗∗
+UniversityofAmsterdam FondazioneBrunoKessler
+Wordreorderingisoneofthemostdifficultaspectsofstatisticalmachinetranslation(SMT),
+and an important factor of its quality and efficiency. Despite the vast amount of research
+publishedtodate,theinterestofthecommunityinthisproblemhasnotdecreased,andnosingle
+methodappearstobestronglydominantacrosslanguagepairs.Instead,thechoiceoftheoptimal
+approachforanewtranslationtaskstillseemstobemostlydrivenbyempiricaltrials.
+Toorientatethereaderinthisvastandcomplexresearcharea,wepresentacomprehensive
+surveyofwordreorderingviewedasastatisticalmodelingchallengeandasanaturallanguage
+phenomenon. The survey describes in detail how word reordering is modeled within different
+string-based and tree-based SMT frameworks and as a stand-alone task, including systematic
+overviewsoftheliteratureinadvancedreorderingmodeling.
+Wethenquestionwhysomeapproachesaremoresuccessfulthanothersindifferentlanguage
+pairs.Wearguethat,besidesmeasuringtheamountofreordering,itisimportanttounderstand
+whichkindsofreorderingoccurinagivenlanguagepair.Tothisend,weconductaqualitative
+analysis of word reordering phenomena in a diverse sample of language pairs, based on a
+large collection of linguistic knowledge. Empirical results in the SMT literature are shown to
+supportthehypothesisthatafewlinguisticfactscanbeveryusefultoanticipatethereordering
+characteristicsofalanguagepairandtoselecttheSMTframeworkthatbestsuitsthem.
+1.Introduction
+Statistical machine translation (SMT) is a data-driven approach to the translation of
+text from a natural language into another. Emerged in the 1990s and matured in the
+2000’s to become widespread today, the core SMT methods (Brown et al. 1990, 1993;
+Bergeretal.1996;Koehn,Och,andMarcu2003)learndirectcorrespondencesbetween
+sourceandtargetlanguagefromcollectionsoftranslatedsentences,withouttheneedof
+abstractlinguisticrepresentations.ThemainadvantagesofSMTareversatilityandcost-
+effectiveness: in principle, the same modeling framework can be applied to any pair
+of languages with minimal engineering effort, given sufficient amount of translation
+data. However, experience in a diverse range of language pairs has revealed that this
+formofmodelingishighlysensitivetostructuraldifferencesbetweensourceandtarget
+language,particularlyatthelevelofwordorder.
+∗ InformaticsInstitute,UniversityofAmsterdam,SciencePark904,1098XHAmsterdam,TheNetherlands.
+E-mail:a.bisazza@uva.nl
+∗∗ FondazioneBrunoKessler,ViaSommarive18,38123Povo,Trento,Italy.E-mail:federico@fbk.eu
+2v83940.2051:viXra
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+(cid:250)(cid:230)(cid:132)(cid:29) (cid:9) (cid:81)(cid:174) (cid:9) (cid:203)(cid:64) (cid:129)(cid:28)(cid:10)(cid:75) (cid:13) (cid:81)(cid:203)(cid:64) (cid:168)(cid:240)(cid:81)(cid:229) (cid:17) (cid:132)(cid:211) (cid:5)(cid:203) (cid:233)(cid:7) (cid:209)(cid:171)(cid:88) (cid:128)(cid:88)(cid:65)(cid:130)(cid:203)(cid:64) (cid:89)(cid:210)(cid:109)(cid:215) (cid:189)(cid:202)(cid:214)(cid:207)(cid:64) (cid:250)(cid:71)(cid:81)(cid:170) (cid:9) (cid:214)(cid:207)(cid:64) (cid:201)(cid:235)(cid:65)(cid:170)(cid:203)(cid:64) (cid:88)(cid:89)(cid:103)(cid:46)
+(cid:10) (cid:10)(cid:46)
+SRC verb subject object complement
+jdd AlEAhl Almgrby Almlk mHmd AlsAds dEm -h l- m$rwE Alr}ys Alfrnsy
+renewed the-monarch the-Moroccan the-King Mohamed the-sixth support his to project the-president the-French
+REF TheMoroccanmonarchKingMohamedVIrenewedhissupporttotheprojectoftheFrenchPresident
+Figure1:Arabicsourcesentence(right-to-left)andEnglishreferencetranslation,taken
+fromtheNIST-MT09benchmark.TheArabicsentenceismorphologicallysegmentedby
+AMIRA(Diab,Hacioglu,andJurafsky2004)accordingtotheArabicTreebankscheme,
+andprovidedwithBuckwaltertransliteration(left-to-right)andEnglishglosses.
+Indeed,naturallanguagesvarygreatlyinhowtheyarrangesentencecomponents,
+and translating words in the correct order is essential to preserve meaning across lan-
+guages.InEnglish,forinstance,theroleofdifferentpredicateargumentsisdetermined
+preciselybytheirrelativepositionwithinthesentence.Considerthetranslationexam-
+pleinFigure1:LookingattheEnglishglossesoftheArabicsentence,onecanseethat
+correspondingwordsinthetwolanguagesareplacedinoverallsimilarorderswiththe
+notableexceptionoftheverb(jdd/renewed),whichoccursatthebeginningoftheArabic
+sentencebutinthemiddleoftheEnglishone—morespecifically,betweenthesubject
+andtheobject.ToreachthecorrectEnglishorder,threeotherreorderingsarerequired
+between pairs of adjacent Arabic words: (AlEAhl/the-monarch, Almgrby/the-Moroccan),
+(dEm/support,-h/his)and(Alr}ys/the-president,Alfrnsy/the-French).Thisexamplesuggests
+asimpledivisionofreorderingpatternsintolong-range,orglobal,andshort-range,or
+local.Howeverotherlanguagepairsdisplaymorecomplex,hierarchicalpatterns.
+Wordreorderingphenomenaarenaturallyhandledbyhumantranslators1 butare
+a major source of complexity for SMT. In very general terms, the task of SMT consists
+of: breaking the input sentence into smaller units, selecting an optimal translation for
+each unit and placing them in the correct order. Searching for the overall best trans-
+lation throughout the space of all possible reorderings is, however, computationally
+intractable (Knight 1999). This crucial fact has motivated an impressive amount of
+research around two inter-related questions: namely, how to effectively restrict the set
+ofallowedwordpermutations?andhowtodetectthebestpermutationamongthem?
+Existing solutions to these problems range from heuristic constraints, based on
+word-to-worddistancesandcompletelyagnosticaboutthesentencecontent,tolinguis-
+tically motivated SMT frameworks where the entire translation process is guided by
+syntactic structure. The research in word reordering has advanced together with the
+core SMT research and has sometimes directed it, being one of the main motivation
+for the development of tree-based SMT. At the same time, the variety of word orders
+existing in the world languages has pressed the SMT community to admit the impor-
+tanceoflanguage-specificknowledgeandtoreassessitsambitionstowardsauniversal
+translationalgorithm.
+According to the Machine Translation Archive, a scientific interest in this specific
+subproblemofMTstartedaround2006andkeptgrowingatarapidpace.In2014,the
+research papers mainly dedicated to reordering accounted for no less than 10% of all
+1 Neverthelesslearningandunderstandinganewlanguagehasbeenshowntobemoredifficultwhenthe
+newlanguageisstructurallydistantfromone’snativelanguage(Corder1979).
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+SMTpapers.2Despitetheabundantresearch,wordorderdifferencesremainamongthe
+most important factors of performance in modern SMT systems, and new approaches
+toreorderingarestillproposedeveryyear.
+Toorientatethereaderinthiscomplexandproductiveresearcharea,wepresenta
+comprehensive survey of word reordering viewed as a statistical modeling challenge
+and as a natural language phenomenon. Our survey notably differs from previous
+(Costa-jussàandFonollosa2009)inthatwedonotonlyreviewtheexistingapproaches
+to word reordering in SMT, but we also question why some approaches are more
+successful than others in different language pairs. In particular, we argue that under-
+standing the complexity of reordering in a given language pair is key to selecting the
+rightSMTmodelsandtoimprovingthem.
+The survey is organized as follows: Section 2 explains how the word reordering
+problem is treated within different string-based and tree-based SMT frameworks, as
+well as a stand-alone task (i.e. pre- and post-ordering). The literature in advanced
+reorderingmodelingisextensivelyreviewed,withamajorfocusonrecentwork.Section
+3describesthechallengesofautomaticallyassessingwordreorderingaccuracyinSMT
+outputs. Section 4 presents a qualitative analysis of word reordering across language
+pairs. In particular, detailed word order profiles are provided for a sample of seven
+widely spoken languages representing structural and geographical diversity: namely
+English, German, French, Arabic, Turkish, Japanese and Chinese. The same section
+reviews empirical results from the SMT literature showing that the proposed word
+order profiles are useful to anticipate the reordering characteristics of a language pair
+andtoselecttheSMTframeworkthatbestsuitsthem.Thesurveyendswithadiscussion
+ofthestrengthsandweaknessesofthemajorapproachestoreorderinginSMT.
+2.ApproachestoWordReorderinginStatisticalMachineTranslation
+Afirstimportantdistinctionhastobemadebetweenwordreorderingperformedaspart
+of the decoding process (Sections 2.1 to 2.3) and word reordering performed before or
+afteritasamonolingualtaskdecoupledfromthebilingualtranslationtask(Section2.4).
+Within the former, we further distinguish between string-based (sequential) ap-
+proaches and tree-based (structural) approaches. String-based SMT (Sections 2.1 and
+2.2) treats translation as a sequential task: the target sentence is built from left to right
+while the input units are visited in different orders and no dependencies other than
+wordadjacencyareconsidered.Subsequently,problemdecompositionisappliedtothe
+target string: an optimal translation is sought for each prefix of the target translation,
+fromtheshortesttothelongest.Tree-basedSMT(Section2.3)positstheexistenceofa
+tree structure to explain translation as a hierarchical process and to capture dependen-
+cies among non-adjacent text units. Problem decomposition is therefore based on this
+structure:anoptimaltranslationissoughtforeachwordspancorrespondingtoanode
+inthetree,fromtheleavesuptotheroot.Whereasstring-basedSMThastosearchover
+all input permutations that do not violate some general reordering constraints, tree-
+based SMT considers only those permutations that result from transforming a given
+treerepresentingtheinputsentence(asforexamplepermutingeachnode’schildren).
+Moreover, we should note the difference between syntax-based SMT approaches
+thatutilizetreesproducedbymonolingualparserstrainedonsyntactictreebanks,and
+2 Peer-reviewedconferences,workshopsandjournalpaperslistedbytheMachineTranslationArchive:
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+data-driven tree-based SMT approaches that extract bilingual translation grammars
+directly from pairs of source and target sentences. In the former, word reordering is
+constrainedbyagivensyntacticparsetreeoftheinputsentenceorbythegrammarof
+thetargetlanguage(orboth),whereas,inthelatter,treestructurecaptureshierarchical
+reorderingpatternsthatmayormaynotcorrespondtosyntacticallymotivatedrules.
+Ingeneral,theSMTsearch(ordecoding)processconsistsinsearchingforthemost
+probabletarget(orEnglish)sentencee∗givenasource(orforeign)sentencef byscoring
+translationhypothesesthroughalinearcombinationoffeaturefunctions:
+(cid:34) R (cid:35)
+e∗ =argmaxmax exp λ h (f,e,b) (1)
+where b is a latent variable representing either a linear or a hierarchical mapping
+(alignment) between f and e, h (e,f,b) are R arbitrary feature functions and λ the
+corresponding feature weights. Feature functions try to capture relevant translation
+adequacyandwordreorderingaspectsfromalignedparalleldata,aswellastranslation
+fluencyaspectsfrommonolingualtargettexts.Moreover,featurefunctionsareassumed
+to be locally decomposable to allow for efficient decoding via dynamic programming.
+Feature weights are tuned discriminatively by directly optimizing translation quality3
+on a development set, using parameter tuning techniques such as MERT (Och 2003),
+MIRA(Chiang,Marton,andResnik2008)orPRO(HopkinsandMay2011).
+2.1Phrase-basedSMT
+Phrase-based SMT (PSMT) is the currently dominant approach in string-based SMT.
+PSMTruledouttheearlyword-basedSMTframework(Brownetal.1990,1993;Berger
+et al. 1996) thanks to two important novelties: the use of multi-word translation units
+(Och1999;Zens,Och,andNey2002;Koehn,Och,andMarcu2003),andthemovefrom
+agenerativetoadiscriminativemodelingframework(OchandNey2002).
+The search process (1) in PSMT is guided by the target string e, built from left to
+right,andthealignmentvariablebwhichembedsbothsegmentationandreorderingof
+thesourcephrases.Thisisdefinedas:
+1 1 1 2 2 I I
+such that K ,...,K are consecutive intervals partitioning the target word positions,
+andJ ,...,J arecorrespondingbutnotnecessarilyconsecutiveintervalspartitioning
+thesourcewordpositions.Aphrasesegmentationforourrunningexampleisshownin
+Figure2.
+The use of phrases mainly results in a better handling of ambiguous words and
+many-to-many word equivalences, but it also makes it possible to capture a consid-
+erable amount of local reordering phenomena within a translation unit (intra-phrase
+reordering). With reference to our running example (Figure 1), a PSMT model may
+handle the local reorderings as single phrase pairs — [AlEahl Almgrby]-[The Moroccan
+monarch]etc.—ifthesewereobservedinthetrainingdata.Onthecontrary,itisunlikely
+thatasinglelongphrasespanningfromjddtoAlsAdswasobserved,thereforethelong-
+rangereorderingoftheverbcouldbehandledbyinter-phrasereordering.
+3 AutomaticmeasuresoftranslationqualityarediscussedinSection3.
+jdd AlEAhl Almgrby Almlk mHmd AlsAds dEm -h l- m$rwE Alr}ys Alfrnsy!
+Bitshaez MzaoraonccdanF emdoenraicrcoh King MohameAd SVuI rrevneeywoefd Whiso rsdupRpoerot rtdo ethrein pgroijnecSt toaf ttihseti FcarelnMcha PchreisnideeTnrt!anslation
+[jdd] [AlEAhl Almgrby] [Almlk mHmd AlsAds] [dEm -h] [l- m$rwE] [Alr}ys Alfrnsy]
+3 1 2 4 5 6!
+[the Moroccan monarch] [King Mohamed VI] [renewed] [his support] [to the project of] [the French President]
+1 2 3 4 5 6!
+Figure2:Anexampleofwordalignmentandphrasesegmentationforthesentencepair
+presentedinFigure1.SubscriptindicesdenotethephrasealignmentbI.Notethatother
+phrase[jdsde] 3g [mAlEenAhtal Atilmongrsbya] 1r e [Aplmolsks mibHlmedg AivlseAndst] 2h e[dsEamm -he] 4w [l-o mrd$rwalEi]g5 n [Amlre}yns tA.lfrnsy] 6!
+[the Moroccan monarch] [King Mohamed VI] [renewed] [his support] [to the project of] [the French President]
+1 2 3 4 5 6!
+State-of-theartPSMTsystemstypicallyincludethefollowingcorefeaturefunctions:
+phrase- and word-level translation models; target n-gram language model; distortion
+penalty;plusadditionalcomponentsthatmodelspecifictranslationaspects.Assuming
+a one-to-one correspondence between source and target phrases, reordering in PSMT
+means searching through a set of permutations of the source phrases. Thus, two sub-
+problemsarise:definingthesetofpermutationsinballowedduringdecoding(reorder-
+ing constraints) and scoring the allowed permutations (reordering models or feature
+functions).Wewillnowdiscusseachofthemindetail.
+2.1.1 PSMT reordering constraints. Because searching over the space of all possible
+translations is NP-hard (Knight 1999), SMT decoders employ heuristic search algo-
+rithmstoonlyexploreapromisingsubsetofthesearchspace.Inparticular,limitingthe
+setofexplorableinputpermutationsisanessentialwaytoreducedecodingcomplexity.
+The reordering constraint originally included in the PSMT framework is called
+distortion limit (DL). This consists in allowing the decoder to jump, or skip, at most
+kwordsbetweenthelasttranslatedsourcephraseandthenextone,i.e.:
+i−1 i i i−1
+Setting a low distortion limit means only exploring local reorderings, based on the
+arguable assumption that languages tend to arrange sentence constituents in similar
+orders. Besides being essential for efficiency — DL allows for linear decoding com-
+plexity—,reorderingconstraintsarealsoimportantfortranslationqualitybecausethe
+existing SMT models are typically not discriminative enough to guide the search over
+very large sets of reordering hypotheses. However, reordering constraints have also
+severaldrawbacks.ForinstancetheverbreorderinginFigure2maynotbecapturedby
+aPSMTsystemthatappliesaDLofk=5orless,becausejumpingbackfromAlsAdsto
+jddcorrespondstoaskipof6positions.Whilethedistortionlimitisadefactostandard
+inmodernPSMTsystems,thefirstconstrainingparadigmswereformulatedearlierfor
+word-basedSMT(Bergeretal.1996;ZensandNey2003)andarecalledIBMconstraints.
+AdifferentkindofreorderingconstraintcanbederivedfromtheInversionTrans-
+duction Grammars (ITG) (Wu 1995, 1997). ITG constraints only admit permutations
+that are generated by recursively swapping pairs of adjacent blocks of words.4 In
+particular, ITG constraints disallow reorderings that generalize the patterns (3142)
+and(2413),whicharerarelyattestedinnaturallanguages(Wu1997).5 EnforcingITG
+constraints in left-to-right PSMT decoding requires the use of a shift-reduce permuta-
+tion parser (Zens 2008; Feng et al. 2010). Alternatively, a relaxed version of the ITG
+4 ForacomparativestudyoftheIBMandITGconstraints,wereferthereadertoZensandNey(2003).
+5 EmpiricalevidenceagainstthiswaspresentedbyWellington,Waxmonsky,andMelamed(2006).
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+constraints (i.e. Baxter permutations) may be enforced by simply inspecting the set
+of covered source positions, as proposed by Zens et al. (2004) and Zens (2008). Inter-
+estingly, Cherry, Moore, and Quirk (2012) found no consistent benefit from applying
+eitherexactorapproximateITG-constraintstoaPSMTsystemthatalreadyincludeda
+hierarchicalphraseorientationmodel6(GalleyandManning2008).
+The reordering constraints presented so far are not sensitive to the words being
+translatednortotheircontext.Thisresultsinaverycoarsedefinitionofthereordering
+searchspace,whichisproblematicinlanguagepairswithdifferentsyntacticstructures.
+To address this problem, Yahyaei and Monz (2009) propose to decouple local and
+globalreorderingbysegmentingtheinputsentenceintochunksthatcanbepermuted
+arbitrarily,buteachofwhichistranslatedmonotonically.Inarelatedwork,Yahyaeiand
+Monz(2010)presentatechniquetodynamicallysettheDLduringdecoding:theytrain
+a discriminative classifier to predict the most probable jump length after each input
+word, and use the predicted value as the DL after that position. Unfortunately, this
+method appears to generate inconsistent constraints leading to decoding dead-ends.
+Bisazza and Federico (2013a) further develop this idea so that only long reorderings
+predictedbyaspecificreorderingmodelareexploredbythedecoder.Thisformofearly
+reorderingpruningenablesthePSMTsystemtocapturelong-rangereorderingwithout
+hurtingefficiencyandisnotaffectedbytheconstraintinconsistencyproblem.
+When available, a parse tree of the input may also be used to constrain PSMT
+reordering following the principle of syntactic cohesion (Fox 2002). Concretely, the
+dependencycohesionconstraint(Cherry2008)statesthat,whenpartofasourcesubtree
+is translated, all words under the same subtree must be covered before moving to
+words outside of it. Integrated in phrase-based decoding as soft constraints — i.e.
+by using the number of violations as a feature function — dependency cohesion and
+its variants (Cherry 2008; Bach, Vogel, and Cherry 2009) were shown to significantly
+improvetranslationquality.Inarelatedwork,Feng,Sun,andNey(2012)derivesimilar
+cohesion constraints from the semantic role labeling structure of the input sentence.
+The divide-and-translate approach of Sudoh et al. (2010) employs source-side parse
+treestosegmentcomplexsentencesintosimpleclauseswhicharereplacedbyspecific
+symbolsandtranslatedindependently.Then,thetargetsentenceisreconstructedusing
+theplaceholders,withtheaimofsimplifyinglong-rangeclause-levelreordering.
+2.1.2PSMTreorderingfeaturefunctions.Targetlanguagemodelingistheprimaryway
+to reward promising reorderings during translation. This happens indirectly, through
+thescoringoftargetwordn-gramsthataregeneratedbytranslatingthesourcepositions
+in different orders. However, the fixed-size context of language models used in SMT
+(typically4or5words)makesthemlargelyinsensitivetoglobalreorderingphenomena.
+Inthelastyears,agrowinginterestforlanguagepairswithverydifferentwordorders,
+suchasArabic-EnglishandChinese-English,hasfavoredthedevelopmentofnewtech-
+niquestoexplicitlymodelthereorderingproblem.Givenasourcesentence,thesearch
+foritsoptimalreorderingisgenerallydecomposedintoasequenceoflocalreordering
+decisions,asisdoneforthewholetranslationprocess.Thus,thebasicreorderingstep
+corresponds to the relative positioning of the word, or phrase, being translated with
+respecttotheword,orphrase,thatwaspreviouslytranslated.
+Thesimplestexampleofreorderingfeaturefunctionisthedistortioncostordistor-
+tion penalty jump(J ,J ), which by convention assigns zero cost to hypotheses that
+6 Thereorderingmodelsmentionedhereinareexplainedindetailinthenextsubsection.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+Model Reorderingstep
+Reorderingmodels References Features
+type classification
+Phraseorientationmodels(POM):
+Example:P(orient=discontinuous-left|next-phrase-pair=[jdd]-[renewed])
+Tillmann2004;
+lexicalized(hierarchical) Koehn&al.2005; source/targetphrases
+gener.
+phraseorientationmodel Nagata&al.2006;
+Galley&Manning2008 monotonic,swap,
+phraseorientation discontinuous
+Zens&Ney2006 discr.
+maxentclassifier (leftorright) source/targetwords
+sparsephrase orwordclusters
+Cherry2013 discr.
+orientationfeatures
+Jumpmodels(JM):
+Example:P(jump=−5|from=AlsAds,to=jdd)
+inbound/outbound/pairwise Al-Onaizan&Papineni
+gener. jumplength sourcewords
+lexicalizeddistortion 2006
+inbound/outbound jumplengthbased sourcewords,POS,
+Green&al.2010 discr.
+length-binclassifier (9lengthbins) position;sent.length
+Sourcedecodingsequencemodels(SDSM):
+Example:P(next-word=jdd|prev-translated-words=AlEahilAlmlkmHmdAlsAds)
+sourcewords
+reorderedsourcen-gram Feng&al.2010a gener. —
+(9-gramcontext)
+Bisazza&Federico2013; sourcewords,POS;
+sourceword-after-word Goto&al.2013 discr. — sourcecontext’swords
+Operationsequencemodels(OSM):
+Example:P(next-operation=generate[jdd,renewed]|prev-operations=generate[AlsAds,VI] jumpBack[1])
+translation/reordering Durrani&al.2011; insertGap, source/targetwords,
+operationn-gram Durrani&al.2013; gener. jumpBack, POSorwordclusters;
+Durrani&al.2014 jumpForward prev.n–1operations
+Table 1: An overview of state-of-the-art reordering models for PSMT. Model type
+indicateswhetheramodelistrainedinagenerativeordiscriminativeway.Allexamples
+refertothesentencepairshowninFigure2.
+preserve the order of the source phrases (monotonic translations). During decoding,
+the basic implementation of distortion cost penalizes long jumps only when they are
+performed, leading to the proliferation of hypotheses with gaps (i.e. uncovered input
+positions). This issue can be addressed by incorporating into the distortion cost an
+estimateofthecostyettobeincurred(MooreandQuirk2007).
+State-of-the-artsystemsusethedistortioncostincombinationwithmoresophisti-
+catedreorderingmodelsthattakeintoaccounttheidentityofthereorderedphrasesand,
+optionally, various kinds of contextual information. A representative selection of such
+modelsissummarizedinTable1.Toeasethepresentation,wehavedividedthemodels
+into four groups according to their problem formulation: phrase orientation models,
+jumpmodels,sourcedecodingsequencemodelsandoperationsequencemodels.
+Phrase orientation models (POM) (Tillmann 2004; Koehn et al. 2005; Nagata et
+al. 2006; Zens and Ney 2006; Li et al. 2014), simply known as lexicalized reordering
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+models, predict whether the next translated source span should be immediately to
+theright(monotone),immediatelytotheleft(swap)oranywhereelse(discontinuous)
+relatively to the last translated one.7 For example, in Figure 2, the phrase pair [Almlk
+mHmd AlsAds]-[King Mohamed VI] has monotone orientation whereas [jdd]-[renewed]
+has discontinuous left orientation with respect to the previously translated phrase.
+Becauseoftheirsimplereorderingstepclassification,POMcanbeconditionedonvery
+fine-grained information, such as the whole phrase pair, without suffering too much
+fromdatasparseness.However,sincePOMignorethedistancebetweenconsecutively
+translatedphrases,theycannotproperlyhandlelong-rangereorderingphenomenaand
+aretypicallyusedwithalowdistortionlimit.
+Jump models (JM) (Al-Onaizan and Papineni 2006; Green, Galley, and Manning
+2010) predict the direction and length of the jump that is performed between con-
+secutively translated words or phrases, with the goal of better handling long-range
+reordering. Due to data sparseness, JM work best when trained in a discriminative
+fashionusingavarietyofbinaryfeatures(suchasthelasttranslatedword,itsPOStag
+andrelativepositioninthesentence)andwhenlengthbinsareusedinsteadoftheexact
+jumplength(Green,Galley,andManning2010).AdrawbackofJMisthattheytypically
+over-penalizelongjumpsbecausetheyaremorerarelyobservedthanshortjumps.
+Sourcedecodingsequencemodels(SDSM)addressthesaidissuebydirectlymod-
+eling the reordered sequence of input words, as opposed to the reordering operations
+that generated it. This in turn can be done in several ways, such as: training n-gram
+modelsontarget-likereorderedsourcesentencesandusingthemtoscorethesequence
+ofinputwordsvisitedbythedecoder(Feng,Mauser,andNey2010);taggingthewhole
+inputsentencewithsymbolsdenotinghoweachwordshouldbereorderedwithrespect
+toitsleftandrightcontext,thenrewardingthedecodingpathsthatmostagreewiththe
+tagsequence(Feng,Peter,andNey2013);andfinally,predictingwhichinputpositionis
+likelytobetranslatedrightafteragiveninputpositionbymeansofamaximumentropy
+modelusingwordandcontextfeatures(BisazzaandFederico2013a;Gotoetal.2013).
+Operationsequencemodels(OSM)(Durrani,Schmid,andFraser2011)aren-gram
+modelsthatincludelexicaltranslationoperationsandreorderingoperations(insertGap,
+jumpBack or jumpForward) in a single generative story, thereby combining elements
+fromthepreviousthreemodelfamilies.Anoperationsequenceexampleisprovidedin
+the lower part of Table 1. OSM are closely related to n-gram based SMT models (see
+nextsection)buthavebeensuccessfullyappliedasfeaturefunctionstoPSMT(Durrani
+etal.2013).Toovercomedatasparseness,OSMcanbesuccessfullyappliedtoPOS-tags
+andunsupervisedwordclusters(Durranietal.2014).
+SDSMandOSMhavebeenprovenoptimalforlanguagepairswherehighdistortion
+limitsarerequiredtocapturelong-rangereorderingphenomena(Durrani,Schmid,and
+Fraser2011;BisazzaandFederico2013b;Gotoetal.2013).NeverthelessPOMremains
+themostwidelyusedtypeofphrase-basedreorderingmodelandisconsideredanec-
+essary component of PSMT baselines in any language pair. In particular, two variants
+ofPOMdeservefurtherattentionbecauseoftheirnotableeffectontranslationquality:
+hierarchicalPOMandsparsephraseorientationfeatures.
+Hierarchicalphraseorientationmodels,orsimplyhierarchicalreorderingmodels
+(HRM)(GalleyandManning2008)improvethewayinwhichtheorientationofanew
+phrase pair is determined: already translated adjacent blocks are merged together to
+7 Somephraseorientationmodelsfurtherdistinguishbetweendiscontinuousleftanddiscontinuousright.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+standard: discontinuous!
+hierarchical: swap
+!
+[jdd] [AlEAhl Almgrby] [Almlk mHmd AlsAds] [dEm -h] …
+3 1 2 4 !
+[the Moroccan monarch] [King Mohamed VI] [renewed] [his support] …
+1 2 3 4 !
+Figure 3: Phrase orientation example for the phrase pair [jdd]-[renewed]: the standard
+modeldetectsadiscontinuousorientationwithrespecttothelasttranslatedphrase(2)
+whereasthehiera[rjdcdh]ic a[AllmEAohdl eAllmdgertbeyc]ts [aAslmwlka pmHwmitdh ArlessApdesc]t t[doEtmhe -hb]lo c[lk- mo$frpwhEr]a s [eAslr(}1ys-2 A).lfrnsy]
+3 1 2 4 5 6!
+[the Moroccan monarch] [King Mohamed VI] [renewed] [his support] [to the project of] [the French President]
+1 2 3 4 5 6!
+form longer phrases around the current one. For instance in Figure 3, HRM merges
+phrases1and2intoalargephrasepair[AlEahl...AlsAds]-[The...VI]andconsequently
+assignsaswap,insteadofdiscontinuousorientation,to[jdd]-[renewed].Asaresult,ori-
+entationassignmentsbecomemoreconsistentacrosshypotheseswithdifferentphrase
+segmentations.
+Ratherthantrainingareorderingmodelbyrelativefrequencyormaximumentropy
+and using its score as one dense feature function, Cherry (2013) introduces sparse
+phraseorientationfeaturesthataredirectlyaddedtothemodelscoreduringdecoding
+(cf. equation (1)) and optimized jointly with all other SMT feature weights. Effective
+sparsereorderingfeaturescanbeobtainedbysimplycouplingaphrasepair’sorienta-
+tionwiththefirstorlastword(orwordclass)ofitssourceandtargetside(Cherry2013),
+orevenwiththewholephrasepairidentity(Auli,Galley,andGao2014).
+2.2N-grambasedSMT
+N-gram based SMT (Casacuberta and Vidal 2004; Mariño et al. 2006) is a string-based
+alternative to PSMT. In this framework, smoothed n-gram models are learnt over se-
+quences of minimal translation units (called tuples), which, like phrase pairs, are pairs
+ofwordsequencesextractedfromword-alignedparallelsentences.Tuples,however,are
+typicallyshorterthanphrasepairsandareextractedfromaunique,monotonicsegmenta-
+tionofthesentencepair.Thus,theproblemofspuriousphrasesegmentationisavoided
+but non-local reordering becomes an issue. For instance, in Figure 2, a monotonic
+phrasesegmentationcouldbeachievedonlybytreatingthelargeblock[jdd...AlsAds]-
+[The ... renewed] as a single tuple. Reordering is then addressed by ‘tuple unfolding’
+(Crego,Mariño,anddeGispert2005):thatis,duringtrainingthesourcewordsofeach
+translationunitarerearrangedinatarget-likeordersothatmore,shortertuplescanbe
+extracted.Attesttime,inputsentenceshavetobepre-orderedfortranslation.Tothisend,
+CregoandMariño(2006)proposetoprecomputeanumberoflikelypermutationsofthe
+input using POS-based rewrite rules learned during tuple unfolding. The reorderings
+thusobtainedareusedtoextendthesearchgraphofamonotonicdecoder.8Reordering
+isoftenconsideredasashortcomingofn-grambasedSMTasreorderingdecisionsare
+largelydecoupledfromdecodingandmostlybasedonsource-sideinformation.
+8 Morepre-orderingtechniqueswillbediscussedinSection2.4.
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+2.3Tree-basedSMT
+The SMT frameworks discussed so far learn direct correspondences between source
+andtargetwordsorphrases,treatingreorderingasasequentialprocess.Thisflatrepre-
+sentationisfairlysuccessfulforsomelanguagepairshowever,inothers,reorderingis
+morenaturallydescribedasahierarchicalprocesswheresmall,locallyreorderedblocks
+becometheelementsofrecursivelylargerreorderedblocks.Concretely,inourrunning
+example(Figure2),ahierarchicalortree-basedapproachwouldmakeitpossibleto:first
+translateandreordersmallblockssuchas[AlEahlAlmgrby]and[AlmlkmHmdAlsAds],
+thenmergethemtocomposealargerblockthatgetsreorderedasawholewithrespectto
+theverbjdd,andsoforth.Thedegreeofgeneralizationateachlevelwouldthendepend
+onhowblocksarerepresented:e.g.bytheirlexicalcontent,byatagdenotingtheblock’s
+syntacticcategory,orbyagenericsymbol.
+Tree-based approaches are largely inspired by syntactic parsing, but not all in the
+sameway:somemodeltranslationasthetransformationoftreesproducedbymonolin-
+gualparserstrainedonsyntactictreebanks(Section2.3.1),whileothersextractabilin-
+gual translation grammar directly from word-aligned parallel text without using any
+syntacticinformation(Section2.3.2).Non-syntacticbilingualtranslationgrammarsmay
+stillbeenrichedwithsyntacticinformation,forinstanceintheformofsoftconstraints
+(Section2.3.3).
+All tree-based frameworks crucially differ from PSMT and other string-based
+frameworkswithrespecttoreordering:WhereasPSMTconsidersallinputpermutations
+that do not violate general reordering constraints and then scores them with separate
+reordering models, tree-based systems model reordering jointly with translation and,
+duringdecoding,only(ormostly)exploreinputpermutationsthatarelicensedbythe
+learnttranslationmodel.
+Most modern tree-based approaches fall under the general formulation of SMT
+which scores translation hypotheses by a linear combination of feature functions (see
+equation (1)), with a translation model (or grammar) and a target language model as
+core features. Tree-based decoding is usually performed by a chart parsing algorithm
+with beam search and integrated target language model. Hence, the target sentence is
+not produced from left to right as in string-based SMT, but bottom-up according to a
+treederivationorder.
+2.3.1 Syntax-based SMT. An important motivation for using syntax in SMT is that
+reorderingamongnaturallanguagesveryofteninvolvethepermutationofwholesyn-
+tacticconstituents(seee.g.Fox(2002)).Forinstance,inourrunningexample(Figure2),
+knowing the span of the Arabic subject would be enough to predict the reordering of
+theverbfortranslationintoEnglish.
+Syntax-basedSMTencompassesavarietyofframeworksthatusesyntacticannota-
+tion either on the source or on the target language, or to both. So-called tree-to-string
+methods(Huang,Knight,andJoshi2006;Liu,Liu,andLin2006)useagiveninputsen-
+tenceparsetreetoresricttheapplicationoftranslation/reorderingrulestowordspans
+thatcoincidewithsyntacticconstituentsofspecificcategories.Forinstance,theswapof
+Alr}ysAlfrnsymayonlybedictatedbyaruleapplyingtonounphrasescomposedofa
+nounandanadjective.Ontheotherhand,string-to-treemethods(YamadaandKnight
+2002;Galleyetal.2004;Marcuetal.2006;Shen,Xu,andWeischedel2010)employsyntax
+asawaytorestricttranslationhypothesestowell-formedtargetlanguagesentences—
+ruling out, for instance, a translation that fails to reorder the translated verb renewed
+with respect to its subject. Using syntax on both source and target sides (tree-to-tree)
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+VBD NN JJ NN NNP JJ-NUM NN PRP IN NN NN JJ !
+jdd AlEAhl Almgrby Almlk mHmd AlsAds dEm -h l- m$rwE Alr}ys Alfrnsy!
+the Moroccan monarch King Mohamed VI renewed his support to the project of the French President!
+Treelet pairs:!
+AlEAhl & AlEAhl Almgrby & jdd AlEAhl & jdd AlEAhl Almgrby & jdd dEm&
+monarch& Moroccan monarch& monarch renewed& Moroccan monarch renewed& renewed support&
+Order templates:!
+VBD 1 NN 2 NN 3& ! &2 1 3& NN 1 JJ 2 NN 3& ! &2 1 3& NN 1 NNP 2 JJ-NUM 3& ! &1 2 3&
+Figure4: Examplesoftreeletpairsandordertemplatesextractedfromaword-aligned
+sentencepairanditssource-sidedependencyparsetree.Theprojectedtreeforthewhole
+targetsentenceisnotshownduetospacelimitations.
+(Imamura, Okuma, and Sumita 2005; Ding and Palmer 2005; Smith and Eisner 2006;
+Watanabe, Tsukada, and Isozaki 2006; Zhang et al. 2008) has proven rather difficult in
+practiceduetothecomplexityofaligningpotentiallyverydifferenttreetopologiesand
+to the large size of the resulting translation grammars. Moreover, the need for high-
+qualityparsersinbothlanguagesidesseriouslylimitstheapplicabilityofthisapproach.
+Syntax-basedSMTapproachesalsodifferintheformalismtheyusetorepresentthe
+trees.Thosebasedonphrasestructure(constituency)grammarstypicallycomplytothe
+principle that each translation/reordering rule should match a complete constituent,
+while those based on dependency grammars opt for a more flexible use of structure.
+Forexample,instring-to-dependencySMT(Shen,Xu,andWeischedel2010)rulescan
+correspond to partial constituents but must be either a single rooted tree, with each
+child being a complete sub-tree, or a sequence of siblings, each being a complete sub-
+tree. Partial dependency rules are then combined during decoding, which means that
+notallreorderingdecisionsaregovernedbythetranslationmodel.
+An even more flexible use of structure is advocated by the treelet-based SMT
+framework(Quirk,Menezes,andCherry2005),wheretranslationrulescancorrespond
+to any connected subgraph of the dependency tree (i.e. treelet). As illustrated by Fig-
+ure4,treeletpairsareextractedfrompairsofsourcedependencyparsetreeandtarget-
+sideprojectedtree.Treeletscanbeseenasphrasesthatarenotlimitedtosetsofadjacent
+words, but rather to sets of words that are connected by dependency relations, which
+inturnmakesitpossibletolearnnon-localreorderingpatterns.Asreorderingdecisions
+are only partially governed by the translation model, treelet-based SMT benefits from
+additional model components specifically dedicated to reordering. For example, in
+Figure 4, treelet pair (3) determines the swapping of jdd and AlEAhl but does not
+specify the ordering of dEm which is also a child of jdd. Hence, during decoding, all
+possiblereorderingsoftheunmatchedchildrenareconsideredandscoredbyaseparate
+discriminativemodelpredictingthepositionofachildnode(ormodifierm)relativeto
+itsheadh,givenlexical,POSandpositionalfeaturesofmandh.Reorderingmodeling
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+Hierarchical rules:! Regular phrase translation rules:!
+(1) X ! jdd X || X renewed ! (7) X ! Almgrby || Moroccan!
+(2) X ! AlEAhl X Almlk X || the X monarch King X ! (8) X ! mHmd AlsAds || Mohamed VI!
+(3) X ! X -h || his X! S! (9) X ! dEm || support!
+(4) X ! l- m$rwE X || to the project of the X ! S! (10) X ! Alr}ys Alfrnsy || French President!
+Glue rules:! S!
+(5) S ! S X || S X ! X!
+(6) S ! X || X ! X! X! X!
+jdd AlEAhl Almgrby Almlk mHmd AlsAds dEm -h l- m$rwE Alr}ys Alfrnsy!
+the Moroccan monarch King Mohamed VI renewed his support to the project of the French President!
+Figure5: Possiblederivationofaword-alignedsentencepairandcorrespondinghier-
+archicalphrase-basedtranslationgrammar.Thetarget-sidetreeisnotrepresenteddue
+tospacelimitations.
+is thus largely decoupled from lexical selection, which makes the model very flexible
+but results in a very large search space and high risk of search errors. To address this
+issue, Menezes and Quirk (2007) introduce another mechanism to complement treelet
+reordering:namely,dependencyordertemplates.Anordertemplateisanunlexicalized
+rule specifying the reordering of a node and all its children based on their POS tags.
+Forinstance,inFigure4,treeletpair(3)maybecombinedwithtemplate(a)tospecify
+theorderofthechilddEm.Foreachnewtestsentence,matchingtreeletpairsandorder
+templatesarecombinedtoconstructlexicalizedtranslationrulesforthatsentenceand,
+finally,decodingisperformedwithachartparsingalgorithm.
+WewillnowdiscussSMTframeworksthatmodeltranslationasaprocessofparallel
+parsingofthesourceandtargetlanguageviaasynchronousgrammar.
+2.3.2Tree-basedSMTwithoutsyntax.Theideaofextractingbilingualtranslation(i.e.
+synchronous) grammars directly from word-aligned parallel data originates in early
+workonInversionTransductionGrammars(ITG)byWu(1996,1997).
+In a more mature approach, hierarchical phrase-based SMT (HSMT) (Chiang
+2005),thetranslationmodelisaprobabilisticsynchronouscontext-freegrammar(SCFG)
+whose rules can correspond to arbitrary (i.e. non syntactically motivated) phrases la-
+beledbyonlytwogenericnon-terminalsymbols(XorS).AsshowninFigure5,HSMT
+translation rules can either include: a mix of terminals and non-terminals capturing
+reordering patterns and discontinuities (rules 1-4) or only terminals (7-10) basically
+correspondingtophrasepairsinstring-basedPSMT.Finally,theso-calledgluerules(5-
+6)arealwaysaddedtothegrammartocombinetranslatedblocksinamonotonefashion
+regardless of their content. As in PSMT, extracted translation rules may not exceed
+a certain length and rule scores are obtained using maximum likelihood estimation.
+Crucially, swapping adjacent phrases with no lexical evidence (X → X1X2 ||X2X1 ) is not
+allowed by standard HSMT grammars, therefore reordering can only be triggered by
+atleastpartiallylexicalizedtranslationrules.Thisisamajordifferencewithrespectto
+most syntax-based approaches where reordering can be captured by rules containing
+only labeled non-terminals (e.g. S → NP VP || VP NP). This means that, for instance,
+the reordering pattern learnt by our example HSMT grammar (Figure 5, rule 1) may
+Hiero&with&shallow&grammars:&
+Shallow(1,!K1!=&1,&K2!=&3!&
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+Regular phrase translation rules:!
+(1) X0 ! AlEAhl Almgrby || the Moroccan monarch!
+(2) X0 ! Almlk || King !
+(3) X0 ! mHmd AlsAds || Mohamed VI! S!
+(4) X0 ! dEm || support!
+S!
+Monotonic block rules: !
+X1!
+(5) M2 ! X0 X0 || X0 X0 !
+1 2 1 2 M3!
+(6) M3 ! X0 M2 || X0 M2 M2! X1!
+!
+Hierarchical rules:! X0! X0! X0! X0!
+(7) X1 ! jdd M3 || M3 renewed !
+jdd AlEAhl Almgrby Almlk mHmd AlsAds dEm -h !
+(8) X1 ! X0 -h || his X0!
+Glue rules:!
+(9) S ! S X1 || S X1 ! the Moroccan monarch King Mohamed VI renewed his support!
+(10) S ! X1 || X1
+!
+Figure 6: Example of shallow-1 HSMT grammar with monotonic non-terminals Mk.
+Thetarget-sidetreeisnotrepresentedduetospacelimitations.
+onlybeusedtoreorderthespecificverbformjdd(renewed)insubsequenttestsentences.
+Thus,HSMTislikelytoworkbetterforlanguageswherethesyntacticroleofphrasesis
+mostly expressed by separate function words (e.g. Chinese) than for languages where
+thisinformationislargelyconveyedbywordinflection(e.g.Russian).
+While hierarchical models are inherently capable of dealing with complex and
+recursivereorderingpatterns,inpracticemanytranslationrulesarenoisyorbasedon
+limited context. To limit search complexity, a constraint is imposed on the maximum
+numberofsourcewordsthatmaybecoveredbyanon-terminalsymbolduringdecod-
+ing(spanconstraint).Thisparameteristypicallysetto10or15wordsaswiderspans
+result in prohibitively slow decoding and lower translation quality. For these reasons,
+anumberofextensionstotheoriginalHSMTframeworkhavebeenproposedwiththe
+specificgoalofbetterhandlingcomplexreorderingphenomena.
+Shallow-n grammars (de Gispert et al. 2010) can be used to refine the reordering
+space of HSMT according to the reordering characteristics of a specific language pair.
+Forinstance,asshowninFigure6,anArabic-EnglishHSMTgrammarisextendedwith
+anadditionalnon-terminalsymbolX0thatcanonlygeneratefullylexicalizedphrases,
+thereby disallowing recursive nesting of hierarchical rules (shallow-1 grammar). To
+accountforthemovementoflargewordblocks,othernewnon-terminalsMk allowfor
+themonotonicgenerationofknon-terminalsX0.Whiledefiningamuchsmallersearch
+space than the original HSMT grammar, the resulting shallow grammar can capture
+the long-range reordering of our running example even in the likely absence of a rule
+coveringthewholesubjectspan(thatisrule2inFigure5).
+Inarelatedworkspecificallyaddressingtheissueoflong-rangereordering,Braune,
+Gojun,andFraser(2012)proposetorelaxthespanconstraintonlyforspecifictypesof
+hierarchicalruleswhicharemorelikelytocapturelongreorderingpatternsinGerman-
+English.Forinstance,ruleswhosesourcesidestartswithatleastoneterminalfollowed
+byonenon-terminalandendswithatleastoneterminal(t+ Xt+)cancapturethepattern
+‘finite-auxiliary-verbXparticiple’(e.g.istXgestiegen/hasincreasedX)withverywideX
+spans.
+MylonakisandSima’an(2010)separatethemodelingoflocalreordering(captured
+by fully lexicalized phrase-pair emission rules) from the modeling of higher-order
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+recursive reordering (captured by ITG-style non-lexicalized binary rules). Instead of a
+singlenon-terminalX,threedifferentreordering-basedlabelsareusedaccordingtothe
+reorderingpatterninwhichtheyparticipate:Xformonotonicrules;XSLandXSRforthe
+firstandsecondsymbol,respectively,ofswappingrules.Thusreorderingdecisionsare
+conditioned on the phrase pair’s content, rather than its lexical context as in HSMT.
+More fine-grained non-terminals are introduced by Maillette de Buy Wenniger and
+Sima’an (2014) to also capture the relation of a phrase pair’s reordering with respect
+totheparentphrasethatcontainsit.
+Ratherthanrelabelingnon-terminals,otherworkincorporatesreordering-specific
+models as additional feature functions. He, Meng, and Yu (2010) add to their HSMT
+grammar the generic phrase swapping rule (X → X1X2 ||X2X1 ) and use a maximum-
+entropy classifier to predict whether two neighboring phrases should be swapped or
+not during decoding. Rather than conditioning the decision on the whole phrase pair,
+theclassifieremploysfeaturesextractedfromit,suchasfirstandlastword(orPOStag)
+of the source and target side. A similar model was first developed by Xiong, Liu, and
+Lin(2006)forsimplerphrasetranslationmodels(i.e.withoutdiscontinuities)basedon
+ITG. Li, Liu, and Sun (2013) use recursive autoencoders (Socher et al. 2011) to assign
+vector representations to the neighboring phrases given as input to the ITG classifier,
+thereby avoiding manual feature engineering but affecting hypothesis recombination
+and decoding speed. Nguyen and Vogel (2013) and Huck et al. (2013) successfully
+integrate the distortion cost feature function and phrase orientation models initially
+designedforstring-basedPSMTintoachart-basedHSMTdecoder.
+Finally,Setiawan,Kan,andLi(2007)observethat,inlanguageslikeChineseandEn-
+glish,functionwordsprovideimportantcluesonthegrammaticalrelationshipsamong
+phrases.Consequently,theyintroduceaSCFGwherefunctionwords(approximatedby
+high-frequency words) are the only lexicalized non-terminals guiding phrase reorder-
+ing.Basedonthesameintuition,Setiawanetal.(2009)augmentaHSMTsystemwitha
+function-wordorderingmodelthatpredicts,foranypairoftranslationrules,whichone
+should dominate the other in the hierarchical structure, based on the function words
+thattheycontain.9
+2.3.3Tree-basedSMTwithsoftsyntacticconstraints.WehavediscussedSMTframe-
+workswherethetranslationmodelisfullybasedonthesyntacticparsetreeofthesource
+ortargetsentence(Section2.3.1)orwheresyntaxisnotusedatall(Section2.3.2).Athird
+lineofworkbridgesbetweenthesetwobyexploitingsyntacticinformationintheform
+of soft constraints while operating with a synchronous translation grammar extracted
+fromnon-parsedparalleldata.
+Chiang(2005)firstexperimentedwithafeaturefunctionrewardingtranslationrules
+appliedtofullsyntacticconstituents(constituentfeature).Whilethisinitialattemptdid
+notappeartoimprovetranslationquality,MartonandResnik(2008)furtherelaborated
+the idea and proposed a series of finer-grained features distinguishing among con-
+stituenttypes(VP, NP,etc.),eventuallyleadingtobetterperformance.Gao,Koehn,and
+Birch (2011) extract two reordering-related feature functions from source dependency
+parsetrees:(i)Thedependencyorientationmodelpredictswhethertherelativeorder
+ofasourcewordanditsheadshouldbereversedduringtranslation.Thisistrainedas
+9 Twoothermodelsutilizingfunctionwordsastheanchorsofglobalreorderingdecisionsareproposedin
+(Setiawanetal.2013)and(Setiawan,Zhou,andXiang2013).Althoughintegratedinasyntax-based
+system(Shen,Xu,andWeischedel2010),thesemodelsareinprincipleapplicabletootherSMT
+frameworkssuchasHSMT.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+a maximum-entropy classifier using the words and their dependency relation type as
+features.(ii)Thedependencycohesionpenaltyfireswheneverawordanditsheadare
+translated separately (i.e. by different translation rules) thereby measuring derivation
+well-formedness. Since long-range reordering tends to happen closer to the root and
+localreorderingclosertotheleaves,adistinctionismadebetweenwordsoccurringat
+different depths of the dependency tree leading to a number of sub-features. In this
+way,thetuningprocesscandecidehowimportantorreliablearefeaturescorescoming
+fromdifferentlevelsoftheparsetree.Huang,Devlin,andZbib(2013)workedinstead
+with constituency parses and trained a classifier to predict whether the order of any
+two sibling constituents in the input tree should be reversed or maintained during
+translation.Theclassifieristrainedbymaximum-entropyusinganumberofsyntactic
+featuresandusedduringdecodingatthewordlevel:thatis,eachpairofinputwords
+inherittheorientationprobabilitiesoftheconstituentsthatcoverthemrespectively.
+Syntacticannotationhasbeenalsousedtorefinenon-terminalSCFGlabels,poten-
+tiallyleadingtobetterreorderingchoices.In(ZollmannandVenugopal2006)and(My-
+lonakisandSima’an2011),labelsindicatewhetheraphrasecorrespondstoasyntactic
+constituentortopartofit,aswellastheconstituenttype,relativelytoatargetorsource
+parse tree, respectively. Moreover, Mylonakis and Sima’an (2011) treat the phrase-pair
+category as a latent variable and let their system learn reordering distributions over
+multiple labels per span (e.g. generic X or source-syntax based like NP, VBZ+DT, etc.).
+Lietal.(2012)usesourcedependencyannotationtorefinenon-terminalsymbolswith
+syntactic head information. More specifically, given a hierarchical phrase, its type is
+obtainedbyconcatenatingthePOStagsoftheexposedheadsitcontainsonthesource
+side,whereanexposedheadisaworddominatedbyawordoutsidethephrase.Like
+He,Meng,andYu(2010),Lietal.(2012)alsoallowadjacentphrasestoswapbutinstead
+of introducing a separate orientation model, they rely on rule translation probabilities
+basedontherefinednon-terminalstoguidereordering.
+2.4WordReorderingasPre-(orPost-)Processing
+Given the complexity of solving word reordering during the decoding process, a pro-
+ductivelineofresearchhasfocusedondecouplingreorderingdecisionsfromtranslation
+decisions.Theseapproachesaimatarrangingwordsinatarget-likeordereitheronthe
+input, before translating, or on the output, after translating. Thus, word reordering is
+solved as pre- or post-processing (i.e. pre-ordering or post-ordering) in a monolingual
+fashionandwithunconstrainedaccesstothewholesentencecontext.Figure7(Sudoh
+etal.2011)illustratestheworkflowsofpre-andpost-orderingapproachesasopposed
+tostandardSMT.
+2.4.1Mainpre-orderingstrategies.Alargenumberofpre-orderingstrategieshasbeen
+proposed.Asafirstclassification,wedividethemintodeterministic,non-deterministic
+and hybrid. Deterministic pre-ordering aims at finding a single optimal permutation
+of the input sentence, which is then translated monotonically or with a low distortion
+limit(NießenandNey2001;XiaandMcCord2004;Collins,Koehn,andKucerova2005;
+Popovic´andNey2006;Costa-jussàandFonollosa2006;Wang,Collins,andKoehn2007;
+Habash2007;Lietal.2007;TrombleandEisner2009;Xuetal.2009;Genzel2010;Isozaki
+et al. 2010b; Yeniterzi and Oflazer 2010; Khalilov and Fonollosa 2011; Khalilov and
+Sima’an2011;Visweswariahetal.2011;GojunandFraser2012;Yangetal.2012;Lerner
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+that of English parse trees into Japanese word order (c1)
+monotone translation
+canbeimplementedbyasimpleruleofmovingsyn- [Source language] in source word order [Source-ordered target]
+tactic heads (Isozaki et al., 2010). This implies an- Words : source Words : target
+Word order : source Word order : source
+other question; can we utilize a pre-reordering tech-
+nique in the opposite direction? If it is feasible, we (b1) (c2)
+(a) standard
+pre-ordering post-ordering
+can easily reverse the translation direction in which translation
+the pre-ordering approach successfully works.
+[Target-ordered source] [Target language]
+This paper proposes a novel approach for this
+Words : source Words : target
+problem, which we call post-ordering. As the name Word order : target monotone translation Word order : target
+in target word order
+implies, it first translates source language sentences
+Figure7:Typicalworkflowsofstandard,pre-orderingandpost-orderingapproachesto
+into source-ordered target language sentences and Figure 1: A typical work flow in a standard translation,
+SMT.TakenfromSudohetal.(2011).
+pre-orderingandpost-orderingapproach.
+then reorders these words to correct target lan-
+guage word order. Figure 1 illustrates the differ-
+ences among: (a) a standard translation a d n i d re P c e t t i r o o n v 2013; Jehl et al. 2014).10 Non-deterministic pre-ordering encodes multiple
+the opposite direction by placing Japanese syntac-
+from the source language to the target alaltnegrnuaatgivee,reorderingsintoawordlatticeandletsamonotonic(usuallyn-grambased)
+tic heads in the middle is not a trivial problem.
+(b) the pre-ordering approach, and (c) dtheceodpeorscth-oosethebestpathaccordingtoitsmodels(Zens,Och,andNey2002;Kanthak
+et al. 2005; CreWgoeanudtilMizaeriñthoe20H06e;aZdh-aFnign,aZlieznast,ioanndrNuleeys20to07;gReontetmr-ann and Vogel
+ordering approach. As shown in Figure 1, the pre-
+2007; Crego anadteHainbtaesrhm2e0d0i8a;tEelmhienagda-findnaHliazbeadshE2n0g09li;sNhiesheunetsenacnedsKolss 2009). A
+and post-ordering are very similar methodologies.
+hybrid approach is adopted by Bisazza and Federico (2010), Andreas, Habash, and
+called Head-Final English (HFE) and decompose
+Their monotone translation parts are almRoasmtbiodwen(-2011): rules are used to generate multiple likely pre-orderings, but only for
+Japanese-to-English translation into 1) Japanese-
+specific language phenomena that are responsible for difficult (long-range) reordering
+tical, except their targeting word order. The post-
+patterns. The stpoa-HrseFEreotrrdaenrsinlagtiloatnticeasndpro2d)ucHedFEby-toth-eEsnegtleicshhniqpuoesst-are then trans-
+ordering process is the problem of reordering dif-
+latedbyadecoodredrepreirnfgor.minWgeadadcihtiioenvaeldphsriagsne-ibfiacsaendtreiomrdperroinvge.mInenatfsollow-upwork,
+ferently ordered sentence in the correctBwisoarzdzaoarn-d Federico (2012) introduce another way to encode multiple pre-orderings
+from baseline (phrase-based, hierarchical phrase-
+der. This is the inverse problem of the preo-fortdheeriinnpgut: instead of generating a word lattice, pre-computed permutations are
+based, and string-to-tree) translation methods by
+representedbyamodifieddistortionmatrixsothatlowerdistortioncostsor‘shortcuts’
+that changes word order of correctly ordered sen-
+arepermittedb1e.t5w6e,e0n.s7e6le,catenddp2a.i7rs7ofpionipnutstpinosiBtiLonEsU. , respectively,
+tences. We solve this inverse problem as a SMT
+Pre-orderiningtmheethexodpserciamneanlstoobfepcaltaesnsitfiterdanbsylatthioenk.ind of pre-ordering rules that
+problem. Once we have bitexts of source and tar-
+they apply: that iTs,hmearneumalalyinwderirttoenf bthaissedpaopnelrinigsuoisrtgicaknnizoewdleadsgef,ool-r automatically
+get language and the pre-ordering rules or models
+learnedfromdata.Wenowdiscusseachofthemindetail.
+lows. Section2brieflyreviewsrelatedstudiesonthe
+for target-to-source translation, we can easily gen-
+2.4.2Linguisticrekonrodwerliendggepbroasbeldemprea-nodrdaenriontgh.eInr trheelaseteadppterocahcnhoelso,gmyanuallywritten
+erate source-ordered target language sentences. We
+rulesdeterminethetransformationofinputsyntaxtrees(Collins,Koehn,andKucerova
+called post-editing. Section 3 presents the proposed
+then use these source-ordered target sente2n00c5e;sWanandg, Collins, and Koehn 2007; Xu et al. 2009; Isozaki et al. 2010b; Yeniterzi
+method in detail taking Japanese-to-English transla-
+the target language portion of the bitexts toantrdaiOnfltahzeer 2010; Gojun and Fraser 2012; Andreas, Habash, and Rambow 2011) or
+the permutatiotnioonfasshaaltloewstcsyasneta.cStiecccthiounnk4srienpoarstesnoteunrceex(pHearirmdmeneitesr, Bisazza, and
+SMT models for “source-ordered target” to “correct
+Federico2010;aDnudrgdairsEclu-KssaehslotuhteanredsOulfltas.zerS2e0c1t0io;Bnis5azczoan,Pcliguhdiens,atnhdisFederico2012).
+target” translation. This post-ordering approach has
+Inanearlyexampleofsyntax-basedpre-ordering,Collins,Koehn,andKucerova(2005)
+paper with our prospects for future work.
+an advantage on saving the effort to devperloopposneeawset of six rules aimed at arranging German sentences in English-like order.
+pre-orderingrulesandmodelsbyutilizingTghoeodruplerse-addressthepositionofverbs,verbparticlesandnegationparticles,andthey
+2 Related Work
+areappliedtoconstituencyparsetrees.Followingasimilarapproach,GojunandFraser
+ordering in the opposite direction. Note that it can
+(2012)developasetofrulesfortheoppositetranslationdirection(English-to-German).
+beusedinanylanguagepairsinwhichwehavepre- Reordering is a both theoretically and practically
+ordering techniques in the opposite direction. challenging problem in SMT. In the early period
+10 Lietal.(2007)experimentwithasmallnumberofn-bestpre-orderingsgivenasalternativeinputstothe
+We focus on Japanese-to-English translation in of SMT studies, reordering is modeled by distance-
+SMTsystem.
+this paper, since this remains a challenging trans- basedconstraintsintranslationmodel(Brownetal.,
+lation pair for SMT. In case of opposite direc- 1993; Koehn et al., 2003). This reordering model
+tion, English-to-Japanese, Isozaki et al. (2010) pro- is easy to compute and also works well in rela-
+posed simple but effective English reordering rules tively similar language pair like French-to-English.
+calledHead-Finalizationthatmovessyntacticheads The distance-based reordering constraint is not rea-
+toward the end of their siblings. This Head- sonable in some language pair such as English-to-
+Finalization rule matches the head-final word order- Japanese, because they have very different word
+ing of Japanese and works quite well in English- ordering and appropriate reordering distances of
+to-Japanese translation. However, pre-ordering in words and phrases highly depend on their syntac-
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+Xu et al. (2009) instead propose a simple set of dependency-based rules to pre-order
+Englishfortranslationintosubject-object-verb(SOV)languages,whichisshowntobe
+effective for Korean, Japanese, Hindi, Urdu, and Turkish. Isozaki et al. (2010b) obtain
+evenbetterresultsinanEnglish-to-Japanesetaskusingonlyonepre-orderingrule,i.e.
+headfinalization,withaparserannotatingsyntacticheads.
+2.4.3Data-drivenpre-ordering.Thiskindofmodelsarelearnedfromsetsofpairs(f,f(cid:48))
+wheref isasourcesentenceandf(cid:48) isitsreferencepermutation(pre-ordering)inferred
+fromareferencetranslationeviaaword-levelalignment.11 Theseapproachestypically
+require some form of linguistic annotation of the source language, such as syntactic
+parsetrees(XiaandMcCord2004;Habash2007;Lietal.2007;ElmingandHabash2009;
+Genzel2010;KhalilovandFonollosa2011;KhalilovandSima’an2011;Yangetal.2012;
+LernerandPetrov2013;Jehletal.2014),shallowsyntaxchunks(Zhang,Zens,andNey
+2007; Crego and Habash 2008) or POS labels (Crego and Mariño 2006; Rottmann and
+Vogel2007;NiehuesandKolss2009;TrombleandEisner2009;Visweswariahetal.2011).
+Amongthefirstexamplesofdata-driventree-basedpre-ordering,XiaandMcCord
+(2004)proposeamethodtoautomaticallylearnreorderingpatternsfromadependency-
+parsedFrench-Englishbitext,usinganumberofheuristics.Whilesource-sideparsesare
+required by their method, target-side parses are optionally used to provide additional
+constraints during rule extraction. Habash (2007) extracts pre-ordering rules from an
+Arabic-English parallel corpus dependency-parsed on the source side. In both these
+works,pre-orderingrulesareappliedinadeterministicwaytopreprocessbothtraining
+and test data. Following a discriminative modeling approach, Li et al. (2007) train a
+maximum-entropyclassifiertopre-ordereachnodewithatmost3childreninthesource
+constituencyparse,usingarichsetoflexicalandsyntacticfeatures.LernerandPetrov
+(2013) extend this work to pre-order nodes with more children (up to 7 on either side
+of the head) using a cascade of classifiers: first, decide the order of each child relative
+to the head, then decide the order of left children and that of the right children. As
+training separate classifiers for each number of children is prone to sparsity issues,
+Jehl et al. (2014) build a single logistic regression model to predict whether any two
+sibling nodes should be swapped or not. Then, for each node in the tree, they search
+for the best permutation of all its children given the pairwise scores produced by
+the model, using a depth-first procedure. Yang et al. (2012) treat the permutation of
+each node’s children as a ranking problem and model it with ranking support vector
+machines.Asanalternativetodeterministicpre-ordering,theyalsoproposetousethe
+predictedsourcepermutationtogeneratesoftconstraintsfortheSMTdecoder:thatis,
+apenaltythatfireswheneverthedecoderviolatesthepredictedpre-ordering.Atighter
+integration between source pre-ordering and source-to-target translation is proposed
+by Dyer and Resnik (2010). In their approach, optimal source pre-orderings (f’) are
+treatedasalatentvariableinanend-to-endtranslationmodelandtheparametersofthe
+tree permutation model are learnt directly from parallel data. At test time, alternative
+permutations of the input tree are encoded as a source reordering forest, which is then
+translatedbyafinite-statephrase-basedtranslationmodel.
+Examplesofpre-orderingbasedonshallowsyntaxinclude(Zhang,Zens,andNey
+2007)and(CregoandHabash2008).Intheseapproaches,automaticallyextractedchunk
+11 Variousheuristicshavebeenproposedtoconvertawordalignmentsetintoasentencepermutation
+(Birch,Osborne,andBlunsom2010;Feng,Mauser,andNey2010;Visweswariahetal.2011).
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+pre-orderingrulesareusedtogenerateawordreorderinglatticeoftheinputsentence,
+whichisthentranslatedbyamonotonicphraseorn-grambaseddecoder.
+In (Costa-jussà and Fonollosa 2006), pre-ordering is learnt by training a monolin-
+gual n-gram based SMT system at the level of word clusters. In (Tromble and Eisner
+2009), pre-ordering is cast as a permutation problem and solved by a model that es-
+timates the probability of reversing the relative order of any two input words based
+on their distance as well as lexicalized and POS-based features. In a related work,
+Visweswariahetal.(2011)obtainsmallermodelsandbetterresultsbylearningthecost
+ofagiveninputwordappearingrightafteranother,asopposedtoanywhereafterit(cf.
+sourceword-after-wordreorderingmodelsdescribedinSection2.1).
+2.4.4Onthelimitationsofsyntax-basedpre-ordering.Syntaxisoftenregardedasthe
+most effective way to inform reordering in translation. However, empirical work has
+shown that the success of syntax-based pre-ordering methods can be severely limited
+by:(i)thereachabilityofreferencepermutationswhenparsetreesareusedtoconstrain
+thepre-orderingmodel,and(ii)thequalityoftheparserusedtolearnandapplyapre-
+orderingmodel.
+Withregardtotheconstraintsimposedbysyntactictrees(i),KhalilovandSima’an
+(2012)conductedoraclepre-orderingexperimentsacrossvariouslanguagepairs.Their
+results consistently showed that final translation quality was highest by far when no
+syntacticconstraintwasimposedonpre-ordering(oraclestring).Onthecontrary,only
+allowingpermutationsofsiblingsofthesourceparsetree(oracletree)gavethesmallest
+improvement.Onlysomeofthislosscouldberecoveredbyapplyingspecificmodifica-
+tionstothetreebeforeextractingtheoptimalpermutation(oraclemodifiedtree).
+Withregardtoparseraccuracy(ii),Green,Sathi,andManning(2009)analyzedtwo
+state-of-the-artparsers(Bikel2004;KleinandManning2003)andreportedF-measures
+of only 55-56% at the sub-task of detecting Arabic NP subjects in verb-initial clauses.
+Similar results were observed by Carpuat, Marton, and Habash (2010) using a depen-
+dency parser (Nivre, Hall, and Nilsson 2006). The same paper also showed that the
+correct pre-ordering for Arabic-English translation could not be safely predicted even
+from gold standard parses, partly due to syntactic transformations occurring during
+translation.FromamanualanalysisoftheirEnglish-Germansystem,GojunandFraser
+(2012)reportedthatabout10%oftheEnglishclauseswerewronglypre-ordered,mostly
+due to source sentence parsing errors. Howlett and Dras (2011) analyzed a reimple-
+mentationoftheGermanpre-orderingmethodofCollins,Koehn,andKucerova(2005)
+and found that results could be affected — or even cancelled out — by many factors
+including: choice of training data, quality of the parser, as well as order of the target
+languagemodelandtypeofreorderingmodelusedduringdecoding.
+Rather than relying on supervised parsers trained on golden treebanks, specific
+parsers can be induced directly from non-annotated parallel text. In (DeNero and
+Uszkoreit2011),sourcesentencereorderingsarefirstinferredfromthewordalignment
+with the target translation. Then, a binary parsing model is trained to maximize the
+likelihood of source trees that can generate such reorderings. Finally, a pre-ordering
+model is trained to permute each node in the tree. Evaluated on the English-Japanese
+language pair, this method almost equals the performance of a pre-ordering method
+based on a supervised parser. Neubig, Watanabe, and Mori (2012) follow a similar
+approach but build a single ITG-style pre-ordering model treating the parse tree as a
+latentvariable.Inthetargetself-trainingmethodofKatz-Brownetal.(2011),abaseline
+treebank-trained parser is used to produce n-best parses of a parallel corpus’ source
+side.Then,theparsesresultinginthemostaccuratepre-orderingafterapplicationofa
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+dependency-basedpre-orderingruleset(Xuetal.2009)areaddedtothetreebankdata
+andusedtore-trainthebaselineparser.
+2.4.5Post-ordering.Asomewhatsmallerlineofresearchhasinsteadtreatedreordering
+aspost-processing.In(BangaloreandRiccardi2000;Sudohetal.2011),targetwordsare
+reorderedafteramonotonictranslationprocess.Otherworkhasfocusedonrescoringa
+setofn-besttranslationcandidatesproducedbyaregularPSMTdecoder—forinstance
+by means of POS-based reordering templates (Chen, Cettolo, and Federico 2006) or
+word-class specific distortion models (Gupta, Cettolo, and Federico 2007). Chang and
+Toutanova (2007) use a dependency tree reordering model to generate n alternative
+orders for each 1-best sentence produced by the SMT system. Each set of n sentence
+reorderings is then reranked using a discriminative model trained on word bigram
+features and standard word reordering features (i.e. distance or orientation between
+consecutivelytranslatedinputwords).
+FocusingonJapanese-to-Englishtranslation,Sudohetal.(2011,2013)proposedto
+‘translate’foreign-orderEnglishintocorrect-orderEnglishusingamonolingualphrase-
+based (Sudoh et al. 2011) or syntax-based (Sudoh et al. 2013) SMT system trained for
+thisspecificsubtask.12 Theunderlyingmotivationisthat,whileEnglish-to-Japaneseis
+well handled by pre-ordering with the aforementioned head-finalization rule (Isozaki
+etal.2010b),itismuchhardertopredicttheEnglish-likeorderofJapaneseconstituents
+for Japanese-to-English translation. Post-ordering addresses this issue by generating
+head-final English (HFE) sentences that are used to create a HFE-to-English parallel
+corpus. Goto, Utiyama, and Sumita (2012, 2013) solve post-ordering by parsing the
+HFE sentences into binary trees annotated with both syntactic labels and ITG-style
+monotone/swap labels. Hayashi et al. (2013) improve upon this work with a shift-
+reduce parser that efficiently integrates non-local features like n-grams of the post-
+orderedstring.
+Also related to post-ordering is the work on right-to-left or reverse decoding by
+Watanabe and Sumita (2002), Finch and Sumita (2009), and Freitag et al. (2013). Here,
+thetargetsentenceisbuiltupfromthelastwordtothefirst,therebyalteringlanguage
+modelcontextandreorderingsearchspace.FinchandSumita(2009)obtainbestresults
+on a wide range of language pairs by combining the outputs of standard and reverse
+decodingsystems.
+3.EvaluatingWordReorderinginStatisticalMachineTranslation
+Since there are innumerable ways to correctly render a source sentence’s meaning in
+thetargetlanguage,automaticallyevaluatingtranslationqualityisacomplexproblem.
+Generally, SMT systems are judged by the extent to which their outputs resemble a
+set of reference translations produced by different human translators. Despite relying
+on a very rough approximation of language variability, this approach provides SMT
+researchers with fast automatic metrics that can guide, at least in part, their steps
+towards improvement. Besides, fast evaluation metrics are used to automatically tune
+SMTfeatureweightsonadevelopmentcorpus,forinstancebymeansofminimumerror
+rate training procedures (Och 2003). The design of MT evaluation metrics correlating
+withhumanjudgementsisanactiveresearcharea.Herewebrieflysurveytwowidely
+12 Notethesimilaritytothepre-orderingapproachofCosta-jussàandFonollosa(2006),exceptthatherethe
+monolingualSMTprocessisappliedtothetargetlanguageafteramonotonictranslationphase.
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+usedgeneral-purposemetrics,BLEUandMETEOR,andthendescribeinmoredetaila
+numberofreordering-specificmetrics.
+3.1General-purposemetrics
+BLEU (Papineni et al. 2001) is a lexical match based score that represents the de facto
+standardforSMTevaluation.Here,proximitybetweencandidateandreferencetransla-
+tionsismeasuredintermsofoverlappingwordn-grams,withntypicallyrangingfrom
+1 to 4. For each order n a modified precision score (see Papineni et al. (2001) for details)
+is computed on the whole test set and combined in a geometric mean. The resulting
+scoreisthenmultipliedbyabrevitypenaltythataccountsforlengthmismatchesbetween
+reference and candidate translations. Al-Onaizan and Papineni (2006) use BLEU to
+measurewordordersimilaritybetweentwolanguages:thatis,bycomputingtheBLEU
+scorebetweentheoriginaltargetsentenceeandasource-likepermutationofe.Using
+n-grams, though, is a limited solution to the problem of word ordering evaluation:
+First, because only exact surface matches are counted, without any consideration of
+morphology or synonymy. Second, because the absolute positioning of words in the
+sentenceisnotcaptured,butonlytheirproximitywithinasmallcontext.
+The former issue is addressed to some extent by METEOR (Banerjee and Lavie
+2005),whichreliesonlanguage-specificstemmersandsynonymymodulestogobeyond
+the surface-level similarity. As for word order, METEOR treats it separately with a
+fragmentationpenaltyproportionaltothesmallestnumberofchunksthatthehypothesis
+must be divided into to align with the reference translation. This quantity can be
+interpretedasthenumberoftimesthatahumanreaderwouldhaveto‘jump’between
+wordstorecoverthecorrecttranslationorder.However,nodistinctionismadebetween
+shortandlong-rangereorderingerrors.
+TheweaknessofBLEUandMETEORwithrespecttowordorderwasdemonstrated
+by Birch, Osborne, and Blunsom (2010) with a significant example that we report in
+Table2.Forsimplicity,theexampleassumesthatthereferenceorderismonotonicand
+that hypotheses and reference translations contain exactly the same words. According
+tobothmetrics,hypothesis(a)isworsethan(b),althoughin(a)onlytwoadjacentwords
+areswappedwhilein(b)thetwohalvesofthesentenceareswapped.
+3.2Reordering-specificmetrics
+To overcome the aformentioned limitations, Birch, Osborne, and Blunsom (2010) pro-
+pose to directly measure the similarity between the reorderings needed to reach the
+reference translations from the source sentence and those applied by the decoder to
+produce the candidate translation. In practice, this is done by first converting word
+alignmentstopermutationsusingsimpleheuristicstohandlenullandmultiplealign-
+ments,andthencomputingapermutationdistanceamongtheresultingpermutations.
+Amongvariousmetricsproposedinthepaper,thesquarerootoftheKendall’sTauwas
+showntobereliableandhighlycorrelatedwithhumanjudgements.
+The normalized Kendall’s Tau distance K is originally a measure of disagreement
+between rankings. Given a set of n elements and two permutations π and σ, the K
+distance corresponds to the number of discordant pairs (i.e. pairs of elements whose
+relative order differs in the two permutations) normalized by the total number of
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+A.Birchetal.
+Example: (a) (b)
+BLEU 61.80 81.33
+METEOR 86.91 92.63
+Fig.1TaSybnltehet2ic:exaTmwpleosoefxtwaomexpamlepleaalliiggnnmmentesnantdsthaenirdpertmhuetaitironrsewshpereec:atitvheereBisLonEeUshoartnd METEOR scores,
+distancewordorderdifference,btheorderofthetwohalveshasbeenswapped.Bulletpointsrepresentthe
+assuming that the reference alignment is monotonic. The permutation resulting from
+non-sequentialgapsinthepermutation
+thehypothesisalignmentisreportedundereachmatrix,wherebulletpointsrepresent
+jumpsbetweennon-sequentialindices.TakenfromBirch(2011).
+eitherbyaveragingthemetricsforeachreference,orbyselectingthemostappropriate
+referencetocomparewith.Permutationdistancemetricshavebeenusedtoevaluate
+data in natural language processing tasks before. Kendall’s tau (Lapata 2003) was
+usedasameansofestimatingthedistancebetweenasystem-generatedandahuman-
+generatedgold-standardorderforthesentencediscoursetask.Thecorrelationbetween
+Kendoarlld’setraeudanedlehmumenantpjuadigresm: entswasalsoestablished(Lapata2006).
+Apermutationisabijectivefunctionfromasetofnaturalnumbers1,2,...,N to
+b it e se d lf e . n W ot e ed wi aK l s ln π( a π( m i,) e σa o )n u d= rp th e(cid:80) e rm i n i d = u e t 1 n a t t(cid:80) i i t o y nn j , s = o π r 1 m dan o (di n , o σj t . o )T n h e, e wp it eh h rme sy rue m ta b t o iod l n o (i f i,d a j p i)s e = r t m he u(cid:26)t p a 1 e ti r o m if n u π π ta i t w i < o il n l π j andσ i >σ j
+1n(n−1) 0otherwise
+forwhichid(i) i foralli. 2
+Figure1showsanexampleoftwosentencepairsandtheirpermutations.Theper-
+Birch,Osborne,andBlunsom(2010)furthersuggesttoextractthesquarerootofKtoob-
+mutationsarecalculatedbyiteratingoverthesourcewords(s1…s10),andoutputting
+theptoasiitnioanofufnthcetaiolingntehdatatrigsemtwoorredsd(its1c…ritm10i)n.Aatliigvnemoenntlsocwanerrepdriessteanntcsieturaatinognses,i.e.fortranslations
+thatatrheamtoarreecocmlopsleerxtthoanthpeerrmeufetarteionncsecawnoarcdcouonrtdfeorrianngd.wFeinmaalklye,stohmeeKsimenpdli-all Reordering Score
+fying(KasRsuSm)p—tionasp.Pohsriatsivaleamligenamseunrtesaorfeqasusaulmiteydrtaonbgeimnognfortoonmew0otord1a—lignimscenotms.putedbysubtracting
+Non-tchoentliagtutoeursqauligannmtietnytsfraoremsiomnpeli,fiaenddtoboynlmyruecltoirpdltyhienfigrstthtaergreestuwlotrdbypoasibtiroenv.itypenalty(BP)that
+Nullasocucrocuenwtosrfdoarlilgennmgetnhtsmariesmassautmcheedstobaeltiwgneteonthreepfererveinocueswanordd.candidatetranslations:
+Permutationdistancemetricsarecalculatedbycomparingpermutationsextracted
+fromasourcesentencealignedtodifferenttargetsentences.W(cid:112)einvertthedistancemet-
+ricsbysubtractingfromone,sothatanincreaseinthemetricsrepresentsanincrease
+inthequalityofwordorder.Wedefineanddiscussthedifferentmetricsbelow.
+TheBP definitioncorrespondstothatofBLEU(Papinenietal.2001)withthedifference
+that,forKRS,itiscomputedatthesentencelevel.Incaseofmultiplereferences,theone
+– TthheaHtyamiemldinsgthDeishtaingcheemstesacsuorreesftohreenaucmhbteersotfsednistaegnreceemiesnrtsetbaeintweede.nFtiwnoally,theaverageofall
+pesremnutetanticoen-sle(RvoenlaKldR1S99s8c)o:res gives the global KRS of the test set. The linear interpolation
+ofKRSandBLEU(LRscore)canbesuccessfullyusedtooptimizethefeatureweightsof
+.
+byhumanannotators
+Inarelatedwork!,BisazzaandFeder"ico(2013a)observethatsomewordclasses,like
+verbs,aretypicallymoreimportantthanotherstodeterminethegeneralstructureofa
+sentence. Hence, they develop a word-weighted KRS variant that is more sensitive to
+thepositioningofspecificinputwords.Assumingthateachinputwordf isassigneda
+weightλ ,theoriginalKRSformulaismodifiedasfollows:
+d (i,j)= i j i j i j
+λ 0 otherwise
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+For their evaluation of long reordering errors in Arabic-English and German-English,
+Bisazza and Federico (2013a) set the weights to 1 for verbs and 0 for all other words
+toonlycaptureverbreorderingerrors.Theresultingmetric,KRS-V,ratesatranslation
+hypothesisasperfectwhenthetranslationsofallsourceverbsarelocatedintheircorrect
+position,regardlessoftheorderingofotherwords.
+In a different approach called RIBES, Isozaki et al. (2010a) propose to directly
+measure the reordering occurring between the words of the hypothesis and those of
+thereferencetranslation,therebyeliminatingtheneedtoword-aligninputandoutput
+sentence. A limitation of this approach is that only identical words contribute to the
+score. As a solution, the permutation distance is multiplied by a word precision score
+that penalizes hypotheses containing few reference words. Nevertheless, the resulting
+metricassignsdifferentscorestohypothesesthatdifferintheirlexicalchoice,butnotin
+theirwordreordering.
+Talbot et al. (2011) introduce yet another reordering-specific metric, called fuzzy
+reordering score (FRS) which, like the KRS, is independent from lexical choice and
+measures the similarity between a sentence’s reference reordering and the reordering
+produced by an SMT system (or by a pre-ordering technique). However, while Birch,
+Osborne, and Blunsom (2010) employed the Kendall’s Tau between the two sentence
+permutations,Talbotetal.(2011)countthesmallestnumberofchunksthatthehypoth-
+esis permutation must be divided into to align with the reference permutation. This
+corresponds precisely to the fragmentation penalty of METEOR except that the align-
+mentisperformedbetweenpermutationsandnotbetweentranslations.LikeMETEOR,
+FRSmakesnodifferencebetweenshortandlong-rangereorderingerrors(cf.Table2).
+Stanojevic´ and Sima’an (2014b) argue for a hierarchical treatment of reordering
+evaluation, where word sequences can be grouped recursively into larger blocks. To
+thisend,theyfactorizetheoutput-referencereorderingintoaPermutationTree(Zhang
+andGildea2007),whosenodesrepresentatomicpermutations.Giventhisfactorization,
+the counts of monotone (12) versus other permutation nodes — (21), (3142), etc. —
+areusedasfeaturesinalinearmodeloftranslationquality(BEER)trainedtocorrelate
+with the human ranking of a set of MT system outputs. With reference to Table 2, the
+permutation trees of both hypotheses (a) and (b) would contain only one swapping
+nodeleadingtothesamereorderingscore.Stanojevic´ andSima’an(2014a)extendthis
+workwithastand-alonereorderingmetricthatconsidersallpossibletreefactorizations
+of a permutation (permutation forest) and that gives recursively less importance to
+lowernodesinthetree(i.e.coveringsmallerspans).Hierarchicalpermutationmetrics
+are shown to better correlate with human judgements than string-based permutation
+metricsliketheKendall’sTaudistanceK.
+4.ReorderingPhenomenainNaturalLanguages
+Understandingthecomplexityofreorderinginagivenlanguagepairiskeytoselecting
+therightSMTmodelsandtoimprovingthem.Todate,wordreorderingphenomenain
+natural languages have mainly been analyzed from a quantitative perspective (Birch,
+Osborne, and Koehn 2008; Birch, Blunsom, and Osborne 2009). While measuring the
+amount of reordering is certainly important, understanding which kinds of reordering
+occur in a given language pair is also essential. To this end, we present a qualitative
+analysisofwordreorderingbasedonlinguisticknowledge.Morespecifically,wedraw
+on a large body of syntactic information collected by linguists from more than 1500
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+languages,andsystematizedintheWorldAtlasofLanguageStructures(WALS)(Dryer
+andHaspelmath2011)13.
+FollowingtheseminalworkoflanguagetypologistMatthewS.Dryer,wedescribe
+thewordorderprofileofalanguagebythecanonicalordersofitsconstituentsets(word
+orderfeatures).Theresultinglanguagepairclassificationisprimarilybasedontheorder
+of subject, object and verb, and further refined according to the order of several other
+element pairs, such as noun-adjective, verb-negation, etc. We then compare the word
+order features of several languages that were studied in the SMT field, and show that
+empiricalresultsgenerallyconfirmtheexistingtheoreticalknowledge.
+4.1Aqualitativeanalysis
+Theamountofwordreorderingfoundinalanguagepairisknowntobeagoodpredic-
+torofSMTperformance.Birch,Osborne,andKoehn(2008)consideredthreevariables—
+reorderingquantity,morphologicalcomplexityandhistoricalrelatedness—andfound
+thefirsttohavethehighestcorrelationwiththeBLEUscoresofastandardPSMTsystem
+on a sample of 110 European language pairs. Birch, Blunsom, and Osborne (2009)
+furtheranalyzedthe distributionofdifferentreordering widthsinArabic-Englishand
+Chinese-English, and the ability of two SMT approaches to model them. They found
+that the PSMT approach is more suitable for language pairs where most reordering
+is local (Arabic-English), while the hierarchical approach is stronger when medium-
+range reorderings are dominant (Chinese-English). Still, both PSMT and HSMT failed
+tocapturemostofthelong-rangereorderingsfoundinthereferencecorpora.
+Thesefindingsareindeedrelevanttoourwork,butwebelievethereisalsomuch
+to learn from theoretical linguistic knowledge. Moreover, a quantitative analysis can
+suffer from noise in the data, typically originating from automatic word alignments.
+Birch, Blunsom, and Osborne (2009) used manual word alignment in their study, but
+thiskindofresourceisavailableonlyforveryfewlanguagepairs.Noisecanalsobedue
+to what we can call optional reordering: human translators often choose to restructure
+thesentenceaccordingtogenreconventionsortotheirpersonalstyle,evenwhenthisis
+notrequiredbythetargetlanguagegrammar.Hereisanexample:
+(cid:250)(cid:175)
+(cid:233)(cid:75)
+(cid:65)(cid:75)(cid:46) (cid:81)(cid:170)(cid:130)
+(cid:10)(cid:29) (cid:233)(cid:75)
+(cid:64) (cid:250)(cid:205)(cid:64) (cid:145)
+(cid:74)(cid:10)(cid:75)(cid:46)(cid:66)(cid:64) (cid:73)
+(cid:28)(cid:10)
+(cid:74)(cid:46)(cid:203)(cid:64)
+b (cid:16)
+(cid:75)(cid:80)
+(cid:65)(cid:170)
+(cid:74)(cid:10)
+(cid:74)(cid:46)(cid:175)
+(cid:16) e: (cid:225)(cid:9)(cid:15)
+(cid:30)(cid:10)(cid:175)
+(cid:65)(cid:106)(cid:146)(cid:203)(cid:64) (cid:40)(cid:233)
+(cid:131) (cid:41) (cid:128)
+(cid:241)(cid:75)(cid:46) (cid:224)
+(cid:9) (cid:13)
+(cid:65)(cid:210)(cid:163) (cid:240)
+(cid:10) 55
+(cid:46) (cid:64)(cid:89)(cid:103)(cid:46) (cid:16) (cid:232)(cid:89)(cid:74)(cid:10)(cid:107)(cid:46) (cid:233) (cid:16) (cid:109)(cid:25)(cid:149) (cid:240) (cid:233) (cid:16) (cid:170)(cid:75) (cid:13) (cid:64)(cid:80) (cid:200)(cid:65)(cid:103)
+Literaltranslation:
+Bush,aged55,assuredjournalistsbeforeleavingtheWhiteHousethathefelt
+“great”andthathishealthwas“verygood”.
+Humantranslation:
+BeforeleavingtheWhiteHouse, Bush, aged 55, assured journalists that he
+felt“great”andthathishealthwas“verygood”.
+AsalsonotedbyFox(2002),thiskindofreorderingisnotstrictlynecessarytoproduce
+accurateandfluenttranslations,butitsoccurrenceinparallelcorporaaffectstheauto-
+maticreorderingmeasures.
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+Onthecontrary,aqualitativeanalysiscanprofitfromtheextensiveworkdoneby
+linguists and grammaticians to abstract the fundamental properties of a language. In
+this section we draw largely on Dryer (2007) and on the sections of WALS devoted to
+wordorder(Dryer(2011),ch.81-97,143-144).
+4.2Wordorderprofiles
+The word order profile of a language is determined by the canonical order of its
+constituentsets,orwordorderfeatures.Ingeneral,thebasicorcanonicalorderofacon-
+stituentsetcanbeestablishedbycriteriaoffrequency(themostcommon),distribution
+(the one with the least restricted usage) or pragmatics (the neutral one) (Dryer 2007).
+Although some languages are said to have free (or flexible) order, it is often possible
+to detect one that is dominant and neutral. Consider for instance English, a subject-
+verb-object (SVO) language where other orders are used, but only to achieve specific
+emphasisortopicalizationeffects:
+(1) a. Isawthecat.
+b. Thecat,Isaw.
+However, there exist cases where no particular order can be defined as dominant. An
+exampleofmix-orderedconstituentsetinEnglishisthepairnounandgenitive:
+(2) a. thetailofthecat
+b. thecat’stail
+Based on Dryer (2007) and on the availability of data points in the WALS, we
+have established a set of 13 core features to determine the word order profile of a
+language.Forthepurposeofdescribingwordorderdifferencesbetweenlanguagepairs,
+wehavedividedthefeaturesintotwobroadcategories:clause-levelandphrase-level14.
+AnEnglishexampleforeachfeatureisprovidedinTable4.
+4.2.1Clause-levelorderfeatures.
+• Subject,Object,Verb[WALSfeature81A]
+Thefirstandmostimportantfeatureisthe“orderingofsubject,object,and
+verb in a transitive clause, more specifically declarative clauses in which
+boththesubjectandobjectinvolveanoun(andnotjustapronoun)”(Dryer
+2011).Forinstance,EnglishandFrenchareSVOlanguages,whileTurkishis
+SOV.Thedistributionofmainwordordertypesinalargesampleofworld
+languages is given in Table 3. This feature is often used alone to denote
+thewordorderprofileofalanguage,becauseitcanbeagoodpredictorof
+severalotherfeatures.
+• ObliqueorAdpositionalPhrase[84A]
+This feature refers to the position of a phrase functioning as adverbial
+modifieroftheverb,relativetothepositionofobjectandverb.Forinstance,
+EnglishisVOXbecauseitplacesobliquephrasesafterverbandobject.
+14 Inthissection,phraseisusedinitstraditionalsyntacticsense—i.e.agroupofwordsforminga
+constituent—asopposedtothenotionofdata-drivenphraseadoptedbyphrase-basedSMT.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+Order Languages
+SOV 565 41%
+SVO 488 35%
+mixed/no-dominant 189 14%
+totalsamplesize 1377
+Table3: Thedistributionofmainwordordertypes(Subject,Object,Verb)intheworld
+languages.FromtheWorldAtlasofLanguageStructures,chapter81(Dryer2011).
+• NounandRelativeClause[90A]
+Orderoftherelativeclausewithrespecttothenounitmodifies.
+• AdverbialSubordinatorandSubordinateClause[94A]
+Subordinators are used to link adverbial subordinate clauses to the main
+clause.Theycantaketheformofverbalsuffixesorseparatewords,suchas
+theEnglishsubordinatingconjunctions‘when’and‘because’.
+• PolarQuestionParticle[92A]
+In many languages, polar (yes/no) questions are signaled by specific par-
+ticles. This feature denotes their position in the sentence (not defined for
+English).
+• ContentQuestionPhrase[93A]
+Content questions are characterized by the presence of an interrogative
+word or phrase (e.g. ‘who’, ‘which one’). In some languages, like English,
+these are always placed at the beginning of the sentence. In some others,
+like Turkish, they take the position of the constituent they replace: for
+instance,theword‘ne/what’replacingtheobjectnaturallyoccursbetween
+subjectandverb.
+• NegationandVerb[143A]
+Order of the negative word or morpheme15 with respect to the main verb.
+Note thatmore thanone word ormorpheme maybe necessary toexpress
+negation(e.g.‘ne...pas’inFrench).
+4.2.2Phrase-levelorderfeatures.
+• NounandAdpositions[WALSfeature85A]
+Whetheralanguageusesmainlyprepositionsorpostpositions.
+• NounandGenitive[86A]
+Orderofgenitiveorpossessornounphrasewithrespecttotheheadnoun.
+• NounandAdjective[87A]
+Orderofadjectiveswithrespecttothenountheymodify.
+• NounandDemonstrative[88A]
+15 UnliketheWALS,wedonotdistinguishbetweennegativewordsandaffixesforthisfeature.
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+Orderofdemonstrativewords(e.g.this,that)oraffixeswithrespecttothe
+nountheymodify.
+• NounandNumeral[89A]
+Orderofcardinalnumberwordswithrespecttothenountheymodify.
+• AdjectiveandDegreeWord[91A]
+Orderofdegreewords(e.g.very,more)withrespecttotheadjectivethey
+modify.
+Indo-European Afro-Asiatic Altaic Japanese Sino-Tibet.
+Germanic Romance Semitic Turkic Japanese Chinese
+Features English German French Arabic Turkish Japanese Chinese
+level-esualC
+Subject,Object,Verb S-V-O S-V-O/ S-V-O V-S-O/ S-O-V S-O-V S-V-O
+ObliquePhrase V-O-X mixed V-O-X V-O-X X-O-V X-O-V X-V-O
+[chases][Jerry][withastick]
+Noun,RelClause N-Rel N-Rel N-Rel N-Rel* Rel-N Rel-N Rel-N
+[astick][thathestole]
+Subordinator,Clause Sub-C Sub-C Sub-C Sub-C C-Sub/ C-Sub mixed**
+[because][hewashungry] Sub-C
+PolarQuest.Particle none none initial initial final final final
+∅[didTomstealit?]
+ContentQuest.Phrase initial initial initial initial* other other other
+[what][didTomsteal?]
+Negation,Verb Neg-V Neg-V/ Neg-V-Neg/ Neg-V V-Neg V-Neg Neg-V
+hedid[not][steal] V-Neg V-Neg
+level-esarhP
+Noun,Adpositions Adp-N Adp-N Adp-N Adp-N N-Adp N-Adp N-Adp/
+[with][astick] Adp-N
+Noun,Genitive N-Gen/ N-Gen N-Gen N-Gen Gen-N Gen-N Gen-N
+[Tom’s][stick] Gen-N
+Noun,Adjective A-N A-N N-A N-A A-N A-N A-N
+Noun,Demonstrative Dem-N Dem-N Dem-N Dem-N Dem-N Dem-N Dem-N
+Noun,Numeral Num-N Num-N Num-N Num-N Num-N Num-N Num-N
+Adjective,DegreeW. Deg-A Deg-A Deg-A A-Deg Deg-A Deg-A Deg-A
+[very][hungry]
+Feature English German French Arabic Turkish Japanese Chinese
+Table 4: The word order profile of seven world languages. Language family and genus
+(Dryer1989)areindicatedintheheader’sfirstandsecondrow,respectively. Sources:the
+WorldAtlasofLanguageStructures(DryerandHaspelmath2011),(*)authors’knowledge,
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+4.2.3Languagesample.Forourstudy,wehavechosensevenwidelyspokenlanguages.
+These are English, German, French, Arabic (Modern Standard), Turkish, Japanese and
+Chinese(Mandarin).MainlybasedontheWALS,wehavesummarizedthewordorder
+feature values for all these languages in Table 4. Whenever possible, features were
+assignedone(ortwo)valuescorrespondingtothedominantorder(s)inthatlanguage.
+Whennoparticularorderwasgivenasdominantwemarkeditas‘mixed’.
+ThemainwordorderofGermanandArabicdeservesaspecialmention.InGerman,
+the positioning of subject, object and verb is syntactically determined: main clauses
+without auxiliary verb are SVO, while subordinate clauses and clauses containing an
+auxiliaryareSOV.Afurthercomplication,notmarkedinTable4,isthattheGermanfi-
+niteverbmustbeplacedinsecondposition,inwhichcasethepatternbecomesSAuxOV,
+withtheobjectinterveningbetweenauxiliaryandmainverb.AsregardsArabic,while
+the WALS classifies Modern Standard Arabic as VSO, the corpora typically used in
+SMT show a very mixed distribution of VSO and SVO clauses.16 Carpuat, Marton,
+and Habash (2012) examined the Arabic-English Treebank and found that, when the
+subject is expressed, it follows the verb in 70% of the cases, but precedes it in 30%.
+Similarly,inthePennsylvaniaArabicTreebank,theyfoundanorderdistributionof67%
+VS and 33% SV. Besides frequency, it can be noted that the SVO sentences attested in
+these corpora are in general pragmatically neutral. We conjecture that this variability
+inModernStandardArabicmaybeduetotheeffectofspokenlanguagevarietiessuch
+asEgyptian,Gulf,Kuwaiti,Iraqi(alllistedasSVObytheWALS),andSyrian(listedas
+VSO/SVO).Forthesereasons,weclassifyArabicasamixedVSO/SVOlanguage.
+Itisworthnotingthatourseven-languagesamplecoversthemainwordordertypes
+ofthelargemajorityoftheworldlanguages:namelySOV,SVOandVSO(seeTable3).
+4.3Wordorderdifferences
+Linguisticallymotivatedwordorderprofilescanbeveryhelpfultoanticipatethekind
+of word reordering problems that an SMT system will have to face. Clearly, these will
+also vary in relation to the text genre (written news, speeches, etc.) and to the trans-
+lation’sstyleanddegreeofliterality.However,wecanreasonablyexpectthesyntactic
+propertiesoftwolanguagestodeterminethegeneralreorderingcharacteristicsofthat
+pair.
+Wewillnowanalyzethereorderingcharacteristicsofsevenlanguagepairs:English
+pairedwiththeothersixlanguagespresentedinTable4,aswellastheFrenchandAra-
+bicpair.Tothisend,weproposethefollowinganalysisprocedure.Asafirstindication
+ofreorderingcomplexity,welookatthemainwordorderfeature(subject,object,verb).
+A difference at this level typically results in poor SMT performances. Then, we count
+the total number of discordant features. To simplify, if a particular element does not
+exist in a language (e.g. polar question particles in English) we count zero difference
+for that feature, and when one of the languages has a mixed order we count a half
+difference. We insist, however, on the qualitative nature of our analysis: numbers are
+only meaningful in combination with the list of specific discordant features, as these
+have different impact on word reordering. In particular, we find it essential for SMT
+to distinguish between clause-level and phrase-level differences (CDiff and PDiff)
+because the former account for most longer-range word movements, and the latter
+16 VOSorderisalsoadmittedinArabic,butonlyinspecificcontexts(e.g.whentheobjectisexpressedbya
+pronoun).
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+for the shorter. Thus, a language pair with only phrase-level discordant features is
+likelytobesuitableforaPSMTapproach,wherereorderingismanagedthroughlocal
+distortion or inside translation units. On the contrary, the presence of many clause-
+level differences typically calls for a tree-based solution, either at preprocessing or at
+decodingtime.Aswewillsee,somepairslayontheborderline,withonlyoneorfew
+clause-level differences. Finally, it should be noted that, even among features of the
+same group, some have more impact on SMT than others due to their frequency or to
+theaveragelengthoftheirconstituents.Forinstance,theorderofnounandgenitiveis
+moreimportantthanthatofadjectiveanddegreeword.
+EnglishandGerman [Mainorder:different; CDiff=1.5; PDiff=0.5]
+ThemainwordorderofGermanisSVOorSOVaccordingtothesyntacticcontext
+(cf. Section 4.2). German also differs from English with respect to the position
+of oblique phrases and that of the negation: both fixed in English but mixed in
+German.Atthephraselevel,Germanpredominantlyplacesthegenitiveafterthe
+noun,whileEnglishdisplaysbothorders.
+Thus, despite belonging to the same family branch (Indo-European/Germanic),
+thispairdisplayscomplexreorderingpatterns.Indeed,German-Englishreorder-
+ing has been widely studied in SMT and is still an open topic. At the Workshop
+on Statistical Machine Translation 2014 (Bojar et al. 2014), a syntax-based string-
+to-treeSMTapproach(Williamsetal.2014)waswinninginbothlanguagedirec-
+tions(officialresultsexcludingonlinesystems).AttheInternationalWorkshopon
+Spoken Language Translation 2014 (Cettolo et al. 2014), the best submission was
+a combination of PSMT with POS- and syntax-based preordering (Slawik et al.
+2014),string-to-treesyntax-basedSMTandfactoredPSMT(Birchetal.2014).
+EnglishandFrench [Mainorder:same; CDiff:0.5; PDiff:1.5]
+Mostclause-levelfeatureshavethesamevaluesinFrenchasinEnglish,exceptfor
+thenegationwhichistypicallyexpressedbytwowordsinFrench:onepreceding
+and one following the verb.17 At the phrase level, differences are found in the
+location of genitives and adjectives. Thus, English and French have very similar
+clause-levelorders,butreorderingisabundantatthelocallevel.
+This is a case where reordering is mostly well handled by string-based PSMT.
+As a reference, the three top English-to-French WMT14 systems (official results
+excluding online systems), were all phrase-based. A similar trend was observed
+intheFrench-to-Englishtrack.
+EnglishandArabic [Mainorder:different; CDiff:0.5; PDiff:2.5]
+ThedominantArabicorderisVSO,followedbySVO(cf.Section4.2).Apartfrom
+thisimportantdifference,allotherclause-levelfeaturesagreebetweenArabicand
+English. At the phrase level, differences are found in genitives, adjectives and
+degreewords.
+As a result, reordering is overwhelmingly local but few crucial long-range re-
+orderingsalsoregularlyoccur.Thus,thispairischallengingforPSMTbut,atthe
+same time, not well suited for a tree-based approach. As shown by Zollmann et
+al. (2008) and Birch, Blunsom, and Osborne (2009), PSMT performs similarly or
+betterthanHSMTfortheArabic-to-Englishlanguagepair.However,HSMTwas
+shown to better cope with the reordering of VSO sentences (Bisazza 2013). Pre-
+orderingofArabicVSOsentencesfortranslationintoEnglishhasprovedtobea
+17 Pre-verbalnegationcanbeomittedincolloquialFrench.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+particularlydifficulttask(Green,Sathi,andManning2009;Carpuat,Marton,and
+Habash2010)andhasinspiredworkonhybridpre-orderingwheremultipleverb
+pre-orderings are fed to a PSMT decoder (Bisazza and Federico 2010; Andreas,
+Habash,andRambow2011),seealsoSection2.4.
+EnglishandTurkish [Mainorder:different; CDiff:5.5; PDiff:1.5]
+Turkish is a good example of head-final language, except for the fact that it can
+employbothclause-finalandclause-initialsubordinators.18Asaresult,almostall
+clause-levelfeaturesarediscordantinthispair.Atthephraselevel,Turkishmainly
+differsfromEnglishfortheuseofpostpositionsinsteadofprepositions.
+Amongourlanguagepairs,thisisoneofthemostdifficulttoreorderforanSMT
+system. The complex nature of its reordering phenomena suggests a good fit for
+tree-based SMT approaches, and indeed HSMT was shown to significantly out-
+performPSMTbetweenTurkishandEnglishinbothlanguagedirections(Ruizet
+al.2012;Yılmazetal.2013).However,state-of-the-artSMTqualityinthislanguage
+pair is still very low, mostly due to the agglutinative nature of Turkish which
+makes it difficult to tear apart word reordering issues from rich morphology
+issues.AttemptingtoaddressbothissuesinanEnglish-to-TurkishfactoredPSMT
+system, Yeniterzi and Oflazer (2010) pre-process the parsed English side with
+a number of syntax-to-morphology mapping rules and costituent pre-ordering
+rulesdealingwithlocalandglobalreorderingphenomenarespectively.Onlythe
+former,though,resultedinbettertranslationquality.
+EnglishandJapanese [Mainorder:different; CDiff:6; PDiff:1.5]
+Japaneseistheprototypicalexampleofhead-finallanguage.Inthispairallclause-
+levelfeaturesarediscordant,whileatthephraselevel,JapanesediffersfromEn-
+glishfortheuseofpostpositionsandthestrictlyhead-finalgenitiveconstruction.
+Thispair,likethepreviousone,isextremelychallengingforPSMTduetothehier-
+archicalnatureofitsreorderingphenomenaandthehighfrequencyoflong-range
+wordmovements.Indeed,translationbetweenEnglishandJapanesehasspurred
+aremarkableamountofworkonpre-ordering,post-orderinganddecoding-time
+reordering. In 2013 the PatentMT evaluation campaign of the NTCIR conference
+(Goto et al. 2013a) saw rule-based and hybrid systems largely outperform the
+purely statistical ones in Japanese-to-English. The highest-ranked SMT submis-
+sionwasactuallyacombinationofthreeSMTsystemsincluding:abaselinePSMT
+method, a rule-based pre-ordering method, and a post-ordering method based
+on string-to-tree syntax-based SMT (Sudoh et al. 2013). Interestingly, the trends
+were different in the opposite translation direction, English-to-Japanese, where
+all rule-based MT systems were significantly outperformed by a PSMT system
+thatperformedpre-orderingoftheEnglishinputwithfewmanualrulesforhead
+finalizationbasedondependencyparsetrees(Sudohetal.2013).
+EnglishandChinese [Mainorder:same; CDiff:3.5; PDiff:1]
+Despite belonging to the same main order type, these two languages differ in
+the positioning of oblique phrases, relative clauses, interrogative phrases and
+subordinating words.19 Moreover, word order variations are quite common in
+18 InTurkish,non-finitesubordinateclausesaretypicallyplacedbeforethemainclauseandlinkedtoitbya
+clause-finalsubordinator(e.g.ragˇmen/although),whereasfinitesubordinateclausescanbeplacedafter
+themainclauseandintroducedbyaclause-initialsubordinator(e.g.ama/but).Theformerisdominantin
+writtenlanguage.
+19 SubordinatingwordsinChinesecanoccuratthebeginningofthesubordinateclause,atitsend,oreven
+insideit(Li2008).
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+Chinesetomarkthetopicofasentence,i.e.whatisbeingtalkedabout.Comparing
+thetwolanguagesatthephraselevel,wefindpartialdisagreementintheuseof
+genitiveandadpositions(Chinesehasbothprepositionsandpostpositions).
+Thus, this pair too is characterized by very complex reordering, hardly man-
+ageable by a PSMT system. This is confirmed by a number of empirical results
+showingthattree-basedapproaches(particularlyHSMT)consistentlyoutperform
+PSMT in Chinese-to-English evaluations (Zollmann et al. 2008; Birch, Blunsom,
+and Osborne 2009). It is worth noting that translation between Chinese and En-
+glishhasbeenthemainmotivationandtestbedforthedevelopmentofHSMT.
+FrenchandArabic [Mainorder:different; CDiff:1.5; PDiff:1]
+Attheclauselevel,thispairdiffersinmainwordorder(SVOversusVSOorSVO)
+like the English-Arabic pair, but also in the order of negation and verb. On the
+otherhand,phrase-levelorderisnotablymoresimilar,withonlyonediscordant
+featureofminorimportance(adjectiveanddegreeword).
+Lessresearchwaspublishedonthislanguagepair.Nevertheless,HasanandNey
+(2008) and Schwenk and Senellart (2009) chose a PSMT approach to experiment
+withanArabic-to-Frenchtask.
+Figure8illustratesthereorderingcharacteristicsofthreelanguagepairsbymeans
+of sentence examples that were automatically word-aligned with GIZA++ (Och and
+Ney2003)(intersectionofdirectandinversealignments).Onthefirstrow,weseetwo
+English-Germansentencepairs:inbothcases,mostofthepointslieclosetothediagonal
+representinganoverallmonotonictranslation,whereasfewisolatedpointsdenotethe
+verylong-rangereorderingofverbs.Similarly,inthetwoEnglish-Arabicsentencepairs,
+we mostly observe local reorderings, with the exception of few isolated points corre-
+sponding to the Arabic clause-initial verbs. Finally, the two Turkish-English examples
+displayglobalreordering,duetothehighnumberofclause-levelorderdifferences.
+Where possible, it is interesting to relate our analysis with previously published
+measures of reordering based on parallel data. To our knowledge, the most compre-
+hensive results of this kind are reported by Birch (2011), who formulates reordering
+as a binary process occurring between two blocks that are adjacent in the source (cf.
+ITG constraints in Section 2.1). Here, the general amount of reordering in a language
+pairisestimatedbytheRQuantity,definedasthesumofthespansofallthereordered
+blocks on the target side, normalized by the length of the target sentence and aver-
+aged over a corpus. Based on the Europarl corpus (Koehn 2002) and automatic word
+alignments,Birch(2011)reportsaverageRQuantityvaluesof0.586/0.608inEnglish-to-
+German/German-to-English, versus only 0.402/0.395 in English-to-French/French-to-
+English.Themanually-alignedGALEcorpus(LDC2006E93)isinsteadusedtomeasure
+the distribution of reordering widths, defined as the sum of the swapped blocks’ tar-
+get spans. Widths are binned into short (2-4 words), medium (5-8), and long (>8). In
+Chinese-to-English there are about 0.8/0.9/0.9 short/medium/long reordered blocks
+per sentence, while in Arabic-to-English there are 1.1/0.4/0.2 short/medium/long
+reordered blocks per sentence. These figures align nicely with our classification of
+phrase- and clause-level differences, which we have related to longer and shorter-
+range reordering respectively: Chinese-to-English (PDiff: 1, CDiff: 3.5) displays much
+morereorderingoverall,whileArabic-to-English(PDiff:2.5,CDiff:0.5)hasmoreshort
+reorderingsbutmuchlessmediumandshort.
+The advantage of using our proposed analysis is that it can be easily extended
+to other language pairs thanks to the wide coverage of WALS, whereas data-driven
+analysesdependontheavailabilityofhigh-qualityword-alignedparallelcorpora.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+EnglishandGerman:
+EnglishandArabic:
+EnglishandTurkish:
+Figure 8: Word-alignment matrices of sentence pairs taken from three parallel news
+corpora: the NIST-MT-08 Arabic-English evaluation benchmark, the WMT-10 German-
+Englishtrainingcorpus,andtheTurkish-EnglishSouthEuropeanTimescorpus(Tyers
+andAlperen2010).Englishisalwaysonthexaxis.
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+5.Discussionandconclusions
+We have provided a comprehensive overview of how the word reordering problem is
+modeledwithindifferentstring-basedandtree-basedSMTframeworks,andasastand-
+alone task. To summarize, string-based SMT considers all permutations of the source
+sentence and relies on separate reordering models to score them. On the other hand,
+tree-basedSMTtightlycouplesreorderingtotranslationand,duringdecoding,onlyor
+mostlyconsiderswordpermutationsthatarelicensedbythelearnttranslationmodel.
+In practice, both approaches apply general heuristic constraints on the maximum re-
+orderingwidthtoavoidexplosionofthesearchspace.
+Themainweaknessofastring-basedapproachlikephrase-basedSMT(PSMT)with
+regard to reordering lies in its coarse definition of the reordering search space. In this
+framework, relaxing the distortion limit means dramatically increasing the size of the
+searchspace,makingthereorderingmodel’staskextremelycomplexandintensifying
+theriskofbothsearchandmodelerrors.Asaresult,PSMTisgenerallygoodathandling
+localreorderingbutlargelyfailstocapturelong-rangereorderingphenomena.
+As for tree-based SMT, a distinction must be made between methods that extract
+hierarchical structure directly from parallel data and methods that rely on syntactic
+annotationprovidedbypre-trainedmonolingualparsers.Aprominentexampleofthe
+formerishierarchicalphrase-basedSMT(HSMT),whichmodelsreorderingviapartially
+lexicalized translation rules. While this results in a more principled definition of the
+reordering search space, HSMT lacks the ability to generalize the learnt reordering
+patternsfromspecificlexicalcluestowholewordorphrasecategories.
+Finally, reordering may be constrained by syntactic information in the source or
+target language, or both. When syntax is used in the source language, reordering is
+performed by transforming a given parse tree of the input sentence. When syntax is
+usedinthetargetlanguage,reorderingisallowedonlyifresultinginagrammatically
+validtargettreefragment.Syntacticinformationisadoptedbybothsyntax-basedSMT,
+wherethetreeisreorderedandtranslatedsimultaneously,andbysyntacticpre-ordering
+(orpost-ordering)methods,wherethetreeistransformedbefore(orafter)translation.
+The success of these approaches largely depends on the degree of isomorphism of
+the modeled language pair, as well as on the parser’s performance, which can vary
+substantiallyacrosslanguages.
+AfterdescribinghowwordreorderingismodeledinSMT,wehavequestionedwhy
+different language pairs appear to need different reordering modeling solutions. To
+answerthisquestion,wehaveoutlinedthewordorderprofilesofsevenwidelyspoken
+languages,basedonalargebodyoflinguisticknowledge.Thenwehaveexaminedtheir
+pairwise differences in detail. Finally, we have used these differences to interpret the
+empiricalfindingsofpreviousworkthatevaluatedvariousSMTreorderingtechniques
+inthoselanguagepairs.
+Weconcludefromouranalysisthatafewlinguisticfactscanbeveryusefultopre-
+dictthereorderingcharacteristicsofalanguagepairandtoselecttheSMTapproachthat
+best suits them. In particular, string-based PSMT is preferable for language pairs with
+only constituent-level differences, like French-English, as these mostly imply short or
+medium-rangereorderingpatternsthatcanbecapturedbylocaldistortion.Ontheother
+hand, language pairs with many clause-level order differences (e.g. Japanese-English,
+Turkish-English,Chinese-English)arebesthandledbytree-basedSMTorsyntax-based
+pre-/post-ordering approaches that can handle complex, hierarchical reordering pat-
+terns. While this may seem obvious, we notice that, in the literature, the choice of an
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+optimal SMT framework for a new translation task is often driven by costly empirical
+trials rather than by linguistic knowledge. Finally, the pairs with mostly constituent-
+level differences and only one or few clause-level differences (e.g. German-English
+and Arabic-English) do not fit well into either category. In sentences without global
+reordering,HSMTcanunderperformPSMT,likelyduetothemuchlargersearchspace
+explored. At the same time, applying PSMT to such pairs with heuristic reordering
+constraints can lead to systematic errors in the positioning of important elements of
+thesentence,suchasverbs.Notsurprisingly,theselanguagepairshavebeentheobject
+ofafairamountworkaimingatrefiningthereorderingspaceofbothPSMTandHSMT.
+Our word order analysis can be easily extended to other language pairs using the
+methodologypresentedinSection4.
+In conclusion, finding a definitive solution to the problem of word reordering
+implies answering the fundamental research questions of SMT: Is structure needed to
+translate?Ifso,whatkindofstructureandhowshoulditbeused?Agrowingpartofthe
+researchcommunityhasconvergedonapositiveanswertotheformerquestion,butthe
+latterremainsopentodate.Whilethefieldkeepsevolvingaroundthesequestions,SMT
+hasalreadyreachedthestageofappliedlanguagetechnology.Wehopethissurveywill
+provide practical guidelines to the system developers of today and, at the same time,
+goodscientificreferencestotheresearcherselaboratingthesolutionsoftomorrow.
+Acknowledgments
+WewouldliketothankAlexandraBirch,MartaR.Costa-jussà,NadirDurrani,ChrisDyer,Adrià
+deGispert,IsaoGoto,SpenceGreen,ZhongqiangHuang,MaximKhalilov,GrahamNeubig,
+KhalilSima’an,MilošStanojevic´,KatsuhitoSudoh,ChristophTillmann,TaroWatanabeand
+RichardZens,aswellastheanonymousreviewers,forprovidingvaluablefeedbackonanearlier
+versionofthissurvey.
+References [Bach,Vogel,andCherry2009]Bach,Nguyen,
+[Al-OnaizanandPapineni2006]Al-Onaizan, StephanVogel,andColinCherry.2009.
+YaserandKishorePapineni.2006. Cohesiveconstraintsinabeamsearch
+Distortionmodelsforstatisticalmachine phrase-baseddecoder.InProceedingsof
+translation.InProceedingsofthe21st HumanLanguageTechnologies:The2009
+InternationalConferenceonComputational AnnualConferenceoftheNorthAmerican
+Linguisticsand44thAnnualMeetingofthe ChapteroftheAssociationforComputational
+AssociationforComputationalLinguistics, Linguistics,CompanionVolume:ShortPapers,
+pages529–536,Sydney,Australia,July. pages1–4,Boulder,Colorado,June.
+AssociationforComputationalLinguistics. AssociationforComputationalLinguistics.
+[Andreas,Habash,andRambow2011] [BanerjeeandLavie2005]Banerjee,Satanjeev
+Andreas,Jacob,NizarHabash,andOwen andAlonLavie.2005.METEOR:An
+Rambow.2011.Fuzzysyntacticreordering automaticmetricforMTevaluationwith
+forphrase-basedstatisticalmachine improvedcorrelationwithhuman
+translation.InProceedingsoftheSixth judgments.InProceedingsoftheACL
+WorkshoponStatisticalMachineTranslation, WorkshoponIntrinsicandExtrinsic
+pages227–236,Edinburgh,Scotland,July. EvaluationMeasuresforMachineTranslation
+AssociationforComputationalLinguistics. and/orSummarization,pages65–72,Ann
+[Auli,Galley,andGao2014]Auli,Michael, Arbor,Michigan,June.Associationfor
+MichelGalley,andJianfengGao.2014. ComputationalLinguistics.
+Large-scaleexpectedbleutrainingof [BangaloreandRiccardi2000]Bangalore,
+phrase-basedreorderingmodels.In SrinivasandGiuseppeRiccardi.2000.
+Proceedingsofthe2014Conferenceon Finite-statemodelsforlexicalreorderingin
+EmpiricalMethodsinNaturalLanguage spokenlanguagetranslation.InProceedings
+Processing(EMNLP),pages1250–1260, ofInternationalConferenceonSpoken
+Doha,Qatar,October.Associationfor LanguageProcessing,volume2,pages
+ComputationalLinguistics. 422–425,Beijing,China.
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+[Bergeretal.1996]Berger,AdamL.,PeterF. translation.InProceedingsoftheJointFifth
+Brown,StephenA.DellaPietra,Vincent WorkshoponStatisticalMachineTranslation
+J.DellaPietra,AndrewS.Kehler,and andMetricsMATR,pages241–249,
+RobertL.Mercer.1996.Language Uppsala,Sweden,July.Associationfor
+translationapparatusandmethodofusing ComputationalLinguistics.
+context-basedtranslationmodels.United [BisazzaandFederico2012]Bisazza,Arianna
+StatesPatent,No.5510981,Apr. andMarcelloFederico.2012.Modified
+[Bikel2004]Bikel,DanielM.2004.Intricacies distortionmatricesforphrase-based
+ofCollins’parsingmodel.Computational statisticalmachinetranslation.In
+Linguistics,30(4):479–511. Proceedingsofthe50thAnnualMeetingofthe
+[Birch2011]Birch,Alexandra.2011.Reordering AssociationforComputationalLinguistics
+MetricsforStatisticalMachineTranslation. (Volume1:LongPapers),pages478–487,Jeju
+Ph.D.thesis,UniversityofEdinburgh. Island,Korea,July.Associationfor
+[Birch,Blunsom,andOsborne2009]Birch, ComputationalLinguistics.
+Alexandra,PhilBlunsom,andMiles [BisazzaandFederico2013a]Bisazza,Arianna
+Osborne.2009.Aquantitativeanalysisof andMarcelloFederico.2013a.Dynamically
+reorderingphenomena.InStatMT’09: shapingthereorderingsearchspaceof
+ProceedingsoftheFourthWorkshopon phrase-basedstatisticalmachine
+StatisticalMachineTranslation,pages translation.TransactionsoftheACL,
+197–205,Morristown,NJ,USA. 1:327–340,July.
+AssociationforComputationalLinguistics. [BisazzaandFederico2013b]Bisazza,Arianna
+[Birchetal.2014]Birch,Alexandra,Matthias andMarcelloFederico.2013b.Efficient
+Huck,NadirDurrani,NikolayBogoychev, solutionsforwordreorderingin
+andPhilippKoehn.2014.EdinburghSLT German-Englishphrase-basedstatistical
+andMTsystemdescriptionfortheIWSLT machinetranslation.InProceedingsofthe
+2014evaluation.InInternationalWorkshop EighthWorkshoponStatisticalMachine
+onSpokenLanguageTranslation(IWSLT), Translation,pages440–451,Sofia,Bulgaria,
+pages49–56,LakeTahoe,California. August.AssociationforComputational
+[BirchandOsborne2011]Birch,Alexandra Linguistics.
+andMilesOsborne.2011.Reordering [Bisazza,Pighin,andFederico2012]Bisazza,
+metricsformt.InProceedingsofthe49th Arianna,DanielePighin,andMarcello
+AnnualMeetingoftheAssociationfor Federico.2012.Chunk-latticesforverb
+ComputationalLinguistics:HumanLanguage reorderinginArabic-Englishstatistical
+Technologies,pages1027–1035,Portland, machinetranslation.MachineTranslation,
+Oregon,USA,June.Associationfor SpecialIssueonMTforArabic,
+ComputationalLinguistics. 26(1-2):85–103.
+[Birch,Osborne,andBlunsom2010]Birch, [Bojaretal.2014]Bojar,Ondrej,Christian
+Alexandra,MilesOsborne,andPhil Buck,ChristianFedermann,Barry
+Blunsom.2010.MetricsforMTevaluation: Haddow,PhilippKoehn,Johannes
+evaluatingreordering.MachineTranslation, Leveling,ChristofMonz,PavelPecina,
+24(1):15–26. MattPost,HerveSaint-Amand,Radu
+[Birch,Osborne,andKoehn2008]Birch, Soricut,LuciaSpecia,andAlešTamchyna.
+Alexandra,MilesOsborne,andPhilipp 2014.Findingsofthe2014workshopon
+Koehn.2008.Predictingsuccessin statisticalmachinetranslation.In
+machinetranslation.InProceedingsofthe ProceedingsoftheNinthWorkshopon
+ConferenceonEmpiricalMethodsinNatural StatisticalMachineTranslation,pages12–58,
+LanguageProcessing,pages745–754, Baltimore,Maryland,USA,June.
+Stroudsburg,PA,USA.Associationfor AssociationforComputationalLinguistics.
+ComputationalLinguistics. [Braune,Gojun,andFraser2012]Braune,
+[Bisazza2013]Bisazza,Arianna.2013. Fabienne,AnitaGojun,andAlexander
+LinguisticallyMotivatedReorderingModeling Fraser.2012.Long-distancereordering
+forPhrase-BasedStatisticalMachine duringsearchforhierarchical
+Translation.Ph.D.thesis,Universityof phrase-basedSMT.InProceedingsofthe
+Trento. AnnualConferenceoftheEuropean
+[BisazzaandFederico2010]Bisazza,Arianna pages28–30,Trento,Italy.
+andMarcelloFederico.2010.Chunk-based [Brownetal.1990]Brown,PeterF.,John
+verbreorderinginVSOsentencesfor Cocke,StephenA.DellaPietra,VincentJ.
+Arabic-Englishstatisticalmachine DellaPietra,FredrickJelinek,JohnD.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+Lafferty,RobertL.Mercer,andPaulS. reorderingforphrase-basedtranslation
+Roossin.1990.Astatisticalapproachto usingsparsefeatures.InProceedingsofthe
+machinetranslation.Computational 2013ConferenceoftheNorthAmerican
+Linguistics,16(2):79–85. ChapteroftheAssociationforComputational
+[Brownetal.1993]Brown,PeterF.,StephenA. Linguistics:HumanLanguageTechnologies,
+DellaPietra,VincentJ.DellaPietra,and pages22–31,Atlanta,Georgia,June.
+RobertL.Mercer.1993.Themathematics AssociationforComputationalLinguistics.
+ofstatisticalmachinetranslation: [Cherry,Moore,andQuirk2012]Cherry,
+Parameterestimation.Computational Colin,RobertC.Moore,andChrisQuirk.
+Linguistics,19(2):263–312. 2012.Onhierarchicalre-orderingand
+[Carpuat,Marton,andHabash2010]Carpuat, permutationparsingforphrase-based
+Marine,YuvalMarton,andNizarHabash. decoding.InProceedingsoftheSeventh
+2010.ImprovingArabic-to-EnglishSMTby WorkshoponStatisticalMachineTranslation,
+reorderingpost-verbalsubjectsfor pages200–209,Montréal,Canada,June.
+alignment.InProceedingsoftheACL2010 AssociationforComputationalLinguistics.
+ConferenceShortPapers,pages178–183, [Chiang2005]Chiang,David.2005.A
+Uppsala,Sweden,July.Associationfor hierarchicalphrase-basedmodelfor
+ComputationalLinguistics. statisticalmachinetranslation.In
+[Carpuat,Marton,andHabash2012]Carpuat, Proceedingsofthe43rdAnnualMeetingofthe
+Marine,YuvalMarton,andNizarHabash. AssociationforComputationalLinguistics
+2012.ImprovedArabic-to-English (ACL’05),pages263–270,AnnArbor,
+statisticalmachinetranslationby Michigan,June.Associationfor
+reorderingpost-verbalsubjectsforword ComputationalLinguistics.
+alignment.MachineTranslation,SpecialIssue [Chiang,Marton,andResnik2008]Chiang,
+onMTforArabic,26(1-2):105–120. David,YuvalMarton,andPhilipResnik.
+[CasacubertaandVidal2004]Casacuberta, 2008.Onlinelarge-margintrainingof
+FranciscoandE.Vidal.2004.Machine syntacticandstructuraltranslation
+translationwithinferredstochastic features.InEMNLP’08:Proceedingsofthe
+finite-statetransducers.Computational ConferenceonEmpiricalMethodsinNatural
+Linguistics,30(2):205–225. LanguageProcessing,pages224–233.
+[Cettoloetal.2014]Cettolo,Mauro,Jan AssociationforComputationalLinguistics.
+Niehues,SebastianStüker,Luisa [Collins,Koehn,andKucerova2005]Collins,
+Bentivogli,andMarcelloFederico.2014. Michael,PhilippKoehn,andIvona
+Reportonthe11thIWSLTevaluation Kucerova.2005.Clauserestructuringfor
+campaign.InInternationalWorkshopon statisticalmachinetranslation.In
+SpokenLanguageTranslation(IWSLT),pages Proceedingsofthe43rdAnnualMeetingofthe
+2–17,LakeTahoe,California. AssociationforComputationalLinguistics
+[ChangandToutanova2007]Chang, (ACL’05),pages531–540,AnnArbor,
+Pi-ChuanandKristinaToutanova.2007.A Michigan,June.Associationfor
+discriminativesyntacticwordordermodel ComputationalLinguistics.
+formachinetranslation.InProceedingsof [Corder1979]Corder,StephenPit.1979.
+the45thAnnualMeetingoftheAssociationof Languagedistanceandthemagnitudeof
+ComputationalLinguistics,pages9–16, thelanguagelearningtask.Studiesin
+Prague,CzechRepublic,June.Association SecondLanguageAcquisition,2(01):27–36.
+forComputationalLinguistics. [Costa-jussàandFonollosa2006]Costa-jussà,
+[Chen,Cettolo,andFederico2006]Chen, MartaR.andJoséA.R.Fonollosa.2006.
+Boxing,MauroCettolo,andMarcello Statisticalmachinereordering.In
+Federico.2006.Reorderingrulesfor Proceedingsofthe2006Conferenceon
+phrase-basedstatisticalmachine EmpiricalMethodsinNaturalLanguage
+translation.InProc.oftheInternational Processing,pages70–76,Sydney,Australia,
+WorkshoponSpokenLanguageTranslation, July.AssociationforComputational
+pages182–189,Kyoto,Japan,November. Linguistics.
+[Cherry2008]Cherry,Colin.2008.Cohesive [Costa-jussàandFonollosa2009]Costa-jussà,
+phrase-baseddecodingforstatistical MartaR.andJoséA.R.Fonollosa.2009.
+machinetranslation.InProceedingsof State-of-the-artwordreordering
+ACL-08:HLT,pages72–80,Columbus, approachesinstatisticalmachine
+Ohio,June.AssociationforComputational translation:Asurvey.IEICE
+Linguistics. TRANSACTIONSonInformationand
+[Cherry2013]Cherry,Colin.2013.Improved Systems,E92-D(11):2179–2185.
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+[CregoandHabash2008]Crego,JosepM.and Structure,LanguageTypologyandSyntactic
+NizarHabash.2008.Usingshallowsyntax Description,volume1.Cambridge
+informationtoimprovewordalignment UniversityPress,secondedition,chapter2,
+andreorderingforSMT.InStatMT’08: pages61–131.
+ProceedingsoftheThirdWorkshopon [Dryer2011]Dryer,MatthewS.2011.Orderof
+StatisticalMachineTranslation,pages53–61, subject,objectandverb.InMatthewS.
+Morristown,NJ,USA.Associationfor DryerandMartinHaspelmath,editors,The
+ComputationalLinguistics. WorldAtlasofLanguageStructuresOnline.
+[Crego,Mariño,anddeGispert2005]Crego, MaxPlanckDigitalLibrary,Munich.
+JosepM.,JoséB.Mariño,andAdrià [DryerandHaspelmath2011]Dryer,
+deGispert.2005.Reorderedsearch,and MatthewS.andMartinHaspelmath,
+tupleunfoldingforngram-basedSMT.In editors.2011.TheWorldAtlasofLanguage
+ProceedingsoftheTenthMachineTranslation StructuresOnline.MaxPlanckDigital
+Summit(MTSummitX),pages283–289, Library,Munich,2011edition.
+Phuket,Thailand,September. [DurgarEl-KahloutandOflazer2010]Durgar
+[CregoandMariño2006]Crego,JosepMaria El-Kahlout,I˙lknurandKemalOflazer.
+andJoséB.Mariño.2006.Improving 2010.Exploitingmorphologyandlocal
+statisticalMTbycouplingreorderingand wordreorderinginenglish-to-turkish
+decoding.MachineTranslation, phrase-basedstatisticalmachine
+20(3):199–215. translation.Audio,Speech,andLanguage
+[deGispertetal.2010]deGispert,Adrià, Processing,IEEETransactionson,
+GonzaloIglesias,GraemeBlackwood, 18(6):1313–1322,Aug.
+EduardoR.Banga,andWilliamByrne. [Durranietal.2013]Durrani,Nadir,
+2010.Hierarchicalphrase-based AlexanderFraser,HelmutSchmid,Hieu
+translationwithweightedfinite-state Hoang,andPhilippKoehn.2013.Can
+transducersandshallow-ngrammars. markovmodelsoverminimaltranslation
+ComputationalLinguistics,36(3):505–533, unitshelpphrase-basedsmt?In
+September. Proceedingsofthe51stAnnualMeetingofthe
+[DeNeroandUszkoreit2011]DeNero,John AssociationforComputationalLinguistics
+andJakobUszkoreit.2011.Inducing (Volume2:ShortPapers),pages399–405,
+sentencestructurefromparallelcorpora Sofia,Bulgaria,August.Associationfor
+forreordering.InProceedingsofthe ComputationalLinguistics.
+ConferenceonEmpiricalMethodsinNatural [Durranietal.2014]Durrani,Nadir,Philipp
+LanguageProcessing,EMNLP’11,pages Koehn,HelmutSchmid,andAlexander
+193–203,Stroudsburg,PA,USA. Fraser.2014.Investigatingtheusefulness
+AssociationforComputationalLinguistics. ofgeneralizedwordrepresentationsin
+[Diab,Hacioglu,andJurafsky2004]Diab, smt.InProceedingsofCOLING2014,the
+Mona,KadriHacioglu,andDaniel 25thInternationalConferenceon
+Jurafsky.2004.AutomaticTaggingof ComputationalLinguistics:TechnicalPapers,
+ArabicText:FromRawTexttoBasePhrase pages421–432,Dublin,Ireland,August.
+Chunks.InDanielMarcuSusanDumais DublinCityUniversityandAssociationfor
+andSalimRoukos,editors,HLT-NAACL ComputationalLinguistics.
+2004:ShortPapers,pages149–152,Boston, [Durrani,Schmid,andFraser2011]Durrani,
+Massachusetts,USA.Associationfor Nadir,HelmutSchmid,andAlexander
+ComputationalLinguistics. Fraser.2011.Ajointsequencetranslation
+[DingandPalmer2005]Ding,Yuanand modelwithintegratedreordering.In
+MarthaPalmer.2005.Machinetranslation Proceedingsofthe49thAnnualMeetingofthe
+usingprobabilisticsynchronous AssociationforComputationalLinguistics:
+dependencyinsertiongrammars.In HumanLanguageTechnologies,pages
+Proceedingsofthe43rdAnnualMeetingofthe 1045–1054,Portland,Oregon,USA,June.
+AssociationforComputationalLinguistics AssociationforComputationalLinguistics.
+(ACL’05),pages541–548,AnnArbor, [DyerandResnik2010]Dyer,ChrisandPhilip
+Michigan,June.Associationfor Resnik.2010.Context-freereordering,
+ComputationalLinguistics. finite-statetranslation.InHumanLanguage
+[Dryer1989]Dryer,MatthewS.1989.Large Technologies:The2010AnnualConferenceof
+linguisticareasandlanguagesampling. theNorthAmericanChapteroftheAssociation
+StudiesinLanguage,13:257–292. forComputationalLinguistics,pages
+[Dryer2007]Dryer,MatthewS.2007.Word 858–866,LosAngeles,California,June.
+order.InTimothyShopen,editor,Clause AssociationforComputationalLinguistics.
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+[ElmingandHabash2009]Elming,Jakoband LanguageTechnologiesandtheAnnual
+NizarHabash.2009.Syntacticreordering MeetingoftheNorthAmericanChapterofthe
+forEnglish-Arabicphrase-basedmachine AssociationofComputationalLinguistics
+translation.InProceedingsoftheEACL2009 (HLT-NAACL),pages273–280.Association
+WorkshoponComputationalApproachesto forComputationalLinguistics.
+SemiticLanguages,pages69–77,Athens, [GalleyandManning2008]Galley,Michel
+Greece,March.Associationfor andChristopherD.Manning.2008.A
+ComputationalLinguistics. simpleandeffectivehierarchicalphrase
+[Feng,Mauser,andNey2010]Feng,Minwei, reorderingmodel.InEMNLP’08:
+ArneMauser,andHermannNey.2010.A ProceedingsoftheConferenceonEmpirical
+source-sidedecodingsequencemodelfor MethodsinNaturalLanguageProcessing,
+statisticalmachinetranslation.In pages848–856,Morristown,NJ,USA.
+ConferenceoftheAssociationforMachine AssociationforComputationalLinguistics.
+TranslationintheAmericas(AMTA),Denver, [Gao,Koehn,andBirch2011]Gao,Yang,
+Colorado,USA. PhilippKoehn,andAlexandraBirch.2011.
+[Feng,Peter,andNey2013]Feng,Minwei, Softdependencyconstraintsforreordering
+Jan-ThorstenPeter,andHermannNey. inhierarchicalphrase-basedtranslation.In
+2013.Advancementsinreorderingmodels Proceedingsofthe2011Conferenceon
+forstatisticalmachinetranslation.In EmpiricalMethodsinNaturalLanguage
+Proceedingsofthe51stAnnualMeetingofthe Processing,pages857–868,Edinburgh,
+AssociationforComputationalLinguistics Scotland,UK.,July.Associationfor
+(Volume1:LongPapers),pages322–332, ComputationalLinguistics.
+Sofia,Bulgaria,August.Associationfor [Genzel2010]Genzel,Dmitriy.2010.
+ComputationalLinguistics. Automaticallylearningsource-side
+[Feng,Sun,andNey2012]Feng,Minwei, reorderingrulesforlargescalemachine
+WeiweiSun,andHermannNey.2012. translation.InProceedingsofthe23rd
+Semanticcohesionmodelforphrase-based InternationalConferenceonComputational
+SMT.InProceedingsofCOLING2012,pages Linguistics,COLING’10,pages376–384,
+867–878,Mumbai,India,December.The Stroudsburg,PA,USA.Associationfor
+COLING2012OrganizingCommittee. ComputationalLinguistics.
+[Fengetal.2010]Feng,Yang,HaitaoMi,Yang [GojunandFraser2012]Gojun,Anitaand
+Liu,andQunLiu.2010.Anefficient AlexanderFraser.2012.Determiningthe
+shift-reducedecodingalgorithmfor placementofGermanverbsin
+phrased-basedmachinetranslation.In English-to-GermanSMT.InProceedingsof
+COLING(Posters),pages285–293. the13thConferenceoftheEuropeanChapterof
+[FinchandSumita2009]Finch,Andrewand theAssociationforComputationalLinguistics,
+EiichiroSumita.2009.Bidirectional pages726–735,Avignon,France,April.
+phrase-basedstatisticalmachine AssociationforComputationalLinguistics.
+translation.InProceedingsofthe2009 [Gotoetal.2013a]Goto,Isao,KaPoChow,
+ConferenceonEmpiricalMethodsinNatural BinLu,EiichiroSumita,andBenjaminK.
+LanguageProcessing,pages1124–1132, Tsou.2013.Overviewofthepatent
+Singapore,August.Associationfor machinetranslationtaskattheNTCIR-10
+ComputationalLinguistics. workshop.InProceedingsofNTCIR-10,
+[Fox2002]Fox,Heidi.2002.Phrasalcohesion pages260–286.
+andstatisticalmachinetranslation.In [Goto,Utiyama,andSumita2012]Goto,Isao,
+ProceedingsoftheConferenceonEmpirical MasaoUtiyama,andEiichiroSumita.2012.
+MethodsinNaturalLanguageProcessing Post-orderingbyparsingfor
+(EMNLP),pages304–311,Philadelphia, japanese-englishstatisticalmachine
+July.AssociationforComputational translation.InProceedingsofthe50th
+Linguistics. AnnualMeetingoftheAssociationfor
+[Freitagetal.2013]Freitag,Markus,Minwei ComputationalLinguistics(Volume2:Short
+Feng,MatthiasHuck,StephanPeitz,and Papers),pages311–316,JejuIsland,Korea,
+HermannNey.2013.Reversewordorder July.AssociationforComputational
+models.InMachineTranslationSummit, Linguistics.
+pages159–166,Nice,France. [Goto,Utiyama,andSumita2013]Goto,Isao,
+[Galleyetal.2004]Galley,Michel,Mark MasaoUtiyama,andEiichiroSumita.2013.
+Hopkins,KevinKnight,andDanielMarcu. Post-orderingbyparsingwithitgfor
+2004.What’sinatranslationrule?In japanese-englishstatisticalmachine
+ProceedingsoftheJointConferenceonHuman translation.ACMTransactionsonAsian
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+LanguageInformationProcessing, KatsuhitoSudoh,HajimeTsukada,Jun
+12(4):17:1–17:22,October. Suzuki,andMasaakiNagata.2013.
+[Gotoetal.2013]Goto,Isao,MasaoUtiyama, Shift-reducewordreorderingformachine
+EiichiroSumita,AkihiroTamura,and translation.InProceedingsofthe2013
+SadaoKurohashi.2013.Distortionmodel ConferenceonEmpiricalMethodsinNatural
+consideringrichcontextforstatistical LanguageProcessing,pages1382–1386,
+machinetranslation.InProceedingsofthe Seattle,Washington,USA,October.
+51stAnnualMeetingoftheAssociationfor AssociationforComputationalLinguistics.
+ComputationalLinguistics(Volume1:Long [He,Meng,andYu2010]He,Zhongjun,Yao
+Papers),pages155–165,Sofia,Bulgaria, Meng,andHaoYu.2010.Extendingthe
+August.AssociationforComputational hierachicalphrasebasedmodelwith
+Linguistics. maximumentropybasedBTG.In
+[Green,Galley,andManning2010]Green, ConferenceoftheAssociationforMachine
+Spence,MichelGalley,andChristopherD. TranslationintheAmericas(AMTA),Denver,
+Manning.2010.Improvedmodelsof Colorado,USA.
+distortioncostforstatisticalmachine [HopkinsandMay2011]Hopkins,Markand
+translation.InHumanLanguage JonathanMay.2011.Tuningasranking.In
+Technologies:The2010AnnualConferenceof Proceedingsofthe2011Conferenceon
+theNorthAmericanChapteroftheAssociation EmpiricalMethodsinNaturalLanguage
+forComputationalLinguistics(NAACL), Processing,pages1352–1362,Edinburgh,
+pages867–875,LosAngeles,California. Scotland,UK.,July.Associationfor
+AssociationforComputationalLinguistics. ComputationalLinguistics.
+[Green,Sathi,andManning2009]Green, [HowlettandDras2011]Howlett,Susanand
+Spence,ConalSathi,andChristopherD. MarkDras.2011.Clauserestructuringfor
+Manning.2009.NPsubjectdetectionin smtnotabsolutelyhelpful.InProceedingsof
+verb-initialArabicclauses.InProceedingsof the49thAnnualMeetingoftheAssociationfor
+theThirdWorkshoponComputational ComputationalLinguistics:HumanLanguage
+ApproachestoArabicScript-basedLanguages Technologies:ShortPapers-Volume2,HLT
+(CAASL3),Ottawa,Canada. ’11,pages384–388.Associationfor
+[Gupta,Cettolo,andFederico2007]Gupta, ComputationalLinguistics.
+Deepa,MauroCettolo,andMarcello [Huang,Knight,andJoshi2006]Huang,
+Federico.2007.POS-basedreordering Liang,KevinKnight,andAravindJoshi.
+modelsforstatisticalmachinetranslation. 2006.Statisticalsyntax-directedtranslation
+InInProceedingsofMTSummitXI,pages withextendeddomainoflocality.In7th
+207–213,Copenhagen,Denmark. ConferenceoftheAssociationforMachine
+[Habash2007]Habash,Nizar.2007.Syntactic TranslationintheAmericas(AMTA),pages
+preprocessingforstatisticalmachine 66–73,Cambridge,Massachusetts,August.
+translation.InBenteMaegaard,editor, [Huang,Devlin,andZbib2013]Huang,
+ProceedingsoftheMachineTranslation Zhongqiang,JacobDevlin,andRabih
+SummitXI,pages215–222,Copenhagen, Zbib.2013.Factoredsoftsourcesyntactic
+Denmark. constraintsforhierarchicalmachine
+[Hardmeier,Bisazza,andFederico2010] translation.InProceedingsofthe2013
+Hardmeier,Christian,AriannaBisazza, ConferenceonEmpiricalMethodsinNatural
+andMarcelloFederico.2010.FBKatWMT LanguageProcessing,pages556–566,Seattle,
+2010:Wordlatticesformorphological Washington,USA,October.Associationfor
+reductionandchunk-basedreordering.In ComputationalLinguistics.
+ProceedingsoftheJointFifthWorkshopon [Hucketal.2013]Huck,Matthias,Joern
+StatisticalMachineTranslationandMetrics Wuebker,FelixRietig,andHermannNey.
+MATR,pages88–92,Uppsala,Sweden, 2013.Aphraseorientationmodelfor
+July.AssociationforComputational hierarchicalmachinetranslation.In
+Linguistics. ProceedingsoftheEighthWorkshopon
+[HasanandNey2008]Hasan,Sašaand StatisticalMachineTranslation,pages
+HermannNey.2008.Amulti-genreSMT 452–463,Sofia,Bulgaria,August.
+systemforArabictoFrench.InProceedings AssociationforComputationalLinguistics.
+oftheInternationalConferenceonLanguage [Imamura,Okuma,andSumita2005]
+ResourcesandEvaluation,LREC2008,pages Imamura,Kenji,HideoOkuma,and
+2167–2170,Marrakech,Morocco.European EiichiroSumita.2005.Practicalapproach
+LanguageResourcesAssociation(ELRA). tosyntax-basedstatisticalmachine
+[Hayashietal.2013]Hayashi,Katsuhiko, translation.InProceedingsofMachine
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+TranslationSummitX,pages267–274. Mai,Thailand,November.Asian
+[Isozakietal.2010a]Isozaki,Hideki,Tsutomu FederationofNaturalLanguage
+Hirao,KevinDuh,KatsuhitoSudoh,and Processing.
+HajimeTsukada.2010a.Automatic [KhalilovandSima’an2012]Khalilov,Maxim
+evaluationoftranslationqualityfordistant andKhalilSima’an.2012.Statistical
+languagepairs.InProceedingsofthe2010 translationaftersourcereordering:
+ConferenceonEmpiricalMethodsinNatural Oracles,context-awaremodels,and
+LanguageProcessing,pages944–952, empiricalanalysis.NaturalLanguage
+Cambridge,MA,October.Associationfor Engineering,18(04):491–519.
+ComputationalLinguistics. [KleinandManning2003]Klein,Danand
+[Isozakietal.2010b]Isozaki,Hideki, ChristopherD.Manning.2003.Fastexact
+KatsuhitoSudoh,HajimeTsukada,and inferencewithafactoredmodelfornatural
+KevinDuh.2010b.Headfinalization:A languageparsing.InS.ThrunS.Becker
+simplereorderingruleforSOVlanguages. andK.Obermayer,editors,Advancesin
+InProceedingsoftheJointFifthWorkshopon NeuralInformationProcessingSystems15
+StatisticalMachineTranslationand (NIPS).MITPress,Cambridge,MA,pages
+MetricsMATR,WMT’10,pages244–251. 3–10.
+AssociationforComputationalLinguistics. [Knight1999]Knight,Kevin.1999.Decoding
+[Jehletal.2014]Jehl,Laura,AdriàdeGispert, complexityinwordreplacement
+MarkHopkins,andBillByrne.2014. translationmodels.Computational
+Source-sidepreorderingfortranslation Linguistics,25(4):607–615.
+usinglogisticregressionanddepth-first [Koehn2002]Koehn,Philipp.2002.Europarl:
+branch-and-boundsearch.InProceedingsof AMultilingualCorpusforEvaluationof
+the14thConferenceoftheEuropeanChapterof MachineTranslation.Unpublished,
+pages239–248,Gothenburg,Sweden, [Koehnetal.2005]Koehn,Philipp,Amittai
+April.AssociationforComputational Axelrod,AlexandraBirchMayne,Chris
+Linguistics. Callison-Burch,MilesOsborne,andDavid
+[Kanthaketal.2005]Kanthak,Stephan,David Talbot.2005.Edinburghsystem
+Vilar,EvgenyMatusov,RichardZens,and descriptionforthe2005IWSLTspeech
+HermannNey.2005.Novelreordering translationevaluation.InProc.ofthe
+approachesinphrase-basedstatistical InternationalWorkshoponSpokenLanguage
+machinetranslation.InProceedingsofthe Translation,October.
+ACLWorkshoponBuildingandUsing [Koehn,Och,andMarcu2003]Koehn,
+ParallelTexts,pages167–174,AnnArbor, Philipp,FranzJosefOch,andDaniel
+Michigan,June.Associationfor Marcu.2003.Statisticalphrase-based
+ComputationalLinguistics. translation.InProceedingsofHLT-NAACL
+[Katz-Brownetal.2011]Katz-Brown,Jason, 2003,pages127–133,Edmonton,Canada.
+SlavPetrov,RyanMcDonald,FranzOch, [LernerandPetrov2013]Lerner,UriandSlav
+DavidTalbot,HiroshiIchikawa,Masakazu Petrov.2013.Source-sideclassifier
+Seno,andHidetoKazawa.2011.Traininga preorderingformachinetranslation.In
+parserformachinetranslationreordering. Proceedingsofthe2013Conferenceon
+InProceedingsoftheConferenceonEmpirical EmpiricalMethodsinNaturalLanguage
+MethodsinNaturalLanguageProcessing, Processing,pages513–523,Seattle,
+EMNLP’11,pages183–192.Association Washington,USA,October.Associationfor
+forComputationalLinguistics. ComputationalLinguistics.
+[KhalilovandFonollosa2011]Khalilov, [Lietal.2007]Li,Chi-Ho,MinghuiLi,
+MaximandJoséA.R.Fonollosa.2011. DongdongZhang,MuLi,MingZhou,and
+Syntax-basedreorderingforstatistical YiGuan.2007.Aprobabilisticapproachto
+machinetranslation.ComputerSpeechand syntax-basedreorderingforstatistical
+Languagejournal(Elsevier),25:761–788, machinetranslation.InProceedingsofthe
+October. 45thAnnualMeetingoftheAssociationof
+[KhalilovandSima’an2011]Khalilov,Maxim ComputationalLinguistics,pages720–727,
+andKhalilSima’an.2011. Prague,CzechRepublic,June.Association
+Context-sensitivesyntactic forComputationalLinguistics.
+source-reorderingbystatistical [Lietal.2012]Li,Junhui,ZhaopengTu,
+transduction.InProceedingsof5th GuodongZhou,andJosefvanGenabith.
+InternationalJointConferenceonNatural 2012.Usingsyntacticheadinformationin
+LanguageProcessing,pages38–46,Chiang hierarchicalphrase-basedtranslation.In
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+ProceedingsoftheSeventhWorkshopon [MartonandResnik2008]Marton,Yuvaland
+StatisticalMachineTranslation,pages PhilipResnik.2008.Softsyntactic
+232–242,Montréal,Canada,June. constraintsforhierarchicalphrased-based
+AssociationforComputationalLinguistics. translation.InProceedingsofACL-08:HLT,
+[Li,Liu,andSun2013]Li,Peng,YangLiu,and pages1003–1011,Columbus,Ohio,June.
+MaosongSun.2013.Recursive AssociationforComputationalLinguistics.
+autoencodersforITG-basedtranslation.In [MenezesandQuirk2007]Menezes,Aruland
+Proceedingsofthe2013Conferenceon ChrisQuirk.2007.Usingdependency
+EmpiricalMethodsinNaturalLanguage ordertemplatestoimprovegeneralityin
+Processing,pages567–577,Seattle, translation.InProceedingsoftheSecond
+Washington,USA,October.Associationfor WorkshoponStatisticalMachineTranslation,
+ComputationalLinguistics. pages1–8,Prague,CzechRepublic,June.
+[Lietal.2014]Li,Peng,YangLiu,Maosong AssociationforComputationalLinguistics.
+Sun,TatsuyaIzuha,andDakunZhang. [MooreandQuirk2007]Moore,RobertC.and
+2014.Aneuralreorderingmodelfor ChrisQuirk.2007.Fasterbeam-search
+phrase-basedtranslation.InProceedingsof decodingforphrasalstatisticalmachine
+COLING2014,the25thInternational translation.InInProceedingsofMTSummit
+ConferenceonComputationalLinguistics: XI,pages321–327,Copenhagen,Denmark.
+TechnicalPapers,pages1897–1907,Dublin, [MylonakisandSima’an2010]Mylonakis,
+Ireland,August.DublinCityUniversity MarkosandKhalilSima’an.2010.Learning
+andAssociationforComputational probabilisticsynchronouscfgsfor
+Linguistics. phrase-basedtranslation.InProceedingsof
+[Li2008]Li,Ying.2008.ThreeSensitive theFourteenthConferenceonComputational
+PositionsandChineseComplexSentences: NaturalLanguageLearning,pages117–125,
+AComparativePerspective.Journalof Uppsala,Sweden,July.Associationfor
+ChineseLanguageandComputing, ComputationalLinguistics.
+18(2):47–59. [MylonakisandSima’an2011]Mylonakis,
+[Liu,Liu,andLin2006]Liu,Yang,QunLiu, MarkosandKhalilSima’an.2011.Learning
+andShouxunLin.2006.Tree-to-string hierarchicaltranslationstructurewith
+alignmenttemplateforstatisticalmachine linguisticannotations.InProceedingsofthe
+translation.InProceedingsofthe21st 49thAnnualMeetingoftheAssociationfor
+InternationalConferenceonComputational ComputationalLinguistics:HumanLanguage
+Linguisticsandthe44thAnnualMeetingof Technologies,pages642–652,Portland,
+theAssociationforComputationalLinguistics, Oregon,USA,June.Associationfor
+pages609–616,Stroudsburg,PA,USA. ComputationalLinguistics.
+[Nagataetal.2006]Nagata,Masaaki,Kuniko
+[MaillettedeBuyWennigerandSima’an2014] Saito,KazuhideYamamoto,andKazuteru
+MaillettedeBuyWenniger,Gideonand Ohashi.2006.Aclusteredglobalphrase
+KhalilSima’an.2014.Bilingualmarkov reorderingmodelforstatisticalmachine
+reorderinglabelsforhierarchicalsmt.In translation.InProceedingsofthe21st
+ProceedingsofSSST-8,EighthWorkshopon InternationalConferenceonComputational
+Syntax,SemanticsandStructureinStatistical Linguisticsand44thAnnualMeetingofthe
+Translation,pages11–21,Doha,Qatar, AssociationforComputationalLinguistics,
+October.AssociationforComputational pages713–720,Sydney,Australia,July.
+Linguistics. AssociationforComputationalLinguistics.
+[Marcuetal.2006]Marcu,Daniel,WeiWang, [Neubig,Watanabe,andMori2012]Neubig,
+AbdessamadEchihabi,andKevinKnight. Graham,TaroWatanabe,andShinsuke
+2006.Spmt:Statisticalmachinetranslation Mori.2012.Inducingadiscriminative
+withsyntactifiedtargetlanguagephrases. parsertooptimizemachinetranslation
+InProceedingsofthe2006Conferenceon reordering.InProceedingsofthe2012Joint
+EmpiricalMethodsinNaturalLanguage ConferenceonEmpiricalMethodsinNatural
+Processing,pages44–52,Sydney,Australia, LanguageProcessingandComputational
+July.AssociationforComputational NaturalLanguageLearning,pages843–853,
+Linguistics. JejuIsland,Korea,July.Associationfor
+[Mariñoetal.2006]Mariño,J.B.,R.E.Banchs, ComputationalLinguistics.
+J.M.Crego,A.deGispert,P.Lambert, [NguyenandVogel2013]Nguyen,ThuyLinh
+J.A.R.Fonollosa,andM.R.Costa-Jussà. andStephanVogel.2013.Integrating
+2006.N-gram-basedmachinetranslation. phrase-basedreorderingfeaturesintoa
+ComputationalLinguistics,32(4):527–549. chart-baseddecoderformachine
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+translation.InProceedingsofthe51stAnnual InternationalConferenceonLanguage
+MeetingoftheAssociationforComputational ResourcesandEvaluation(LREC),pages
+Linguistics(Volume1:LongPapers),pages 1278–1283,Genoa,Italy.
+1587–1596,Sofia,Bulgaria,August. [Quirk,Menezes,andCherry2005]Quirk,
+AssociationforComputationalLinguistics. Chris,ArulMenezes,andColinCherry.
+[NiehuesandKolss2009]Niehues,Janand 2005.Dependencytreelettranslation:
+MuntsinKolss.2009.APOS-basedmodel SyntacticallyinformedphrasalSMT.In
+forlong-rangereorderingsinSMT.In Proceedingsofthe43rdAnnualMeetingofthe
+ProceedingsoftheFourthWorkshopon AssociationforComputationalLinguistics
+StatisticalMachineTranslation,pages (ACL’05),pages271–279,AnnArbor,
+206–214,Athens,Greece,March. Michigan,June.Associationfor
+AssociationforComputationalLinguistics. ComputationalLinguistics.
+[NießenandNey2001]Nießen,Sonjaand [RottmannandVogel2007]Rottmann,Kay
+HermannNey.2001.Morpho-syntactic andStephanVogel.2007.Wordreordering
+analysisforreorderinginstatistical instatisticalmachinetranslationwitha
+machinetranslation.InProceedingsofthe POS-baseddistortionmodel.InTheoretical
+MTSummitVIII:MachineTranslationinthe andMethodologicalIssuesinMachine
+InformationAge,pages247–252,Santiago Translation(TMI),pages171–180,Skövde,
+deCompostela,Spain. Sweden.
+[Nivre,Hall,andNilsson2006]Nivre,Joakim, [Ruizetal.2012]Ruiz,Nick,AriannaBisazza,
+JohanHall,andJensNilsson.2006. RoldanoCattoni,andMarcelloFederico.
+Maltparser:Adata-driven 2012.FBK’sMachineTranslationSystems
+parser-generatorfordependencyparsing. forIWSLT2012’sTEDLectures.In
+InInProc.ofLREC-2006,pages2216–2219. InternationalWorkshoponSpokenLanguage
+[Och1999]Och,FranzJosef.1999.Anefficient Translation(IWSLT),pages61–68,Hong
+methodfordeterminingbilingualword Kong.
+classes.InProceedingsofthe9thConference [SchwenkandSenellart2009]Schwenk,
+oftheEuropeanChapteroftheAssociationfor HolgerandJeanSenellart.2009.
+ComputationalLinguistics(EACL),pages Translationmodeladaptationforan
+71–76. arabic/frenchnewstranslationsystemby
+[Och2003]Och,FranzJosef.2003.Minimum lightly-supervisedtraining.InProceedings
+ErrorRateTraininginStatisticalMachine oftheMachineTranslationSummitXII,
+Translation.InErhardHinrichsandDan Ottawa,Canada.
+Roth,editors,Proceedingsofthe41stAnnual [Setiawan,Kan,andLi2007]Setiawan,
+MeetingoftheAssociationforComputational Hendra,Min-YenKan,andHaizhouLi.
+Linguistics,pages160–167. 2007.Orderingphraseswithfunction
+[OchandNey2002]Och,FranzJosefand words.InProceedingsofthe45thAnnual
+HermannNey.2002.Discriminative MeetingoftheAssociationofComputational
+trainingandmaximumentropymodelsfor Linguistics,pages712–719,Prague,Czech
+statisticalmachinetranslation.In Republic,June.Associationfor
+Proceedingsofthe40thAnnualMeetingofthe ComputationalLinguistics.
+AssociationforComputationalLinguistics [Setiawanetal.2009]Setiawan,Hendra,
+(ACL),pages295–302,Philadelhpia,PA. MinYenKan,HaizhouLi,andPhilip
+[OchandNey2003]Och,FranzJosefand Resnik.2009.Topologicalorderingof
+HermannNey.2003.Asystematic functionwordsinhierarchical
+comparisonofvariousstatistical phrase-basedtranslation.InProceedingsof
+alignmentmodels.Computational theJointConferenceofthe47thAnnual
+Linguistics,29(1):19–51. MeetingoftheACLandthe4thInternational
+[Papinenietal.2001]Papineni,Kishore,Salim JointConferenceonNaturalLanguage
+Roukos,ToddWard,andWei-JingZhu. ProcessingoftheAFNLP,pages324–332,
+2001.Bleu:amethodforautomatic Suntec,Singapore,August.Associationfor
+evaluationofmachinetranslation. ComputationalLinguistics.
+ResearchReportRC22176,IBMResearch [Setiawan,Zhou,andXiang2013]Setiawan,
+Division,ThomasJ.WatsonResearch Hendra,BowenZhou,andBingXiang.
+Center. 2013.AnchorGraph:Globalreordering
+[Popovic´andNey2006]Popovic´,Majaand contextsforstatisticalmachinetranslation.
+HermannNey.2006.Pos-basedword InProceedingsofthe2013Conferenceon
+reorderingsforstatisticalmachine EmpiricalMethodsinNaturalLanguage
+translation.InProceedingsofthe Processing,pages501–512,Seattle,
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+Washington,USA,October.Associationfor [Sudohetal.2010]Sudoh,Katsuhito,Kevin
+ComputationalLinguistics. Duh,HajimeTsukada,TsutomuHirao,
+[Setiawanetal.2013]Setiawan,Hendra, andMasaakiNagata.2010.Divideand
+BowenZhou,BingXiang,andLibinShen. translate:Improvinglongdistance
+2013.Two-neighbororientationmodel reorderinginstatisticalmachine
+withcross-boundaryglobalcontexts.In translation.InProceedingsoftheJointFifth
+Proceedingsofthe51stAnnualMeetingofthe WorkshoponStatisticalMachineTranslation
+AssociationforComputationalLinguistics andMetricsMATR,WMT’10,pages
+(Volume1:LongPapers),pages1264–1274, 418–427.AssociationforComputational
+Sofia,Bulgaria,August.Associationfor Linguistics.
+ComputationalLinguistics. [Sudohetal.2013]Sudoh,Katsuhito,Jun
+[Shen,Xu,andWeischedel2010]Shen,Libin, Suzuki,HajimeTsukada,MasaakiNagata,
+JinxiXu,andRalphWeischedel.2010. ShoHoshino,andYusukeMiyao.2013.
+String-to-dependencystatisticalmachine NTT-NIIstatisticalmachinetranslationfor
+translation.ComputationalLinguistics, NTCIR-10PatentMT.InProceedingsof
+36(4):649–671. NTCIR-10,pages294–300.
+[Slawiketal.2014]Slawik,Isabel,Mohammed [Sudohetal.2011]Sudoh,Katsuhito,
+Mediani,JanNiehues,YuqiZhang,Eunah XianchaoWu,KevinDuh,Hajime
+Cho,TeresaHerrmann,Thanh-LeHa,and Tsukada,andMasaakiNagata.2011.
+AlexWaibel.2014.TheKITtranslation Post-orderinginStatisticalMachine
+systemsforIWSLT2014.InInternational Translation.InMTSummitXIII:the
+WorkshoponSpokenLanguageTranslation ThirteenthMachineTranslationSummit,
+(IWSLT),pages119–126,LakeTahoe, pages316–323,Xiamen,China.
+California. [Sudohetal.2013]Sudoh,Katsuhito,
+[SmithandEisner2006]Smith,Davidand XianchaoWu,KevinDuh,Hajime
+JasonEisner.2006.Quasi-synchronous Tsukada,andMasaakiNagata.2013.
+grammars:Alignmentbysoftprojectionof Syntax-basedpost-orderingforefficient
+syntacticdependencies.InProceedingson japanese-to-englishtranslation.ACM
+theWorkshoponStatisticalMachine TransactionsonAsianLanguageInformation
+Translation,pages23–30,NewYorkCity, Processing,12(3):12:1–12:15,August.
+June.AssociationforComputational [Talbotetal.2011]Talbot,David,Hideto
+Linguistics. Kazawa,HiroshiIchikawa,Jason
+[Socheretal.2011]Socher,Richard,Jeffrey Katz-Brown,MasakazuSeno,andFranz
+Pennington,EricH.Huang,AndrewY. Och.2011.Alightweightevaluation
+Ng,andChristopherD.Manning.2011. frameworkformachinetranslation
+Semi-supervisedrecursiveautoencoders reordering.InProceedingsoftheSixth
+forpredictingsentimentdistributions.In WorkshoponStatisticalMachineTranslation,
+Proceedingsofthe2011Conferenceon pages12–21,Edinburgh,Scotland,July.
+EmpiricalMethodsinNaturalLanguage AssociationforComputationalLinguistics.
+Processing,pages151–161,Edinburgh, [Tillmann2004]Tillmann,Christoph.2004.A
+Scotland,UK.,July.Associationfor UnigramOrientationModelforStatistical
+ComputationalLinguistics. MachineTranslation.InProceedingsofthe
+[Stanojevic´andSima’an2014a]Stanojevic´, JointConferenceonHumanLanguage
+MilošandKhalilSima’an.2014a. TechnologiesandtheAnnualMeetingofthe
+Evaluatingwordorderrecursivelyover NorthAmericanChapteroftheAssociationof
+permutation-forests.InProceedingsof ComputationalLinguistics(HLT-NAACL),
+SSST-8,EighthWorkshoponSyntax, pages101–104,Boston,Massachusetts,
+SemanticsandStructureinStatistical USA.
+Translation,pages138–147,Doha,Qatar, [TrombleandEisner2009]Tromble,Royand
+October.AssociationforComputational JasonEisner.2009.Learninglinear
+Linguistics. orderingproblemsforbettertranslation.In
+[Stanojevic´andSima’an2014b]Stanojevic´, Proceedingsofthe2009Conferenceon
+MilošandKhalilSima’an.2014b.Fitting EmpiricalMethodsinNaturalLanguage
+sentenceleveltranslationevaluationwith Processing,pages1007–1016,Singapore,
+manydensefeatures.InProceedingsofthe August.AssociationforComputational
+2014ConferenceonEmpiricalMethodsin Linguistics.
+NaturalLanguageProcessing(EMNLP), [TyersandAlperen2010]Tyers,FrancisMand
+pages202–206,Doha,Qatar,October. MuratSerdarAlperen.2010.South-east
+AssociationforComputationalLinguistics. europeantimes:Aparallelcorpusof
+BisazzaandFederico ASurveyofWordReorderinginStatisticalMachineTranslation
+Balkanlanguages.InProceedingsofLREC AssociationforComputationalLinguistics.
+2010,SeventhInternationalConferenceon [Wu1995]Wu,D.1995.Stochasticinversion
+LanguageResourcesandEvaluation,pages transductiongrammars,withapplication
+49–53,Valletta,Malta. tosegmentation,bracketing,and
+[Visweswariahetal.2011]Visweswariah, alignmentofparallelcorpora.In
+Karthik,RajakrishnanRajkumar,Ankur Proceedingsof14thInternationalJoint
+Gandhe,AnanthakrishnanRamanathan, ConferenceonArtificialIntelligence,pages
+andJiriNavratil.2011.Awordreordering 1328–1335,Montreal,Canada,August.
+modelforimprovedmachinetranslation. [Wu1996]Wu,Dekai.1996.A
+InProceedingsofthe2011Conferenceon polynomial-timealgorithmforstatistical
+EmpiricalMethodsinNaturalLanguage machinetranslation.InProceedingsofthe
+Processing,pages486–496,Edinburgh, 34thAnnualConferenceoftheAssociationfor
+Scotland,UK.,July.Associationfor ComputationalLinguistics,pages152–158,
+ComputationalLinguistics. SantaCruz,CA.
+[Wang,Collins,andKoehn2007]Wang,Chao, [Wu1997]Wu,Dekai.1997.Stochastic
+MichaelCollins,andPhilippKoehn.2007. inversiontransductiongrammarsand
+Chinesesyntacticreorderingforstatistical bilingualparsingofparallelcorpora.
+machinetranslation.InProceedingsofthe ComputationalLinguistics,23(3):377–403.
+2007JointConferenceonEmpiricalMethods [XiaandMcCord2004]Xia,FeiandMichael
+inNaturalLanguageProcessingand McCord.2004.ImprovingastatisticalMT
+ComputationalNaturalLanguageLearning systemwithautomaticallylearnedrewrite
+(EMNLP-CoNLL),pages737–745,Prague, patterns.InProceedingsofColing2004,
+CzechRepublic,June.Associationfor pages508–514,Geneva,Switzerland.
+ComputationalLinguistics. COLING.
+[WatanabeandSumita2002]Watanabe,Taro [Xiong,Liu,andLin2006]Xiong,Deyi,Qun
+andEiichiroSumita.2002.Bidirectional Liu,andShouxunLin.2006.Maximum
+decodingforstatisticalmachine entropybasedphrasereorderingmodelfor
+translation.InProceedingsofthe statisticalmachinetranslation.In
+InternationalConferenceonComputational Proceedingsofthe21stInternational
+Linguistics(COLING),pages1079–1085. ConferenceonComputationalLinguisticsand
+[Watanabe,Tsukada,andIsozaki2006] 44thAnnualMeetingoftheAssociationfor
+Watanabe,Taro,HajimeTsukada,and ComputationalLinguistics,pages521–528,
+HidekiIsozaki.2006.Left-to-righttarget Sydney,Australia,July.Associationfor
+generationforhierarchicalphrase-based ComputationalLinguistics.
+translation.InProceedingsofthe21st [Xuetal.2009]Xu,Peng,JaehoKang,Michael
+InternationalConferenceonComputational Ringgaard,andFranzOch.2009.Usinga
+Linguisticsand44thAnnualMeetingofthe dependencyparsertoimprovesmtfor
+AssociationforComputationalLinguistics, subject-object-verblanguages.In
+pages777–784,Sydney,Australia,July. ProceedingsofHumanLanguageTechnologies:
+AssociationforComputationalLinguistics. The2009AnnualConferenceoftheNorth
+AmericanChapteroftheAssociationfor
+[Wellington,Waxmonsky,andMelamed2006] ComputationalLinguistics,NAACL’09,
+Wellington,Benjamin,SonjiaWaxmonsky, pages245–253.Associationfor
+andI.DanMelamed.2006.Empirical ComputationalLinguistics.
+lowerboundsonthecomplexityof [YahyaeiandMonz2009]Yahyaei,Sirvanand
+translationalequivalence.InProceedingsof ChristofMonz.2009.Decodingby
+the21stInternationalConferenceon dynamicchunkingforstatisticalmachine
+ComputationalLinguisticsand44thAnnual translation.InProceedingsoftheMachine
+MeetingoftheAssociationforComputational TranslationSummitXII,Ottawa,Canada.
+Linguistics,pages977–984,Sydney, [YahyaeiandMonz2010]Yahyaei,Sirvanand
+Australia,July.Associationfor ChristofMonz.2010.Dynamicdistortion
+ComputationalLinguistics. inadiscriminativereorderingmodelfor
+[Williamsetal.2014]Williams,Philip,Rico statisticalmachinetranslation.In
+Sennrich,MariaNadejde,MatthiasHuck, InternationalWorkshoponSpokenLanguage
+EvaHasler,andPhilippKoehn.2014. Translation(IWSLT),pages353–360,Paris,
+Edinburgh’ssyntax-basedsystemsatwmt France.
+2014.InProceedingsoftheNinthWorkshop [YamadaandKnight2002]Yamada,Kenjiand
+onStatisticalMachineTranslation,pages KevinKnight.2002.Adecoderfor
+207–214,Baltimore,Maryland,USA,June. syntax-basedstatisticalMT.InProceedings
+A.BisazzaandM.Federico ASurveyofWordReorderinginSMT
+ofthe40thAnnualMeetingoftheAssociation [ZhangandGildea2007]Zhang,Haoand
+ofComputationalLinguistics(ACL),pages DanielGildea.2007.Factorizationof
+303–310,Philadelphia,Pennsylvania,USA. synchronouscontext-freegrammarsin
+[Yangetal.2012]Yang,Nan,MuLi, lineartime.InProceedingsofSSST,
+DongdongZhang,andNenghaiYu.2012. NAACL-HLT2007/AMTAWorkshopon
+Aranking-basedapproachtoword SyntaxandStructureinStatistical
+reorderingforstatisticalmachine Translation,pages25–32,Rochester,New
+translation.InProceedingsofthe50th York,April.Associationfor
+AnnualMeetingoftheAssociationfor ComputationalLinguistics.
+ComputationalLinguistics(Volume1:Long [Zhangetal.2008]Zhang,Min,HongfeiJiang,
+Papers),pages912–920,JejuIsland,Korea, AitiAw,HaizhouLi,ChewLimTan,and
+July.AssociationforComputational ShengLi.2008.Atreesequence
+Linguistics. alignment-basedtree-to-treetranslation
+[YeniterziandOflazer2010]Yeniterzi,Reyyan model.InProceedingsofACL-08:HLT,
+andKemalOflazer.2010. pages559–567,Columbus,Ohio,June.
+Syntax-to-morphologymappingin AssociationforComputationalLinguistics.
+factoredphrase-basedstatisticalmachine [Zhang,Zens,andNey2007]Zhang,Yuqi,
+translationfromenglishtoturkish.In RichardZens,andHermannNey.2007.
+Proceedingsofthe48thAnnualMeetingofthe Chunk-levelreorderingofsourcelanguage
+AssociationforComputationalLinguistics, sentenceswithautomaticallylearnedrules
+pages454–464,Uppsala,Sweden,July. forstatisticalmachinetranslation.In
+AssociationforComputationalLinguistics. ProceedingsofSSST,NAACL-HLT2007/
+[Yılmazetal.2013]Yılmaz,Ertug˘rul, AMTAWorkshoponSyntaxandStructurein
+I˙lknurDurgarEl-Kahlout,BurakAydın, StatisticalTranslation,pages1–8,Rochester,
+Zis¸anSılaÖzil,andCos¸kunMermer.2013. NewYork,April.Associationfor
+TübitakTurkish-Englishsubmissionsfor ComputationalLinguistics.
+IWSLT2013.InProc.oftheInternational [ZollmannandVenugopal2006]Zollmann,
+WorkshoponSpokenLanguageTranslation, AndreasandAshishVenugopal.2006.
+December. Syntaxaugmentedmachinetranslationvia
+[Zens2008]Zens,Richard.2008.Phrase-based chartparsing.InProceedingsonthe
+StatisticalMachineTranslation:Models, WorkshoponStatisticalMachineTranslation,
+Search,Training.Ph.D.thesis,RWTH pages138–141,NewYorkCity,June.
+AachenUniversity. AssociationforComputationalLinguistics.
+[ZensandNey2003]Zens,Richardand [Zollmannetal.2008]Zollmann,Andreas,
+HermannNey.2003.Acomparativestudy AshishVenugopal,FranzOch,andJay
+onreorderingconstraintsinstatistical Ponte.2008.Asystematiccomparisonof
+machinetranslation.InProceedingsofthe phrase-based,hierarchicaland
+41stAnnualMeetingoftheAssociationfor syntax-augmentedstatisticalMT.In
+ComputationalLinguistics,pages144–151. Proceedingsofthe22ndInternational
+ConferenceonComputationalLinguistics
+[ZensandNey2006]Zens,Richardand
+HermannNey.2006.Discriminative
+(Coling2008),pages1145–1152,
+reorderingmodelsforstatisticalmachine Manchester,UK,August.Coling2008
+translation.InProceedingsontheWorkshop OrganizingCommittee.
+onStatisticalMachineTranslation,pages
+55–63,NewYorkCity,June.Association
+forComputationalLinguistics.
+[Zensetal.2004]Zens,Richard,Hermann
+Ney,TaroWatanabe,andEiichiroSumita.
+2004.Reorderingconstraintsfor
+phrase-basedstatisticalmachine
+translation.InProceedingsofColing2004,
+pages205–211,Geneva,Switzerland,Aug
+23–Aug27.COLING.
+[Zens,Och,andNey2002]Zens,Richard,
+FranzJosefOch,andHermannNey.2002.
+Phrase-basedstatisticalmachine
+translation.In25thGermanConferenceon
+ArtificialIntelligence(KI2002),pages18–32,
+Aachen,Germany.SpringerVerlag.

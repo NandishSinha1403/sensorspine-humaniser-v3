@@ -1,0 +1,948 @@
+1v1114060/sc:viXra
+Analysis of Dynamic Task Allocation in
+Multi-Robot Systems
+Kristina Lerman1, Chris Jones2, Aram Galstyan1 and Maja J
+1. Information Sciences Institute
+2. Computer Science Department
+University of Southern California, Los Angeles, CA 90089-0781,USA
+{lerman|galstyan}@isi.edu,{cvjones|maja}@robotics.usc.edu
+Dynamic task allocation is an essential requirement for multi-robot
+systemsoperatinginunknowndynamicenvironments. Itallowsrobotsto
+change their behavior in response to environmental changes or actions of
+other robots in order to improve overall system performance. Emergent
+coordinationalgorithmsfortaskallocationthatuseonlylocalsensingand
+no direct communication between robots are attractive because they are
+robustandscalable. However,alackofformalanalysistoolsmakesemer-
+gent coordination algorithms difficult todesign. In thispaper we present
+a mathematical model of a general dynamic task allocation mechanism.
+Robots using this mechanism have to choose between two types of task,
+and the goal is to achieve a desired task division in the absence of ex-
+plicit communication andglobalknowledge. Robotsestimatethestateof
+the environment from repeated local observations and decide which task
+to choose based on these observations. We model the robots and obser-
+vations as stochastic processes and study the dynamics of the collective
+behavior. Specifically, we analyze the effect that the number of obser-
+vations and the choice of the decision function have on the performance
+of the system. The mathematical models are validated in a multi-robot
+multi-foraging scenario. The model’s predictions agree very closely with
+experimental results from sensor-based simulations.
+1 Introduction
+In the 1980’s it was considered ground-breaking for a mobile robot to move
+around an unstructured environment at reasonable speeds. In the years since,
+advancements in both hardware mechanisms and software architectures and
+algorithms have resulted in quite capable mobile robot systems. Provided with
+thisbaselinecompetencyofindividualrobots,increasingattentionhasbeenpaid
+tothe study ofMulti-RobotSystems(MRS), andinparticulardistributed MRS
+withwhichtheremainderofthispaperisconcerned. InadistributedMRSthere
+isnocentralizedcontrolmechanism–instead,eachrobotoperatesindependently
+under local sensing and control, with coordinated system-level behavior arising
+from local interactions among the robots and between the robots and the task
+environment. The effective design of coordinated MRS is restricted by the lack
+of formal design tools and methodologies. The design of single robot systems
+(SRS) has greatly benefited from the formalisms provided by control theory –
+the design of MRS is in need of analogous formalisms.
+For a group of robots to effectively perform a given system-level task, the
+designer must address the question of which robot should do which task and
+when [4]. The process of assigning individual robots to sub-tasks of a given
+system-level task is called task allocation, and it is a key functionality required
+of any MRS. Dynamic task allocation is a class of task allocation in which
+the assignment of robots to sub-tasks is a dynamic process and may need to
+be continuously adjusted in response to changes in the task environment or
+group performance. The problem of task allocation in a distributed MRS is
+further compounded by the fact that task allocation must occur as a result
+of a distributed process as there is no central coordinator available to make
+task assignments. This increases the problem’s complexity because, due to the
+local sensing of each robot, no robot has a complete view of the world state.
+Giventhis incomplete andoften noisy information,eachrobot must make local
+control decisions about which actions to perform and when, without complete
+knowledge of what other robots have done in the past, are doing now, or will
+do in the future.
+Thereareanumberoftaskallocationmodelsandphilosophies. Historically,
+the most popular approaches rely on intentional coordination to achieve task
+allocation[21]. Inthose,therobotscoordinatetheirrespectiveactionsexplicitly
+throughdeliberatecommunicationsandnegotiations. Duetoscalingissues,such
+approaches are primarily used in MRS consisting of a relatively small number
+ofrobots(i.e.,fewer than10). Taskallocationthroughintentionalcoordination
+remainsthe preferredapproachbecauseitisbetter understood,easierto design
+and implement, and more amenable to formal analysis [4].
+AsthesizeoftheMRSgrows,thecomplexityofthedesignofintentionalap-
+proachesincreases due to increaseddemands in communicationbandwidth and
+computational abilities of individual robots. Furthermore, complexity intro-
+duced by increased robot interactions makes such systems much more difficult
+toanalyzeanddesign. Thisleadstothealternativeto intentionalcoordination,
+namely, task allocation through utilizing emergent coordination. In systems
+using emergent coordination, individual robots coordinate their actions based
+solely on local sensing information and local interactions. Typically, there is
+very little or no direct communication or explicit negotiations between robots.
+They are, therefore, more scalable to larger numbers of robots and are more
+ableto takeadvantageofthe robustnessandparallelismprovidedbythe aggre-
+gationoflargenumbersofcoordinatedrobots. The drawbackoftaskallocation
+as achieved through emergent coordination mechanisms is that such systems
+can be difficult to design, solutions are commonly sub-optimal, and since co-
+ordination is achieved through many simultaneous local interactions between
+varioussubsetsof robots,predictive analysisofexpectedsystemperformanceis
+difficult.
+As MRS composed of ever-larger numbers of robots become available, the
+needfortaskallocationthroughemergentcoordinationwillincrease. Toaddress
+the lack of formalisms in the design of such MRS, in this article we present
+and experimentally verify a predictive mathematical model of dynamic task
+allocation for MRS using emergent coordination. Such a formal model of task
+allocation is a positive step in the direction of placing the design of MRS on a
+formal footing.
+The rest of the paper is organizedas follows. Section 2 providesa summary
+of related work. In Section 3 we describe a general mechanism for task alloca-
+tion in dynamic environments. This is a distributed mechanism based on local
+sensing. In Section 4 we present a mathematical model of the collective behav-
+ior of an MRS using this mechanismand study its performance under a variety
+of conditions. We validate the model in a multi-foraging domain. In Section 5
+wedefine the experimentaltaskdomainofmulti-foraging,robotcontrollersand
+the simulation environment. In Section 6 we compare the predictions of math-
+ematical models with the results from sensor-based simulations. We conclude
+the paper in Section 7, with a discussion of the approach and the results.
+2 Related Work
+Mathematical modeling and analysis of the collective behavior of MRS is a
+relatively new field with approaches and methodologies borrowed from other
+fields, including mathematics, physics, and biology. Recently, a number of re-
+searchers attempted to mathematically analyze multi-robot systems by using
+phenomenological models of the type present here. Sugawara et al. [23, 24]
+developed a simple model of cooperative foraging in groups of communicating
+and non-communicating robots. Kazadi et al. [11] studied the general prop-
+erties of multi-robot aggregation using phenomenological macroscopic models.
+Agassounon and Martinoli [1] presented a model of aggregation in which the
+number of robots taking part in the clustering task is based on the division of
+labormechanisminants. Thesemodelsaread-hoc anddomainspecific,andthe
+authorsgivenoexplanationastohowtoapplysuchmodelstootherdomain. In
+earlier works we have developed a general framework for creating phenomeno-
+logicalmodelsofcollectivebehavioringroupsofrobots[16,18]. Weappliedthis
+frameworkto study collaborativestick-pullingin agroupofreactiverobots[17]
+and foraging in robots [13].
+Most of the approaches listed above are implicitly or explicitly based on
+stochastic processes theory. Another example of the stochastic approach is the
+probabilisticmicroscopicmodeldevelopedbyMartinoliandcoworkers[19,20,8]
+to study collective behavior of a group of robots. Rather than compute the
+exact trajectoriesand sensory information of individual robots, Martinoli et al.
+model each robot’s interactions with other robots and the environment as a
+series of stochastic events, with probabilities determined by simple geometric
+considerations. Running several series of stochastic events in parallel, one for
+eachrobot,allowedthemtostudythegroupbehaviorofthemulti-robotsystem.
+Sofarverylittleworkhasbeendoneonmathematicalanalysisofmulti-robot
+systems in dynamic environments. We have recently extended [14] the stochas-
+tic processes framework developed in earlier work to robots that change their
+behavior based on history of local observations of the (possibly changing) envi-
+ronment [15]. In the current paper we develop these ideas further, and present
+the exact stochastic model of the system, in addition to the phenomenological
+model.
+Closest to ours is the work of Huberman and Hogg [7], who mathematically
+studiedcollective behaviorofa systemofadaptiveagentsusing game dynamics
+asa mechanismfor adaptation. Ingame dynamicalsystems,winning strategies
+arerewarded,andagentsusethebestperformingstrategiestodecidetheirnext
+move. Although their adaptation mechanism is different from our dynamic
+task allocation mechanism, their analytic approach is similar to ours, in that
+it is based on the theory of stochastic processes. Others have mathematically
+studied collectivebehaviorofsystems composedoflargenumbers ofconcurrent
+learners [25, 22]. These are microscopic models, which only allow one to study
+collectivebehaviorofrelativelysmallsystemsofafewrobots. Weareinterested
+in macroscopic approaches that enable us to directly study collective behavior
+in large systems. Our work differs from earlier ones in another important way:
+wesystematicallycomparetheoreticalpredictionsofmathematicalmodels with
+results of experiments carried out in a sensor-based simulator.
+3 Dynamic Task Allocation Mechanism
+Thedynamictaskallocationscenariowestudyconsidersaworldpopulatedwith
+tasksofT differenttypesandrobotsthatareequallycapableofperformingeach
+task but can only be assigned to one type at any given time. For example, the
+tasks could be targets of different priority that have to be tracked, different
+typesofexplosivesthatneedtobelocated,etc. Additionally,arobotcannotbe
+idle — eachrobot is always performing a task at any given time. We introduce
+the notion of a robot state as a shorthand for the type of task the robot is
+assignedto service. A robotmayswitch its state accordingto its controlpolicy
+when it determines it is appropriate to do so. However, needlessly switching
+tasksis tobe avoided,sinceinphysicalrobotsystems,this caninvolvecomplex
+physical movement that requires time to perform.
+The purpose of task allocation is to assign robots to tasks in a way that
+will enhance the performance of the system, which typically means reducing
+the overall execution time. Thus, if all tasks take an equal amount of time to
+complete, in the best allocation, the fraction of robots in state i will be equal
+to the fraction of tasks of type i. In general, however, the desired allocation
+couldtakeotherforms—forexample,itcouldbe relatedtotherelativereward
+or cost of completing each task type — without change to our approach. In
+the dynamic task allocation scenario, the number of tasks and the number of
+available robots are allowed to change over time, for example, by adding new
+tasks, deploying new robots, or removing malfunctioning robots.
+Thechallengefacedbythedesigneristodeviseamechanismthatwillleadto
+adesiredtaskallocationinadistributedMRSevenastheenvironmentchanges.
+The challenge is made even more difficult by the fact that robots have limited
+sensing capabilities, do not directly communicate with other robots, and there-
+fore, cannot acquire global information about the state of the world, the initial
+or current number of tasks (total or by type), or the initial or current number
+of robots (total or by assigned type). Instead, robots can sample the world
+(assumed to be finite) — for example, by moving around and making local ob-
+servationsofthe environment. We assumethatrobotsareable to observetasks
+anddiscriminatetheirtypes. Theymayalsobeabletoobserveanddiscriminate
+the task states of other robots.
+One way to give the robot an ability to respond to environmental changes
+(includingactionsofotherrobots)istogivearobotaninternalstatewhereitcan
+store its knowledge of the environment as captured by its observations [9, 14].
+Theobservationsarestoredinarollinghistorywindowoffinitelength,withnew
+observations replacing the oldest ones. The robot consults these observations
+periodically and updates its task state according to some transition function
+specified by the designer. In an earlier work we showed [9, 15] that this simple
+dynamic task allocation mechanism leads to the desired task allocation in a
+multi-foraging scenario.
+In the following sections we present a mathematical model of dynamic task
+allocationand study the role that transition function and the number of obser-
+vations (history length) play in the performance of a multi-foraging MRS. In
+Section 4.1, we present a model of a simple scenario in which robots base their
+decisionstochangestatesolelyonobservationsoftasksintheenvironment. We
+study the simplest form of the transition function, in which the probability to
+change state to some type is proportional to the fraction of existing tasks of
+thattype. InSection6.1wecomparetheoreticalpredictionswith noadjustable
+parameters to experimental data and find excellent agreement. In Section 4.2
+we examine the more complex scenario where the robots base their decisions
+to change task state on the observations of both existing task types and task
+states of other robots. In Section 6.2 we study the consequences of the choice
+of the transition function and history length on the system behavior and find
+good agreement with the experimental data.
+4 Analysis of Dynamic Task Allocation
+Asproposedintheprevioussection,arobotmaybeabletoadapttoachanging
+environment in the absence of complete global knowledge if it is able to make
+and remember local observations of the environment. In the treatment below
+we assume that there are two types of tasks — arbitrarily referred to as Red
+and Green. This simplification is for pedagogical reason only; the model can
+be extended to a greater number of task types.
+During a sufficiently short time interval, each robot can be considered to
+belongto the Green orRedtask state. This is averyhighlevel,coarse-grained
+description. In reality, each state is composed of several robot actions and
+behaviors, for example, searching for new tasks, detecting and executing them,
+avoiding obstacles, etc. However, since we want the model to capture how the
+fraction of robots in each task state evolves in time, it is a sufficient level of
+abstraction to consider only these two states. If we find that additional levels
+of detail are required to explain system behavior, we can elaborate the model
+by breaking each of the high level states into its underlying components.
+4.1 Observations of Tasks Only
+In this section we study dynamic task allocation mechanism in which robots
+make decisions to switch task states based solely on observations of available
+tasks. Let m and m be the numbers of the observed Red and Green tasks,
+respectively, in a robot’s memory or history window. The robot chooses to
+change its state, or the type of task it is assigned to execute, with probabilities
+given by transition functions f g→r (m r ,m g ) (probability of switching to Red
+from Green) and f r→g (m r ,m g ) (probability of switching to Green from Red).
+We would like to define transition rules so that the fraction of time the robot
+spends in the Red(Green) state be equalto the fractionofRed(Green) tasks.
+This will assure that on average the number of Red and Green robots reflect
+thedesiredtaskdistribution. Clearly,iftherobotshaveglobalknowledgeabout
+thenumbersofRedandGreentasksM andM ,theneachrobotcouldchoose
+each state with probability equal to the fraction of the tasks of corresponding
+type. Such global knowledge is not available; hence, we want to investigate
+how incomplete knowledge of the environment (through local observations), as
+well as the dynamically changing environment (e.g., changing ratio of Red and
+Green tasks), affects task allocation.
+4.1.1 Modelling Robot Observations
+As explained above, the transition rate between task execution states depends
+on robot’s observations stored in its history. In our model we assume that a
+robot makes an observation of a task with a time period τ. For simplicity, by
+anobservationwemeanheredetectingatask,suchasatargettobemonitored,
+minetobeclearedoranobjecttobegathered. Therefore,observationhistoryof
+lengthhcomprisesofthe numberofRedandGreen tasksarobothas observed
+during a time interval hτ. We assume that τ has unit length and drop it.
+The process of observing a task is given by a Poisson distribution with rate
+λ = αM0, where α is a constant characterizing the physical parameters of the
+robotsuch as its speed, view angles, etc., and M0 is the number of tasks in the
+environment. This simplification is based on the idea that robot’s interactions
+with other robots and the environment are independent of the robot’s actual
+trajectory and are governed by probabilities determined by simple geometric
+considerations. Thissimplificationhasbeenshowntoproduceremarkablygood
+agreements with experiments [20, 8].
+Let M (t) and M (t) be the number of Red and Green tasks respectively
+(canbe time dependent), and letM(t)=M (t)+M (t)be the totalnumber of
+tasks. The probabilitythat in the time interval[t−h,t]the robothas observed
+exactly m and m tasks is the product of two Poissondistributions:
+m !m !
+where λ , i = r,g, are the means of the respective distributions. If the task
+distribution does not change in time, λ = αM h. For time dependent task
+distributions, λ =α dtM (t).
+4.1.2 Individual Dynamics: The Stochastic Master Equation
+Let us consider a single robot that has to decide between executing Red and
+Green tasks in a closed arena and makes a transition to Red and Green states
+accordingto its observations. Letp (t) be the probabilitythat a robotis in the
+Red state at time t. The equation governing its evolution is
+where ε is the rate at which the robot makes decisions to switch its state,
+and f g→r and f r→g are the correspondingtransitions probabilities between the
+states. Asexplainedabove,theseprobabilitiesdependontherobot’shistory—
+thenumberoftasksofeithertypeithasobservedduringthetimeintervalhpre-
+ceding the transition. If the robots have global knowledge about the numbers
+of Red and Green tasks M and M , one could choose the transition proba-
+bilities as the fraction of tasks of corresponding type, f g→r ∝ M r /(M r +M g )
+and f r→g ∝ M g /(M r +M g ). In the case when the global information is not
+available, it is natural to use similar transition probabilities using robots’ local
+estimates:
+f g→r (m r ,m g )= ≡γ r (m r ,m g ) (3)
+f r→g (m r ,m g )= ≡γ g (m r ,m g ) (4)
+Note that γ (m ,m )+γ (m ,m )=1 whenever m +m >0, e.g., whenever
+r r g g r g r g
+there is at least one observation in the history window. In the case when there
+arenoobservationsinhistory,m =m =0,robotswillchooseeitherstatewith
+probability 1/2 as it follows from taking the appropriate limits in Equations 3
+and4. Hence,wesupplementEquation3withf g→r (0,0)=f r→g (0,0)=0(and
+similarly for Equation 4) to assure that robots do not change their state when
+the history window does not contain any observations.
+Equation2,togetherwiththetransitionratesshowninEquations3–4,deter-
+minestheevolutionoftheprobabilitydensityofarobot’sstate. Itisastochastic
+equationsincethecoefficients(transitionrates)dependonrandomvariablesm
+andm . Moreover,sincetherobot’shistorychangesgradually,thevaluesofthe
+coefficients at different times are correlated, hence making the exact treatment
+very difficult. We propose, instead, to study the problem within the annealed
+approximation: we neglect time–correlation between robot’s histories at differ-
+ent times, assuming instead that at any time the real history {m ,m } can
+be replaced by a random one drawn from the Poisson distribution Equation 1.
+Next, we average Equation 2 over all histories to obtain
+dt r r g r
+Here γ and γ are given by
+r r+g g r+g
+where P(m ,m ) is the Poisson distribution Equation 1 and the summation
+excludes the term r = g = 0. Note that if the distribution of tasks changes in
+time, then γ are time-dependent, γ =γ (t).
+To proceedfurther, we need to evaluate the summations in Equation6. Let
+us define an auxiliary function
+e −λre −λg
+m !m ! m +m
+m Xr=0m Xg=0
+It is easy to check that γ are given by
+Differentiating Equation 7 with respect to x yields
+dx m !m !
+m Xr=1m Xg=0
+Notethatthesummationoverm startsfromm =1. Clearly,thesumsoverm
+andm arede–coupledthankstothecancellationofthedenominator(m +m ):
+dF = e −λr xmr −1 λm r r m e −λg (xλ g )mg (10)
+dx m ! m !
+(cid:18) m Xr=1 r (cid:19)(cid:18) m Xg=0 g (cid:19)
+Theresultingsumsareevaluatedeasily(asthe Taylorexpansionofcorrespond-
+ing exponential functions), and the results is
+where λ = λ +λ . After elementary integration of Equation 11 (subject to
+the condition F(0)=1/2), we obtain using Equation 9 and the expressions for
+λ , λ :
+r,g h Zt−h r,g
+Hereµ (t)=M (t)/M arethefractionofRedandGreentasksrespectively.
+Let us first consider the case when the task distribution does not change
+with time, i.e., µ (t)=µ . Then we have
+γ (t)=(1−e
+The solution of Equation 5 subject to the initial condition p (t = 0) = p is
+readily obtained:
+(cid:18) r g(cid:19)
+One can see that the probability distribution approaches the desired steady
+statevalue ps =µ0 exponentially. Also,the coefficientofthe exponentdepends
+on the density of tasks and the length of the history window. Indeed, it is
+easy to check that γ +γ = 1−e
+−αhM0.
+Hence, for large enough M and
+h, αhM ≫ 1, the convergence rate is determined solely by ε. For a small
+task density or short history length, on the other hand, the convergence rate is
+proportionalto the number oftasks,ε(1−e
+. Note thatthis is
+a directconsequence of the rule that robots do not changetheir state whenever
+there are no observation in the history window.
+Now let us consider the case where the task distribution changes suddenly
+at time t , µ (t) = µ0 + ∆µθ(t − t ), where θ(t − t ) is the step function.
+For simplicity, let us assume that αhM ≫ 1 so that the exponential term in
+Equation 12 can be neglected,
+r,g h Zt−h r,g r g
+ReplacingEquation15intoEquation5,andsolvingtheresultingdifferential
+equation yields
+Equation 16 describes how the robot distribution converges to the new steady
+statevalue after the changeintaskdistribution. Clearly,the convergenceprop-
+erties of the solutions depend on h and ε. It is easy to see that in the limiting
+caseεh≫1thenew steadystateisattainedaftertime h,|p (h)−(µ +∆µ)|∼
+∆µ/(εh) ≪ 1, so the convergence time is t ∼ h. In the other limiting case
+εh ≪ 1, on the other hand, the situation is different. A simple analysis of
+Equation 16 for t > h yields |p (t)−(µ +∆µ)| ∼ ∆µe
+so the convergence
+is exponential with characteristic time t ∼1/ε.
+4.1.3 Collective Behavior
+In order to make predictions about the behavior of an MRS using a dynamic
+task allocation mechanism, we need to develop a mathematical model of the
+collectivebehaviorofthe system. In the previoussectionwe deriveda modelof
+how an individual robot’s behavior changes in time. In this section we extend
+ittomodelthe behaviorofaMRS.Inparticular,westudythecollectivebehav-
+ior of a homogenous system consisting of N robots with identical controllers.
+Mathematically, the MRS is described by a probability density function that
+includes the states of all N robots. However, in most cases we are interested
+in studying the evolution of global, or average, quantities, such as the average
+number of robots in the Red state, rather than the exact probability density
+function. This applies when comparing theoretical predictions with results of
+experiments, which are usually quoted as an average over many experiments.
+Since the robots in either state are independent of each other, p (t), is now
+the fraction of robots in the Red state, and consequently Np (t) is the average
+number of robots in that state. The results of the previous section, namely
+solutions for p (t) for constant task distribution (Equation 14) and for chang-
+ing task distribution (Equation16), canbe used to study the averagecollective
+behavior. Section 6.1 presents results of analysis of the mathematical model.
+4.1.4 Stochastic Effects
+In some cases it is useful to know the probability distribution of robot task
+states over the entire MRS. This probability function describes the exact col-
+lective behavior from which one could derive the average behavior as well as
+the fluctuations around the average. Knowing the strength of fluctuations is
+necessaryfor assessinghow the probabilistic nature of robot’s observationsand
+actionsaffects the globalproperties ofthe system. Belowwe considerthe prob-
+lem of finding the probability distribution of the collective state of the system.
+LetP (t)betheprobabilitythatthereareexactlynrobotsintheRedstate
+at time t. For a sufficiently short time interval ∆t we can write [15]
+where W (t;∆t) is the transitionprobability between the states i and j during
+the time interval (t,t+∆t). In our MRS, this transitions correspond to robots
+changing their state from Red to Green or vice versa. Since the probability
+that more than one robot will have a transition during a time interval ∆t is
+O(∆t), then, in the limit ∆t → 0 only transitions between neighboring states
+are allowed in Equation 17, n→n±1. Hence, we obtain
+Here r is the probability density of having one of the k Red robots change its
+state to Green, and g is the probability density of having one of the N −k
+Green robots change its state to Red. Let us assume again that αhM ≫1 so
+that γ =1−γ . Then one has
+= g−1 = 0, r
+is history-averaged transition rate to
+Red states.
+The steady state solution of Equation 18 is given by [10]
+Ps = g n−1 g n−2 ...g 1 g 0 Ps (20)
+n r n r n−1 ...r 2 r 1 0
+where Ps is determined by the normalization:
+Ps = 1+ g n−1 g n−2 ...g 1 g 0 (21)
+0 " r n r n−1 ...r 2 r 1 #
+Using the expression for γ, after some algebra we obtain
+N!
+n (N −n)!n! r r
+e.g., the steady state is a binomial distribution with parameter γ. Note again
+that this is a direct consequence of the independence of the robots’ dynamics.
+Indeed, since the robots act independently, in the steady state each robot has
+the same probability of being in either state. Moreover,using this argument it
+becomes clear that the time-dependent probability distribution P (t) is given
+by Equation 22 with γ replaced by p (t), Equation 14.
+4.2 Observations of Tasks and Robots
+In this section we study the more complex dynamic task allocation mechanism
+in which robots make decisions to change their state based on the observations
+of not only available tasks but also on the observed task states of other robots.
+Specifically, each robot now records the numbers and types of task as well as
+the numbers and task types of robots it has encountered. Again, we let m
+and m be the number of tasks of Red and Green type, and n and n be the
+number of robots in Red and Green task state in a robot’s history window.
+The probabilities for changing a robot’s state are again given by transition
+functions that now depend on the fractions of observed tasks and robots of
+each type: mˆ = m /(m +m ), mˆ = m /(m +m ), nˆ = n /(n +n ),
+r r r g g g r g r r r g
+and nˆ = n /(n +n ). In our previous work [15] we showed that in order to
+achieve the desired long term behavior for task allocation (i.e., in the steady
+state the average fraction of Red and Green robots is equal to the fraction of
+RedandGreen tasksrespectively),the transitionratesmusthavethefollowing
+functional form:
+f g→r (mˆ r ,nˆ r ) = mˆ r g(mˆ r −nˆ r ), (23)
+Here g(z) is a continuous, monotonically increasing function of its argument
+defined on an interval [−1,1]. In this paper we consider the following forms for
+g(z):
+• Power: g(z)=100z/100
+• Stepwise linear: g(z)=zΘ(z).1
+To analyze this task allocation model, let us again consider a single robot
+that searches for tasks to perform and makes a transition to Red and Green
+states according to transition functions defined above. Let p (t) be the proba-
+bility that the robot is in the Red state at time t, with Equation 2 governing
+its time evolution. Note that p (t) is also the average fraction of Red robots,
+As in the previous case, the next step of the analysis is averaging over the
+the robot’s histories, i.e., mˆ and nˆ . Note that a robot’s observations of avail-
+able tasks can still be modeled by a Poissondistribution similar to Equation1.
+However, since the number of robots of each task state changes stochastically
+in time, the statistics of n and n should be modeled as a doubly stochas-
+tic Poisson process (also called Cox process) with stochastic rates. This would
+complicate the calculation of the average over nˆ = n /(n +n ) and require
+mathematical details that go well beyond the scope of this paper. Fortunately,
+as we demonstrated in the previous section, if a robot’s observation window
+contains many readings, then the estimated fraction of task types is exponen-
+tially close to the average of the Poisson distribution. This suggests that for
+sufficiently high densities of tasks and robots we can neglect the stochastic ef-
+fects of modeling observations for the purpose of our analysis, and replace the
+robot’s observation by their average (expected) values. In other words, we use
+the following approximation:
+The Equations 2, 25, and 26 are a system of integro–differential equations
+that uniquely determine the dynamics of p (t). In the most general case it is
+notpossible to obtainsolutions by analyticalmeans,hence one has to solve the
+system numerically. However, if the task density does not change in time, we
+canstillperformsteadystateanalysis. Steadystateanalysislooksforlong-term
+solutions that do not change in time, i.e., dp /dt = 0. Let µ0 be the density
+of Red tasks, and p = p (t →∞) be the steady state value, so that mˆ = µ0,
+nˆ =p0. Then, by setting left hand side of Equation 2 to zero, we get
+0 r r 0 0 r r 0
+Note that p = µ0 is a solution to Equation 27 so that in the steady state
+the fraction of Red robots equals the fraction of red tasks as desired. To show
+thatthisistheonlysolution,wenotethatforafixedµ0 theright-andleft-hand
+1ThestepfunctionΘisdefined asΘ(z)=1ifz≥0;otherwise,itis0. Thestepfunction
+guarantees thatnotransitionstoRedstateoccurwhen mr <nr.
+sides of the equation are monotonically increasing and decreasing functions of
+p respectively, due to the monotonicity of g(z). Consequently, the two curves
+can meet only once and that proves the uniqueness of the solution.
+4.2.1 Phenomenological Model
+Exact stochastic models of task allocation can quickly become analytically in-
+tractable, as we saw above. Instead of exact models, it is often more conve-
+nient to work with the so-called Rate Equations model. These equations can
+be derived from the exact stochastic model by appropriately averaging it [15];
+however,theyareoften(see,forexample,populationdynamics[6])phenomeno-
+logical,or ad hoc, in nature — constructed by taking into account the system’s
+salient processes. This approach makes a number of simplifying assumptions:
+namely, that the system is uniform and dilute (not too dense), that actions of
+individual entities are independent of one another, that parameters canbe rep-
+resentedbytheir meanvaluesandthatsystembehaviorcanbedescribedby its
+average value. Despite these simplifications, resulting models have been shown
+to correctly describe dynamics of collective behavior of robotic systems [18].
+Phenomenological models are useful for answering many important questions
+aboutthe performanceofaMRS,suchas,doesthe steadystateexist,howlong
+doesittaketo reachit, andsoon. Belowwe presentaphenomenologicalmodel
+of dynamic task allocation.
+Individualrobotsaremakingtheirdecisionstochangetaskstateprobabilis-
+ticallyandindependently ofoneanother. ArobotwillchangestatefromGreen
+to Red with probability f g→r and with probability 1−f g→r it will remain in
+the Green state. We can succinctly write ∆N g→r and ∆N r→g , the number of
+robotsthatswitchfromGreentoRedandvice versa duringasufficientlysmall
+time interval ∆t, as
+X (cid:0) (cid:1)
+X (cid:0) (cid:1)
+Here we introduced a state variable x , such that x =1 when a robot is in the
+Green state, and x = 0 when a robot is in the Red state. δ(x) is Kronecker
+delta, defined as δ(x) = 1 when x = 0 and δ(x) = 0 otherwise. Therefore,
+∆N g→r is a random variable from a binomial distribution specified by a mean
+µ = f g→r N g and variance σ2 = f g→r (1−f g→r )N g . Similarly, the distribution
+of the random variable ∆N r→g is specified by mean µ = f r→g N r and variance
+σ2 =f r→g (1−f r→g )N r .
+Duringatimeinterval∆tthetotalnumberofrobotsinRedandGreentask
+states will change as individual robots make decisions to change states. The
+followingfinite difference equation specifies how the number of Redwill change
+on average:
+Rearrangingthe equationandtaking the continuoustime limit (∆t→0)yields
+adifferentialRateEquationthatdescribestimeevolutionofthenumberofRed
+robots. By taking the means of ∆N’s as their values, we recover Equation 2.
+Keeping ∆N’s as random variables allows us to study the effect the prob-
+abilistic nature of the robots’ decisions have on the collective behavior.2 We
+solve Equation 28 by iterating it in time and drawing ∆N’s at random from
+their respective distributions. The solutions are subject to the initial condition
+N (t≤0)=N and specify the dynamics of task allocation in robots.
+Functions f g→r and f r→g are calculated using estimates of the densities of
+Red tasks (m ) and robots in Red state (n ) from the observed counts stored
+in the robot’s history window.
+Transitionratesf g→r andf r→g inthemodelaremeanvalues,averagedover
+all histories and all robots. In order to compute them, we need to aggregate
+observations of all robots. Suppose each robot has a history window of length
+h. For a particular robot i, the values in the most recent observational slot are
+N0 , N0 , M0 and M0 , the observed numbers of Red and Green robots and
+i,r i,g i,r i,g
+tasks respectively at time t. In the next latest slot, the values are N1 , N1 ,
+M1 and M1 , the observed numbers at time t−∆, and so on. Each robot
+estimates the densities of Red robots and tasks using the following calculation:
+n = i,r = nj (29)
+i,r h Nj +Nj h i,r
+j=0 i,r i,g j=0
+m = i,r = mj . (30)
+i,r h Mj +Mj h i,r
+j=0 i,r i,g j=0
+When observations of all robots are taken into account, the mean of the
+observeddensities of Red robots at time t — 1 N n0 — will fluctuate due
+to observation noise, but on average it will be proportional to N (t)/N, which
+is the actual density of Red robots at time t. The proportionality factor is
+related to physical robot parameters, such as speed and observation area (see
+Section 6.1). Likewise, the average of the observed densities at time t−j∆ is
+1 N nj ∝ N (t−j∆)/N, the density of robots at time t−j∆. Thus, the
+N i=1 i,r r
+aggregate estimates of the fractions of Red robots and tasks are:
+2Notethatwedonotmodelheretheeffectofobservationnoiseduetouncertaintyinsensor
+readingsandfluctuations inthedistributionoftasks.
+Robots are making their decisions asynchronously, i.e., at slightly different
+times. Therefore, the last terms in the above equations are best expressed in
+continuousform: e.g., 1/Nh N (t−τ)dτ (see Equation25andEquation26).
+Estimates Equation 31 and 32 can be plugged into Equation 23 and Equa-
+tion 24 to compute the values of transition probabilities for any choice of the
+transition function (power or linear). Once we know f r→g and f g→r , we can
+solveEquation28tostudythe dynamicsoftaskallocationinrobots. Note that
+Equation 28 is now a time-delay finite difference equation, and solutions will
+show typical oscillations.
+We solve the models presented in this section and validate their predictions
+in context of the multi-foraging task described next.
+5 Multi-Robot Multi-Foraging Task
+In this section we describe the multi-foraging task domain in which we exper-
+imentally tested our dynamic task allocation mechanism, including the simu-
+lation environment used and robot sensing and control characteristics. In Sec-
+tion 6.1 we use this application to validate the models presented above, solve
+them and compare their solutions to the results of embodied simulations.
+5.1 Task Description
+The traditional foraging task is defined by having an individual robot or group
+of robots collect a set of objects from an environment and either consume on
+the spot or return them to a common location [5]. Multi-foraging, a variation
+on traditional foraging, is defined in [2] and consists of an arena populated by
+multiple types of objects to be concurrently collected.
+In our multi-foraging domain, there are two types of objects (e.g., pucks)
+randomly dispersed throughout the arena: Puck and Puck pucks that
+are distinguishable by their color. Each robot is equally capable of foraging
+both puck types, but can only be allocated to foraging for one type at any
+giventime. Additionally,allrobotsareengagedinforagingatalltimes;arobot
+cannot be idle. A robot may switch the puck type for which it is foraging
+according to its control policy, when it determines it is appropriate to do so.
+This is an instantiation of the generaltask allocation problem described earlier
+in this paper, with puck colors representing different task types.
+Inthemulti-foragingtask,therobotsmoveinanenclosedarenaandpickup
+encountered pucks. When a robot picks up a puck, the puck is consumed (i.e.,
+it is immediately removed from the environment, not transported to another
+region) and the robot carries on foraging for other pucks. Immediately after
+a puck is consumed, another puck of the same type is placed in the arena at
+a random location. This is done so as to maintain a constant puck density
+in the arena throughout the course of an experiment. In some situations, the
+densityofpuckscanimpacttheaccuracyorspeedofconvergencetothe desired
+task allocation. This is an important consideration in dynamic task allocation
+mechanisms for many domains; however, in this work we want to limit the
+number of experimental variables impacting system performance. Therefore,
+we reserve the investigation on the impact of varying puck densities for future
+work.
+The role of dynamic task allocation in this domain requires the robots to
+split their numbers by having some forage for Puck pucks and others for
+Puck pucks. For the purpose of our experiments, we desire an allocation
+of robots to converge to a situation in which the proportion of robots foraging
+for Puck pucks is equal to the proportion of Puck pucks present in the
+foraging arena (e.g., if Puck pucks make up 30% of the pucks present in the
+foraging arena, then 30% of the robots should be foraging for Puck pucks).
+In general,the desired allocation could take other forms. For example, it could
+be related to the relative reward or cost of foraging each puck type without
+change to our approach.
+We note that the limited sensing capabilities and lack of direct communica-
+tionoftheindividualrobotsintheimplementationofourtaskdomainprohibits
+them from acquiring global information such as the size and shape of the for-
+aging arena, the initial or current number of pucks to be foraged (total or by
+type), or the initial or current number of foraging robots (total or by foraging
+type).
+5.2 Simulation Environment
+In order to experimentally demonstrate the dynamic task allocation mecha-
+nism we made use of a physically-realistic simulation environment. Our simu-
+lationtrials were performedusing Playerand Gazebo simulationenvironments.
+Player [3] is a server that connects robots, sensors, and control programs over
+a network. Gazebo [12] simulates a set of Player devices in a 3-D physically-
+realistic world with full dynamics. Together, the two represent a high-fidelity
+simulation tool for individual robots and teams that has been validated on a
+collection of real-robotrobot experiments using Player controlprograms trans-
+ferred directly to physical mobile robots. Figure 1 provides snapshots of the
+simulation environment used. All experiments involved 20 robots foraging in a
+400m2 arena.
+The robots used in the experimental simulations are realistic models of the
+ActivMedia Pioneer 2DX mobile robot. Each robot, approximately 30 cm in
+diameter,is equippedwithadifferentialdrive,anodometrysystemusingwheel
+rotation encoders, and 180 degree forward-facing laser rangefinder used for ob-
+stacle avoidance and as a fiducial detector/reader. Each puck is marked with
+a fiducial that marks the puck type and each robot is equipped with a fiducial
+thatmarksthe activeforagingstateoftherobot. Notethatthefiducialsdonot
+contain unique identities of the pucks or robots but only mark the type of the
+puck or the puck type a given robot is engaged in foraging. Each robot is also
+equipped with a 2-DOF gripper on the front, capable of picking up a single 8
+cm diameter puck at a time. There is no capability available for explicit, di-
+rectcommunicationbetweenrobotsnorcanpucksandotherrobotsbeuniquely
+Figure 1: Snapshots from the simulation environment used. (left) An overhead
+view of foraging arena and robots. (right) A closeup of robots and pucks.
+identified.
+5.3 Behavior-Based Robot Controller
+All robots have identical behavior-based controllers consisting of the following
+mutually exclusive behaviors: Avoiding, Wandering, Puck Servoing, Grasping,
+and Observing. Descriptions of robot behaviors are provided below.
+- The Avoiding behaviorcauses the robotto turn to avoidobstacles in its
+path.
+- The Wandering behavior causes the robot to move forward and, after a
+randomlength ofelapsedtime, to turn leftor rightthrougharandomarc
+for a random period of time.
+- ThePuck Servoingbehaviorcausestherobottomovetowardadetected
+puckofthedesiredtype. Iftherobot’scurrentforagingstateisRobot ,
+the desired puck type is Puck , and if the robots currentforaging state
+is Robot , the desired puck type is Puck .
+Green Green
+- TheGraspingbehaviorcausestherobottouseitsgrippertopickupand
+consume a puck within the gripper’s grasp.
+- The Observing behavior causes the robot to take the current fiducial
+information returned by the laser rangefinder and record the detected
+pucks and robots to their respective histories. The robot then updates
+its foraging state based on those histories. A description of the histories
+is given in Section 5.3.1 and a description of the foraging state update
+procedure is given in Section 5.3.2.
+Each behavior listed above has a set of activation conditions based on rel-
+evant sensor inputs and state values. When met, the conditions cause the be-
+havior to be become active. A description of when each activation condition is
+Obstacle Puck Gripper Break- Observation Active
+Detected Detected Beam On Signal Behavior
+X X X 1 Observing
+1 X X X Avoiding
+0 1 0 0 Puck Servoing
+0 X 1 0 Grasping
+0 X X X Wandering
+Table 1: Behavior Activation Conditions. Behaviors are listed in order of de-
+creasing rank. Higher ranking behaviors preempt lower ranking behaviors in
+the event multiple are active. X denotes the activation condition is irrelevant
+for the behavior.
+active is given below. The activation conditions of all behaviors are shown in
+Table 1.
+- The Obstacle Detected activation condition is true when an obstacle
+is detected by the laser rangefinder within a distance of 1 meter. Other
+robots, pucks, and the arena walls are considered obstacles.
+- ThePuck Detectedactivationconditionistrueiftherobot’scurrent
+foraging state is Robot and a puck of type Puck (where Det is Red
+orGreen)isdetectedwithinadistanceof5metersandwithin±30degrees
+of the robot’s direction of travel.
+- TheGripper Break-Beam Onactivationconditionistrueifthebreak-
+beam sensor between the gripper jaws detects an object.
+- TheObservationSignalactivationconditionistrueifthedistancetrav-
+eledbytherobotaccordingtoodometrysincethelasttimetheObserving
+behavior was activated is greater than 2 meters.
+5.3.1 Robot State Information
+All robots maintain three types of state information: foraging state, observed
+puck history, and observedrobot history. The foraging state identifies the type
+of puck the robot is currently involved in foraging. A robot with a foraging
+state of Robot refers to a robot engaged in foraging Puck pucks and a
+foraging state of Robot refers to a robot engaged in foraging Puck
+Green Green
+pucks. Forsimplicity,wewillrefertobothrobotforagingstatesandpucktypes
+as Red and Green. The exact meaning will be clear in context.
+Eachrobotisoutfittedwithacoloredbeaconpassivelyobservablebynearby
+robots which indicates the robot’s currentforaging state. The color of the bea-
+con changes to reflect the current state – a red beacon for a foraging state of
+Red and a green beacon for foraging state Green. Thus, the colored beacon
+acts as a form of local, passive communication conveying the robot’s current
+foragingstate. All robots maintaina limited, constant-sizedhistory storing the
+most recently observed puck types and another constant-sized history storing
+the foraging state of the most recently observed robots. Neither of these his-
+tories contains a unique identity or location of detected pucks or robots, nor
+does it store a time stamp of when any given observation was made. The his-
+tory of observedpucks is limited to the last MAX-PUCK-HISTORYpucks observed
+and the history of the foraging states of observed robots is limited to the last
+MAX-ROBOT-HISTORYrobots observed.
+While moving about the arena, each robot keeps track of the approximate
+distance it has traveled by using odometry measurements. At every interval of
+2 meters traveled, the robot makes an observation performed by the Observing
+behavior. Thisprocedureisnearlyinstantaneous;therefore,therobot’sbehavior
+isnotoutwardlyaffected. Theareainwhichpucksandotherrobotsarevisibleis
+within5metersand±30degreesintherobot’sdirectionoftravel. Observations
+are only made after traveling 2 meters because updating too frequently leads
+to over-convergence of the estimated puck and robot type proportions due to
+repeatedobservationsofthe samepucksand/orrobots. Onaverage,duringour
+experiments, a robot detected 2 pucks and robots per observation.
+5.3.2 Foraging State Transition Function
+Afterarobotmakesanobservation,itre-evaluatesandprobabilisticallychanges
+itscurrentforagingstategiventhenewlyupdatedpuckandrobothistories. The
+probabilitybywhichthe robotchangesits foragingstate isdefinedby the tran-
+sition function. We experimentally studied transition functions given by Equa-
+tion3,Equation23andEquation24with both power andlinear forms. Below
+we presentresults of analysis and simulations and discuss the consequences the
+choice of the transition function has on system level behavior.
+6 Analysis and Simulations Results
+The mathematical models developedin Section 4 canbe directly appliedto the
+multi-foraging task if we map Red and Green tasks to Red and Green pucks
+and task states of robots to their foraging states. Model parameters, such as
+ε, α, etc, depend on physical realizations of the implementation and can be
+computed from details of the multi-foraging task as described below.
+6.1 Observations of Pucks Only
+First, we study the model of dynamic task allocation, presented in Section 4.1,
+where robots observeonly pucks and make decisionto switchforagingstate ac-
+cording to the transition functions givenby Equation 3. We comparedtheoret-
+ical predictions of the robots’ collective behavior with results from simulations.
+We used Equation 14 and 16 to compute how the average number of robots in
+the Red state changes in time when the puck distribution is suddenly changed.
+The parametervalues were obtained from experiments. p =1.0 was the initial
+density of Red robots (of 20 total robots), µ = 0.3 was the initial Red puck
+density (of 50 total pucks), which remained constant until it was changed by
+theexperimenter. Thefirstchangeinpuckdensitywas∆µ=0.5,meaningthat
+80%ofthe pucks inthe arenaarenowRed. The secondchangeinpuck density
+was ∆µ=−0.3, to 50% Red pucks.
+ǫistherateatwhichrobotsmakedecisionstoswitchstates. Robottraveled
+2 m between observations at an average speed of 0.2 m/s; therefore, there are
+10 s between observations, and ε = 0.1. h, the history length, is the number
+of pucks in the robot’s memory. αM0 is the rate at which robots encounter
+pucks. A robot makes an observationof its local environment at discrete time
+intervals. The area visible to the robot is A = (5 m)2π/6 = 13.09, with 1/6
+coming from the 60o angle of view. The arena area is A = 315 m2; therefore,
+αM0 = A M0/A = 2.1. We studied the dynamics of the system for different
+history lengths h.
+0 500 1000 1500
+History length 10
+Red Robots (expt)
+Red Robots (theory)
+0 500 1000 1500
+History length 50
+0 500 1000 1500
+History length 100
+0 500 1000 1500
+Simulation Time (seconds)
+Figure 2: Evolution of the fraction of Red robots for different history lengths.
+Robots’ decision to change state is based on observations of pucks only.
+Figure 2 shows evolution of the numbers of Red robots for different history
+lengths. Initially, the distribution of Redpucks is set to 30%and all the robots
+are in the Red foraging state. At t = 500 s, the puck distribution changes
+abruptly to 80%, and at t = 1000 s to 50%. The solid line shows results of
+simulations — the fraction of Red robots, averaged over 10 runs. The dashed
+line gives theoretical predictions for the parameters quoted above. Since we
+are in the εh ≫ 1 limit (for h = 50,100), the time it takes to converge to the
+steady state is linear in history length, t ∼h, as predicted by Equation 16.
+The agreement between theoretical and experimental results is excellent. We
+stress that there are no free parameters in the theoretical predictions — only
+experimental values of the parameters were used in producing these plots.
+In addition to being able to predict the average collective behavior of the
+multi-robot system, we can also quantitatively characterize the amount of fluc-
+tuationsinthe system. Fluctuations aredeviationsfromthe steadystate (after
+the system has converged to the steady state) that arise from the stochastic
+nature of robot’s observations and decisions. These deviations result in fluctu-
+ations from the desired global distribution of Red and Green robots seen in an
+individualexperiment. Onecansuppressthesefluctuationsbyaveragingresults
+of many identical experiments.
+Figure 3: Histogram of the fraction of Red robots in the steady state for three
+differentpuckdistributions(dataforh=10). µ specifiesfractionofRedpucks.
+Lines are theoretical predictions of the distribution of Red robots.
+Tomeasurethestrengthofthefluctuations,wetakedatafromanindividual
+experimental run and extract the fraction of Red robots, after the system has
+converged to the steady state, for each of the three Red puck distributions:
+µ = 30%, 50%, 80%. Because the runs were relatively short, we only have
+300sworthofdata(30datapoints)inthe convergedstate;however,sinceeach
+experimentwasrepeatedten times, wemake the data sets longerby appending
+datafromallexperiments. Inthe end, wehave300measurementsofthe steady
+state Red robot density for three different puck distributions. Figure 6.1 shows
+the histogram of robot distributions for three different puck distributions. The
+solidlinesarecomputedusingEquation22,whereforγweusedtheactualmeans
+ofthe steady state distributions (γ =0.28,0.47and 0.7for µ =30%,50%and
+80%respectively). We cansee fromthe plots that the theory correctlypredicts
+the strength of fluctuations about the steady state. As is true of binomial
+distributions, the fluctuations (measured by the variance)are greatestfor cases
+where the numbers of Red and Green pucks are comparable (µ = 50%) and
+smaller when their numbers are very different (µ =80%).
+6.2 Observations of Pucks and Robots
+In this section we study the dynamic task allocation model developed in Sec-
+tion 4.2, in which robots use observations of pucks and other robots’ foraging
+states to make decision to change their own foraging state.
+Figure 4 shows results of embodied simulations (solid lines) as well as so-
+lutions to the model Equation 28 (dashed lines) for different values of robot
+history length and forms of transition function (given by Equation 23 and 24,
+withg(z)linearorpowerfunction). Initially,theRedpuckfraction(dottedline)
+is30%. Itischangedabruptlyatt=500sto80%andthenagainatt=2000s
+to 50%. Each solid line showing Red robot density has been averaged over 10
+runs. We rescale the dimensionless time of the model by parameter 10, corre-
+spondingε=0.1. Thehistorylengthwastheonlyadjustableparameterusedin
+solvingthe equations. The valuesofhusedtocompute the observedfractionof
+Redrobotsn inEquation31wereh=2, 8, 16,correspondingtoexperimental
+history lengths 10, 50, 100 respectively. For m , the observed fraction of Red
+pucks, we used their actual densities.
+In order to explain the difference in history lengths between theory and ex-
+periment,we notethatinthe simulationexperiments,the historylengthmeans
+the numbers of observed robots and pucks, while in the model, it means the
+number of observations, with multiple objects sighted within a single observa-
+tion. According to calculations in Section 6.1, a robot observes about 2 pucks
+in a single observation. Moreover, the robot travels 2 m between observations,
+yet it sees 5 m out during each observation, meaning that individual observa-
+tions will be correlated. Observations will be further correlated because of the
+pattern of a robot’s motion — as the robot moves in a straight line towards
+a goal, it is likely to observe overlapping regions of the arena. These consid-
+erations could explain the factor of five difference between the history lengths
+used in the experiments and the corresponding values used in the model. More
+detailed experiments, for example, ones in which robots travel farther between
+observations, are necessary to explain these differences.
+Solutions exhibit oscillations,although eventually oscillations decay and so-
+lutions relax to their steady state values. In all cases, the steady state value is
+the same as the fraction of red pucks in the arena. History-induced oscillations
+0 500 1000 1500 2000 2500 3000 3500
+History length 10
+Red Robots (expt)
+Red Robots (theory)
+0 500 1000 1500 2000 2500 3000 3500
+History length 50
+0 500 1000 1500 2000 2500 3000 3500
+History length 100
+Simulation Time (seconds)
+(a) Linear transition function
+0 500 1000 1500 2000 2500 3000 3500
+History length 10
+Red Robots (expt)
+Red Robots (theory)
+0 500 1000 1500 2000 2500 3000 3500
+History length 50
+0 500 1000 1500 2000 2500 3000 3500
+History length 100
+Simulation Time (seconds)
+(b) Power transition function
+Figure 4: Evolution of the fraction of Red robots for different history lengths
+and transition functions, compared to predictions of the model
+arefarmorepronouncedforthelineartransitionfunction(Figure4(a))thanfor
+the power transition function (Figure 4(b)). For the power transition function,
+theseoscillationsarepresentbutbecomeevidentonlyforlongerhistorylengths.
+This behavior is probably caused by the differences between the values of tran-
+sition functions near the steady state: while the value of the power transition
+function remains small near the steady state, the value of the linear transition
+function grows linearly with the distance from the steady state, thereby ampli-
+fying any deviations from the steady state solution. The amplitude and period
+of oscillations and the convergence rate of solutions to the steady state all de-
+pend on history length, and it generally takes longer to reach the steady state
+for longer histories. Another conclusion is that the linear transition function
+convergesto thedesireddistributionfasterthanthe powerfunction,atleastfor
+moderate history lengths.
+7 Discussion
+Wehaveconstructedandanalyzedmathematicalmodelsofdynamictaskalloca-
+tioninamulti-robotsystem. Themodelsaregeneralandcanbeeasilyextended
+to other systems in whichrobots use a history of localobservationsof the envi-
+ronmentasabasisformakingdecisionsaboutfuture actions. Thesemodelsare
+based on theory of stochastic processes. In order to study a robot’s behavior,
+we do not need to know its exact trajectory or the trajectories of other robots;
+instead, we derive a probabilistic model that governs how a robot’s behavior
+changes in time. In some simple cases these models can be solved analytically.
+However, stochastic models are usually too complex for exact analytic treat-
+ment. Thus, in the scenariodescribed inSection 4.1 in whichonly observations
+oftasksaremade,thoughtheindividualmodelistractable,thestochasticmodel
+of the collective behavior is not. Instead, we use averaging and approximation
+techniquestoquantitativelystudythedynamicsofthecollectivebehavior. Such
+models, therefore, do not describe the robots’ behavior in a single experiment,
+butratherthebehaviorthathasbeenaveragedovermanyexperimentalorsim-
+ulations runs. Fortunately, results of experiments and simulations are usually
+presentedasanaverageovermanyruns;therefore,mathematicalmodelsofaver-
+agecollectivebehaviorcanbeusedtodescribeexperimentalresults. Infact,the
+stochastic model produces excellent agreementwith experimental results under
+all experimental conditions and without using any adjustable parameters.
+Phenomenological models are more straightforward to construct and ana-
+lyze than exact stochastic models — in fact, they can be easily constructed
+from details of the individual robot controller [18]. The ease of use comes at a
+price, namely, the number of simplifying assumptions that were made in order
+to producea mathematicallytractablemodel. First, weassumethat the robots
+arefunctioning inadilute limit, wherethey aresufficientlyseparatedthattheir
+actionsarelargelyindependentofoneanother. Second,weassumethatthetran-
+sitionratescanberepresentedbyaggregatequantitiesthatarespatiallyuniform
+and independent of the details of the individual robot’s actions or history. We
+alsoassumethesystemishomogeneous,withmodeledrobotscharacterizedbya
+set of parameters,eachof them representing the mean value of some real robot
+feature: mean speed, mean duration for performing a certainmaneuver, and so
+on. Real robot systems are heterogeneous: even if the robots are executing the
+same controller, there will always be variations due to inherent differences in
+hardware. We do not consider parameter distributions in our models as would
+benecessarytodescribesuchheterogeneoussystems. Finally,phenomenological
+models more reliably describe systems where fluctuations (deviations from the
+mean behavior) can be neglected, as happens in large systems or when many
+experimental runs are aggregated. However, even if phenomenological models
+don’t agree with experiments exactly, as we saw in Section 6.2, they can still
+reliably predict most behaviors of interest even in not-so-large systems. They
+are, therefore, a useful tool for modeling and analyzing multi-robot systems.
+8 Conclusion
+Mathematical analysis can be a useful tool for the study and design of MRS
+and a viable alternative to experiments and simulations. It can be applied to
+large systems that are too costly to build or take too long to run in simula-
+tion. Mathematical analysis can be used to study the behavior of an MRS,
+select parameters that optimize its performance, prevent instabilities, etc. In
+conjunction with the design process, mathematical analysis can help under-
+stand the effect individual robot characteristics have on the collective behavior
+before a system is implemented in hardware or in simulation. Unlike experi-
+ments and simulations, where exhaustive search of the design parameter space
+is often required to reach any conclusion, analysis can often produce exact an-
+alytic results, or scaling relationships, for the quantities of interest. If these
+are not possible, exhaustive search of the parameter space is much more prac-
+tical and efficient. Finally, results of analysis can be used as feedback to guide
+performance-enhancing modifications of the robot controller.
+In this paper we have described an dynamic task allocation mechanism
+where robots use local observations of the environment to decide their task
+assignments. We have presented a mathematical model of this task allocation
+mechanism and studied it in the context of a multi-foraging task scenario. We
+compared predictions of the model with results of embodied simulations and
+foundexcellentquantitativeagreement. Inthisapplication,mathematicalanal-
+ysis could help the designer choose robot properties, such as the form of the
+transition probability used by robots to switch their task state, or decide how
+many observations the robot ought to consider.
+Mathematical analysis of MRS is a new field, but its success in explaining
+experimentalresults shows it to be a promisingtool for the design andanalysis
+of robotic systems. The field is open to new research directions, from apply-
+ing analysis to new robotic systems to developing increasingly sophisticated
+mathematical models that, for example, account for heterogeneities in robot
+population that are due to differences in their sensors and actuators.
+Acknowledgment
+The research reported here was supported in part by the Defense Advanced
+ResearchProjectsAgency(DARPA) under contractnumber F30602-00-2-0573.

@@ -1,0 +1,583 @@
+J. Chem. Inf. Comput. Sci. 2002, 42, 1273-1280 1273
+Reoptimization of MDL Keys for Use in Drug Discovery
+Joseph L. Durant,* Burton A. Leland, Douglas R. Henry, and James G. Nourse
+MDL Information Systems, 14600 Catalina Street, San Leandro, California 94577
+ReceivedDecember 17, 2001
+ForanumberofyearsMDLproductshaveexposedboth166bitand960bitkeysetsbasedon2Ddescriptors.
+These keysets were originally constructed and optimized for substructure searching. We report on
+improvements in the performance of MDL keysets which are reoptimized for use in molecular similarity.
+Classification performance for a test data set of 957 compounds was increased from 0.65 for the 166 bit
+keysetand0.67forthe960bitkeysetto0.71forasurprisalS/Nprunedkeysetcontaining208bitsand0.71
+for a genetic algorithm optimized keyset containing 548 bits. We present an overview of the underlying
+technologysupportingthedefinitionofdescriptorsandtheencodingofthesedescriptorsintokeysets.This
+technologyallowsdefinitionofdescriptorsascombinationsofatomproperties,bondproperties,andatomic
+neighborhoods at various topological separations as well as supporting a number of custom descriptors.
+Thesedescriptorscanthenbeusedtosetoneormorebitsinakeyset.Weconstructedvariouskeysetsand
+optimizedtheirperformanceinclusteringbioactivesubstances.Performancewasmeasuredusingmethodology
+developedbyBriemandLessel.“Directedpruning”wascarriedoutbyeliminatingbitsfromthekeysetson
+the basis of random selection, values of the surprisal of the bit, or values of the surprisal S/N ratio of the
+bit. The random pruning experiment highlighted the insensitivity of keyset performance for keyset lengths
+of more than 1000 bits. Contrary to initial expectations, pruning on the basis of the surprisal values of the
+various bits resulted in keysets which underperformed those resulting from random pruning. In contrast,
+pruningonthebasisofthesurprisalS/Nratiowasfoundtoyieldkeysetswhichperformedbetterthanthose
+resulting from random pruning. We also explored the use of genetic algorithms in the selection of optimal
+keysets.Oncemoretheperformancewasonlyaweakfunctionofkeysetsize,andtheoptimizationsfailed
+to identify a single globally optimal keyset. Instead multiple, equally optimal keysets could be produced
+which had relatively low overlap of the descriptors they encoded.
+INTRODUCTION features of a query molecule can be used to set keybits; a
+search for molecules matching that query could then be
+There are a number of tasks in the drug-discovery
+facilitated by screening out all molecules in the database
+workflow which require grouping and/or separating mol-
+whichdonotsetthosesamekeybits.Anoptimizationstrategy
+ecules based on some criteria. Clustering1,2 and diversity
+for such a task might include the choice of properties to
+analysis3,4areoftenimplementedusingdistancesorsimilarity
+encodewhichwouldbestructuredifferentiatingandarrange-
+measures based on binary keysets. Databases and libraries
+ment of them within the keyset in order of increasing
+can be characterized based on statistical distribution func-
+probability of occurrence within a reference data set.
+tions5ofbitswithinkeysets,inadditiontothemorefamiliar
+Indeed,thisisthegenesisoftwocommonMDLkeysets:
+calculations based on Pfizer “Rule of Five”,6 distribution
+onecontaining960keybitsandtheothercontainingasubset
+functions,7,8oratomoccurrencecounts.9Leadidentification
+of166keybits.20Theiruseinsubstructuresearchinghasbeen
+using fingerprints based on binary keysets continues to be
+largely obviated by index-based search techniques.21 They
+examined.10-12Finally,therelatedtopicsoflibrarydesign13,14
+have,however,foundavarietyofusesinthedrug-discovery
+and optimal compound selection15-17 often use binary
+workflow.
+keysets.
+There continues to be interest in the design of keysets
+Inthispaperwewillusethefollowingdefinitionstorefer which will provide more performance in a drug-discovery
+tokeysetcomponents.“Descriptor”willbeusedtoreferto workflow. Recent work includes examination of in Vitro
+amolecularfeature.Descriptorscanbeencodedintobinary affinity fingerprints,22,23 in silico (or virtual) affinity
+“keybits”. There can be a one-to-one relationship between fingerprints,24-26andfeaturetrees27asmethodsofproducing
+descriptors and keybits, or hashing can be used to create a keysetsoptimizedforsimilaritysearches.BriemandLessel26
+many-to-oneormany-to-manyrelationshipbetweendescrip- carried out a study comparing various 2D descriptors with
+torsandkeybits.Anorderedcollectionofkeybitsconstitute severalvirtualaffinityfingerprints.Theyfoundthatthe2D
+a “keyset”. “Keys” is context-sensitive and is used to refer descriptors out-performed the affinity fingerprint methods.
+either to keybits or keysets. The existing MDL 2D keyset technology can, in theory,
+Historically, molecular keysets have been used for sub- produce in excess of 3 million distinct keybits, which can
+structuresearching.18,19Forexample,anumberoftopological becombinedintoinnumerablekeysets.Wewantedtoexplore
+the reoptimization of keysets and determine how much
+*Correspondingauthorphone: (510)895-1313;e-mail: jdurant@mdli.com. performance could be improved by such reoptimization.
+10.1021/ci010132rCCC:$22.00 ©2002AmericanChemicalSociety
+PublishedonWeb09/14/2002
+1274 J. Chem. Inf. Comput. Sci., Vol. 42, No. 6, 2002 DURANT ET AL.
+Table1. Atom-BasedProperties Table2. Single-AtomAtom-BasedProperties
+0 null 0 null
+1 atomwithatleastthreeneighbors 1 atomwithatleastthreeneighbors
+2 heteroatom 2 heteroatom
+3 atominvolvedinoneormoremultiplebonds,notaromatic 3 atominvolvedinsomemultiplebonds,notaromatic
+4 atomwithatleastfourneighbors 4 atomwithatleastfourneighbors
+5 atomwithatleasttwoheteroatomneighbors 5 atomwithatleasttwoheteroatomneighbors
+6 atomwithatleastthreeheteroatomneighbors 6 atomwithatleastthreeheteroatomneighbors
+7 heteroatomwithatleastonehydrogenattached 7 heteroatomwithatleastonehydrogenattached
+8 carbonwithatleasttwosinglebondsandatleasttwo 8 carbonwithatleasttwosinglebondsandatleasttwo
+hydrogensattached hydrogensattached
+9 carbonwithatleastonesinglebondandatleastthree 9 carbonatominaCdCdoublebond
+hydrogensattached 10 atomhasatleasttwosinglebonds
+10 halogen 11 atomhasatleastthreesinglebonds
+11 atomhasatleastthreesinglebonds 12 atomisinatleasttwodifferentsix-memberedrings
+12 atomisinatleasttwodifferentsix-memberedrings 13 notused
+13 notused 14 atomhasmorethantworingbonds
+14 atomhasmorethantworingbonds 15 atomisataring/chainboundary
+15 atomisataring/chainboundary.Whenacomparisonisdone 16 centralatomisatanaromatic/nonaromaticboundary
+withanotheratomthepathpassesthroughthechainbond. 17 atomwithmorethanonechainbond
+16 atomisatanaromatic/nonaromaticboundary.Whena 18 atomisinaring
+comparisonisdonewithanotheratomthepath 19 aromaticatom
+passesthroughthearomaticbond. 20 atomisaheteroatominaring.
+17 atomwithmorethanonechainbond 21 rareproperties: atomwithfiveormoreneighbors,atomin
+18 atomisataring/chainboundary.Whenacomparisonisdone fourormorerings,oratomtypesotherthan
+withanotheratomthepathpassesthroughtheringbond. H,C,N,O,S,F,Cl,Br,orI
+19 atomisatanaromatic/nonaromaticboundary.Whena 22 rareproperties: atomhasacharge,isanisotope,hastwoor
+comparisonisdonewithanotheratomthe moremultiplebonds,orhasatriplebond.
+pathpassesthroughthenonaromaticbond. 23 nitrogen
+20 atomisaheteroatominaring. 24 sulfur
+21 rareproperties: atomwithfiveormoreneighbors,atomin 25 oxygen
+fourormorerings,oratomtypesotherthan 26 atominathree-memberedring
+H,C,N,O,S,F,Cl,Br,orI 27 atominafour-memberedring
+22 rareproperties: atomhasacharge,isanisotope,hastwoor 28 atominafive-memberedring
+moremultiplebonds,orhasatriplebond. 29 atominasix-memberedring
+23 nitrogen 30 atomhastwoneighbors,eachwiththreeormoreneighbors
+24 sulfur (includingthecentralatom).
+25 oxygen 31 atomhastwohydrocarbon(CH)neighbors
+26 notused
+27 notused
+28 notused ofanazulene.“Arom5”bondsarethoseinafive-membered
+29 notused ringwithtwodoublebondsanda“heteroatom”orC-atthe
+30 atomhastwoneighbors,eachwiththreeormoreneighbors
+apex of the ring.
+(includingthecentralatom).
+31 atomhastwohydrocarbon(CH)neighbors Descriptor Encoding. The largest block of descriptors
+makesuseofalgorithmicallycalculatedatom-basedproper-
+ties.Specificallyweperceive26propertiesoftypeP,aslisted
+COMPUTATIONAL METHOD
+in Table 1, and 30 properties of type A (most of which are
+StructureofMDLKeys.Theunderlyingtechnologyused the same as type P properties), as listed in Table 2.
+in the MDL 2D keysets is based on a general molecule Additionallyweperceive32one-atomenvironments,aslisted
+perception algorithm, which perceives a number of atom, in Table 3.
+bond,andcustomproperties.Themappingoftheseproperties One class of possible atom-based descriptors result from
+into descriptors and then into the keybits and ultimately the presence of one or two properties of type A located on
+keysets is under software control. a single atom. For this class n1 ) 0; n2 and n3 encode the
+Specifically, a keybit is defined by nine numbers, which appropriate values of A.
+we will denote by n1 through n9. The first four numbers A second class of possible atom-based descriptors result
+encodethevariouspropertiesintodescriptors.Theremaining fromthepresenceofanatomwithpropertyP,separatedby
+five numbers determine which keybits are set by the one to four bonds from a second atom with a property P¢.
+descriptor. Forthisclassn1encodesthenumberofbondsbetweenthe
+General Definitions. MDL has specific definitions for a atoms, and n2 and n3 encode the appropriate values of P
+number of general chemistry terms. “Heteroatom” is used and P¢.
+torefertoanynon-C,non-Hatom,andisabbreviated“Q”. A third class of possible atom-based descriptors results
+“Halogens”consistofF,Cl,Br,andI.“Other”atomsinclude fromthepresenceofanatomwithpropertyAlocatedinthe
+any atoms other than H, C, N, O, Si, P, S, F, Cl, Br, and I center of a particular atom environment. In this case n1 )
+and is abbreviated “X”. “Aromatic” refers to bonds which 7, n2 encodes the atom environment, and n3 encodes the
+areeither“Kekulearomatic”or“arom5”.“Kekulearomatic” property A.
+bonds are those in a six-membered ring system with Another block of descriptors encodes one of 264 atom-
+alternating double and single bonds or the perimeter bonds bond-atom combinations. Atoms include C, N, O, Si, P, S,
+MDL KEYS FOR USE IN DRUG DISCOVERY J. Chem. Inf. Comput. Sci., Vol. 42, No. 6, 2002 1275
+Table3. AtomicEnvironments reversingn2andn3.Thealgorithmusedwillonlysetkeybits
+n atomenvironmenta n atomenvironmenta forn2lessthanorequalton3intheseinstances.Asaresult
+we can encode 3234 different descriptors encoding occur-
+0 C(CC) 16 Q(CC)
+1 C(CCC) 17 Q(CCC) rencecountsof“1ormore”.Sincethesedescriptorscanhave
+2 C(CN) 18 Q(CN) occurrencecountsof“1ormore”to“999ormore”,wehave
+3 C(CCN) 19 Q(CCN) the ability, in theory, to produce in excess of 3 million
+4 C(NN) 20 Q(NN)
+distinctdescriptors,whichcanbecombinedintoinnumerable
+5 C(NNC) 21 Q(CNN)
+keysets. Our question is then “How does one select an
+6 C(NNN) 22 Q(NNN)
+7 C(CO) 23 Q(CO) optimal set of descriptors for use in drug discovery work-
+8 C(CCO) 24 Q(CCO) flows, or, more concretely, for use in molecular similarity
+9 C(NO) 25 Q(NO)
+calculations?”.
+10 C(NCO) 26 Q(CNO)
+Success Measure. We chose to adopt a success measure
+11 C(NNO) 27 Q(NNO)
+12 C(OO) 28 Q(OO) defined by Briem and Lessel.26 Their success measure is
+13 C(COO) 29 Q(COO) calculatedbytakingthemeanfractionofmolecularnearest
+14 C(NOO) 30 Q(NOO)
+neighbors which are of the same activity class as the target
+15 C(OOO) 31 Q(OOO)
+activecompound,andaveragingthisquantityoverallactive
+aThe first symbol is the central atom, with atoms bonded to the targetcompounds.Thismeasureshouldbedirectlyapplicable
+centralatomlistedinparentheses.“Q”isanynon-C,non-Hatom.If toclusteringanddiversityapplicationsandshouldalsoreflect
+onlytwoatomsareinparentheses,thereisnoimplicationconcerning performanceexpectedinotherdrugdiscoveryapplications.
+theotheratomsbondedtothecentralatom.
+ToimplementthismethodBriemandLesselhavedefined
+asetofsixcategoriesofmoleculesselectedfromtheMDDR
+F, Cl, Br, I, and “other” (X), with bond types of “single”
+database.29Thesemoleculesconsistof134PAFantagonists,
+49 5-HT3 antagonists, 49 TXA2 antagonists, 40 ACE
+descriptorshaven1)6;n2andn3aresetasshowninTable
+inhibitors,111HMG-CoAreductaseinhibitors,and574other
+4.
+compoundsselectedatrandomfromMDDRwhichwerenot
+YetanotherblockencodesanumberofcustomandSgroup
+primarily members of the already selected activity classes.
+features.28 These can be found in Table 5.
+Thefirstfivecategorieswillbereferredtoas“actives”,the
+The first subblock of these descriptors encodes a series
+randomlychosenmoleculesas“inactives”.Thetotalnumber
+of properties which are used in the 166 bit MDL keyset.
+of molecules in the data set is 957.
+The next subblock of 256 descriptors encodes atom types
+The next step in calculating the success measure for the
+of 1-256. Normally atom types between 1 and 103 cor-
+keysetunderinvestigationistocollectnearestneighborsfor
+respond directly with periodic table elements. The range
+all the compounds in the “active” classes. In the original
+104-256 allows encoding of custom atom types.
+paperEuclideandistancesbetweenkeyswereused;weuse
+AfinalsubblockofdescriptorsencodeavarietyofMDL
+thecomputationallyeasierHammingdistance,definedasthe
+Sgroup properties.
+numberofbitswhicharedifferentbetweenthetwobitsets.
+Inconvertingthesedescriptorstokeybitswealsoneedto
+ForbinarykeystheEuclideandistanceisthesquarerootof
+setanoccurrencecount,whichisencodedinn4.Thisallows
+theHammingdistance.UseoftheHammingdistanceresults
+ustodefinedescriptorsforoccurrencecountsof“1ormore”
+in the same nearest neighbors as those found using a
+up to “999 or more”.
+Euclidean metric. The fraction of the top 10 nearest-
+KeyBit Encoding. The last five numbers in the keybit
+neighbors which are in the same activity class as the target
+definitionareusedtocontrolwhichkeybit(s)aresetbythe
+defines the success measure for that target molecule. The
+descriptor defined by the first four numbers. N5 is used to
+total success measure is then the average of the individual
+specifythenumberofkeybitswhichareset,whichisinthe
+successmeasuresforalltheactivemolecules.Wehaveadded
+range of 1 to 3. N6 is a flag indicating whether (1) or not
+explicitconsiderationoftiesbyincludingallmoleculeswhich
+(0) the keybit(s) set are also set by other descriptors. The
+have distances equal to the tenth nearest neighbor. This
+finalthreenumbers,n7,n8,andn9,identifythekeybits,with
+removes a dependence on the order that the molecules are
+“0” used for padding.
+consideredwhichwaspresentintheoriginalmethod.Italso
+Putting it Together. At this point we can consider the
+has the effect of reducing the success measure for the 166
+meaning of an example keybit:
+keybitMDLkeysetto0.65fromthe0.67reportedbyBriem
+and Lessel.26
+position: n1 n2 n3 n4 n5 n6 n7 n8 n9
+Completelyrandomcompoundselectionofmoleculeswill
+key: 2 3 5 2 3 1 479 469 763
+yieldanonzerofractionofcompoundsofthesameactivity
+Thiskeybitcanbetranslatedtothefollowing: Atleasttwo class within the 10 nearest neighbors. Consideration of the
+occurrences(n4)ofanatominamultiple,nonaromaticbond average probability of this occurring for the five active
+(n2)locatedtwobonds(n1)awayfromanatomwithatleast classesyieldsanaveragesuccessmeasureof0.08forrandom
+two heteroatom neighbors (n3). The descriptor sets three selection.
+keybits(n5),whichcanbesetbyotherdescriptors(n6).The UseofHammingdistancesinthiscontextmostprobably
+keybits set are 479, 469, and 763 (n7-n9). resultsinaperformancedegradationrelativetoresultsusing
+Anumberofpropertiesareincompatible,resultinginthe Tanimoto distances. However, calculation of Hamming
+fact that fewer descriptors are chemically possible than are distancescanbeeasilyoptimized,andtheresultingoptimized
+mathematicallyallowed.Additionally,anumberofdescrip- code gave us increased latitude in carrying out GA studies
+torscanbeencodedtwodifferentways,mostfrequentlyby (vide infra).
+1276 J. Chem. Inf. Comput. Sci., Vol. 42, No. 6, 2002 DURANT ET AL.
+Table4. Atom-Bond-AtomProperties
+n2 n3 n2 n3 n2 n3 n2 n3 n2 n3
+0 17 C-C 4 8 Br-Br 11 6 PdP 18 4 S#S 25 2 N%N
+0 18 C-N 4 9 Br-Si 11 7 PdF 18 5 S#Cl 25 3 N%O
+0 19 C-O 4 10 Br-I 11 8 PdBr 18 6 S#P 25 4 N%S
+0 20 C-S 4 15 Br-X 11 9 PdSi 18 7 S#F 25 5 N%Cl
+0 21 C-Cl 4 25 Si-Si 11 10 PdI 18 8 S#Br 25 6 N%P
+0 22 C-P 4 26 Si-I 11 15 P)X 18 9 S#Si 25 7 N%F
+0 23 C-F 4 31 Si-X 11 23 FdF 18 10 S#I 25 8 N%Br
+0 24 C-Br 5 10 I-I 11 24 FdBr 18 15 S#X 25 9 N%Si
+0 25 C-Si 5 15 I-X 11 25 FdSi 18 21 Cl#Cl 25 10 N%I
+0 26 C-I 7 31 X-X 11 26 FdI 18 22 Cl#P 25 15 N%X
+0 31 C-X 8 17 CdC 11 31 F)X 18 23 Cl#F 25 19 O%O
+1 2 N-N 8 18 CdN 12 8 BrdBr 18 24 Cl#Br 25 20 O%S
+1 3 N-O 8 19 CdO 12 9 BrdSi 18 25 Cl#Si 25 21 O%Cl
+1 4 N-S 8 20 CdS 12 10 BrdI 18 26 Cl#I 25 22 O%P
+1 5 N-Cl 8 21 CdCl 12 15 Br)X 18 31 Cl#X 25 23 O%F
+1 6 N-P 8 22 CdP 12 25 SidSi 19 6 P#P 25 24 O%Br
+1 7 N-F 8 23 CdF 12 26 SidI 19 7 P#F 25 25 O%Si
+1 8 N-Br 8 24 CdBr 12 31 Si)X 19 8 P#Br 25 26 O%I
+1 9 N-Si 8 25 CdSi 13 10 IdI 19 9 P#Si 25 31 O%X
+1 10 N-I 8 26 CdI 13 15 I)X 19 10 P#I 26 4 S%S
+1 15 N-X 8 31 C)X 15 31 X)X 19 15 P#X 26 5 S%Cl
+1 19 O-O 9 2 NdN 16 17 C#C 19 23 F#F 26 6 S%P
+1 20 O-S 9 3 NdO 16 18 C#N 19 24 F#Br 26 7 S%F
+1 21 O-Cl 9 4 NdS 16 19 C#O 19 25 F#Si 26 8 S%Br
+1 22 O-P 9 5 NdCl 16 20 C#S 19 26 F#I 26 9 S%Si
+1 23 O-F 9 6 NdP 16 21 C#Cl 19 31 F#X 26 10 S%I
+1 24 O-Br 9 7 NdF 16 22 C#P 20 8 Br#Br 26 15 S%X
+1 25 O-Si 9 8 NdBr 16 23 C#F 20 9 Br#Si 26 21 Cl%Cl
+1 26 O-I 9 9 NdSi 16 24 C#Br 20 10 Br#I 26 22 Cl%P
+1 31 O-X 9 10 NdI 16 25 C#Si 20 15 Br#X 26 23 Cl%F
+2 4 S-S 9 15 N)X 16 26 C#I 20 25 Si#Si 26 24 Cl%Br
+2 5 S-Cl 9 19 OdO 16 31 C#X 20 26 Si#I 26 25 Cl%Si
+2 6 S-P 9 20 OdS 17 2 N#N 20 31 Si#X 26 26 Cl%I
+2 7 S-F 9 21 OdCl 17 3 N#O 21 10 I#I 26 31 Cl%X
+2 8 S-Br 9 22 OdP 17 4 N#S 21 15 I#X 27 6 P%P
+2 9 S-Si 9 23 OdF 17 5 N#Cl 23 31 X#X 27 7 P%F
+2 10 S-I 9 24 OdBr 17 6 N#P 24 17 C%C 27 8 P%Br
+2 15 S-X 9 25 OdSi 17 7 N#F 24 18 C%N 27 9 P%Si
+2 21 Cl-Cl 9 26 OdI 17 8 N#Br 24 19 C%O 27 10 P%I
+2 22 Cl-P 9 31 O)X 17 9 N#Si 24 20 C%S 27 15 P%X
+2 23 Cl-F 10 4 SdS 17 10 N#I 24 21 C%Cl 27 23 F%F
+2 24 Cl-Br 10 5 SdCl 17 15 N#X 24 22 C%P 27 24 F%Br
+2 25 Cl-Si 10 6 SdP 17 19 O#O 24 23 C%F 27 25 F%Si
+2 26 Cl-I 10 7 SdF 17 20 O#S 24 24 C%Br 27 26 F%I
+2 31 Cl-X 10 8 SdBr 17 21 O#Cl 24 25 C%Si 27 31 F%X
+3 6 P-P 10 9 SdSi 17 22 O#P 24 26 C%I 28 8 Br%Br
+3 7 P-F 10 10 SdI 17 23 O#F 24 31 C%X 28 9 Br%Si
+3 8 P-Br 10 15 S)X 17 24 O#Br 28 10 Br%I
+3 9 P-Si 10 21 CldCl 17 25 O#Si 28 15 Br%X
+3 10 P-I 10 22 CldP 17 26 O#I 28 25 Si%Si
+3 15 P-X 10 23 CldF 17 31 O#X 28 26 Si%I
+3 23 F-F 10 24 CldBr 28 31 Si%X
+3 24 F-Br 10 25 CldSi 29 10 I%I
+3 25 F-Si 10 26 CldI 29 15 I%X
+3 26 F-I 10 31 Cl)X 31 31 X%X
+In carrying out genetic algorithm optimizations we have Finally,wecanformakeysetbyassigningauniquekeybit
+also made use of a “training set success measure”, which to each of the descriptors encoded by the underlying key
+differsfromthe“BriemandLesselsuccessmeasure”inthat setting algorithm, assigning an occurrence count to each
+the molecular data set used is the training set, not the one descriptor of “set 1 or more times”.
+defined by Briem and Lessel. SurprisalCalculations.Theinformationtheoreticconcept
+BasicKeysetsUsed.Asastartingpointweusedboththe of a surprisal is defined as30
+166bitMDLkeysetandthe960bitMDLkeyset.Asnoted
+earlier,the960bitkeysetcontainsanumberofkeybitswhich I)-ln(A/B)
+can be set by more than one descriptor. If we remove all
+those multiply mapped keybits we are left with a 726 bit where A and B are probabilities associated with observing
+keyset.Alternatively,wecanmakeeachoneofthedescrip- thecorrespondingproperties.TypicallyAisanexperimen-
+torsencodedinthe960bitkeysetcorrespondtooneunique tally observed probability and B is from a theoretically
+keybit, yielding a 1387 bit keyset. derived “prior” distribution. The surprisal thus provides a
+MDL KEYS FOR USE IN DRUG DISCOVERY J. Chem. Inf. Comput. Sci., Vol. 42, No. 6, 2002 1277
+Table5. CustomandSgroupProperties Table6. TrainingSetActivityClasses
+n1 n2 n3 property MDDRactivitycode activityclass
+5 0 1 charge(instructuresomewhere) 02452 TNFInhibitor
+5 0 2 isotope 09221 acetylcholinesteraseinhibitor
+5 0 3 “other”atomtype 12453 lipidperoxidationinhibitor
+5 0 4 CH 31430 angiotensinIIblocker
+5 0 5 halogen 31500 calciumchannelblocker
+5 0 6 NH 54112 H+/K+-ATPaseinhibitor
+5 0 7 five-memberedring 71522 reversetranscriptaseinhibitor
+5 0 8 six-memberedring 71523 HIV-1proteaseinhibitor
+5 0 9 Kekule-aromaticring 75721 aromataseinhibitor
+5 0 10 seven-memberedring 78348 phospholipaseA2inhibitor
+5 0 11 eight-memberedring 78351 lipoxygenaseinhibitor
+5 0 12 103<atomtype<256 78362 thymidylatesynthetaseinhibitor
+5 0 13 morethanonefragment 78371 collagenaseinhibitor
+5 1 1-31 atomtypes1-31 78373 topoisomeraseinhibitor
+5 2 0-31 atomtypes31-63 78374 proteinkinaseCinhibitor
+5 3 0-31 atomtypes64-95 78417 phosphodiesteraseIIIinhibitor
+5 4 0-31 atomtypes96-127 78418 phosphodiesteraseIVinhibitor
+5 5 0-31 atomtypes128-159
+5 6 0-31 atomtypes160-191
+5 7 0-31 atomtypes192-223 age.31 SUGAL provided the underlying genetic algorithm
+5 8 0-31 atomtypes224-255 methods;customCcodewaswrittentohandlethecalculation
+5 9 1 atomtype256 of success measures for the proposed keys as well as some
+5 11 1 componentSgrouptype
+ancillary utility functions.
+5 11 2 SRUSgrouptype
+5 11 3 monomerSgrouptype Training Set. Initial genetic algorithm optimization of
+5 11 4 copolymerSgrouptype keysets used the Briem and Lessel data set for both
+5 11 5 alternatingcopolymersubtype optimization and calculation of the final success measure.
+5 11 6 randomcopolymersubtype
+As should be expected, these GA optimizations, when run
+5 11 7 blockcopolymersubtype
+5 11 8 graftSgrouptype to completion, were found to be overtrained. We therefore
+5 11 9 formulationSgrouptype constructed an independent data set to use in the GA
+5 11 10 mixtureSgrouptype optimizations.
+5 11 11 cross-linkSgrouptype
+This“trainingset”wasculledfromtheMDDRdatabase.29
+5 11 12 modificationSgrouptype
+5 11 13 anypolymerSgrouptype It consisted of 1700 compounds which belonged to one of
+5 11 14 dataSgrouptype 17activityclasses.Compoundswhichbelongedtomorethan
+51115thru5135 dataSgroupfieldnumber one activity class were removed from the data set. Each of
+5 13 6 merSgrouptype
+the activity classes had more than 100 compounds, and so
+100werechosenatrandomfromeachactivityclass.Useof
+symmetricmeasureofthedegreetowhichtheprobabilities
+equalnumbersofcompoundsineachactivityclassremoved
+in the two distributions differ.
+effectsofdifferingclasssizefromthe“class-specific”success
+In this work we chose to associate A with the total
+measure. Otherwise, classes with more members will tend
+probability for keybits to be set by molecules in the five
+to have higher success measures. Additionally, we did not
+activeclassesandsimilarlyassociateBwiththeprobability
+useanyoftheactivityclassesusedintheBriemandLessel
+for keybits to be set in the one inactive class, using the
+data set as a further step to orthogonalize the training and
+molecules in the Briem and Lessel data set.
+evaluation data sets. The activity classes used, and their
+Additionally, we noted that the frequency for a number
+MDDRactivitycodes,canbefoundinTable6.A“training
+of keybits was quite low, and so we also calculated the
+setsuccessmeasure”couldbecalculatedbysubstitutingthis
+expectednoiseinthekeybitfrequency,assumingaPoisson
+trainingsetfortheBriemandLesseldatasetinthesuccess
+distribution for the noise. This also allowed us to define a
+measure calculations outlined above.
+surprisal S/N ratio by dividing the calculated surprisal by
+the standard deviation of the noise
+RESULTS AND DISCUSSION
+S/N)jI/(1/N +1/N )1/2j RandomPruningofthe3234BitKeyset.Itisinstructive
+tobeginbyconsideringthegenerationofkeysetsbyrandom
+whereN andN arethekeybitfrequenciesinthefiveactive eliminationofkeybitsfromthe3234bitkeyset.Sinceeach
+and one inactive classes, respectively. keybit in the 3234 bit keyset corresponds to a single
+Unlikethesurprisal,thissurprisalsignal-to-noiseratiodoes descriptor,eliminationofakeybitisequivalenttoeliminating
+depend on the size of the data sets; increasing the number a descriptor from the keyset. Figure 1 shows the success
+ofcompoundsincreasesthecalculatedS/Nratio.However, measures for 96 such keysets, with sizes from 100 to 3200
+because of the relatively low frequency of some of the keybits, which were generated from the 3234 bit keyset.
+keybits, coupled with the small sample sizes, it was felt There is noise in the resulting graph, but it is clear that the
+important to investigate the effects of explicitly accounting dependenceoftheobservedsuccessmeasureonthenumber
+for statistical noise in these calculations. of keybits is quite weak above about 1000 keybits in the
+Genetic Algorithm Optimization of Keysets. Use of keyset.Belowthatsizethereisadegradationinperformance,
+genetic algorithms to optimize the choice of keybits was whichbecomesnoticeablebyakeysetlengthof500keybits.
+facilitated by use of the SUGAL Genetic Algorithm pack- Note, however, that even at lengths of 100 keybits the
+1278 J. Chem. Inf. Comput. Sci., Vol. 42, No. 6, 2002 DURANT ET AL.
+Figure1. Plotofsuccessmeasureasafunctionofkeysetsizefor Figure 3. Plot of success measure as a function of the surprisal
+96randomlygeneratedkeysetsderivedfromthe3234bitkeyset. S/Nthresholdusedinpruningthekeysets.
+Solidlineismeanttoguidetheeye.
+Figure4. Plotofsuccessmeasureasafunctionofthenumberof
+Figure2. Plotofsuccessmeasureasafunctionofkeysetsizefor keybitsintheprunedkeyset.
+(a)randomlypruned3234bitkeyset,(b)surprisalpruned3234bit
+keyset,and(c)surprisalS/Npruned3234bitkeyset. locatedatavalueofthesurprisalS/Nof1.9,with711keybits
+used in the keyset, and a success measure of 0.704.
+performance has only degraded by about 25%. Note also We next pruned the 166, 726, 960, and 1387 bit keysets
+thatthecurveinFigure1ismerelymeanttoguidetheeye. described above. Figure 3 shows a plot of the success
+Surprisal Optimization of Basic Keysets. One might measures obtained as a function of the threshold surprisal
+expectthatamoreeffectivepruningofkeybitsfromakeyset S/N used in pruning the various keysets. Keysets were
+couldbeobtainedusingthesurprisalvaluesorthesurprisal obtainedbyeliminatingallkeybitswithasurprisalS/Nless
+S/N ratio for the various keybits as part of the selection than the threshold. It is evident that the 166 bit keyset has
+criterion. Keybits with surprisals of zero are set at a inferior performance to the other keysets and that its
+statisticallyequalrateinboththecompositeofactiveclasses performance is not improved by the surprisal S/N pruning.
+andintheinactiveclass.Thisshouldmakethemlessactive/ Theotherkeysetsshowsomeimprovementinperformance
+inactive differentiating than keybits which have a signifi- as the pruning threshold is increased and appear to behave
+cantlydifferentprobabilityofbeingsetinthesetwoclasses. quite similarly as a function of the surprisal S/N. A broad
+Figure2displaystheresultsofpruningthe3234bitkeyset, maximum is found at a surprisal S/N of approximately 2,
+using both surprisal and the surprisal S/N ratio as the with degradation of performance as the threshold is raised
+selectioncriterion.Inbothcaseskeybitswereeliminatedwith further.
+thelowestsurprisalorS/Nvalues,andthecutoffvalueswere Figure4isaninterestingrecastingofthissamedata,this
+successively increased. For these calculations we used the timeasafunctionofkeysetsize.Thisplotshowsthedegree
+BriemandLesseldatasettodefinethesurprisalsaswellas of commonality in performance between the keysets as a
+inevaluatingthesuccessmeasure.AlsoplottedinFigure2 functionofsize.Mostevidentisthesignificantdegradation
+aretheresultsoftherandompruningofthe3234bitkeyset. in performance observed below 200 keybits. Interestingly,
+It is evident that using the raw surprisal yields keysets theperformanceofthe166bitkeysetliesonthecurvesfor
+which function significantly worse than those produced by the 1387 and 3234 bit keysets.
+randompruning.Incontrast,theresultsofpruningbasedon The similar performance of the various pruned keysets
+the surprisal S/N ratio shows improvement over random seen in Figure 4 does not, however, imply commonality in
+pruning. There is even a broad maximum in the success the descriptors encoded in the keysets. Indeed, the overlap
+measure at between 400 and 900 keybits. The maximum is incommondescriptorsbetweentheunpruned166bitkeyset
+MDL KEYS FOR USE IN DRUG DISCOVERY J. Chem. Inf. Comput. Sci., Vol. 42, No. 6, 2002 1279
+Table7. GAResults
+initial 200generations 400generations
+av mean success max. B.-L. t.s. B.-L. t.s.
+bits success SD success bits successa successb bits successa successb
+194 0.499 0.016 0.540 454 0.698 0.676 538 0.698 0.687
+258 0.522 0.013 0.555 475 0.710 0.676 548 0.711 0.687
+323 0.536 0.011 0.573 505 0.702 0.675 580 0.703 0.686
+485 0.555 0.008 0.582 636 0.708 0.678 648 0.705 0.687
+646 0.565 0.007 0.588 708 0.701 0.677 742 0.701 0.685
+970 0.576 0.005 0.586 949 0.707 0.674 938 0.705 0.683
+1293 0.582 0.004 0.591 1147 0.705 0.671 1088 0.708 0.680
+1617 0.585 0.003 0.593 1391 0.698 0.665 1342 0.706 0.676
+av 0.704 0.674 0.705 0.684
+aB.-L.success: BriemLesselsuccessmeasure.bt.s.success: trainingsetsuccessmeasure.
+andeitherthepruned1387keyset(S/Nthreshold)3.0,173 Our initial calculations used a population of 200 keysets
+keybits) or the 3234 keyset (S/N threshold ) 3.5, 182 whichwaspropagatedfor200generations.Totestthequality
+keybits) is (cid:24)16% and (cid:24)11%, respectively. However, they of the convergence we extended these calculations for an
+show very comparable success measures of 0.649, 0.652, additional200generations.Ascanbeseenfromtheaverages
+and 0.668. The pruned 1387 and 3234 keysets have more reported at the bottom of Table 7 the Briem and Lessel
+overlap, but it is still only about 66%. successmeasurechangedbyonly0.1%,suggestingthatthe
+It is also interesting to note the behavior of the 726 bit calculationswerewellconverged(atleastlocally)after200
+keyset as it is pruned. The full keyset performs worse than generations.Thesuccessmeasureevaluatedusingthetraining
+the 1387 and 3234 bit keysets, but it exhibits a strong setdidincreaseby1.5%,presumablyreflectingovertraining
+maximum in performance for small keyset size. At a S/N of the GA.
+thresholdof1.9ithasasuccessmeasureof0.708,and208 Overall,geneticalgorithmoptimizationdidproducekey-
+keybits remaining in the keyset. This represents the best sets with better performance than our initial keysets. The
+performance observed for surprisal S/N-based pruning of a best keyset had a success measure of 0.711, with a size of
+keyset. 548 bits. However, the average success measure of all the
+Genetic Algorithm Optimization of Keysets. We next genetic algorithm optimized keysets was 0.704, slightly
+turnedtotheuseofGeneticAlgorithmOptimizationmethods below the result for the best surprisal S/N pruned keyset.
+for construction of optimal keysets. Preliminary runs were
+carried out using the Briem and Lessel data set for both CONCLUSIONS
+training and evaluation. Not surprisingly, the optimization
+WehavedemonstratedthatitispossibletoimproveMDL
+producedhighlyovertrainedkeysetswhichhadhighsuccess
+keyset performance by reoptimizing keysets for use in
+measures (up to 0.84) and abysmal performance on other
+molecular similarity. We have produced keysets with opti-
+problems. Further work was done using the alternate 1700
+mized success measures up to 0.711 versus the success
+member training set described above in the optimization
+measuresof0.649and0.670forthestandardMDL166and
+phase.
+960 bit keysets, which were constructed and optimized for
+Table 7 presents results from a grid of calculations run
+substructure searching.
+starting with average fractions of 0.06, 0.08, 0.1, 015, 0.2,
+0.3, 0.4, and 0.5 of the keybits in the 3234 bit keyset used. InperformingtheseoptimizationsonMDL-basedkeysets
+These runs used a population of 200 keysets. The initial we observed that increasing keyset size had little effect on
+successmeasuresevaluatedusingthetrainingsetmirrorthe overall performance for keysets larger than approximately
+behaviorseeninFigure2,withsuccessmeasuresshowinga 1000 bits. We also observed a striking similarity in perfor-
+veryweakdependenceonkeysetsize,withthedependence mance between different keysets of similar size. This
+becoming stronger for very small keysets. Also evident is similarityinperformancedidnotstemfromthekeysetsbeing
+the fact that the distribution of performance across any of composed of the same descriptors, since descriptor overlap
+the populations is very narrow, with standard deviations of was generally low between the optimized keysets encoun-
+the distributions ranging from a high of 0.016 (or 3%) for tered here.
+thesmallestkeysetsdownto0.003(or0.5%)forthelargest. A number of candidate keysets were produced using
+Weusedascalenormalizationschemewithabiasvalueof random selection, surprisal-based selection, and surprisal
+100 to try to mitigate the effects of these very narrow S/N-basedselection.Surprisal-basedselectionofkeybitswas
+distributions.31 foundtounderperformrandomselection,whilesurprisalS/N
+The Briem and Lessel and training set success measures based selection was found to outperform random selection.
+for the optimized keysets show even less dependence on The best performing keyset from this work contained 208
+keysetsize.Wedonote,however,thatkeysetswhichinitially keybits and had a success measure of 0.708.
+hadfewerthananaverageof700keybitsyieldedoptimized The great insensitivity of overall performance on both
+keysets with more keybits, and keysets with and initial keyset size and identity of the descriptors encoded resulted
+averageofmorethan700keybitsyieldedoptimizedkeysets in great difficulty in attempts to optimize the performance
+with fewer keybits. However, this trend was not strong usingstandardmathematicaltechniques.GeneticAlgorithm
+enoughinourGAcalculationstopointtoanoptimalkeyset optimization is a particularly powerful tool, but while it
+size. succeededinproducingkeysetswithbetterperformance,we
+1280 J. Chem. Inf. Comput. Sci., Vol. 42, No. 6, 2002 DURANT ET AL.
+were unsuccessful in locating a single globally optimum (12) Xue,L.;Stahura,F.L.;Godden,J.W.;Bajorath,J.FingerprintScaling
+keyset. Instead, we were able to produce families of well- IncreasestheProbabilityofIdentifyingMoleculeswithSimilarActivity
+inVirtualScreeningCalculations.J.Chem.Inf.Comput.Sci.2001,
+performingkeysetswithdefinedstartingkeysetsanddefined, 41,746-753.
+but variable, numbers of keybits in the initial, unoptimized (13) Brown,R.D.;Martin,Y.C.DesigningCombinatorialLibraryMixtures
+UsingaGeneticAlgorithm.J.Med.Chem.1997,40,2304-2313.
+key.Performancefortheoptimizedkeysetsaveraged0.704,
+(14) Koehler, R. T.; Villar, H. O. Design of Screening Libraries Biased
+withthebestkeysethavingasuccessmeasureof0.711and for Pharmaceutical Discovery. J. Comput. Chem. 2000, 21, 1145-
+a length of 548 keybits. 1152.
+(15) Patterson, D. E.; Cramer, R. D.; Ferguson, A. M.; Clark, R. D.;
+Thissuggeststhatconstructionofoptimizedkeysetsneeds
+Weinberger, L. E. Neighborhood Behavior: A Useful Concept for
+to be driven by known constraints, such as our use of Validationof“MolecularDiversity”Descriptors.J.Med.Chem.1996,
+surprisalS/N,insteadofautonomously,asisthecaseinour 39,3049-3059.
+(16) Matter,H.SelectingOptimallyDiverseCompoundsfromStructure
+use of genetic algorithms. Future work is focusing on
+Databases: A Validation Study of Two-Dimensional and Three-
+identificationofdataset-sizeindependentconstraintswhich DimensionalMolecularDescriptors.J.Med.Chem.1997,40,1219-
+can be used to direct the selection of descriptors used in 1229.
+(17) Rhodes, N.; Willet, P.; Dunbar, J. B., Jr.; Humblet, C. Bit-String
+keysetconstruction.Oncesuchconstraintscanbeidentified
+MethodsforSelectiveCompoundAcquisition.J.Chem.Inf.Comput.
+wewillalsoextendourworktoincludekeysetsconstructed Sci.2000,40,210-214.
+with occurrence counts different from “one or more”. (18) Ahrens,E.K.F.CustomizationforChemicalDatabaseApplications.
+In Chemical Structures; The International Language of Chemistry;
+Warr, W. A., Ed.; Springer-Verlag: Berlin, 1988; pp 97-111, and
+ACKNOWLEDGMENT referencestherein.
+(19) Christie,B.D.;Leland,B.A.;Nourse,J.G.StructureSearchingin
+We wish to acknowledge the help in this work afforded ChemicalDatabasesbyDirectLookupMethods.J.Chem.Inf.Comput.
+by the Cheshire development team, especially Richard Sci.1993,33,545-547.
+(20) MDLInformationSystems,Inc.,14600CatalinaStreet,SanLeandro,
+Briggs.Wealsogratefullyacknowledgeconversationswith
+CA94577.
+Hans Briem and Uta Lessel and their help in obtaining the (21) Nagy,M.Z.;Kuzics,S.;Veszpremi,T.;Bruck,P.SubstructureSearch
+datasetsusedtocalculatethesuccessmeasureinthiswork. on Very Large Files using Tree-Structured Databases. In Chemical
+Structures;TheInternationalLanguageofChemistry;Warr,W.E.,
+Ed.;Springer-Verlag: Berlin,1988;pp127-130.
+REFERENCES AND NOTES (22) Kauvar, L. M.; Higgins, D. L.; Villar, H. O.; Sportsman, J. R.;
+Engqvist-Goldstein,Å.;Bukar,R.;Bauer,K.E.;Dilley,H.;Rocke,
+(1) Willett, P. In Similarity and Clustering in Chemical Information D.M.Predictingligandbindingtoproteinsbyaffinityfingerprinting.
+Systems;Wiley: NewYork,1987;266pp. Chem.Biol.1995,2,107-118.
+(2) McGregor, M. J.; Pallai, P. V. Clustering of Large Databases of (23) Weinstein, J. N.; Myers, T. G.; O’Connor, P. M.; Friend, S. H.;
+Compounds: Using the MDL “Keys” as Structural Descriptors. J. Fornace,A.J.,Jr.;Kohn,K.W.;Fojo,T.;Bates,S.E.;Rubinstein,L.
+Chem.Inf.Comput.Sci.1997,37,443-448.
+V.;Anderson,N.L.;Buolamwini,J.K.;vanOsdol,W.W.;Monks,
+(3) CombinatorialChemistryandMolecularDiVersityinDrugDiscoVery; A.P.;Scudiero,D.A.;Sausville,E.A.;Zaharevitz,D.W.;Bunow,
+Gordon,E.M.,Kerwin,J.F.,Ed.;Wiley: NewYork,1998;516pp. B.;Viswanadhan,V.N.;Johnson,G.S.;Wittes,R.E.;Paull,K.D.
+(4) Mason,J.S.;Hermsmeier,M.A.DiversityAssessment.Curr.Opin. AnInformation-IntensiveApproachtotheMolecularPharmacology
+Chem.Biol.1999,3,342-349. ofCancer.Science1997,275,343-349.
+(5) Turner, D. B.; Tyrrell, S. M.; Willett, P. Rapid Quantification of (24) Briem, H.; Kuntz, I. D. Molecular Similarity Based on DOCK-
+MolecularDiversityforSelectiveDatabaseAcquisition.J.Chem.Inf. GeneratedFingerprints.J.Med.Chem.1996,39,3401-3408.
+Comput.Sci.1997,37,18-22.
+(25) Lessel,U.F.;Briem,H.Flexsim-X: AMethodfortheDetectionof
+(6) Lipinski, C. A.; Lombardo, F.; Dominy, B. W.; Feeney, P. J. Molecules with Similar Biological Activity. J. Chem. Inf. Comput.
+Experimentalandcomputationalapproachestoestimatesolubilityand Sci.2000,40,246-253.
+permeabilityindrugdiscoveryanddevelopmentsettings.AdV.Drug.
+(26) Briem,H.;Lessel,U.Invitroandinsilicoaffinityfingerprints: Finding
+DeliVeryReV.1997,23,3-25. similaritiesbeyondstructuralclasses.Perspect.DrugDiscoV.Design
+(7) Teague,S.J.;Davis,A.M.;Leeson,P.D.;Oprea,T.TheDesignof 2000,20,231-244.
+LeadlikeCombinatorialLibraries.Angew.Chem.,Int.Ed.Engl.1999, (27) Rarey, M.; Dixon, J. S. Feature trees: A new molecular similarity
+38,3743-3748.
+measurebasedontreematching.J.Comput.-AidedMol.Design1998,
+(8) Oprea,T.I.;Davis,A.M.;Teague,S.J.;Leeson,P.D.IsTherea 12,471-490.
+Difference between Leads and Drugs? A Historical Perspective. J. (28) Gushurst,A.J.;Nourse,J.G.;Hounshell,D.;Leland,B.A.;Raich,
+Chem.Inf.Comput.Sci.2001,41,1308-1315.
+D. G.; The Substance Module: The Representation, Storage and
+(9) Henkel, T.; Brunne, R. M.; Mu¨ller, H.; Reichel, F. Statistical SearchingofComplexStructures.J.Chem.Inf.Comput.Sci.1991,
+InvestigationintotheStructuralComplementarityofNaturalProducts 31,447-454.
+andSyntheticCompounds.Angew.Chem.,Int.Ed.Engl.1999,38, (29) MACCS Drug Data Report, Release 2000.2, MDL Information
+643-647.
+Systems,Inc.,14600CatalinaStreet,SanLeandro,CA94577,2000.
+(10) Shemetulskis, N. E.; Weininger, D.; Blankley, C. J.; Yang, J. J.; (30) Levine, R.; Bernstein, R. B. In Molecular Reaction Dynamics and
+Humblet, C. Stigmata: An Algorithm To Determine Structural ChemicalReactiVity;OxfordUniversityPress: NewYork,1987;p
+CommonalitiesinDiverseDatasets.J.Chem.Inf.Comput.Sci.1996, 260ff.
+36,862-871.
+(11) Xue,L.;Stahura,F.L.;Godden,J.W.;Bajorath,J.Mini-fingerprints sunderland.ac.uk/ahu/sugal/home.html,1995.
+DetectSimilarActivityofReceptorLigandsPreviouslyRecognized
+OnlybyThree-DimensionalPharmacophore-BasedMethods.J.Chem.
+Inf.Comput.Sci.2001,41,394-401. CI010132R

@@ -1,0 +1,962 @@
+The GPU vs Phi Debate:
+Risk Analytics Using Many-Core Computing
+(cid:73),(cid:73)(cid:73)
+BlessonVarghesea
+aSchoolofComputerScience,UniversityofStAndrews,UK
+The risk of reinsurance portfolios covering globally occurring natural catastrophes, such as earthquakes and hurri-
+canes, is quantified by employing simulations. These simulations are computationally intensive and require large
+amounts of data to be processed. The use of many-core hardware accelerators, such as the Intel Xeon Phi and the
+NVIDIAGraphicsProcessingUnit(GPU),aredesirableforachievinghigh-performanceriskanalytics. Inthispaper,
+we set out to investigate how accelerators can be employed in risk analytics, focusing on developing parallel algo-
+rithmsforAggregateRiskAnalysis,asimulationwhichcomputestheProbableMaximumLossofaportfoliotaking
+both primary and secondary uncertainties into account. The key result is that both hardware accelerators are useful
+in different contexts; without taking data transfer times into account the Phi had lowest execution times when used
+independentlyandtheGPUalongwithahostinahybridplatformyieldedbestperformance.
+Keywords: hardwareaccelerators,many-corecomputing,secondaryuncertainty,financialrisk,catastrophicrisk,
+riskanalysis,Phi,GPU
+1. Introduction 1.1. Background
+Risk analytics [1] has become an integral part of a Companies hold portfolios of contracts that cover
+business process in a range of domains (for example, risksassociatedwithcatastrophiceventssuchasearth-
+[2,3,4,5,6,7,8]). Largedatasetsareconsumedbya quakes, hurricanes and floods. In order to have a mar-
+riskmodelandhundredsofthousandsorevenmillions ketplaceforsuchriskitiscriticaltobeabletoefficiently
+oftimeconsumingsimulationsareperformed. Herethe quantify individual risks and portfolios of risks. The
+applicationofparallelandhigh-performancecomputing analyticalpipelineofthemodernquantitativeinsurance
+techniquesareattractive. orreinsurancecompanytypicallyconsistsofthreema-
+Interestingly,inthefinancialriskdomain,specifically jorstages,namelyriskassessment[9,10],portfoliorisk
+insuranceandreinsurance,wheredatasizesareaslarge managementandpricing[11],andenterpriseriskman-
+or even larger than what is employed in the above do- agement[12].
+mains, relatively fewer parallel and high-performance
+In the first stage, catastrophe models [13] are used
+computingtechniqueshavebeenapplied. Giventhede-
+to provide loss estimates by taking two inputs. Firstly,
+pendencies of the insurance and reinsurance setting on
+stochastic event catalogues which are a mathemati-
+volatilemarkets,simulationsthatcanbeperformedina
+cal representation of the natural occurrence patterns
+timelymannerareessential.
+andcharacteristicsofcatastrophes. Secondly,exposure
+databases that describe thousands or millions of build-
+(cid:73)AmodifiedversionofthisarticleisacceptedtotheComputers&
+ings to be analysed, their construction types, location,
+ElectricalEngineeringJournalunderthetitle-“TheHardwareAccel-
+value, use, and coverage. Each event-exposure pair is
+eratorDebate:AFinancialRiskCaseStudyUsingMany-CoreCom-
+(cid:73)(cid:73)Pleasecitethearticleas-BlessonVarghese,“TheHardwareAc- intensity at the exposure site, the vulnerability of the
+celerator Debate: A Financial Risk Case Study Using Many-Core building and resulting damage level, and the expected
+Computing,”Computers&ElectricalEngineering,2015.
+loss,giventhecustomer’sfinancialterms.Theoutputof
+Emailaddress:varghese@st-andrews.ac.uk(Blesson
+acatastrophemodelisanEventLossTable(ELT)which
+PreprintsubmittedtoElsevier November5,2018
+1v62360.1051:viXra
+lossforeveryeventinthecatalogue. simplifications of complex physical phenomenon and
+In the second stage of the analysis pipeline, portfo- arethereforemuchbetteratproducinglossdistributions
+lio risk management and pricing of portfolios of con- than accurate point estimates. Hence, there is a need
+tracts necessitates a further level of stochastic simula- to develop methods to not only capture primary uncer-
+tion, called Aggregate Risk Analysis or referred to as tainty but also quantify secondary uncertainty in risk
+ARAinthispaper[14,15,16,17,18]. ARAisaMonte analysis.
+Carlo like simulation in which each trial represents an The analysis uses mean loss values when only pri-
+alternativeviewofwhichcatastrophiceventsoccurand maryuncertaintyisaccountedfor. Usingsuchdiscrete
+inwhichordertheyoccurwithinapredeterminedperiod values is an oversimplification, because in reality for
+oracontractualyear. Inordertoprovideactuariesand anyeventthereisamultitudeofpossiblelossoutcomes
+decisionmakerswithaconsistentlensthroughwhichto resulting in a distribution of potential losses. A simu-
+view results, a pre-simulated Year Event Table (YET) lation taking a distribution of losses requires statistical
+containing a million alternative views of a single con- tools, for example, the beta probability distribution to
+tractualyearisemployed. TheoutputofARAisaYear estimate the loss using inverse beta cumulative density
+LossTable,inwhichtheresultsarehighlyaggregated. functionwhicharebothdataintensiveandcomputation-
+From the output of ARA, a reinsurer can derive im- ally intensive. Such an analysis will need to accept as
+portantportfolioriskmetricssuchastheProbableMax- input complete event loss distributions represented by
+imum Loss (PML) [19, 20] and the Tail Value-at-Risk the event rate, mean loss, independent standard devia-
+(TVaR)[21,22]. Theoutputistheninterpretedbyactu- tion, and correlated standard deviation, and better ac-
+ariesforkeyinternaldecisionmaking,planningafinan- countfortherangeofpossibleoutcomes.
+cialyearandreportingtoregulatorsandratingagencies. The second problem is related to implementing par-
+Furthermore,thesemetricsthenflowintothefinalstage allelriskanalysismethodsforachievingtimelyresults.
+in the risk analysis pipeline, namely Enterprise Risk FromacomputationalperspectivetheARAsimulation
+Management, whereliability, asset, andotherformsof differs from other Monte Carlo simulations since tri-
+risksarecombinedandcorrelatedtogenerateanenter- als are pre-simulated, rather than randomly generated
+prisewideviewofrisk. on-the-fly. This provides millions of alternate views
+of a contractual year comprising thousands of events
+1.2. Problems which are pre-simulated as a YET. From an analytical
+There are two problems that need to be addressed perspective, a pre-simulated YET lends itself to statis-
+for achieving high-performance risk analytics. Both tical validation and to tuning for seasonality and clus-
+problems can be solved if the data, memory and com- tereffects. However,therearesignificantchallengesin
+putational challenges of the analysis can be efficiently achieving efficient parallelisation. The extremely large
+addressed. The first problem is related to developing YETmustbecarefullysharedbetweenprocessingcores
+methods for applying uncertainties. ARA presented if the computation is to achieve good speed-up when
+aboveaccountsforonly‘PrimaryUncertainty’,whichis thereislimitedmemorybandwidth.
+theuncertaintyassociatedwithwhetheraneventoccurs
+ornotinasimulatedyear.However,thereis‘Secondary 1.2.1. Addressingtheproblems
+Uncertainty’,whichcapturestheuncertaintyinthelevel In this paper, we investigate hardware acceleration
+oflossduetotheuseofsimplifiedphysicalmodelsand platforms for ARA. Parallel algorithms for ARA that
+limitationsintheavailabledata. initially take primary uncertainty into account is im-
+Therearemanysourcesofthisuncertaintythatneed plemented. Further, a methodology that considers sec-
+tobetakenintoaccountwhenconsideringcatastrophic ondaryuncertaintyispresented. Thealgorithmsareim-
+risk, including unknown exposure and hazard parame- plementedontheIntelPhiCoprocessorandanNVIDIA
+ters and their interaction. For example, the exposure GraphicsProcessingUnit(GPU).Experimentalstudies
+datawhichdescribesthebuildings,theirlocations,and evaluatehowARAperformsonthehardwareaccelera-
+constructiontypesmaybeincomplete,lackinginsuffi- torsindependentlyandalongwithahostprocessor.
+cientdetail,ormaybesimplyinaccurate.Alsothephys- Both the Phi Coprocessor and the GPU are compet-
+ical modelling of hazard, for example an earthquake, inghardwareacceleratorsthatofferalternativemachine
+may naturally generate a distribution of hazard inten- architecturestothatofaregularCPU.Whilebothhard-
+sity values due to uncertainty associated with the en- ware accelerators are significantly different, they pro-
+ergy attenuationfunctions used ordriving datasuch as vide in common, firstly, lots of cycles for independent
+soil type. Lastly, building vulnerability functions are parallelism, secondly, fast memory access under the
+rightcircumstances,andfinally,fastmathematicalcom- tionally, acceleratorscanbeexploitedtoachievespeed
+putations. The parallel algorithms implemented in the upandtherebyuserisksimulationsinreal-time.
+paper take full advantage of the high levels of paral- The remainder of this paper is organised as follows.
+lelism, fast shared memory access and fast numerical Section 2 proposes an algorithm for performing ARA
+performance.Inthisresearch,thealgorithmexploitsthe withprimaryuncertainty. Section3presentsamethod-
+machinearchitectureoftheacceleratorstoachievepar- ologyforapplyingsecondaryuncertaintyandtheinputs
+allelismandfastmemoryaccessandforperformingfast required for the extended analysis. Section 4 presents
+numericalcomputations.Theresultisaspeedupof16x the implementations of algorithms both for incorporat-
+-21xthatisachievedonthePhiandGPUoverrespec- ing primary and secondary uncertainties on multi-core
+tive baseline sequential implementations on the CPU. and many-core hardware platforms. Section 5 consid-
+Theexperimentsshowthefeasibilityofhardwareaccel- erstheresultsobtainedfromtheimplementationsinthe
+erators offering a relatively low cost high-performance experimentalstudies. Section6concludesthispaper.
+computingsolutionforperformingfastARA.
+2. AggregateRiskAnalysis
+1.3. RelatedWork
+StochasticMonteCarlolikesimulationsarerequired
+The domain of computational finance and risk ad-
+forportfolioriskmanagementandcontractpricing,and
+dressesproblemsrelatedtoachievingfastcomputations,
+AggregateRiskAnalysis(ARA)isonesuchsimulation.
+surmounting challenges of data management and effi-
+Themeritofperformingtheanalysisisthatmillionsof
+ciently handling memory of computing systems. Par-
+alternativeviewsofasinglecontractualyearcanbeob-
+allelism is exploited to achieve this (for example, [23,
+tained. This section will consider the inputs required
+24, 25, 26]). Therefore, this domain is dependent on
+for performing ARA, propose an algorithm for ARA,
+theadvancesinhigh-performancecomputing. Research
+present the financial terms employed in the algorithm,
+onfinancialapplicationsforproduction-basedcomput-
+andhighlighttheoutputoftheanalysis(referFigure1).
+ing systems have progressed from small scale clusters
+[27, 28] to large supercomputers [29, 30]. These ap-
+2.1. Inputs
+plications are hosted either on in-house clusters or on
+supercomputers. The following three data tables are required for per-
+Anumberoffinancialapplicationsaremigratedfrom formingARA:
+small clusters to multi-core and many-core processors
+i. The Year Event Table (YET), denoted as YET, is a
+which are available at a low budget [31]. For ex-
+databaseofpre-simulatedoccurrencesofeventsfrom
+ample, research related to financial applications ex-
+a catalogue of stochastic events. Each record in a
+ploiting the Cell BE processor is reported in [32, 33].
+YETcalleda‘trial’,denotedasT,representsapos-
+FPGAs are another alternative platform presented in i
+sible sequence of event occurrences for any given
+[34,35,36,37].GPUaccelerationisemployedmorere-
+year. The sequence of events is defined by an or-
+cently[38,39,40,41].Heterogeneousclusterscompris-
+deredsetoftuplescontainingtheIDofaneventand
+ing hardware accelerators are now employed [42, 43].
+the time-stamp of its occurrence in that trial repre-
+Inalltheaboveresearch,theneedforspeedingupfinan-
+sentedasT ={(E ,t ),...,(E ,t )}.
+cialapplicationsarepresentedandisachieved. Thereis i i,1 i,1 i,k i,k
+limited research on how high-performance computing The set is ordered by ascending time-stamp values.
+advances can be applied to simulations in the risk do- A typical YET may comprise thousands to millions
+main,specificallytheinsuranceandreinsurancesetting, of trials. Each trial may have approximately be-
+whichisconsideredinthispaper. tween 800 to 1500 ‘event time-stamp’ pairs based
+Althoughhigh-performancecomputingplatformsare onaglobaleventcataloguecoveringmultipleperils.
+an option to accommodate and accelerate risk simula- TheYETcanberepresentedas
+tions, there is an investment cost that will need to be
+borne along with maintenance costs. A relatively cost YET ={T ={(E ,t ),...,(E ,t )}},
+i i,1 i,1 i,k i,k
+effectivesolutionistoemployhardwareacceleratorsto wherei=1,2,... andk=1,2,...,1500.
+addresstheproblemsfacedbycurrentrisksimulations.
+Hardwareacceleratorscanprovidefastnumericalcom- ii. Event Loss Tables, denoted as ELT, represent col-
+putationswhicharerequiredbystatisticalfunctionsthat lections of specific events and their corresponding
+supportapplyingsecondaryuncertaintyinARA.Addi- losseswithrespecttoanexposureset.Eachrecordin
+Figure1: InputsandoutputsofAggregateRiskAnalysis
+anELTisdenotedas EL = {E,l}andthefinancial
+terms associated with the ELT are represented as a
+tupleI=(I ,I ,...).
+A typical aggregate analysis may comprise 10,000
+ELTs,eachcontaining10,000to30,000eventlosses
+withexceptionsofevenupto2,000,000eventlosses.
+TheELTscanberepresentedas
+(cid:40) (cid:41)
+EL = {E,l},
+ELT = i i i ,
+I = (I ,I ,...)
+withi=1,2,...,30,000.
+iii. A Portfolio, denoted as PF contains a group of
+Programs, denoted as P represented as PF = Algorithm 1: Aggregate Risk Analysis with Pri-
+{P ,P ,··· ,P },withn=1,2,...,10. maryUncertainty
+Each Program in turn covers a set of Layers, de- Input :YET,ELT,PF
+noted as L, which covers a collection of ELTs un- Output:YLT
+der a set of layer terms. A single layer is com-
+1 foreachProgram,P,inPF do
+posedoftwoattributes. Firstly,thesetofELTsE =
+2 foreachLayer,L,inPdo
+{ELT ,ELT ,...,ELT }, and secondly, the Layer
+1 2 j 3 foreachTrial,T,inYET do
+Terms,denotedasT = (T ,T ,T ,T ).
+OccR OccL AggR AggL 4 foreachEvent,E,inT do
+The Layer occurrence terms are (i) Occurrence Re-
+5 foreachELT coveredbyLdo
+tention, denoted as T , which is the retention or
+OccR 6 LookupEintheELT andfind
+deductible of the insured for an individual occur-
+correspondingloss,l
+rence loss, and (ii) Occurrence Limit, denoted as
+7 l E ←ApplyFinancial
+T ,whichisthelimitorcoveragetheinsurerwill
+OccL Terms(l )
+payforoccurrencelossesinexcessofretention. The 8 l T ←l T +l E
+Layer aggregate terms are (i) Aggregate Retention,
+denotedasT ,whichistheretentionordeductible
+oftheinsured Ag f g o R ranannualcumulativeloss,and(ii) 10 l T ←ApplyOccurrenceFinancial
+AggregateLimit,denotedasT ,whichisthelimit T
+or coverage the insurer will pa A y gg f L or annual cumula- 11 l T ←ApplyAggregateFinancial
+tivelossesinexcessofaggregateretention. T
+Atypicallayercoversapproximately3to30individ-
+ualELTs. TheLayercanberepresentedas
+(cid:40) E = {ELT ,ELT ,...,ELT }, (cid:41) 15 end
+L= T = (T 1 ,T 2 ,T ,T j ) , 16 PopulateYLT usingl T
+OccR OccL AggR AggL
+with j=1,2,...,30.
+2.2. Algorithm
+Algorithm 1 presents two stages for performing ag-
+gregate analysis with primary uncertainty. In the first
+stage, data is loaded into local memory, referred to as
+the pre-processing stage. In this stage the YET, ELT
+andPF,areloadedintomemory.
+Inthesecondstage,thefourstepsimulationforeach
+Layer and for each Trial in the YET is performed and
+theYearLossTable(YLT)isproduced.
+In the first step shown in line no. 6, each event of a
+trialandthecorrespondingeventlossinthesetofELTs
+associatedwiththeLayeraredetermined. Inthesecond forapplyingsecondaryuncertaintyandthesequenceof
+step shown in line no. 7, a set of contractual financial stepsareconsideredinthissection.
+terms are applied to each loss value of the Event-Loss
+pair extracted from an ELT to the benefit of the layer. 3.1. Inputs
+Forthisthelossesforaspecificevent’ssetoffinancial For performing ARA accounting for secondary un-
+terms I are accumulated across all ELTs into a single certaintyrequiresthefollowingadditionalinputs:
+eventlossshowninlineno. 8.
+In the third step (line no. 10), the event loss for i. z (Prog,E) = P (Prog,E) ∈ U(0,1), referred to
+each event occurrence in the trial, combined across all as the Program-and-Event-Occurrence-Specific ran-
+ELTs associated with the layer, is subject to occur-
+domnumber.EachEventoccurrenceacrossdifferent
+rence terms. Occurrence terms are applicable to in-
+Programshavedifferentrandomnumbers.
+dividual event occurrences independent of any other
+ii. z = P ∈ U(0,1), referred to as the Event-
+occurrences in the trial. The occurrence terms cap- (E) (E)
+Occurrence-Specific random number. Each Event
+turespecificcontractualpropertiesof’eXcessofLoss’
+occurrenceacrossdifferentProgramshavethesame
+[44,45]treatiesastheyapplytoindividualeventoccur-
+randomnumber.
+rences only. The event losses net of occurrence terms
+are then accumulated into a single aggregate loss for iii. µ,referredtoasthemeanlossisthelossassociated
+the given trial. The occurrence terms are applied as withaneventE.
+l =min(max(l −T ,0),T ).
+T T OccR OccL
+iv. σ ,referredtoastheindependentstandarddeviation
+In the fourth step (line no. 11), aggregate terms are I
+ofloss,representsthevariancewithintheevent-loss
+applied to a trial’s aggregated loss of a layer. Unlike
+distribution.
+occurrenceterms,aggregatetermsareappliedtothecu-
+mulative sum of occurrence losses within a trial, and
+v. σ , referred to as the correlated standard deviation
+thus,theresultdependsonthesequenceofpriorevents
+of loss, represents the error of the event-occurrence
+in the trial. This behaviour captures contractual prop-
+dependencies.
+ertiesastheyapplytomultipleeventoccurrences. The
+aggregate loss net of the aggregate terms is referred to vi. max,referredtoasthemaximumexpectedloss.
+asthetriallossortheyearloss.Theaggregatetermsare
+appliedasl =min(max(l −T ,0),T ). To capture the above additional inputs required for
+T T AggR AggL
+computing secondary uncertainty, the inputs used in
+ARAwithprimaryuncertaintyneedtobemodified.The
+2.3. Output
+YearEventTable(YET),denotedasYET isredefinedas
+The output of ARA is a loss value associated with
+each trial of the YET. A reinsurer can derive impor- YET ={T ={(E ,t ,z ),...,
+i i,1 i,1 (Prog,E)i,1
+tant portfolio risk metrics such as the Probable Max- (E ,t ,z )}},
+i,k i,k (Prog,E)i,k
+imum Loss (PML) and the Tail Value-at-Risk (TVaR) wherei=1,2,... andk=1,2,...,1500.
+which are used for both internal risk management and
+Extended Event Loss Tables, denoted as XELT,
+reporting to regulators and rating agencies. Further-
+are used instead of ELT. Each record in an
+more, these metrics are used in Enterprise Risk Man-
+XELT is denoted as ‘eXtended’ Event Loss XEL =
+agement,whereliability,asset,andotherformsofrisks i
+{E,l,z ,σ ,σ ,max }andthefinancialtermsasso-
+are combined and correlated to generate an enterprise i i (E)i Ii Ci li
+ciated with the XELT are represented as a tuple I =
+wideviewofrisk.
+(I ,I ,...).
+Additionalfunctionscanbeusedtogeneratereports 1 2
+TheextendedELTisrepresentedasXELT =
+that will aid actuaries and decision makers. For exam-
+ple,reportspresentingReturnPeriodLosses(RPL),Re- (cid:40) XEL = {E,µ ,z ,sσ ,σ ,max }, (cid:41)
+gion/Perillosses,Multi-MarginalAnalysisandStochas- I i = (I i ,I li ,. (E .. )i ) Ii Ci li ,
+ticExceedanceProbability(STEP)Analysis. withi=1,2,...,30,000.
+TherepresentationoftheLayerismodifiedasL=
+3. ApplyingSecondaryUncertainty
+(cid:40) (cid:41)
+E = {XELT ,XELT ,...,XELT },
+The methodology to compute secondary uncertainty T = (T OccR ,T OccL ,T AggR ,T AggL )
+builds on industry wide practices. The inputs required with j=1,2,...,30.
+3.2. Combiningstandarddeviation α=µ (cid:16)(cid:0)σβmax (cid:1)2−1 (cid:17) ,
+Given the above inputs, the independent and corre-
+andthebetavalueis
+latedstandarddeviationsneedtobecombinedtoreduce
+theerrorforestimatingthelossvalueassociatedwithan β=(1−µ ) (cid:16)(cid:0)σβmax (cid:1)2−1 (cid:17)
+event. Thisisdoneinthefollowingfivesteps:
+An upper bound is set to limit the standard devia-
+i. Therawstandarddeviationisproducedas tion using σ = µ (1−µ ), if σ > σ , then
+σ = σ . Inthealgorithmreportedinthispaper,for
+σ=σ I +σ C . nu β meric β a m l ax purposes, a value very close to σ βmax is cho-
+sen.
+ii. Theprobabilitiesofoccurrences,z andz are Thelossafterapplyingbetadistributionfunctionsare
+transformedfromuniformdistributiontonormaldis- obtainedas
+tributionusing f(x;µ,σ2)=
+dx. Loss=max l ∗InvCDF beta (z;α,β),
+This is applied to the proba
+ilities of event occur- InvCDF beta (z;α,β)=
+(cid:17)−1
+rencesas (cid:82)z
+v = f(z ;0,1)∈ N(0,1)and
+(Prog,E) (Prog,E)
+v = f(z ;0,1)∈ N(0,1). Algorithm 1 requires the redefined inputs for ap-
+plying secondary uncertainty. The modified YET, the
+XELT and the modified Layer, L in PF considered in
+iii. Thelinearcombinationofthetransformedprobabili-
+thissectionareusedasinputs. Theabovestepstocom-
+tiesofeventoccurrencesandthestandarddeviations
+pute secondary uncertainty are incorporated after line
+iscomputedas
+no. 6 and before applying the financial terms to each
+(cid:16) (cid:17) (cid:16) (cid:17) eventloss.
+LC =v σI +v σC .
+iv. Thenormalrandomvariableiscomputedas 4. Implementation
+v= (cid:113)(cid:0) σI (cid:1) L 2 C + (cid:0) σC (cid:1)2 . me T n h te e d h a a r r e dw fir a s r t e ly p c la o t n f s o i r d m er s ed on in w th h i i s ch se A ct R io A n, i f s ol i l m ow pl e e d -
+by a discussion on the data structures used in the im-
+v. The normal random variable is transformed from plementation of ARA and on the methods for comput-
+normaldistributiontouniformdistributionas ing secondary uncertainty. Optimisations incorporated
+intheimplementationsarefurtherconsidered.
+e− 2 t2 dt.
+2π −∞ 4.1. ExperimentalPlatforms
+Four hardware platforms ranging from desktop
+The model used above for combining the indepen-
+CPUs, such as the Intel i7, a non-consumer worksta-
+dent and correlated standard deviations represents two
+tion/server, such as the Intel Xeon, and accelerators,
+extreme cases. The first case in which σ = 0 and the
+I suchastheNVIDIAGPUandtheIntelPhi,areusedfor
+secondcaseinwhichσ = 0. Themodelalsoensures
+C implementingsequentialandparallelARAalgorithms.
+that the final random number, z, is based on both the
+Firstly, a multi-core CPU is employed whose speci-
+independentandcorrelatedstandarddeviations.
+ficationsarea3.40GHzquad-coreIntel(R)Core(TM)
+i7-2600 processor with 16.0 GB of RAM. The proces-
+3.3. EstimatingLosses
+sorhas256KBL2cachepercore, 8MBL3cacheand
+ThelossisestimatedusingtheBetadistributionsince amaximummemorybandwidthof21GB/sec.
+fitting such a distribution allows the representation of Secondly,twomulti-coreCPUsareemployedwhose
+risksquiteaccurately. TheBetadistributionisatwopa- specifications are a 2.00 GHz octa-core Intel (R)
+rameter distribution, with an upper bound for the stan- Xeon(R)E5-2650processorwith256GBofRAM.The
+n.
+.
+σ β = m σ axl and p
+.
+heandamaximummemory
+Both the above processors support Advanced Vec- design question is whether the data structure contain-
+torExtensions(AVX)instructionsforvectoroperations. ing the event-loss pairs of all trials need to be a sparse
+BothsequentialandparallelversionsoftheARAalgo- matrix in the form of a direct access table or a com-
+rithm were implemented on these platforms. The se- pact representation. While fast lookups can be ob-
+quential version adopted C++, while the parallel ver- tained in the sparse matrix representation, this perfor-
+sion was implemented in C++ and OpenMP. The ver- mance is achieved at the cost of high memory usage.
+sions were compiled using the icpc compiler, version Consider a YET with 1,000,000 events and one Layer
+13.1 provided by the Intel(R) Compiler Suite. The with 16 XELTs, and each XELT consisting of 20,000
+‘-O3’ compiler flag was used for optimisation, and the events with non-zero losses. The representation us-
+OpenMP directive and the Intel Math Kernel library ingadirectaccesstablewouldrequirememorytohold
+wereincluded. 1,000,000×16=16,000,000event-losspairs(without
+Thirdly,anNVIDIATeslaC2075GPU,consistingof considering the data required for computing secondary
+448 CUDA cores, each with a frequency of 1.15 GHz, uncertainty).Whilesuchalargedatastructureisheldin
+aglobalmemoryof6GBandamemorybandwidthof memory,15,700,000eventsrepresentzerolossvalue.
+144 GB/sec. The peak double precision floating point The sparse representation requires large amount of
+performance is nearly 0.515 Tflops. The implementa- memory, butitischosenoveranycompactrepresenta-
+tion of the algorithm is compiled using the NVIDIA tionforthefollowingreason. Asearchoperationisre-
+CUDACompiler(nvcc),version5.01.Theimplementa- quiredtofindanevent-losspaireveninacompactrep-
+tioniscompiledusing‘-arch sm 13’. resentation. If sequential search is adopted, then O(n)
+Fourthly,anIntelXeonPhiCoprocessors5110Pcon- memoryaccessesarerequiredtofindanevent-losspair.
+sistingof60coreswithafrequencyof1.053GHz. The Ifsortingisperformedinapre-processingphasetofa-
+coprocessor supports a maximum of 240 threads, and cilitateabinarysearch,thenO(log(n))memoryaccesses
+a memory of 8 GB and a memory bandwidth of 320 are required to find an event-loss pair. If a constant-
+GB/sec is available. The peak double precision float- time space-efficient hashing scheme, such as cuckoo
+ing point performance is close to one Tflop. The Phi hashing [46] is adopted then an event-loss pair can be
+Coprocessor is based on the Intel (R) Many Integrate accessed with a constant number of memory accesses.
+Cores (MIC) architecture and supports the Intel Initial However,thiscanbeonlybeachievedattheexpenseof
+Many-CoreInstructions(IMCI). a complex implementation and overheads depreciating
+TheGPUisemployedintwoways. Firstly, inahy- run-timeperformance. Further,suchanimplementation
+brid mode, which refers to execution both on the host on hardware accelerators with complex memory hier-
+andtheaccelerator(operatesinasynchronousmodeand archies is cumbersome. Although large memory space
+performsside-by-sideprocessingwiththehostdevice). is required for a direct access table, looking up event-
+Secondly,inanon-hybridmode,whichreferstothehost losspairscanbeachievedwithfewermemoryaccesses
+supporting the data pre-processing and transfer activi- compared to the memory accesses in a compact repre-
+ties and the accelerator performs all the computation. sentation.
+The Phi on the other hand is not only employed in the The GPU implementation of the algorithm uses
+hybridmode, butalsointhenativemode, whichrefers global memory to store all data structures. The par-
+totheexecutionofthecodeontheacceleratorindepen- allel implementations on the GPU require high mem-
+dentofthehostdevice. orytransactions. Thisissurmountedbyutilisingshared
+Inthispaper,sequentialandparallelimplementations memory wherever possible over global memory, but
+of ARA on all the above four platforms, on the hybrid with challenges in dividing data according to memory
+of i7 and GPU, and on the hybrid of Xeon and Phi are accesspatternsofthethreads.
+considered. Four statistical libraries, namely the Intel Two data structure implementations of 16 XELTs
+MKL,Boost,Beta ncandCUDAMathareexploredfor were considered for the GPU. In the first implementa-
+applyingsecondaryuncertainty. tion,eachXELTisconsideredasanindependenttable;
+therefore, in a read cycle, each thread independently
+4.2. ImplementingDataStructuresfortheAlgorithm looksupitseventsfromtheXELTs. Allthreadswithin
+InARA,thelossesofeventsinatrialneedtobede- ablockaccessthesameXELT.
+termined by looking up losses in the XELT. The key In the second implementation, the 16 XELTs are
+combinedintoasingletable. Inthiscaseitischalleng-
+ingtodividedataaccordingtotheaccesspatterns. This
+ferentXELTsandloadingmanyrowsoftheXELTinto makinguseofIntel’sAVXandPhi’sIMCIinstructions.
+memory for each block. There are higher memory ac- Single Instruction Multiple Data (SIMD) instructions
+cesses and transactions between the global and shared facilitate eight (in the case of i7 or Xeon) and sixteen
+memories so that the threads can access the required (onthePhi)single-precisionfloatingpointoperationsin
+events and losses from the XELTs. The implementa- thetimetheytakeforcompletingasinglefloatingpoint
+tionwithcombinedXELTsperformedpoorlycompared operation.
+totheimplementationwhichusesindependentXELTs. ARAincorporatingprimaryuncertaintydoesnotben-
+Whenonlyprimaryuncertaintywasconsideredtheex- efitfromvectorisationasmostcomputationsaremem-
+ecutiontimeincreasedbynearly15%andthereisafur- ory intensive. However, in ARA incorporating sec-
+ther increase when secondary uncertainty is taken into ondary uncertainty, a large number of floating point
+account. arithmetic is performed making it a better candidate to
+be vectorised. For vectorising the function which ap-
+4.3. ImplementingMethodstoComputeSecondaryUn- plies secondary uncertainty, firstly, several single pre-
+certainty cision floating point values are modified to single pre-
+Threestatisticalfunctionsarerequiredinthemethod cision arrays. Secondly, instead of applying secondary
+forapplyingsecondaryuncertainty.Theyare(i)theCu- uncertaintyoneveryEventloss(asintheregularimple-
+mulativeDistributionFunction(CDF)ofNormaldistri- mentations), an array is populated with the Event loss
+bution,(ii)theQuantileoftheCDFofNormaldistribu- values. Thensecondaryuncertaintyisappliedonthear-
+tion,and(iii)theQuantileoftheBetadistribution. The ray. Suchanimplementationmakesroomforperform-
+QuantileoftheBetadistributionisanumericallyinten- ing a number of floating point operations at the same
+sive function since an iterative method is required for time.
+convergingatasolutionwithinacertainerrorbound. Functions using the Boost library are replaced with
+Four statistical libraries are used to implement the equivalents provided by the Intel MKL library as they
+statisticalfunctionsrequiredforapplyingsecondaryun- are optimised to perform SIMD instructions on arrays.
+certainty. Firstly, the Intel MKL library is used in the The basic floating point arithmetic in secondary un-
+implementationsontheCPUandPhifortheCDFofthe certainty was vectorised with the help of the #pragma
+NormaldistributionandtheQuantileoftheNormaldis- ivdep directive, which tells the compiler that it is safe
+tribution [47]. The Intel MKL API currently does not tovectorisethearrays.
+supportBetadistributionfunctions.
+Further,toexploitthebenefitsofvectorising,thein-
+Secondly,theCUDAMathlibrary2isemployed. The
+verse CDF of the Beta distribution was implemented
+CDFoftheNormaldistributionandtheQuantileofthe
+incorporating SIMD instructions. The Beta nc library
+Normal Distribution are fast methods that are included
+was found to lend itself well to vectorisation since it
+intheimplementation. TheCUDAMathAPIcurrently
+hadveryfewbranchconditions, suchasbreakorearly
+doesnotsupportBetadistributionfunctions.
+return statements. Branch conditions make the use of
+Thirdly,theBooststatisticallibraryisofferedbythe
+SIMD instructions more difficult. The inverse CDF of
+Boost C++ libraries3. However, Boost is currently not
+theBetadistributionwasvectorisedinasimilarwayto
+supportedfortheGPUplatform.
+whichthefunctionapplyingsecondaryuncertaintywas
+Fourthly, BETA NC another C++ library that can
+vectorised;usinganarrayinsteadofindividualfloating
+evaluate the CDF of the Noncentral Beta distribution
+pointvalues.
+is employed [48]. This library is ported onto the GPU
+The function for computing the inverse CDF of the
+platformandallthefunctionsinthelibrariesareimple-
+Beta distribution incorporates an algorithm for conver-
+mentedas device functionsfortheGPU.Thisfunc-
+genceofthesolution. Oneconditionforensuringcon-
+tionisalsousedforthePhi.
+vergenceisbasedonthedesiredaccuracyoftheresult.
+Insomecasesalargenumberofiterationsarerequired
+4.4. OptimisingtheImplementationontheCPU
+forthesolutiontoconvergecausingthecomputationsto
+The optimised implementation on the CPUs and the
+takemoretime. Tooptimisethefunctionfurther, solu-
+Phi coprocessor takes advantage of vectorisation by
+tions which converge quickly are switched out and re-
+placedwithnewvalueswhoseinverseCDFneedtobe
+found. In this way, the time spent on cases requiring
+large times for convergence can be mitigated by per-
+4.5. Optimising the Implementation on Hardware ac- FortheGPUimplementations,inthehybridandnon-
+celerators hybridmode, datafrombothsharedandglobalmemo-
+ries are migrated to the kernel registry, which has low
+Two approaches were considered for performing
+latency. Thenumericalcomputationsaremadeslightly
+ARAwithprimaryandsecondaryuncertaintyontheIn-
+fasterbyusingtheCUDAMathAPIssupportforfloat-
+telPhiCoprocessorandtheNVIDIAGPU.
+ingpointoperations(thecompilerflag-use fast math
+For the Intel Phi coprocessor, in the first approach, isincluded).
+referred to as the native approach, the source code for
+the Xeon platform was built for the Intel Many Inte-
+grated Core (MIC) architecture using the Intel com- 5. ExperimentalResults
+piler’s -mmic flag. The executable along with dynamic
+libraries required and all input data were copied onto In this section, the results obtained from the exper-
+thecoprocessorusingthescpcommand. Aconnection imental studies are presented. Typical industry sim-
+totheCoprocessorwasestablishedusingsshandARA ulation specifications are considered; from 200,000 to
+wasperformedthesamewayasitwasontheXeonplat- 800,000 trials with each trial comprising 1,000 events,
+form. Though this approach was easy to adopt, it was andoneLayercovering16XELTs(industrypractition-
+noteasytoruna800,000trialsimulationsincethetime ers were consulted in choosing the size of the simu-
+taken for copying the input data onto the coprocessor lation). The combined size of the YET comprising
+fromthehostmachinewas10timesmorethanitdidfor 800,000trials,the16XELTs,andthemetadatathatde-
+readinginputdataontheXeonplatform. finesoneLayerisapproximately28GBforeachLayer.
+FortheIntelPhicoprocessorasecondapproachisim- So if N Layers are to be used in ARA then the input
+plemented,referredtoasthehybridapproach,inwhich datawillbeN×28GB.Thesizeoftheinputdataisre-
+thehost(Xeonprocessor)iscombinedwiththePhiCo- ducedwhentheARAonlyconsidersPUsincetheYET
+processor. Inthisimplementation,theinputdataisini- andELTsarenotaslargeaswhenSUisconsidered.We
+tiallyloadedintothehostmemory. Theprocessorthen referto‘ARAwithPU’whenonlyprimaryuncertainty
+writes a set of trials onto a buffer and sends the buffer is considered and ‘ARA with SU’ when secondary un-
+tothedevice(PhiCoprocessor). TheCoprocessorthen certaintyisalsotakenintoaccount.Asinglelibrary(for
+appliessecondaryuncertaintyandaggregatestheresults example, Boost) or a combination of libraries (for ex-
+asneededinARAforapplyingprimaryandsecondary ample,MKLandBeta nc)isemployedforthestatistical
+uncertainty. The device then writes back onto a buffer functionsinsecondaryuncertainty.
+on the host. This implementation can accommodate Figure 2 and Figure 3 are the graphs obtained for
+800,000trialsunlikethefirstimplementationsincelim- the sequential implementation. Figure 4 to Figure 12
+ited amount of trials are only handled at once on the aretheresultsobtainedforparallelimplementationson
+device. theCPUs,onhardwareacceleratorsandonhybridplat-
+The connection from the host to the device is estab- forms. Thesummaryoftheresultsfrombothsequential
+lished using Intel’s Core Offload Infrastructure (COI) andparallelimplementationsarepresentedinFigure13.
+library. A process is created on the device using the
+libraryoncethesourcestartsexecuting, andsleepsun-
+5.1. SequentialImplementation
+til the host instructs the COI library to start the device
+function for applying secondary uncertainty and per- Figure2aandFigure2bshowtheresultsfromthei7
+formingaggregation. andXeonCPUsrespectively,whentheBoost,MKLand
+The problem of the Coprocessor memory unable to Beta nclibrariesareemployedtosequentiallyperform
+accommodate the entire simulation in the native ap- ARA.Inthebestcase, thei7isnearly49%fasterthan
+proach is surmounted by iteratively sending a chunk Xeon for ARA with PU and 95% faster than Xeon for
+of trials through a buffer. Better performance can be ARAwithSU,resultinginthei7being1.32timesfaster
+achievedinthehybridapproachbyhavingthehostand thanXeon.
+deviceperformthetasksasynchronously. Forexample, Surprisingly, the combination of MKL and the vec-
+whilethedeviceisapplyingsecondaryuncertaintyand torised Beta nc libraries are outperformed by the com-
+aggregatingachunkoftrials,thehostcouldstartchunk- binationusingMKLandnon-vectorisedBeta nclibrary.
+ingthetrialsforthenextbuffer,orapplysecondaryun- The vectorised code performs well when the precision
+certaintyandperformaggregationforadifferentchunk oftheinverseBetaCDFishigh. Inalltheexperiments
+oftrials. presentedinthispaper,thesolutionfortheinverseBeta
+Figure3: TimetakenforsequentialARAwithPUand
+Figure2: SequentialARAwithPUandSUfor200,000
+SUusingtheBoostlibraryonCPU
+to800,000trialsusingtheBoost,MKLandBeta ncli-
+brariesonCPU
+Figure3showstheindividualtimestakentoapplyPU
+andSUonthei7andXeonCPUswhenBoostlibraryis
+CDFconvergeswhenthereisaccuracyforuptosixdec-
+used. ThetimeforapplyingSUisnearly2.5timesthe
+imal places (or relative error is less than 10−6). How-
+timetakenforARAineachcaseoftrialsshowninthe
+ever, if the precision of the solution is increased for
+graph. The mathematical functions employed for ap-
+greater accuracy, for example, twelve decimal places,
+plying SU are fast methods, although the inverse CDF
+then the vectorised library improves the performance
+ofthebetadistributionwhichtakesmajorityofthetime
+significantly. When the precision is low only few it-
+is an exception; over 95% of the time taken for SU is
+erations are required for the solution to converge; few
+requiredbytheinverseCDF.Thetimeforapplyingsec-
+iterations cannot reap the benefit of vectorisation, but
+introducesoverheadswhichisatrade-off. ondary uncertainty is nearly 1.5 - 1.7 times the time
+takenforARAineachcaseoftrialsshowninthegraph.
+AllpossiblecombinationsofthelibrariesfortheCDF
+The time taken for ARA with PU and SU with in-
+and the Quantile of the CDF for the Normal distri-
+creasing number of trials should scale linearly. This is
+bution and the Quantile of the Beta distribution were
+observedbothinFigure2andFigure3.
+employed. On both the i7 and Xeon, the combina-
+tionoftheMKL(fortheNormaldistributionfunctions)
+5.2. ParallelImplementations
+andBeta nc(fortheBetadistributionfunction)libraries
+gavethebestresults. OneadvantageofusingtheMKL The results obtained from parallel implementations
+libraryisthatitsupportstheIntelAVXinstructionsand onthemulti-coreCPUsareshowninFigure4toFigure
+performswellonIntelhardware. 6. The results when many core hardware accelerators
+are used in the native mode or individually are shown
+in Figure 7 to Figure 9. Results obtained on hybrid
+platforms comprising multi-cores and many-cores are
+showninFigure10toFigure12.
+5.2.1. OnCPU
+Figure 4 shows the time taken for performing ARA
+withPUandSUwhenthenumberofthreadsarevaried
+from 1 to 8 on the i7 (Figure 4a) and the Xeon (Fig-
+ure4b)platformsusingtheBoost,MKLandBeta ncli-
+brariesfor800,000trials. Asinglethreadisrunoneach
+coreoftheCPUandthenumberofcoresarevariedfrom
+1to8. EachthreadsperformsARAwithPUandSUfor
+a single trial. Multiple threads are used by employing
+OpenMP directive #pragma omp parallel in the C++
+source. With respect to the overall time on the i7 and
+Xeon CPUs, the MKL and Beta nc combination per-
+forms the best requiring around 113 seconds. On both
+platforms, the performance of the standalone Boost li-
+brary is poorer than the combination of libraries. The
+vectorised library does not perform better than the un-
+vectorisedlibrary. Thisisso,sincethebenefitsofvec-
+torisation are evident only when high precision is re-
+quiredfromthesolutionoftheinverseBetaCDF.While
+thereareonlyfewiterationsrequiredforconvergingto
+sixdecimalplaceprecision,asrequiredinthisresearch,
+thebenefitsofvectorisationarebalancedoffbytheover-
+headsinthevectorisedlibrary.
+In the case of the best performer, the MKL and the
+Beta nclibrary,aspeedupof4.6xisobtainedoni7and
+7.6xisobtainedonXeon.TheperformanceontheXeon
+isbetterduetothelargernumberofcorescomparedto
+thei7andthebandwidthtomemoryontheXeonwhich
+is 2.4 times that on the i7. The majority of the time
+takentocomputeprimaryuncertaintyisforperforming
+random access reads into the data structure represent-
+ing the XELT (this is further discussed in Section 5.3;
+on the i7 and Xeon, the time taken for such memory (b)Xeon
+operationsisnearlyfivetimesthetimetakenforthere-
+Figure 4: Time taken for ARA with PU and SU using
+mainingcomputationswhileapplyingfinancialtermsin
+onethreadpercomputingcoreonmulti-coreCPUsfor
+PU,alsoshownlaterinFigure13). Themajorityofthe
+800,000trials
+timeforapplyingsecondaryuncertaintyinARAiscon-
+sumedintheinversecumulativedistributionfunctionof
+the beta distribution (nearly 95% of the time taken for
+SU).
+Figure5showsthegraphsplottedforthetimetaken
+for performing ARA accounting both for PU and SU
+whenthenumberofthreadsarevariedfrom16to2048
+onthei7(Figure5a)andXeon(Figure5b)platformsus-
+ing the Boost, MKL and Beta nc libraries for 800,000
+trials. MultiplethreadsarerunoneachcoreoftheCPU
+withtheexceptionoftheXeonuntil32threadsareused.
+For example, when 16 threads are employed on the i7
+andXeontwothreadsandonethreadrunoneachcore
+respectively, and when 2048 threads are employed on
+thei7andXeon256threadsand128threadsrunoneach
+core respectively. In practice, the cores are not gener-
+allyoversubscribed,butispresentedintheexperiments
+to show the effect of over subscription. For example,
+superlinearspeedupsareobservedduetohyperthread-
+ing. Onthei7asmalldropisobservedfirstintheabso-
+lutetimefollowedbyaslightbutgradualincreasewhen
+many threads are executed on each core. However, on
+theXeon,beforethereisasimilarobservation,thereis
+asteepdropinthetimemovingfrom16to32threads.
+This is because the Xeon has 16 cores and the timings
+starttostagnateonlyafterallthe16coresareused. On
+thei7thebestresultis139secondscomparedto48sec-
+onds on the Xeon; the better performance by a factor
+of 3 is attributed to twice the number of cores and 2.6
+timesthebandwidthtomemorycomparedtothei7.
+Figure6showsthegraphsplottedforthetimetaken
+for ARA with PU and SU on the i7 and Xeon plat-
+forms for 32 threads (best performance is obtained for
+32 threads on both platforms). The time taken for ap-
+plying SU increases with the number of trials in each
+case of trials shown in the graph. The time taken for
+applying SU on the i7 is only
+the time taken in the
+sequentialimplementationonthei7. Thetimetakenfor
+ARAwithSUontheXeonisonly
+thetimetakenin
+thesequentialimplementation.TheXeonisnearlythree
+times faster than the i7 for applying PU and upto 2.6
+timesfasterforapplyingSU.Overallaspeedupofap-
+proximately5xand18xisobtainedonthei7andXeon
+overtheirrespectivesequentialimplementations.
+5.2.2. OnHardwareAcceleratorsonly
+Figure7aandFigure7bshowthegraphsplottedfor
+thetimetakenforperformingARAconsideringbothPU (b)Xeon
+andSUfor800,000trialsonthemany-coreGPUusing
+Figure 5: Time taken for ARA with PU and SU using
+the CUDA Math and Beta nc libraries. The Boost li-
+multiplethreadpercomputingcoreonmulti-coreCPUs
+braryisnotavailableforGPUs.
+for800,000trials
+In Figure 7a, the analysis is performed for 800,000
+trialsontheGPUbyvaryingthenumberofthreadsper
+block from 16 to 512 threads. An improvement in the
+performanceisseenasthenumberofthreadsperblock
+increasefrom16to128sincethelatencyforaccessing
+theglobalmemorydrops. Beyond128threads,theper-
+formance starts to drop, since the shared and constant
+memory available to each thread decreases. The low-
+esttimetakenis55secondswhen128threadsperblock
+areused,whichisnearly12timesfasterthanthebestse-
+quentialperformanceoni7and15timesfasterthanthe
+(a)For800,000trialsusingvaryingthreadsperblock
+(b)Using128threadsperblockforvaryingnumberoftrials
+Figure7: TimetakenforARAontheGPU
+bestsequentialperformanceonXeon. Theoveralltime
+for the analysis on the GPU is comparable to the per-
+formanceofthemulti-threadedimplementationof2048
+threadsontheXeon.
+Figure7bshowsthetimetakenforperformingARA
+incorporating PU and SU using 128 threads per block
+ontheGPU.Bothtimesscalelinearlyasexpected. The
+(b)Xeon timetakenforapplyingSUisovertwicethetimetaken
+forperformingARA.
+Figure 6: Time taken for ARA with PU and SU using Figure8andFigure9 showtheexperimentalresults
+MKL and Beta nc libraries using 32 threads on multi- obtainedwhentheIntelPhialoneisemployedforper-
+coreCPUs formingARAwithPUandSUusingBoost, MKLand
+Beta nc libraries. Figure 8a shows the performance of
+ARA when one thread is executed on each core of the
+Phi(the numberof threadsisvaried from1to 60). As
+expected there is an increase in speed when the num-
+berofthreadsisincreased. Thefastesttimeobtainedis
+78.32 seconds on 60 threads using MKL and Beta nc.
+The combination of Boost and Beta nc also perform
+comparably. ARAwithPUconsistsmostlyofmemory
+related operations and does not experience any signif-
+icant speedup. For example, 12 seconds are required
+on30threadsasagainst7secondson60threads. Over
+(a)Singlethreadpercore
+Figure9: TimestakenforapplyingPUandSUinARA
+onthePhiforvaryingnumberoftrials
+realdifferenceisobservedforPUinthatthePhiisfour
+timesfasterthantheGPUforperformingmemorycom-
+putations.
+5.2.3. OnHybridplatforms
+Figure10showsthetimetakenforperformingARA
+onthei7CPUandtheTeslaC2075GPUusedasahy-
+bridplatform.Theworkloadof800,000trialsissplitbe-
+tweentheCPUandtheGPU,withtheintentionthatthe
+CPUdoesnotremainidle,incontrasttowhentheGPU
+(b)Multiplethreadspercore
+alone is employed. The CPU makes use of the multi-
+Figure 8: Time taken for ARA with PU and SU using coresoftheprocessorand16threadsusingOpenMPto
+IntelPhifor800,000trials execute the workload; the MKL and Beta nc libraries
+are employed for applying secondary uncertainty. The
+workloadontheGPUmakesuseofthemanycoresand
+90%ofthetimeisrequiredforapplyingsecondaryun- 128 threads per core; the combination of the CUDA
+certaintywhen60threadsareused. Vectorisationdoes Math and Beta nc libraries are made use of to apply
+notyieldanypotentialbenefitovernon-vectorisedfunc- secondary uncertainty. The x-axis of the graph shows
+tions in applying secondary uncertainty due to over- thevaryingworkloadoftrialsontheCPUandtheGPU
+heads; vectorised function is nearly 38% slower than and the corresponding time taken for the workload on
+thefastestnon-vectorisedfunctionon60threads. eachplatform. ThebestcasescenarioiswhentheCPU
+Figure 8b shows the performance of ARA when PU andtheGPUtakesimilartimesforexecution,whichis
+and SU are applied using multiple threads per core thepointofinflectiononthe graph. TheCPUtendsto
+on the Phi (number of threads is varied from 60 to be idle before the plots converge and the GPU is not
+240). Speedupisobservedalthoughthereislimitedef- utilised beyond the point of convergence. The optimal
+ficiency. Again best performance is noted when MKL workload is when the CPU performs the analysis for
+and Beta nc libraries are employed. The analysis is 220,000trialsandtheGPUperformstheanalysisonthe
+completedin52.16secondsand42.1secondswhentwo remaining 580,000 trials. The analysis on the hybrid
+threadspercoreandthreethreadspercoreareusedre- platform is 25% faster (41 seconds) than the GPU (55
+spectively. seconds).
+Figure 9 shows that there is a linear increase in the Figure 11 shows the experimental results obtained
+timetakenforapplyingPUandSUonthePhiprocessor whentheIntelXeonandPhiCoprocessorareemployed
+for varying number of trials. The time taken for SU is forperformingARAaccountingforbothPUandSUus-
+over 8 times the time taken for PU; the for SU is just ing the Boost, MKL and Beta nc libraries. Figure 11a
+under 38 seconds both for the Phi and the GPU. The isthegraphshowingtheperformanceofARAwhenthe
+Figure10: Timestakenonthei7CPUandTeslaC2075
+GPUforapplyingPUandSUinARAforvaryingtrials
+(a)Singlethreadpercore
+number of threads are varied from 1 to 60 (i.e., execu-
+tionofsinglethreadpercore). Asexpectedanincrease
+in speed is noted with increasing number of threads.
+ThefastesttimeobtainedforARAwithSUislessthan
+102secondson60threadsusingtheMKLandBeta nc
+libraries; the combination of the Boost and Beta nc li-
+braries is also comparable. ARA accounting only for
+PUdoesnotenjoythesamedegreeofspeedup,sinceit
+consists mostly of memory operations; 18 seconds are
+required on 60 threads and 24 seconds on 30 threads.
+Nearly82%percentmoretimeisrequiredforSUusing
+60 threads. Despite the increased potential for vector-
+izationonthePhicoprocessor,theoverheadinthevec-
+(b)Multiplethreadpercore
+torizedfunctionscausesittobenearly20%slowerthan
+thenon-vectorisedlibrary. Figure11: TimetakenforARAwithPUandSUusing
+Figure 11b is the graph showing the performance of IntelXeonandIntelPhiCoprocessor
+ARA incorporating PU and SU when the number of
+threads are varied from 60 to 240 (i.e., execution of
+multiplethreadspercore)onthePhicoprocessor. The
+speedup steadily decreases when multiple threads are
+executedoneachcore. Forexample,whentwothreads
+areexecutingpercorethebesttimeis72secondscom-
+paredto62.88secondswhenthreethreadsareexecuting
+percore.
+Figure12showsthetimetakenforapplyingPUand
+SU on the Xeon and Phi. Both times scale linearly as
+expected. ThetimetakenforapplyingSUisovertwice
+the time taken for performing ARA with PU. The best
+librarycombinationofMKLandBeta nctakesapprox-
+imately 3.5 times longer for SU than for applying pri-
+maryuncertainty.
+5.3. Discussion
+Figure12:TimestakenforapplyingPUandSUinARA
+Figure 13 is a graph that summarises the key results
+forvaryingnumberoftrialsonXeonandPhi
+fromtheexperimentalstudy. Thesetofthreebarsrep-
+resentsthetimetakenfor(i)fetchingEventsfrommem-
+oryandforlookupofLossSetsinmemory,(ii)apply- data of 800,000 trials required more than three hours
+ingFinancialTermsandperformingothercomputations which is not included in the execution time. Although
+inARA,and(iii)applyingsecondaryuncertaintyonthe theexecutiontakesonly42secondsoncealldataresides
+sequential implementation on the CPU platforms and inthePhimemory,itislesslikelythatmostapplication
+the parallel implementations on the multi-core CPU, can use the Phi in the native mode. The Phi is not in-
+many-coreGPUandthePhiCo-processor.Ineachcase, tendedtobeusednatively,butasacoprocessor. Hence,
+parameters specific to the implementation, such as the inthetimingresultsthetimetakenforcopyingdatato
+numberofthreads,weresettothebestvalueidentified thePhiisnotincluded.
+duringtheexperiments. InsequentialorparallelimplementationsonCPU,ac-
+In the parallel implementations for ARA only con- celerator and hybrid platforms require nearly 50% or
+sidering PU, a speedup of 2.3x, of 20x and of 90x is moretimeforapplyingSUinARA.Themajorityofthis
+achieved on the CPU, the GPU and the Phi respec- timeisrequiredbythecomputationsoftheinverseCDF
+tively when compared to the corresponding sequential ofthebetadistribution.Thiscallsfornotonlythedevel-
+implementations(theparallelGPUresultsarecompared opmentoffastmethodstoapplysecondaryuncertainty
+againstthesequentiali7resultsandtheparallelPhire- inriskanalytics,butalsothedevelopmentoffastmeth-
+sultsarecomparedagainstthesequentialXeonresults). ods for the underlying statistical functions. Fast meth-
+Aspeedupofnearly12xisachievedintheoveralltime ods have been implemented for computing the inverse
+for the implementation on the GPU and a speed up of CDF of the symmetrical beta distribution [49] which
+21x is obtained for the overall time for the implemen- considers one shape parameter, but there are minimal
+tationonthePhiincontrasttotherespectivesequential implementations of fast assymetrical beta distribution
+implementationsontheCPU.ForapplyingSU,multiple thattakestwoshapeparametersasrequiredforthesec-
+threading on the CPU is nearly between six to twenty ondaryuncertaintymethodologyreportedinthispaper.
+two times faster than the sequential implementations.
+For the numeric computations on the GPU, an accel-
+6. Conclusions
+eration of approximately 26x is achieved over the se-
+quential implementation. Limited memory bandwidth Hardware accelerators, such as GPUs and Phis, are
+isabottleneckintheCPUthatresultsinapproximately attractiveforacceleratingapplicationsthatrequireHPC
+27%and53%ofthetimespentforfetchingEventsand solutions,sincetheyarelowbudgetplatforms. Riskan-
+for look up of Loss Sets in memory for the sequential alyticsisonesuchdomainthatcanhugelybenefitfrom
+and parallel implementation on the CPU respectively. hardware accelerators. In this research, we set out to
+While the time for fetching Events and for look up of investigate which hardware accelerator is more benefi-
+Loss Sets in memory have been significantly lowered cialforhigh-performanceriskanalytics. ARA,aMonte
+on the GPU, 39% of the total time is still used to this Carlo like simulation that considers primary and sec-
+end. In the case of the Phi, this time is lowered to 3 ondaryuncertaintiesforestimatingportfoliowideriskis
+secondsasagainst16secondsrequiredbytheGPU. chosenasacandidateapplication.Parallelalgorithmsto
+On hybrid platforms, the combination of GPU and speeduptherisksimulationareimplementedonmulti-
+CPUoutperformthePhiandCPU.TheGPUandCPU coreCPUs,hardwareacceleratorsandhybridplatforms
+performARAwithPUandSUinonly41secondscom- comprisingCPUsandaccelerators. Experimentalstud-
+pared to 63 seconds required by Phi and CPU; the Phi ies are pursued on CPUs such as the Intel i7 and the
+and CPU is 50% slower than the GPU and CPU plat- Intel Xeon, and on accelerators, such as the NVIDIA
+form,whichisnearly16xfasterthanthebaselineimple- GPU and the Intel Phi, for evaluating the performance
+mentation on i7. On individual accelerator platforms, ofARA.
+without considering the time required for transferring Both the Phi and the GPU are competing hardware
+data to the device from the host, the Phi only requires accelerators and useful in different contexts for high-
+42secondsagainst55secondsrequiredbytheGPU;the performance risk analytics. Overall, the experimental
+Phi is 1.3 times faster than the GPU for ARA and 21x study indicates that for individual performance, when
+fasterthanthebaselineimplementationonXeon. executiontimesareonlyconsideredwithouttakinginto
+ThePhiinthenativemodeseemsfasterthanthecom- accountthedatatransfertimes,thePhioutperformsthe
+bination of the Xeon and the Phi as a hybrid system. GPUby23%achievingaspeedupof21xoverabase-
+However, this is not always a practical solution since lineimplementation;foratypicalsimulationof800,000
+dataneedstobecopiedofflinetothememoryofthePhi trialswitheachtrialcomprising1,000eventsand16ex-
+and is time consuming. In the case of ARA, copying tendedELTs,thePhiindividuallyrequiresonly42sec-
+Figure13: TimetakenforfetchingEventsfrommemoryandforlookupofLossSetsinmemory,applyingFinancial
+TermsandperformingothercomputationsinPU,andapplyingSUonsequentialandparallelimplementationsofARA
+ondsagainst55secondsrequiredbytheGPU.However, [7] C.L.SmithandE.Borgonovo,“DecisionMakingDuringNu-
+the Phi as an independent processor is impractical in a clearPowerPlantIncidents-ANewApproachtotheEvaluation
+ofPrecursorEvents,”RiskAnalysis,Vol.27,Issue4,pp.1027-
+largenumberofcasesandisbestsuitedasacoprocessor
+1042.
+inahybridplatform. TheXeonandPhihybridplatform
+[8] B.J.Garrick,J.W.StetkarandP.J.Bembia,“QuantitativeRisk
+is50%slowerthanthecombinationofi7andtheGPU. AssessmentoftheNewYorkStateOperatedWestValleyRa-
+For the typical simulation on hybrid platforms, the i7 dioactiveWasteDisposalArea,”RiskAnalysis,Vol.30,Issue8,
+pp.12191230,August2010.
+andGPUcombinationtakesonly41seconds, whichis
+[9] E. Michel-Kerjan, S. Hochrainer-Stigler, H. Kunreuther, J.
+16xfasterthanabaselineimplementation,comparedto
+Linnerooth-Bayer, R. Mechler, R. Muir-Wood, N. Ranger, P.
+63secondsrequiredbyXeonandPhi. VaziriandM.Young,“CatastropheRiskModelsforEvaluating
+DisasterRiskReductionInvestmentsinDevelopingCountries,”
+RiskAnalysis,2012.
+References [10] K. M. Clark, “A Formal Approach To Catastrophe Risk As-
+sessment and Management,” Casualty Actuarial Society, Vol.
+[1] G.Connor,L.R.GoldbergandR.A.Korajczyk,“PortfolioRisk LXXIII,No.139,1986,pp.69-92.
+Analysis,”PrincetonUniversityPress,2010. [11] G.Connor, L.R.Goldberg, R.A.Korajczyk, “PortfolioRisk
+[2] C.Trumbo,M.Lueck,H.MarlattandL.Peek,“TheEffectof Analysis,”PrincetonUniversityPress,2010.
+ProximitytoHurricanesKatrinaandRitaonSubsequentHurri- [12] Alternative Risk Transfer: Integrated Risk Management
+caneOutlookandOptimisticBias,”RiskAnalysis,Vol.31,Issue ThroughInsurance,ReinsuranceandtheCapitalMarkets,Wi-
+12,pp.1907-1918,December2011. leyFinanceSeries,JohnWiley&SonsLtd.,2004.
+[3] E. Mason, A. Rau-Chaplin, K. Shridhar, B. Varghese and N. [13] P.Grossi,H.Kunreuther(Editors),“CatastropheModelling: A
+Varshney, “Rapid Post-Event Catastrophe Modelling and Vi- NewApproachtoManagingRisk,”Springer,2005.
+sualization,” accepted to the 23rd International Workshop on [14] R.R.AndersonandW.Dong,“PricingCatastropheReinsurance
+DatabaseandExpertSystemsApplications,2012. withReinstatementProvisionsusingaCatastropheModel,”Ca-
+[4] D.S.Bowles,A.M.Parsons,L.R.AndersonandT.F.Glover, sualtyActuarialSocietyForum,Summer1998,pp.303-322.
+“PortfolioRiskAssessmentofSAWater’sLargeDams,”Aus- [15] G.G.Meyers,F.L.KlinkerandD.A.Lalonde,“TheAggrega-
+tralianCommitteeonLargeDamsBulletin,Vol.112,Issue27- tionandCorrelationofReinsuranceExposure,”CasualtyActu-
+39,August1999. arialSocietyForum,Spring2003,pp.69-152.
+[5] D. J. Moschandreas and S. Karuchit, “Scenario-Model- [16] W.Dong,H.ShahandF.Wong,“ARationalApproachtoPric-
+Parameter: A New Method of Cumulative Risk Uncertainty ingofCatastropheInsurance,”JournalofRiskandUncertainty,
+Analysis,”EnvironmentInternational,Vol.28,Issue4,pp.247- Vol.12,1996,pp.201-218.
+261,September2002. [17] W.DongandF.S.Wong,“PortfolioTheoryforEarthquakeIn-
+[6] T.WalsheandM.Burgman,“AFrameworkforAssessingand suranceRiskAssessment,”Proceedingsofthe12thWorldCon-
+ManagingRisksPosedbyEmergingDiseases,”RiskAnalysis, ferenceonEarthquakeEngineering,PaperNo.0163,2000.
+Vol.30,Issue2,pp.236-249,February2010. [18] R.M.Berens, “ReinsuranceContractswithaMulti-YearAg-
+gregateLimit,”CasualtyActuarialSocietyForum,Spring1997, lationsusingFPGAs,” ProceedingsoftheIEEEWorkshopon
+pp.289-308. HighPerformanceComputationalFinance,2010.
+[19] G. Woo, “Natural Catastrophe Probable Maximum Loss,” [38] M.F.Dixon,J.ChongandK.Keutzer,“AcceleratingValue-at-
+BritishActuarialJournal,Vol.8,2002. RiskEstimationonHighlyParallelArchitectures,”Concurrency
+[20] M. E. Wilkinson, “Estimating Probable Maximum Loss with andComputation: PracticeandExperience,Vol.24,2012,pp.
+OrderStatistics,”CasualtyActuarialSocietyForum,1982,pp. 895-907.
+195-209. [39] B. Zhang and C. W. Oosterlee, “Option Pricing with COS
+[21] A.A.GaivoronskiandG.Pflug,“Value-at-RiskinPortfolioOp- MethodonGraphicsProcessingUnits,”Proceedingsofthe23rd
+timization:PropertiesandComputationalApproach,”Journalof IEEEInternationalParallelandDistributedProcessingSympo-
+Risk,Vol.7,No.2,2005,pp.1-31. sium,2009.
+[22] P.Glasserman,P.HeidelbergerandP.Shahabuddin,“Portfolio [40] L.A.Abbas-Turki,S.Vialle,B.LapeyreandP.Mercier,“Pric-
+Value-at-Risk with Heavy-tailed Risk Factors,” Mathematical ing Derivatives on Graphics Processing Units Using Monte
+Finance,Vol.12,No.3,2002,pp.239-269. CarloSimulation,”ConcurrencyandComputation:Practiceand
+[23] M.B.GilesandC.Reisinger,“StochasticFiniteDifferencesand Experience,2012.
+MultilevelMonteCarloforaClassofSPDEsinFinance,”SIAM [41] D.M.Dang,C.C.ChristaraandK.R.Jackson,“AnEfficient
+JournalofFinancialMathematics,Vol.3,Issue1,,2012,pp. GPU-BasedParallelAlgorithmforPricingMulti-AssetAmeri-
+572-592. canOptions,”ConcurrencyandComputation:PracticeandEx-
+[24] A.J.Lindeman,“OpportunitiesforSharedmemoryParallelism perience,Vol.24,No.8,2012,pp.849-866.
+inFinancialModelling,”ProceedingsoftheIEEEWorkshopon [42] K.H.TsoiandW.Luk,“Axel: AHeterogeneousClusterwith
+HighPerformanceComputationalFinance,2010. FPGAsandGPUs,”Proceedingsofthe18thACM/SIGDAInter-
+[25] K.SmimouandR.K.Thulasiram, “ASimpleParallelAlgo- nationalSymposiumonFieldProgrammableGateArrays,2010,
+rithmforLarge-ScalePortfolioProblems,”JournalofRiskFi- pp.115-124.
+nance,Vol.11,Issue5,2010,pp.481-495. [43] M.Showerman, J.Enos, A.Pant, V.Kindratenko, C.Steffen,
+[26] S. Weston, J. -T. Marin, J. Spooner, O. Pell and O. Mencer, R.PenningtonandW.-M.Hwu,“QP:AHeterogeneousMulti-
+“AcceleratingtheComputationofPortfoliosofTranchedCredit AcceleratorCluster,”Proceedingsofthe10thLCIInternational
+Derivatives,”ProceedingsoftheIEEEWorkshoponHighPer- ConferenceonHigh-PerformanceClusteredComputing,2009.
+formanceComputationalFinance,2010. [44] D.Cummins,C.LewisandRichardPhillips,“PricingExcess-
+[27] A. Srinivasan, “Parallel and Distributed Computing Issues in of-LossReinsuranceContractsAgainstCatastrophicLoss,”The
+PricingFinancialDerivativesthroughQuasiMonteCarlo,”Pro- FinancingofCatastropheRisk,Editor: K.A.Froot,University
+ceedingsoftheInternationalParallelandDistributedProcessing ofChicagoPress,1999,pp.93-148.
+Symposium,2001. [45] Y. -Sin Lee, “The Mathematics of Excess of Loss Coverages
+[28] K.HuangandR.K.Thulasiram,“ParallelAlgorithmforPric- and Retrospective Rating - A Graphical Approach,” Casualty
+ingAmericanAsianOptionswithMulti-DimensionalAssets,” ActuarialSocietyForum,1988,pp.49-77.
+Proceedingsofthe19thInternationalSymposiumonHighPer- [46] R.PaghandF.F.Rodler,“Cuckoohashing,”JournalofAlgo-
+formanceComputingSymposium,2005,pp.177-185. rithms,Vol.51,2004.
+[29] C.Bekas,A.CurioniandI.Fedulova,“LowCostHighPerfor- [47] Intel(R)MathKernelLibraryReferenceLibrary,MKL11.0Up-
+mance Uncertainty Quantification,” Proceedings of Workshop date3,DocumentNo.630813-058US.
+onHighPerformanceComputationalFinance,2009. [48] H.Posten,“AnEffectiveAlgorithmfortheNoncentralBetaDis-
+[30] D. Daly, K. D. Ryu and J. E. Moreira, “Multi-variate Fi- tributionFunction,”TheAmericanStatistician,Vol.47,No.2,
+nanceKernelsintheBlueGeneSupercomputer,”Proceedingsof 1993,pp.129-131.
+WorkshoponHighPerformanceComputationalFinance,2008. [49] P. L’Ecuyer and R. Simard, “Inverting the Symmetrical Beta
+[31] M.Majmudar,C.Docan,M.Parashar,C.Marty,“Costvs.Per- Distribution,” ACM Transactions on Mathematical Software,
+formance of VaR on Accelerator Platforms,” Proceedings of Vol.32,No.4,2006,pp.509-520.
+WorkshoponHighPerformanceComputationalFinance,2009.
+[32] V.Agarwal,L.-K.LiuandD.A.Bader,“FinancialModelling
+on the Cell Broadband Engine,” Proceedings of the IEEE In-
+ternationalSymposiumonParallelandDistributedProcessing,
+2008.
+[33] C. Docan, M. Parashar, and C. Marty, “Advanced Risk Ana-
+lyticsontheCellBroadbandEngine,”Proceedingsofthe23rd
+IEEEInternationalParallelandDistributedProcessingSympo-
+sium,2009.
+[34] N.Singla,M.Hall,B.ShandsandR.D.Chamberlain,“Finan-
+cial Monte Carlo Simulation on Architecturally Diverse Sys-
+tems,” Proceedings of Workshop on High Performance Com-
+putationalFinance,2008.
+[35] S. Weston, J. -T. Marin, J. Spooner, O. Pell and O. Mencer,
+“AcceleratingtheComputationofPortfoliosofTranchedCredit
+Derivatives,” Proceedings of Workshop on High Performance
+ComputationalFinance,2010.
+[36] A.Irturk,B.Benson,N.LaptevandR.Kastner,“FPGAAccel-
+erationofMeanVarianceFrameworkforOptimalAssetAlloca-
+tion,”ProceedingsofWorkshoponHighPerformanceCompu-
+tationalFinance,2008.
+[37] D.B.Thomas,“AccelerationofFinancialMonte-CarloSimu-

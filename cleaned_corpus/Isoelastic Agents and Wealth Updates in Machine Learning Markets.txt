@@ -1,0 +1,575 @@
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+Amos J. Storkey a.storkey@ed.ac.uk
+Jonathan J. Millin j.j.millin@sms.ed.ac.uk
+Krzysztof J. Geras k.j.geras@sms.ed.ac.uk
+School of Informatics,University of Edinburgh
+Abstract basisofexpectedutilitytheory. Weshowthatawhole
+Recently, prediction markets have shown spectrum of aggregation methods are then available,
+considerable promise for developing flexible includingandextendingthoseprovidedbyα-mixtures.
+mechanismsformachinelearning. Inthispa- We demonstrate the empirical benefits of these aggre-
+per, agents with isoelastic utilities are con- gation methods over those discussed above.
+sidered. It is shown that the costs asso- A number of authors have recently examined the pos-
+ciated with homogeneous markets of agents sibilities of market mechanisms for implementing ma-
+with isoelastic utilities produce equilibrium chine learning methods. Desirable properties of mar-
+prices corresponding to alpha-mixtures, with kets include the fact that agents act independently,
+aparticularformofmixingcomponentrelat- markets are inherently parallelisable and the fact that
+ing to each agent’s wealth. We also demon- the form of models produced by markets is more
+strate that wealth accumulation for logarith- general than explicitly defined probabilistic models.
+micandotherisoelasticagents(throughpay- Market based machine learning approaches are be-
+offsonpredictionoftrainingtargets)canim- ing shown to be consistent with standard probabilis-
+plement both Bayesian model updates and tic machine learning formalisms (Storkey, 2011) as
+mixtureweightupdatesbyimposingdifferent wellprovidingregretboundsformarketmakers(Chen
+market payoff structures. An iterative algo- & Wortman Vaughan, 2010; Abernethy et al., 2011).
+rithmisgivenformarketequilibriumcompu- Markets are also a well studied and pervasive part of
+tation. We demonstrate that inhomogeneous our social and computational infrastructure.
+marketsofagentswithisoelasticutilitiesout-
+We envisage the possibility of setting up online pre-
+perform state of the art aggregate classifiers
+diction markets for large scale multivariate prediction
+suchasrandomforests,aswellassingleclas-
+problems in which different algorithms compete. This
+sifiers (neural networks, decision trees) on a
+generalises prediction markets, which usually focus on
+numberofmachinelearningbenchmarks,and
+disconnected discrete events, and relates to other re-
+showthatisoelasticcombinationmethodsare
+centworkinutilisingalgorithmcrowdsourcingforma-
+generally better than their logarithmic coun-
+chinelearning(Abernethy&Frongillo,2011). Itwould
+terparts.
+provide an alternative to, say, the current interest in
+competition and challenge environments (e.g. Netflix,
+1. Introduction
+Kaggle,PASCAL2),whereindividualscompeteforthe
+This paper addresses the problem of classifier aggre- best personal performance. Experience in these do-
+gation through the use of Machine Learning Markets. mains has suggested that it is common for individual
+In supervised machine learning, many algorithms use algorithms to be outperformed by competitors group-
+simple averaging, weighted averaging, mixtures, mix- ing together to produce model combinations (Bell &
+ing and log opinion pools for combining a variety of Koren, 2007). This mirrors the experience regarding
+classifiers to form aggregate classifiers. On the other aggregation of expert predictions (Dani et al., 2006).
+hand, prediction markets have been used for aggrega- The main novel contributions of this paper are:
+tionofsimplebeliefsinotherfields(themarketpriceis
+used as an aggregate probability). Some simple forms • Extending the set of standard agents from loga-
+of theoretical prediction markets have been shown to rithmic agents and exponential agents to also in-
+be equivalent to weighted averaging (Barbu & Lay, clude the various forms of isoelastic agents, and
+2011; Storkey, 2011). However, more generally, we toshowsuchagentscanreproduceandextendthe
+can formulate prediction market mechanisms on the α-mixtures framework (Amari, 2007).
+AppearinginProceedingsofthe29th InternationalConfer- • Demonstrating that online and batch agent
+enceonMachineLearning,Edinburgh,Scotland,UK,2012. wealth updates are equivalent to Bayesian pos-
+Copyright 2012 by the author(s)/owner(s). teriorupdatesandmixturecoefficientupdatesre-
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+spectively. will be critical for efficiently reaching equilibrium. In
+(Tsengetal.,2010)theauthorsexaminethestatistical
+• Equating the multi-agent equilibrium (fixed-
+properties of market agent models, whereas in (Lee &
+point) market with a divergence minimisation.
+Moretti,2009)theauthorsconsiderpredictionmarkets
+The result is an iterative process for establishing
+in the context of Bayesian learning.
+the market equilibrium values.
+• Demonstrating that Machine Learning Markets 3. Notation
+outperformindividualstrongclassifierswhenpre-
+sented with equivalent data. Showing that the Machine Learning Markets use prediction market
+markets improve on state of the art classifiers, mechanisms to generate machine learning models via
+such as random forests, and provide better log- themarketprice. Thebasicconceptsandnotationare
+probabilityperformanceonclassificationtestsets. now introduced.
+• Demonstrating that inhomogeneous sets of isoe-
+3.1. Goods
+lastic agents produce better performance than
+logarithmic agents. Hence aggregation by simple We consider a set of market goods enumerated by k =
+mixtures can be improved upon. 1,2,...N G , each corresponding to a specific outcome
+of a discrete random variable, denoted k. The good k
+will pay out one unit of currency in the event that the
+2. Other Related Work outcomeforkisk. Themarkethasacommonlyagreed
+cost c (0 < c < 1) for each good k and we collect
+A number of previous papers address machine learn- k k
+the costs into the cost vector c = (c ,c ,...,c )T.
+ing and prediction markets. In (Lay & Barbu, 2010) 1 2 NG
+The cost vector c will be interpreted as the aggregate
+and (Barbu & Lay, 2011), the authors consider agents
+probabilistic belief provided by the market: the prob-
+endowed with betting functions, and do experimental
+ability1 of k occurring is c .
+tests in the context of classifiers (leaves of the trees of k
+a random forest) trained on bootstrapped samples. In
+3.2. Agent Actions
+(Storkey, 2011) the author develops a complementary
+approach, utilizing beliefs and utilities of individual A number of agents, enumerated by i = 1,2,...,N ,
+agents. He shows that a variety of machine learning act in the market. Each agent has wealth W , and in-
+model combination methods, including model averag- vests (or risks) an amount r in stock k. We collect
+ing, product models, factor graphs etc. can be imple- r =(r ,r ,...,r )T. A no arbitrage assumption2
+mented using Machine Learning Markets. In (Chen & implies that c =1, meaning a probabilistic inter-
+Wortman Vaughan, 2010) the market is defined with pretation of c is reasonable. Likewise, we can require
+respect to a global cost function, and they demon- allagentstospendalltheirwealth: ifanyagentwants
+strate achieving ‘no regret’ learning using information tokeepitasariskfreeinvestment,thatagentcansim-
+markets. From another perspective, Agrawal et al. plypurchaseoneofeachstockinstead. Hence,without
+(Agrawal et al., 2010) looked at the equilibrium con- loss of generality, we have
+ditions of prediction markets in various situations of (cid:88)
+r =W . (1)
+matching buyers and sellers. The available informa- ik i
+tion is important for market conditions. This was dis- k
+cussedin(Jumadinova&Dasgupta,2011),wherethey Again without loss of generality, we will measure
+used a multi-agent system to examine the various de- wealth in units such that the total wealth across all
+pendencies on information reliability, rate etc. It is agents is 1: (cid:80) W =1. Hence (cid:80) r =1.
+the ability of prediction markets to aggregate belief
+Each agent is also endowed with a utility function
+that is key to their potential (Pennock & Wellman,
+U (W) denoting the utility of having wealth W. For
+1997; Ottaviani & Sørensen, 2007), and much of the i
+the purposes of this paper we will only consider con-
+experimental work on prediction markets backs that
+cave utility functions. Finally, each agent has a belief
+up (Ledyard & Hanson, 2008).
+P , where P (k) denotes the probabilistic belief, for
+The potential of prediction markets has been consid- that particular agent i, that the outcome of k will be
+ered for some time. In (Arrow et al., 2008; Manski, k. Necessarily, as k enumerates all possible outcomes,
+2006; Wolfers & Zitzewitz, 2004) the authors discuss (cid:80) P (k)=1 for all agents.
+the capability of practical prediction markets to cap-
+ture accurate probabilities. In (Dani et al., 2006) the 1Strictly, the probability is c k divided by the unit of
+payout. This ensures dimensional consistency, both here
+authors compared a number of different mechanisms
+and elsewhere.
+for expert aggregation including a simple prediction
+2No arbitrage: there is no opportunity for a risk free
+market approach. Different market designs have dif- (cid:80)
+gain. If c (cid:54)= 1 an agent can make a risk free win
+ferent features, and ensuring good prediction market by buying (o k r k selling) one of each stock which has a sure
+design with sufficient fluidity (Brahma et al., 2010) return (or debt) of 1 unit.
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+3.3. Market isoelastic utility with the limiting value of η =1.
+The agents jointly act in a market. The market trans-
+4.2. Market Equilibrium
+actions are subject to the macroscopic constraint
+The Market must satisfy the market constraint (2).
+r ik = (cid:88)
+W =1⇒ (cid:88)
+r =c (2) At the same time each agent attempts to maximise
+c k i ik k theirindividualutility. Itiswellknown(Arrow&De-
+i=1 i=1 i=1
+where N is the number of agents. This states that breu, 1954) that, if the individual utilities are concave
+wealthmustbeconservedinthemarket: thetotalpay- (as is the case in this paper), there is a unique fixed
+out were that item to occur matches the total original price point for which agents all attain their maximum
+wealth. Here r /c is the amount of good k bought utility and the market constraints are satisfied. This
+by agent i (the amount invested divided by cost) and is called the market equilibrium. However, the exis-
+so is the amount received if event k occurs. tence of a fixed point does not establish a means of
+obtainingit. Thequestionofhowamarketmightequi-
+3.4. Summary Table librate formed part of the early discussion regarding
+i → agent k → good/outcome equilibria, and led to Walras’ concept of tˆatonnement.
+N ,N → #agents/goods r → investment This idea, as communicated by Samuelson (Samuel-
+W → Wealth U → Utility son, 1947), was that prices are differentially changed
+c → cost vector P (k) → agent belief in the direction of the excess or deficit demand. How-
+ever, the constraints on this formalism meant it was
+4. Utility Maximisation not established as a general purpose procedure. The
+aremanyanalysesthatinvolveformulatingconvexop-
+In Machine Learning Markets the market price c de- timisation approaches or auction processes for obtain-
+finesaprobabilitydistributionoverpossibleoutcomes, ingmarketequilibria,e.g. (Dengetal.,2002;Devanur
+which can be used for prediction. The multiclass pre- et al., 2008; Ye, 2006) – see (Vazirani, 2007) for more
+diction problem is the focus for this paper. details. These algorithms typically require a complete
+optimisation procedure. Two exceptions are (Cole &
+4.1. Investment Functions Fleischer, 2007; Fleischer et al., 2008) which develop
+A given utility function U induces a given investment on the idea of tˆatonnement.
+function r∗ i (W i ,c) via expected utility maximisation: In this paper an iterative tˆatonnement-like approach
+r∗ i =r∗ i (W i ,c)=argm r a i x (cid:88) P i (k)U i (cid:18) r c i k k (cid:19) i t s he us fa ed ct f t o h r a e t s (cid:80) tab k l c i (cid:80) s k hi = ng 1 m an ar d ke (cid:80) t k e ( q (cid:80) ui i li r b i r k i ) a. = C 1 o m ns e i a d n e s r
+k that both c and r take probabilistic form. At
+(cid:88) k i(cid:80) ik
+s.t. r ik =W i . (3) equilibrium, we have i r ik = c k (see (2)) when all
+agentsareallocatedtheiroptimaldemand. Awayfrom
+where we have used the fact that every agent must equilibrium there will be an excess or deficit demand
+spendtheirwholewealth(1). Theinvestmentfunction in different goods, which is evident in the difference
+indicates the amount an agent ideally would wish to between (cid:80) i r ik and c k . Consider the KL divergence
+invest in each good, given the costs c. The market KL(c|| i r i ). This is minimised and zero only at
+constraints may mean this desire cannot be satisfied: equilibrium. To minimise this KL divergence we use
+the agent must find a buyer or seller to realise this Algorithm1. Thisalgorithmonlyterminateswhenthe
+desire. The optimum of (3) is given by (unique) equilibrium is reached, when c is the equilib-
+(cid:18) c (cid:19) rium price. In all our empirical tests the equilibrium
+ik k i i P (k) was always reached. Each pass of the algorithm is
+naivelyO(N ×N )–eachupdateiscomputationally
+whereU(cid:48) isthederivativeofU andλ (c)isaLagrange A G
+multiplier such that (cid:80) r∗ =W is satisfied. equivalent to a mixture model update. In our exper-
+k ik i iments equilibria were reached in between 5 and 15
+In general, the equation for λ cannot be explicitly
+i iterations.
+solved. However, for a number of utilities the invest-
+Satisfaction of the market constraints for given
+mentfunctionisanalytic. Table1listssomeimportant
+buying functions, or equivalently minimisation of
+utilityfunctions(exponential,logarithmicandisoelas-
+KL(c|| r ), defines a fixed point that is a market
+tic) and their corresponding investment functions. i i
+equilibrium. These market equilibria can be explicitly
+Theclassofisoelasticfunctionsareaveryusefulsetof
+computed for various agent utilities. For a market of
+utilities. Theisoelasticutilitiesgettheirnameasthey
+identical logarithmic agents or a market of identical
+all have investment functions that are linear in the
+exponential agents we have
+current wealth; this property is called the isoelastic
+ty.
+0.
+= (cid:80) i
+(cid:89) N
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+Exponential U( (cid:26) W)=−exp(−W) r ik (W i ,c)= N W G i +c k logPi c ( k k) − N 1 G (cid:80) k(cid:48) c k(cid:48) logPi c ( k k (cid:48) (cid:48))
+log(W) for W >0
+Logarithmic U(W)= r (W ,c)=W P (k)
+−∞ otherwise ik i i i
+Isoelastic U(W)= W1 1 − − η η i i −1 r ik =W i (cid:80) k ( (cid:48) c ( k c ) k(cid:48) ) ηi ηi η − i (P 1 ( i P (k i ( ) k )η (cid:48)) i )η 1 i 
+Table 1. Various utility functions and their corresponding investment functions. For the isoelastic utilities 0<η.
+Algorithm 1 Market Equilibrium 0.4
+initialise c, initialise a (e.g. a=0.1) 0.3
+define stopping criterion (cid:15) 0.25
+repeat 0.2
+0.15 Compute optimal r for each agent ignoring mar-
+ket constraint
+set (for normalising Z 1 ) −010 −5 0 x 5 10
+(cid:18)(cid:80)
+(cid:19)1−a
+cnew = i ik c (5)
+discard cnew and increase a.
+until KL(cnew|| (cid:80) r (cnew))<(cid:15)
+respectively. Forlogarithmicagentsthistakestheform
+ofamodelaverageormixtureoftheagents’beliefs;for
+exponential agents it is a log opinion pool of beliefs.
+See (Storkey, 2011) for discussion of these. The term
+homogeneous willbeusedtorefertomarketswhereall
+agents have identical utility functions.
+4.3. Equilibria for Isoelastic Agents
+We cannot explicitly obtain the equilibrium for sets
+of isoelastic agents with η (cid:54)= 1, and so the optimi-
+sation procedure of the previous section needs to be
+employed. However we can say something about the
+form of solution we obtain for isoelastic agents. For
+example we can obtain the following equilibrium for
+homogeneous markets of isoelastic agents, all having
+the same η. This solution is not closed form:
+(cid:34) (cid:35)η
+(cid:88) 1 c
+where V =W /Z and Z is the implicit solution to
+Z i = (cid:88)  (cid:88)W Z jP j (k)η 1  P i (k)η 1 . (8) j k j
+Equation (7) is precisely the equation for α-mixtures
+(Amari, 2007; Wu, 2009), but where V is defined im-
+plicitly in terms of a set of weights (or wealths) W .
+This particular expression for α-mixtures is interest-
+ing because of the isoelastic property: if a single com-
+ponent from the α-mixture is replaced by two iden-
+−010 −5 0 5 10 x
+Figure 1. (a) Three different components (i.e. agent be-
+liefs), each given weights W of 0.4, 0.4 and 0.2 from left
+to right. (b) The logarithmic (i.e. mixture) combination
+of these components (dashed) and the isoelastic (η = 10)
+combination (solid). Note the isoelastic combination puts
+moreweightwheretheoverlapofthedifferentcomponents
+are and down-weights the regions of disagreement or iso-
+lated components.
+tical components with weight W /2, it results in ex-
+actly the same model. The precise number of compo-
+nents/agentsdoesnotmatter,justthetotalwealthas-
+sociated with each belief, regardless of the how many
+components share it. Furthermore the influence the
+agenthasontheoverallmodeldependsonthelevelof
+agreement that the agent has with the overall consen-
+sus. This affect the value of Z for that agent.
+Figure 1 illustrates the distinction between an isoelas-
+ticmarketcombinationandalogarithmiccombination
+(which is equivalent to a standard mixture). In the
+isolelastic market, for η >1, the individual beliefs are
+‘squashed’ (raised to a fractional power) before being
+mixed, and are then ‘unsquashed’ again after mixing.
+The result of this is the areas of agreement between
+agents are emphasised relative to a standard mixture.
+As an alternative to (7), we can also write
+c = W Pη(c) (9) k i ik
+where Pη(c) is defined as
+(cid:16) (cid:17)1/η
+Pη(c)= k ck . (10) ik (cid:16) (cid:17)1/η (cid:80) c Pi(k(cid:48)) k(cid:48) k(cid:48) c k(cid:48)
+Again this is not closed form, but expresses the equi-
+libriumc asaweightedsumoftheeffectivebeliefs Pη
+that are associated with each agent once the impact
+of the combination with rest of the market is taken
+into account. Each effective belief is weighted by the
+agent’s wealth W before aggregation.
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+In the discussion above, all the agents have utilities each time point the outcome is then revealed and all
+with the same value of η. This is a homogeneous mar- bets are cashed in. This is an online update scheme.
+ketstructure. Howeverthereisnorestrictiontohomo- LetWtdenotethewealthofagentiafterthetargetfor
+geneity in the context of Machine Learning Markets. data point t is known and the winnings are received.
+Here an inhomogeneous market structure can be used
+For isoelastic agents (including logarithmic agents
+where different agents have different η values. Hence
+when η = 1), at each data point t, each agent bets
+the equilibria of Machine Learning Markets can im- the whole wealth Wt and gains a return of r /c ,
+plement a broader set of combination processes than i ikt kt
+leading to
+standardα-mixtures,andsogeneralisestheα-mixture WtPη (c)
+formalism. WeshowinSection6thattheuseofanin- Wt+1 = i ikt (11)
+homogeneousmarketstructureprovidesimprovements i (cid:80) i(cid:48) W i t (cid:48) P i η (cid:48)kt (c)
+over standard mixtures for a variety of standard ma- using (10) and (9), and r from Table 1.
+chine learning benchmarks. If we equate Wt+1 with the concept P(i|D ) then
+5. Training and Wealth Allocation this leads to
+Pη P(i|D )
+We consider a classification problem, with a train- W i t+1 =P(i|D T+1 )= (cid:80) P ikt η P(i(cid:48) T |D ) (12)
+ing dataset D
+consisting of covariates xn and cor- i(cid:48) i(cid:48)kt T
+responding classifications kn. We wish to learn the whichgivestheBayesianupdateruleonobservationof
+anewdatapointattimetforasingleagentlikelihood
+relationship between variables x and classifications k,
+so that given a test point x∗ we can provide a predic- P i η kt . For logarithmic agents the belief P i η kt = P i (k t )
+and this just reduces to a Bayes update, treating each
+tive distribution for the value that the corresponding
+class label k∗ will take. A test dataset D is used to agentasanindependentprobabilisticmodel. Forisoe-
+lasticagentsitisstillaBayesupdate,butwhereBayes
+evaluate the final performance.
+ruleusestheeffectivebeliefs Pη asthecomponentdis-
+5.1. Agent Beliefs and Wealth Updates tributions,insteadoftheindividualagentbeliefP i (k t ).
+The equilibrium cost ct for any item at time t after
+Each agent has an individual belief P (k). In this pa-
+i seeing data D is a standard Bayesian model average,
+per we consider agents that have used standard ma- T
+given by (9), as the weights are the posterior proba-
+chine learning algorithms on a training data set D
+Tr bilities associated with each agent (12).
+to derive their beliefs.
+The fact that these Bayesian updates occur for log-
+Each agent has a specific wealth W . The wealth af-
+i arithmic utilities (or equivalently log-loss) has been
+fects the market influence of that agent. An agent’s
+discussed in a different context in (Beygelzimer et al.,
+action in the market changes the wealth of the agent:
+2012). Establishing the extension of this rule for isoe-
+thechangeofwealthafterasingleinvestmentr ,anda
+i lastic agents is a novel generalisation.
+return on that purchase is given by r /c where k∗
+denotestheindexoftheeventthatoccurs. Theagents 5.1.2. Batch: Mixing Coefficient Updates
+make purchases in predictions across the whole train-
+Bayesian model averaging is appropriate if we inter-
+ing dataset, trading with the other agents. Payouts
+pret each agent as an alternative competing hypothe-
+are then made and each agent makes a return on the
+sis, where ultimately one agent has the correct belief.
+investment. Agents that invest well (relatively) gain
+However, in many, or even most situations (see e.g.
+wealth,whereasagentsthatinvestingoodsthatdon’t
+(Domingos, 2000; 1997; Minka, 2002) for a continued
+pay out lose wealth and hence market influence. This
+discussion), we may believe that the most appropriate
+process can be repeated for a number of epochs.
+model is a combination of beliefs rather than a single
+For analytic purposes, we consider two wealth update
+one. In those settings Bayesian model averaging is in-
+schemes: an online and a batch scheme. All the em-
+appropriate. Rather, we may believe the data is best
+pirical analyses are done using the batch scheme.
+described by a mixture of probabilities, and we wish
+to determine optimal mixing proportions.
+5.1.1. Online: Bayesian Model Updates
+Consider, instead, splitting the agent wealth equally
+Consider the case of all agents starting with wealth
+across test cases, and requiring the agents to place
+1/N ,whereN isthenumberofagents. LetT denote
+A A bets on all test cases at once. In this case the wealth
+the first t data items and D denote the ordered set
+T updates are equivalent to a single step of the mixture
+of those data items, with D being the tth item. The
+t component updates. Specifically the return from con-
+total number of items is N . Let k be the target for
+Tr t sidering data item t is
+the tth data point.
+In the online setting, the agent purchases predictions P(i|t) d = ef (cid:80) W i ik P t η (c) . (13)
+on the data points t=1,2,...,N one at a time. At i(cid:48) i(cid:48) i(cid:48)k
+Equation (13) is precisely the form of responsibility
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+Waveform Vehicle Image Ionosphere BreastCancer Sonar LetterRecognition
+21f,3c,5000d 18f,3c,946d 19f,7c,2310d 34f,2c,351d 10f,2c,699d 60f,2c,208d 16f,26c,20000d
+LLR 30 7.9 21 1.9 2 1.1 190
+σ(LLR) 5.9 2.4 3.1 1.9 1.9 0.8 11
+p 6.8×10−23 1.1×10−17 1.9×10−26 3.4×10−6 1.2×10−6 6.4×10−9 3.9×10−38
+NNosi LLR −41 −31 −8 5.6 0.5 2.2 210
+σ(LLR) 15 9.8 7.9 8 3.8 5.1 29
+p 1 1 1 0.00031 0.22 0.012 3.4×10−27
+LLR 28 12 27 19 20 16 390
+σ(LLR) 33 21 19 11 10 7.9 41
+p 3.7×10−5 0.0024 5.1×10−9 5.4×10−11 4.8×10−12 6.2×10−12 1.5×10−30
+TDosi LLR 28 7.3 16 2.1 3.7 1.4 12
+σ(LLR) 13 5.8 8.8 3.2 3.4 2.6 28
+p 5.2×10−13 6.9×10−8 2.4×10−11 0.00056 8.8×10−7 0.0035 0.01
+LLR 2.3×102 42 61 6.8 14 8.8 580
+σ(LLR) 30 13 18 4.2 7.2 3.6 73
+p 6.5×10−28 2.7×10−17 3.9×10−18 4.4×10−10 1.4×10−11 2.8×10−14 3.1×10−28
+Table 2. Comparisons against isoRF. The table uses an isoelastic market of trees from a random forest (isoRF) as a
+baseline and compares this with a number of methods above (positive LLR => isoRF is better). The isoelastic market
+of trees (isoRF) performs better than the other standalone classifiers and random forest aggregation which is among
+state of the art on all these problems (Caruana & Niculescu-Mizil, 2006). The exception is that isoRF is beaten in some
+cases by the isoelastic market of neural networks. The other methods listed are the standalone random forest (RF),
+an inhomogeneous isoelastic market of neural networks (isoNN), a standalone neural network (NN), an inhomogeneous
+isoelastic market of decision trees (isoDT) and a standalone decision tree (DT). LLR is the average test log likelihood-
+ratio(differenceofloglikelihoods)betweentheisoRFandotherlistedmethods. σ(LLR)isthestandarderrorofthatlog
+likelihood-ratio across different data samples. The p values give the sampling probability of each method being better
+than isoRF using a right-tailed paired t-test with 29 degrees of freedom. The information about the dataset is displayed
+belowitsname,wheref isthenumberoffeatures,c thenumberofclasses,andd thenumberofdatapoints. Comparing
+test log likelihood takes into account the full prediction probabilities. It captures not just the highest probability class
+but the quality of the measure of uncertainty across classes.
+calculation for a mixture model, but where we have togeneratemeaningfulstatistics,withdatabeingran-
+used the effective beliefs for the isoelastic agents. The domly permuted before each test. The same series of
+update rule W = P(i|t), which is simply the ac- random seeds were used for each iteration of each test
+cumulated return over the whole dataset, matches the in order to fairly compare different utility functions.
+update rule for mixture coefficients. Wealthupdateswereperformedusingthebatchmech-
+anism described in Section 5.1.2.
+Hence across the whole range of isoelastic agents, ini-
+tialising agents with equal wealth and repeatedly ap- Inhomogeneous isoelastic markets were created by
+plying the batch update rule reproduces the usual sampling values for η using (η − 1) ∼ Γ(k,θ), with
+mixture coefficient updates applied to an α-mixture shape parameter k = 3 and scale parameter θ = 1.
+model. However multiple different values of α can be This produces a diverse set of η values for different
+used for different agents. agents, while ensuring η > 1. More risk averse utility
+functions (η > 1) were chosen as they emphasise re-
+6. Results
+gionsofagreementbetweenagentsratherthanregions
+Machine Learning Markets with logarithmic and iso- of disagreement (see (7) and Figure 1).
+elastic agents were compared with decision trees, neu- The primary purpose of this analysis is to test differ-
+ral networks and random forests on a number of UCI entpossibleprobabilisticcombinationmethodsagainst
+datasets3. Experimental data was split into two sets, other single classifiers. Hence, we compute test log-
+with 2/3 of the data being used for training and 1/3 likelihoodsasthemainevaluationmetric. Thisisgiven
+fortesting, withamaximumtotaldatasetsizeof3200 byLL= (cid:80)T log(P(k |x )),whereP(k |x )istheprob-
+items. For large multiclass data, we used the Letter ability of the true value k given covariates x . For a
+Recognition dataset. The markets of random forests market we have P(k |x ) = c where c is the equi-
+were built using the Matlab random forest imple- librium cost from the t m t arket k g t iven all agents in the
+mentation,treebagger,with20decisiontreespruned market know the covariates x. Logs of test likelihood
+byrequiringaminimumoftenofobservationspertree ratios are used when different models are compared.
+leaf. Individualdecision treeswereextracted fromthe
+random forest after it has been trained on all of the 6.1. Relative Classifier Performance
+training data, and were used to generate each of the
+We compare the methods used in Machine Learning
+20agents’beliefs. Inourcomparisons,marketwealths
+Markets against other standard classifiers. Machine
+wereadaptedonthecompletetrainingsetwith1train-
+Learning Markets can utilise any probabilistic classi-
+ing epoch. 30 iterations of each test were performed
+fier as the beliefs for each agent, and so we compare a
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+wav veh img ion brc snr
+oitaR−doohilekiL
+test η but with significantly less computational cost.
+Figure 2. A boxplot (the red ’x’ represents the mean, and
+blackdotsrepresentonestandarddeviationfromthemean)
+ofthescaledtestloglikelihood-ratiosintheisoelasticand
+logarithmic markets for many iterations, scaled by the
+number of data points. Note that in general, the log-
+likelihood for isoelastic agents is significantly higher than
+forlogarithmicagents. Letterrecognitionisexcludedasit
+would be off the top of the figure.
+sifiers. The exception is for random forests, which is
+already an aggregate classifier, and there we compare
+a random forest, against a market of trees that match
+the trees in the random forest. An inhomogeneous
+isoelastic market with batch updates is used for all
+comparisons. Table 2 presents the results along with
+standard deviations. The market approaches outper-
+form all the standard approaches on all datasets, with
+clear statistical significance. This includes improve-
+ments over random forests. Interestingly, the market
+of neural networks performed better than the market
+of random trees in some settings.
+6.2. Isoelastic versus Logarithmic Markets
+(cid:16) (cid:17)
+Figure2shows 1 log LISO ,whereN isthenum-
+NTe LLOG Te
+ber of test points, and L denotes the test likelihood.
+This is referred to as the (scaled) log of the test
+likelihood-ratio between the inhomogeneous isoelastic
+market and the logarithmic market predictions.
+Ingeneral,theloglikelihood-ratiosarepositive,mean-
+ing that isoelastic markets have higher test perfor-
+mance than logarithmic markets. Further, they are
+positive to one standard deviation (the black dots in
+Figure 2), implying that isoelastic markets perform
+better (paired t-test p<0.01 in all cases).
+6.3. Varying the Parameter of Isoelasticity
+Figure 3 shows that the test log-likelihood varies
+for homogeneous isoelastic markets with varying η.
+Searching for a good η via a cross validation pro-
+cess can be computationally expensive. An alterna-
+tive approach is to randomly allocate an η to each
+of the agents, producing inhomogeneous markets, and
+perform market updates in order to tune the mixing
+proportions for the different agents. Figure 3 demon-
+strates that the inhomogeneous market provides re-
+sults about as good as if we has known the optimal
+01 51 02 03 05
+(cid:100) value
+doohilekiL−goL
+Figure 3. Boxplot showing the test log-likelihoods for dif-
+ferentvaluesofη(onwaveformdataset). Theredlinegives
+thetestlog-likelihoodforthesamedataandaninhomoge-
+neous market with (η−1)∼Γ(3,1). The inhomogeneous
+market performs on par with the market with the best
+η value (’best’ as assessed a posteriori on the test data),
+without prior knowledge of good η values.
+6.4. Batch Wealth Updates and Performance
+Figure 4 shows that adapting wealth improves the
+test log-likelihood. This is true for both logarithmic
+and isoelastic utility functions. We have noticed that
+wealth adaptation does not make a significant differ-
+ence on accuracy for small multiclass datasets, how-
+ever, improvements in accuracy are observed on the
+large multiclass Letter Recognition data. In general,
+learning is more beneficial in cases where some agents
+are significantly poorer performers than others (e.g.
+they overfit, or are trained on biased data etc.).
+0 10 20 30
+doohilkiLgoL
+0 10 20 30
+Figure 4. The(a)loglikelihoodsand(b)accuracyforisoe-
+lastic and logarithmic utility functions, over a number of
+trainingepochsfortheLetterdatasets. Valueoflogutility
+attimezeroisequivalenttothevalueforarandomforest.
+Theisoelasticutilityisbetterthanlogarithmicutilityand
+random forest in both accuracy and log likelihood. The
+gain from using an isoelastic utility is greater than the
+gainfromwealthadaptation(equivalenttomixtureweight
+optimisation). The wealth adaptation does provide some
+benefit, but is more much more useful when spurious or
+poor classifiers are also included. Here most individual
+classifiers provide a similar contribution.
+Isoelastic Agents and Wealth Updates in Machine Learning Markets
+7. Discussion Chen,Y.andWortmanVaughan,J. Anewunderstanding
+of prediction markets via no-regret learning. In Pro-
+Machine Learning Markets can reflect many of the ceedingsofthe11thACMconferenceonElectroniccom-
+propertiesofprincipledprobabilisticmethodsinhand- merce, 2010.
+crafted probabilistic models. The design of Machine Cole, R. and Fleischer, L. Fast-converging tatonnement
+algorithms for the market problem. Technical report,
+LearningMarketsallowstheimplicitdefinitionofpow-
+Dept. Computer Science. Dartmouth College., 2007.
+erful models. We show that Baysesian model averag-
+Dani, V. et al. An empirical comparison of algorithms for
+ing and mixture model learning can be naturally im- aggregating expert predictions. In Proceedings of the
+plemented using market mechanisms. We show that Conference on Uncertainty in AI (UAI), 2006.
+different utility functions have a significant effect on Deng, X., Papadimitriou, C., Saberi, A., and Vazirani, V.
+the market combination results, and that isoelastic On the complexity of equilibria. In STOC 2002, 2002.
+Devanur, N.R., Papadimitriou, C.H., Saberi, A., and
+utilities are more effective in a number of tests than
+Vaziani, V.V. Market equilibrium via a primal–dual al-
+utilitiesthatimplementstandardmixtures. Thebene-
+gorithmforaconvexprogram. Journal of the ACM,55:
+fitsofinhomogeneousmarketsofisoelasticagentsover 22:1–22:18, 2008.
+state of the art classifiers has been demonstrated, and Domingos, Pedro. Why does bagging work? a Bayesian
+the understanding of isoelastic utilities as encoding a accountanditsimplications. InProceedingsKDD,1997.
+generalisation of α-mixtures has been developed. Domingos,Pedro. Bayesianaveragingofclassifiersandthe
+overfitting problem. In In Proc. ICML 2000, 2000.
+Therearetwoimmediateextensionstothisworktobe Fleischer, L., Garg, R., Kapoor, S., Khandekar, R., and
+considered. First, the adaptability of markets means Saberi, A. A fast and simple algorithm for computing
+that tests of this approach in the context of dataset market equilibria. In Proceedings of WINE, pp. 19–30,
+2008.
+shift, or non-stationary environments, would be valu-
+Jumadinova,J.andDasgupta,P. Amulti-agentsystemfor
+able. Anotherangleworthyofinvestigationisthemix-
+analyzing the effect of information on prediction mar-
+tureofexpertsetting. Inthecontextofthispaper, all kets. International Journal of Intelligent Systems, 26:
+agents had beliefs about the whole predictive dataset. 383–409, 2011.
+It is likely that an agent will also learn about its own Lay, N. and Barbu, A. Supervised aggregation of classi-
+fiers using artificial prediction markets. In Proceedings
+performance in the market: assessing what situations
+of ICML, 2010.
+itislikelytogenerateapositivereturnon. Suchagents
+Ledyard, J and Hanson, R. An experimental test of com-
+would allocate different resources to different condi- binatorial information markets. Journal of Economic
+tional situations akin to a mixture of experts. Behavior and Organization, pp. 469–483, 2008.
+Lee,D.S.andMoretti,E.Bayesianlearningandthepricing

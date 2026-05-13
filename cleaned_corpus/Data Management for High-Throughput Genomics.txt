@@ -1,0 +1,687 @@
+Data Management for High-Throughput Genomics
+Uwe Röhm José A. Blakeley
+University of Sydney Microsoft Corporation
+Sydney, Australia Redmond, USA
+roehm@it.usyd.edu.au joseb@microsoft.com
+ABSTRACT processing of small and precise business data records. Everything
+beyond these core assumptions is a challenge for current database
+Today's sequencing technology allows sequencing an individual engines. This includes large BLOB-style attributes – such as gene
+genome within a few weeks for a fraction of the costs of the sequences –, uncertain data – such as most scientific data –,
+original Human Genome project. Genomics labs are faced with computational intensive data processing functions – such as
+dozens of TB of data per week that have to be automatically sequence alignment algorithms –, and efficient support for data
+processed and made available to scientists for further analysis. provenance and annotation management. But perhaps most
+This paper explores the potential and the limitations of using importantly, database systems are not easy to deploy and use by
+relational database systems as the data processing platform for the average scientist. They not only require some specific
+high-throughput genomics. In particular, we are interested in the technical skills, but also a certain way of thinking about data
+storage management for high-throughput sequence data and in design and declarative data access which apparently is not widely
+leveraging SQL and user-defined functions for data analysis embraced by the scientific community.
+inside a database system. We give an overview of a database
+A common perception in the Bioinformatics community is that
+design for high-throughput genomics, how we used a SQL Server
+“Traditional DBMSs require significant performance tuning for
+database in some unconventional ways to prototype this scenario,
+scientific applications, a task that scientists are neither well
+and we will discuss some initial findings about the scalability and
+prepared for, nor eager to address. […] Most importantly, the
+performance of such a more database-centric approach.
+complex data structures and data types needed to represent the
+1. INTRODUCTION data and relationships are not supported well in most
+Genetic analysis labs are facing a serious data management databases”[15]
+problem: The development of high-throughput gene sequencing
+In this paper, we are interested to find out whether this perception
+instruments makes mass genomics feasible, but at the same time
+is true. We study two different scenarios from high-throughput
+produces gigabytes of sequencing data per experiment that need to
+genomics, the 1000 Genomes project [1] and digital gene
+be stored, aligned and analyzed. While it took 10 years and $3B
+expression analysis [20], and investigate how current database
+dollars to produce a first draft of the human reference genome
+technology can be used for efficient data management. In
+(approx. 3.5 billion base pairs (bp)), the current generation of
+particular, we are interested in leveraging the extensibility and file
+sequencing instruments is able to sequence between 2 to 4 billion
+streaming features of the latest SQL Server 2008 for processing of
+bases in only a few days [8][19].
+gene sequence data [5][10].
+The current approach to data management for high-throughput
+Our findings show that there are shortcomings in both approaches:
+genomics is file-centric and involves a large number of separate
+Existing file-centric efforts for genomics violate all best practices
+files containing a text-format or a proprietary binary format. Most
+of the database community, from basically non-existing data
+of these formats are insufficiently documented and do not include
+models to strong data-program dependencies. At the same time,
+meta-data. Some file formats that include metadata (e.g., HDF5)
+current DBMSs lack optimizations for complex user-defined
+do not separate the data’s representation from its conceptual data
+functions and in general do not support the right abstractions for
+model. This makes data workflow management very complicated
+probabilistic data or data provenance. Nevertheless, we show
+and the analysis becomes inefficient. The current file-centric
+how efficient genomic data management can be achieved with
+approach simply does not scale to the terabyte needs of high-
+today’s extensible database systems and which trade-offs between
+throughput genomics.
+strict data modeling and external tool support have to be made.
+On the other hand, traditional database technology also has
+shortcomings that prevent it from becoming commonly used in 2. BACKGROUND
+this scientific domain: Database systems are optimized for fast Let us first have a look at the current state-of-the-art in high-
+throughput genomics and in extensible database technology.
+Permission to make digital or hard copies of all or part of this work for 2.1 Gene Sequencing Workflows
+personal or classroom use is granted without fee provided that copies are
+Gene sequencing workflows consist of five phases (cf. Figure 1):
+not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+Phase -1: Sample Preparation
+otherwise, or republish, to post on servers or to redistribute to lists,
+Using sophisticated chemical processes, a sequencing lab first
+requires prior specific permission and/or a fee.
+prepares several so-called libraries of DNA/mRNA samples by
+CDIR2009, January 4–7, 2009, Asilomar, CA, USA.
+Copyright 2009 ACM 1-58113-000-0/00/0004…$5.00.
+Figure 1 Typical Gene Sequencing Pipeline reference sequences into its own internal formats (intermediate
+binary files); the output of its short-read alignment is another
+proprietary binary file which then has to be converted into a
+human readable form before it can be further processed. Note that
+the final output is a ‘human readable’ text file which actually
+complicates the further processing in the data analysis step.
+2.1.1 Example 1: 1000 Genomes Project
+The 1000 Genomes Project is an international effort to sequence
+the individual genomes of 1000 humans [1]. One of the
+participating labs is the Welcome Trust Sanger Institute in
+Cambridge,UK. The institute has currently 28 Illumina sequencers
+deployed in a 24x7 production mode. Each sequencer is producing
+750 GB of raw level-0 image data per run. After the initial image
+analysis phase, this results in one short-read file per lane, each of
+chopping and replicating the original nucleotide sequences into the size between 1 and 2 GB. This totals about 75 TB of raw
+fragments that are short enough to be processed by the current level-0 data and 0.5 TB of level-1 data per week. This level-1 data
+sequencer machines (the current technology limit is about 300bp). is then aligned against the Human Reference genome, resulting in
+Each library is then prepared onto a flowcell (or slide) that millions of alignments (for quality purposes, individual genomes
+consists of 8 physical lanes. One lane is normally reserved for a are sequenced with 40x coverage). The tertiary data analysis
+control sample, while the remaining seven contain the material to phase finally calls the consensus over all alignments, and looks
+be sequenced. Each lane is logically divided into about 300 tiles for variations between individual genomes (single nucleotide
+which are the actual unit-of-measurement of the sequencers. polymorphisms (SNPs)).
+Phase 0: Sequencer Run 2.1.2 Example 2: Digital Gene Expression Studies
+The content of a flowcell is sequenced in one run of a high- NextGen sequencing is also a promising technique for digital
+throughput sequencing instrument. E.g., the commonly used gene expression studies [20]. The level of activity of a certain
+Illumina Solexa needs between 2.5 and 5 days for one run [8]. The gene is reflected by the amount of messenger RNA (mRNA)
+results are thousands of images as raw level-0 data that show all found in a cell. State-of-the-art for gene expression studies are
+the base signals in one tile for a certain sequence position. Microarrays that only test for a pre-defined set of genes. NextGen
+sequencing allows performing this analysis in silico: mRNA is
+Phase 1: Primary Data Analysis
+transformed into DNA fragments, which are then sequenced. The
+Next comes an image analysis and base-calling step. The output is
+resulting level-1 data, called tags, are evidence for gene activities:
+level-1 data, a separate file for each lane consisting of millions of
+the more active a gene, the more mRNA was produced, the higher
+short sequence fragments (so-called short-reads) from 35 to 300bp
+the frequency of the corresponding tag. To identify the genes that
+(depending on the technology used). Together with some meta-
+are expressed in the cell, the reads are aligned against a reference
+data about each read (ids, tile, coordinates and quality data) this
+genome and the alignments are ranked (level-2 data). As tertiary
+sums up to several Gigabytes of sequencing data per experiment.
+data analysis, one performs a differential expression analysis of
+Phase 2: Secondary Data Analysis different samples, e.g. comparing healthy cells with cancer cells.
+The next step is to align the small reads to larger sequences. There The data volumes in this second scenario are much smaller than in
+are two principle approaches: In de novo sequencing experiments, the previous re-sequencing scenario, because only a faction of the
+the output is unknown and alignment is a computational genome is active in a cell and tags are repeating.
+expensive process of identifying and assembling overlaying The Role of Databases. Even though high-throughput sequencing
+fragments to create contigs; in contrast, re-sequencing produces massive data volumes and we need to efficiently manage
+experiments and digital gene expression studies align the reads and analyze these data, database systems play only a surprisingly
+against a known set of reference sequences (such as the human small role. Most data, in fact all level-0 to level-2 data, is stored in
+genome) to quantify the genes expressed in the samples. The a zoo of proprietary file formats in a cluster file system. The only
+results are ranked lists of (potential) matches as level-2 data. exception is the workflow meta-data (which samples are sampled
+already to what degree etc) which is stored in a relational DBMS.
+Phase 3: Tertiary Data Analysis
+The last step is to qualitatively analyze the alignments, e.g. by 2.2 Extensible Database Systems
+comparing the matches of different sequence samples (differential
+Many DBMSs can be extended with user-defined procedures and
+expression analysis); this is based on statistical analysis and also
+functions [12]. In some systems, these programmability facilities
+requires access to further information about the matched genes
+are used to support an object-relational data model, but recent
+such as their functions or participation in metabolic pathway.
+developments target the extensibility of the query processing level
+There are several short-read alignment tools available which by providing table-valued functions and even user-defined
+implement the secondary data analysis phase of re-sequencing / aggregates. Some DBMSs run their extensions in a hosted runtime
+digital gene expression experiments such as MAQ (free/open such as the JVM or the .Net CLR [2][3].
+source), SOAP (free/open source), Eland (part of the Illumina The normal usage scenario for stored procedures and functions is
+suite), SX Oligo Search (proprietary), and SlimSearch to implement business transactions that execute with some control
+(proprietary) [9]. These tools can be highly parameterized and flow and logic inside the DBMS engine. Our idea is to leverage
+typically produce several intermediate outputs. For example, such programmability features of modern database engines for
+MAQ first transforms the output files from a sequencer and the implementing advanced gene sequence processing algorithms.
+2.3 Basic SQL Server 2008 Concepts into a table. To accomplish this conversion CLR TVFs use a pull
+model to stream as a collection of rows. SQL Server requests
+An example for an extensible DBMS is Microsoft SQL Server.
+(pulls) and processes one row of data from the CLR TVF at a time
+Since version 2005, it integrates a .NET CLR hosting runtime.
+as opposed to the TVF materializing the entire relation and then
+The following section briefly describes some basic .NET and CLR
+the entire relation being processed. This allows the query engine
+hosting concepts that are referenced throughout this paper.
+to begin consuming results immediately after the first row is
+2.3.1 .NET Runtime Hosting in SQL Server 2008 produced instead of having to wait for the entire return table to be
+In the .NET framework, many different high-level programming populated. To become a CLR TVF a class implements the
+languages can be used to construct programs. The compilation of IEnumerator interface.
+the program produces a file, called an assembly, containing the
+2.3.3 User Defined Types in SQL Server 2008
+compiled code in the Microsoft Intermediate Language (MSIL).
+SQL Server supports UDTs as a mechanism to extend the scalar
+The .NET Framework supports a mechanism called custom
+type system of SQL. SQL Server UDTs, implemented as CLR
+attributes for annotating classes, properties, functions and
+classes or structs, are designed to model atomic scalar types such
+methods with additional information or facets the application may
+as monetary currency, geometry and spatial types, etc. UDTs
+want to capture in metadata. SQL Server uses these annotations to
+allow users to define a type using the .NET framework, and to
+complement the specification of extensibility contracts for user-
+deploy and use these types within the database. Once deployed,
+defined functions (UDFs), types (UDTs), and aggregates (UDAs).
+UDTs can be used everywhere a native SQL Server scalar type
+Managed code is MSIL executed in the CLR rather than directly
+can be used. UDTs can hold state up to 2GB data.
+by the operating system. Managed code applications gain CLR
+services such as automatic garbage collection, runtime type 2.3.4 User Defined Aggregates in SQL Server 2008
+checking, and security support. These services help provide
+CLR UDAs give users the ability to write their own aggregates to
+uniform platform- and language-independent behavior of
+suite their own specific needs. Some common cases include
+managed-code applications. At execution time, a just-in-time
+aggregates for string processing, and statistical or mathematical
+(JIT) compiler translates the MSIL into native code (e.g., Intel
+computations. CLR UDAs are tightly integrated into the system,
+X86 code). During this translation, code must pass a verification
+are used by users just as with native aggregates, and can be
+process that examines the MSIL and metadata to find out whether
+parallelized by the system just like built-in aggregates (SUM,
+the code can be determined to be type safe.
+COUNT, MIN, MAX). Aggregates can hold state up to 2 GBs and
+Figure 2 Integration of the CLR inside MSSQL. the contract for aggregation accepts multiple columns or
+expressions as inputs.
+2.3.5 Page/Row Compression in SQL Server 2008
+SQL Server 2008 also supports row and page compression for
+tables and indexes. Row compression uses variable-length storage
+formats for numeric types and fixed-length character strings. Page
+compression combines row, prefix, and dictionary compression
+over several rows [11]. The following examples create tables T1
+and T2 with row and page compression, respectively:
+CREATE TABLE T1 (c1 int, c2 nvarchar(50))
+WITH (DATA_COMPRESSION = ROW);
+CREATE TABLE T2 (c1 int, c2 nvarchar(50))
+SQL Server and the CLR have different internal models for WITH (DATA_COMPRESSION = PAGE);
+managing system resources including memory management,
+2.3.6 FileStreams and SQL Server 2008
+synchronization primitives, and thread scheduling. SQL Server
+acts as the operating system for the CLR when it is hosted inside The massive data volumes of scientific data management require
+the SQL Server process (see Figure 2). SQL Server encapsulates efficient support of binary large objects (BLOBs), an area for
+all operating system primitives in a component called the SQL which DBMS are known to not necessarily shine [15]. Microsoft
+OS. The Hosting Layer coordinates assembly loading, security SQL Server 2008 introduced a new functionality of storing BLOB
+management, application domain management, and escalation data as files in the file system rather than with the normal
+policy when critical exceptions occur. relational storage engine. Those FileStream BLOBs are under full
+transactional and managerial control of the database system – all
+2.3.2 User Defined Functions in SQL Server 2008 shared access is synchronized via the concurrency control of SQL
+CLR UDFs provide a mechanism for extending SQL Server with Server and all file data is managed by the DBMS utilities (e.g.
+new scalar and table-valued routines written in .NET languages. backup/restore, database consistency check). All FileStream
+Any static method can be registered as a scalar CLR UDF. For BLOBs can be accessed directly using standard Win32 file system
+example, a new function for a mathematical or statistical APIs from client programs; this access does not go through the
+operation not natively supported by SQL Server can be written as database’s buffer pool, but rather supports efficient streaming
+a static function in C# and registered as a CLR UDF. CLR UDFs access of the FileStream content to clients [10][14]. As the name
+also allow SQL Server to leverage the functionality available in suggests, this functionality is mainly targeting efficient access to
+the .NET framework such as, e.g, the library for compression large BLOBs such as images or videos.
+(System.IO.Compression).
+In this paper, we are interested to find out how well such external
+Table-valued functions (TVFs) provide a mechanism for FileStream BLOBs can be used for storing sequence data.
+converting raw data (i.e., in a text/binary file or on the network)
+3. DATA MODELING 3.2 Relational Schema Design
+The common approach to data management for bio-data is to keep Next, we apply the usual relational mapping rules to our
+data in files of various proprietary formats. Each file format is conceptual design to come up with a set of normalized relations
+optimized for a specific task, lacking a common data model. for storing the sequence data. Although a natural step in relational
+Many formats are optimized for a textual display of the contained database designs, the outcome is a drastic departure from the
+data. For example, the common FASTA file format for gene or state-of-the-art in file-centric bio-data management – both
+protein sequences contains line-wrapped sequences to 60 base workflow management data and sequencing data are now
+pairs per line for better readability integrated in one schema. This allows scientists to explore the
+context of their experimental results with a simple navigational
+Figure 3 FASTQ File Example
+query. Furthermore, a normalized relational schema strives to
+@IL4_855:1:1:954:659 minimize redundancies. Instead of repeating the short-read
+GTTTTTATGGTTTTAGATCTTAAGTCTTTAATCCAA sequences in each relation, they are linked back to the base
+relation with the level-1 data by foreign-key relationships.
+@IL4_855:1:1:497:759 Example. In the 1000 Genomes Project, the result of the
+secondary data analysis is a set of alignments of the short-read
+Another example is the FASTQ file format (cf. Figure 3) where sequences from one experiment against the Human reference
+each entry consists of 4 lines [6]: An entry name, the actual short genome. With a file-centric data management, the alignments file
+sequence data, and a comment line. The fourth line is the textual actually lists each aligned short-read with the id and position of
+‘printable’ representation of so-called Phred Quality values per- the reference sequence it has been aligned to. In our normalized
+base. These are the logarithmic-transformed error probabilities schema, this is represented by the Alignment table that links
+from the image analysis phase (value range: 0 to 100) that have with a foreign key back to the actual short-read in the Read table.
+been shifted into the visible ASCII character space.
+3.3 Physical Database Design
+These are good examples of practices that violate the fundamental
+principle of large-scale data management, data independence. We finally have several possibilities on how to organize an
+efficient physical database design for our sequencing data:
+3.1 Conceptual Design
+A full relational approach imports all data into the relations and
+As a first step, we want to develop a concise conceptual data
+makes the relational database engine solely responsible for all
+model for gene sequencing experiments that is to be shared
+data management. Such a database-centric approach has all the
+throughout all data processing phases. The goal is to identify all
+advantages of central data management with a database system
+data entities and their relationships used in sequencing workflows.
+such as transactions, declarative query processing with automatic
+Important inputs for this design phase are example files for all
+query optimization by the DBMS, controlled shared access to the
+workflow phases and a description of the expected analysis
+database, and backup/recovery facilities. But at the same time, the
+results. We used an implementation of the Entity-Relationship
+DBMS becomes responsible to process the sequence data such as
+data model, the EDM, as a modeling tool [4].
+sequence alignments and base calling. The alternative of running
+Figure 4 Conceptual Data Model
+those data analysis steps outside the DBMS would otherwise
+mean to export the relational data into the proprietary file formats
+expected by the analysis tools. This would render the intended
+central data management with a database system ad absurdum.
+In contrast, a hybrid approach keeps (some) base data in files
+and accesses them through a wrapping mechanism in a relational
+view in the DBMS. The benefit is that existing bioinformatics
+tools can be used almost unchanged: they are allowed to process
+their files as expected and even with the same file-scan and seek
+API calls as before. Only their file opening code would have to be
+adapted as access to the files is now managed by a DBMS. In
+addition, we can query the base data in the database, combine
+(join) it with other relations and also make use of the database’s
+access control and backup facilities.
+Example. We demonstrate the hybrid approach using the
+FileStream feature of SQL Server 2008: We want to store short-
+read sequences of a typical sequencing workflow in their original
+Figure 4 shows the model for high-throughput sequencing starting FASTQ format, while at the same time being able to access them
+from level-1 data (due to its size, level-0 data is deleted after the via SQL queries. This requires importing the data into the
+primary data analysis as soon as quality control was performed). relational schema as a special BLOB that is stored as FileStream
+There are two challenges for our model: Firstly, the short-read and then accessing the sequence data through a relational wrapper
+sequences are conceptually probabilistic data that has some error table-valued function (TVF). The following Transact-SQL (T-
+probability values associated with each base (cf. FastQ example SQL) statements create a corresponding ShortReadFiles
+above). Secondly, the data model contains both workflow table, import the FASTQ file (in this brief example, we just bulk-
+provenance data and the level-1 to level-3 sequence data. import the data; note that external tools can also write the file
+content using the normal WriteFile() API calls when needed) and Figure 5 Sequencing Diagram of File Wrapper TVF
+list the content using a ListShortReads() TVF function:
+CREATE TABLE ShortReadFiles (
+guid uniqueidentifier ROWGUIDCOL PRIMARY KEY,
+sample INT,
+reads VARBINARY(MAX) FILESTREAM
+) FILESTREAM_ON FILSTREAMGROUP;
+/* Bulk-Import new FileStream row */
+INSERT INTO ShortReadFiles (guid, sample, lane, reads)
+SELECT NEWID(), 855, 1, *
+FROM OPENROWSET(BULK’D:\855_s_1.fastq',SINGLE_BLOB);
+The solution is to separate the file parsing logic from the file-
+/* check meta-data of the filestream table content */
+streaming. Instead of reading individual lines form a text file with
+SELECT guid, ample,lane,reads.PathName(),DATALENGTH(reads)
+each MoveNext() call, we wrote a paging function that scans
+FROM ShortReadFiles;
+through the file in larger chunks of data (cf. the ReadChunk()
+/* check content of one FileStream column using a TVF */ call in Figure 5). The parsing code works on an internal byte
+SELECT * FROM ListShortReads( 855, 1, 'FastQ'); buffer of the iterator that has been filled by the previous
+ReadChunk() call. An additional buffer-wrap check is needed in
+4. DATA PROCESSING the parsing code, because the chunks are not guaranteed to be
+multiple of file entries; if the end of the chunk is reached before
+There are many specialized bioinformatics algorithms for pro-
+the parsing of the current entry is finished, a paging algorithm
+cessing and analyzing sequencing data. If databases shall have a
+moves the current incomplete entry to the start of the buffer and
+more prominent role for bio-data management, they have to
+fills the remaining buffer with the next chunk. Finally, we can
+support such functionality too – either as embedded functions or
+by integrating with the existing file-based programs or Perl scripts stream fast through a FileStream BLOB by using the GetBytes
+such as MAQ or NCBI Blast. In the following, we study on how function together with the SequentialAccess flag that
+we can achieve efficient data access to FileStream data inside the implements pre-fetching on FileStream data. The following code
+database, and how this can be leveraged to implement some gives an overview of our table-valued FileStream wrapper:
+analysis steps directly with SQL.
+Iterator::Create():
+filePos = 0; bufferPos = 0; bufferOffset = 0;
+4.1 File Wrapper Functions
+bufferSize = buffer.length(); bytesRead = ReadChunk();
+The main challenge with the hybrid approach is to be able to
+efficiently access the file content from the relational query engine. Iterator::MoveNext():
+To be able to do so, we need to provide efficient set-valued file while ( bytesRead > 0 ) do
+wrapper functions. Given the large data sizes of today’s genomics if (bufferPos >= bytesRead) then
+(file sizes of 500 MB and more are not unusual) an efficient, bytesRead = ReadChunk();
+streaming-like access is important. fi
+pos = ParseShortReadEntry(buffer, bytesRead, bufferPos);
+Most database engines allow extending the core database if ( pos > 0 ) then
+functionality with user-defined functions and stored procedures. bufferPos += pos;
+In SQL Server, one can write user-defined functions in either T- return true;
+SQL, or in any .NET language. User-defined functions can be else // paging algorithm
+either scalar or table-valued. The API for providing TVFs follows MemCopy(buffer, bufferPos, 0, bytesRead-bufferPos);
+the standard iterator interface of a relational query engine [17]. bufferOffset = bytesRead-bufferPos;
+This means that programming a table-valued function is much bufferPos = bytesRead; // will trigger next ReadChunk()
+closer to implementing a user-defined relational operator than fi
+writing a schema-level UDT method. done
+return false; // end-of-file reached
+Figure 5 above shows a sequence diagram of the interaction
+between the query processor (QP) and a table-valued file wrapper Iterator::ReadChunk():
+function (TVF) that parses data stored in a FileStream BLOB. The len = bufferSize – bufferOffset;
+actual TVF does not do much but rather all data access (and file read = sqlinput.GetBytes(0, filePos, buffer, bufferOffset, len);
+parsing) logic concentrates in the TVF’s result iterator. The query filePos += read; bufferPos = 0;
+processor uses this iterator to scan through the result set and calls if ( read > 0) and (bufferOffset > 0) then
+for each row an explicit data conversion function (FillRow) that read += bufferOffset;
+converts the internal CLR data into the equivalent SQL data types. bufferOffset = 0;
+Given this iterator-oriented contract between the query engine and
+return read;
+the file wrapper function, how can we provide fast streaming
+Iterator::ParseShortReadEntry(…):
+access to data stored in a FileStream?
+// encapsulates file parsing logic – returns 0 if buffer end reached
+4.2 Typical Genomic Queries 4.2.3 Example 3: Consensus Calling
+One of the main benefits of a database-centric (and also the Next, we consider an example for a tertiary data analysis that
+hybrid) approach is that we can use declarative SQL queries to allows us to make good use of the extensibility features of modern
+analyze the bio-data. The query processor then can provide us DBMS. The consensus calling step of a re-sequencing project,
+with automatic parallelization of the data access. such as the 1000 genomes project, aggregates all alignments for
+the same sample to one result sequence (e.g. the one individual
+In the following, we just give a few examples for how data access
+genome of a person that has been sequenced multiple times). The
+to relationally stored bio-data can be done using SQL queries.
+alignments overlap and the algorithm has to decide on the
+resulting base symbol for each position of the result sequence.
+4.2.1 Example 1: Unique Short-Reads
+Figure 6 illustrates this process.
+One of the first steps of a digital gene expression study [20] would
+Figure 6 - Consensus Calling Overview
+be to rank the level-1 sequence results by their frequency: How
+often were certain sequence tags found in the sample (ignoring all
+uncertain sequences, i.e. such which contain at least one ‘N’
+symbol)? The corresponding short-read analysis (sometimes
+referred to as binning) is a typical scripting problem where in one
+example a 26-line Perl script was found to perform this function.
+The same functionality can be achieved with an aggregation-
+In an extensible database system, we can solve this task in a
+group-by query as follows:
+declarative way with one SQL query and a combination of several
+Query 1 - Binning Unique Short Reads TVFs and UDAs. A conceptually clean approach is as follows:
+SELECT ROW_NUMBER() Query 3 - Consensus Calling in SQL
+OVER (ORDER BY COUNT(*)DESC),
+SELECT chromosome, AssembleSequence(pos,b)
+FROM(SELECT chromosome,pos,CallBase(base,qual) b
+short_read_seq FROM Alignments JOIN [Read] ON (…)
+FROM [Read] CROSS APPLY PivotAlignment(pos,seq,quals)
+WHERE r_e_id=1 AND r_sg_id=2 AND r_s_id=1 WHERE a_e_id=… // join condition
+AND CHARINDEX('N',short_read_seq)=0 GROUP BY chromosome, pos )
+GROUP BY short_read_seq GROUP BY chromosome
+This is a query where the CLR integration of a database engine
+Note how the filtering for short-reads without ‘N’ symbol
+can shine. The core idea behind Query 3 is to decompose the
+becomes a straight forward WHERE predicate. The main
+consensus calling algorithm into small building blocks, which are
+challenge is to determine a rank number for each tag. In our
+then naturally combined in a declarative query:
+query, we use a proprietary extension of T-SQL, the
+ROW_NUMBER() function, to determine the result row number. PivotAlignment(pos, seq, quals) is a table-valued
+function that transforms a given DNA sequence with quality
+4.2.2 Example 2: Digital Gene Expression Analysis values (seq, quals), that is aligned against a reference sequence at
+The following is an example of a tertiary data analysis: We would position (pos), into a list of (position, base, qual) tuples.
+like to determine which genes are expressed in the short-reads
+CallBase(base,qual) is a user-defined aggregate function that
+found in a certain sample of a digital gene expression experiment.
+aggregates all bases that have been aligned against the same
+We hence have to analyse against which reference sequences the position to the consensus base. This base calling can take the
+short reads have been aligned to and how often. Again, this is a quality values of each aligned short read into account too.
+classical example of a scripting problem, which given our
+AssembleSequence() is another user-defined aggregate that
+relational approach can be expressed by a simple grouping query:
+does the reverse of PivotAlignment(), namely concatenating all
+Query 2 - Gene Expression Analysis called bases to the resulting consensus sequence.
+INSERT INTO GeneExpression Query 3 first pivots all aligned short reads into a long list of
+SELECT a_g_id, a_e_id, a_sg_id, a_s_id, (position, base) pairs that represent the individual bases aligned
+SUM(t_frequency), COUNT(a_t_id) against the reference sequence. Next, it groups those individual
+FROM Alignment JOIN Tag ON (condition) bases per position and chromosome. The actual base calling is
+WHERE a_e_id=1 AND a_sg_id=1 AND a_s_id=1 then done as an aggregation step on these groups. Finally, it
+GROUP BY a_g_id, a_e_id, a_sg_id, a_s_id assembles the resulting consensus sequence – again as an
+aggregation over all groups of the same chromosome.
+This query groups all aligned tags by the gene id (a_g_id) and
+determines the total frequency and count of the tags aligned However, this approach will generate a large intermediate result
+against the same gene. Most of the query’s complexity is due to when pivoting each alignment into its individual bases and then
+the use of composite primary keys. For example, each tag is grouping those by position and chromosome. An optimisation is
+associated to a sample of a specific experiment (a_e_id, a_sg_id, hence to combine base-calling and result sequence assembly in
+a_s_id). This is a result of the normalization of the schema. It one AssembleConsensus() UDA that combines all overlapping
+however also allows to easily select alignments from a specific alignments for a given chromosome at once without pivoting. To
+experiment or sample. avoid constructing the large intermediate result as internal state of
+that function, we propose a sliding window processing technique
+and to scan over the alignments in order of their starting position.
+5. EVALUATION thereby repeating those textual identifiers in several tables, then
+the storage space increases massively.
+We prototyped two sequencing scenarios: (a) digital gene
+expression studies, and (b) the 1000 Genomes project using the The solution is to normalize the schema and to introduce synthetic
+proposed hybrid data management approach on SQL Server 2008. unique ID values for each database entry. In a plain normalized
+In the following, we present some initial results on the quality of relational schema we achieve the same storage efficiency as with
+our approach in terms of processing and storage overheads. We the original files. The more compact IDs and the minimized
+concentrate on the most significant results. The test environment redundancy compensate for any overhead of the relational tuple
+is a Dell OptiPlex 755 (2 Intel Q6600 dual core CPUs at 2.4 GHz, storage. We can further improve this by using transparent row- or
+8 GB DDR2 RAM, two 250GB SATA disks) under Windows page-level compression in the tables [11]. This experiment
+Server 2008 Enterprise. illustrates that the storage representation in a database approach
+compares well with a file-centric approach.
+5.1 Data Size Comparison
+5.1.2 Data from the 1000 Genomes Project
+First, we are interested in storage efficiency of the different data
+management approaches. We compare the storage requirements of We also studied the storage efficiency of the different approaches
+the original separate input files (Files), with the hybrid FileStream with data from a re-sequencing experiment. Table 2 compares the
+approach, and several full-relational approaches. The example storage requirements of the different processing stages of one lane
+data sets are two complete sets of level-1, level-2 and level-3 data short-reads data from the 1000 Genomes project: ca. 6.2 million
+from a single flowcell lane of two different high-throughput short reads, which are aligned against the 25 chromosomes of the
+sequencing experiments. Human reference genome.
+Table 2 Comparison of Storage Efficiency (1000 Genomes)
+5.1.1 Digital Gene Expression Data
+In Table 1, we compare the amounts of data produced by a digital
+gene expression study: a 490 MB short-reads file for one lane, a
+16 MB output file from a unique tag analysis, 45.8 MB
+alignments data (output of a run of MAQ against the Human
+reference genome) and a 1.8 MB result file of a gene expression
+analysis of the alignments.
+Table 1 Comparison of Storage Efficiency (Digital Gene Expr)
+The characteristics of this data set are different than for digital
+gene expression studies: Almost all short reads are unique which
+leads to an order of magnitude larger number of alignments. Still,
+the results in principle support our previous findings. FileStreams
+have no storage overhead as compared to the original data files. A
+simple 1:1 import of the data that keeps its textual identifiers is
+actually larger than the original data sizes, while a normalized
+schema using numerical identifiers and foreign keys is much
+smaller (e.g. for the alignments, we can save 40% space this way).
+As we can see, FileStreams have no storage overhead as However, the database internal compression on page and row
+compared to the original files. The data is just stored in its original level is much less effective on this data set than in the previous
+format and size on a FileStream as on a file on disk. For the scenario. The reason is that the short-reads are much less uniform
+purely relational representations, the results are more diverse. and hence the common-prefix- and dictionary-based compression
+algorithms over only a small subset of the data fitting on one disk
+If we import all sequence data files unchanged (1:1) from the
+page do not perform that well. In this case, larger chunking or a
+source files, the storage size almost doubles. Note that this is not
+different compression algorithm would be beneficial (e.g. a bit-
+the proposed normalized schema, but a simulation of a user trying
+encoding of the sequences could reduce the size to just about a
+to use a relational database in a ‘straightforward’ manner just
+quarter). This could be achieved by introducing a corresponding
+based on the input file formats. The reason is twofold. First, there
+domain-specific short-read data type.
+is a slight overhead with the internal row structure in the storage
+engine. Second, the main reason for the overhead is redundancies
+with id attributes. Since there is no central ID management in a 5.2 File Wrapping Performance
+file-centric storage or schema information to declare key Next, we are interested in the performance of different approaches
+attributes, the common approach is to construct for each record a to access short-read data depending on the physical design. In
+unique name by combining several attribute values. In other particular, we want to compare the plain file access with a purely
+words, the approach is to materialize a composite primary key. relational access and different approaches to scan FileStream data.
+For example, the name of an individual short read entry in a In the following scenario, we execute a SELECT COUNT(*)
+FASTQ file is a string that combines the name of the sequencer FROM File query with those varying functions. The example
+machine with the flowcell id, the lane and tile numbers on the data set is a short-reads file in FASTA format with 5,028,052
+flowcell, and the x and y coordinates on the tile where that lines of short read data from one lane of a sequencing experiment.
+sequence has been located. If one imports the data files with those Note that in this experiment, the function did not perform any
+textual IDs into a relational schema that mimics the file structures, record conversions.
+Command line program (C#) ~ 5 secs Some secondary data analysis can be implemented solely in SQL,
+T-SQL Stored Procedure several minutes such as some preparation steps for digital gene expression studies.
+CLR-based Stored Procedure with StreamReader 21 secs In Section 4.2.1, we were discussing a declarative way for binning
+CLR-based Stored Procedure with Chunking 7 secs unique short reads as preparation step for the actual sequence
+CLR-based TVF with Chunking 14 secs alignment. We compared the runtime performance of Query 1
+versus an equivalent Perl script, which we found used by some
+These results demonstrate that CLR-based stored procedures and
+bioinformatics colleagues, over a 500 MB short-read data set.
+user defined functions can provide performance comparable to
+Both approaches where producing the same 565,526 unique reads.
+file-based tools. TVFs are slower than stored procedures due to
+The Perl script ran for 10 mins, while SQL Query 1 on SQL
+the overhead of the iterator-interface logic – but they provide a
+Server 2008 finished in just 44 sec.
+streaming access to the data, while stored procedures materialize
+their set-valued result [17]. Figure 7 - Resource Consumption of Perl Script
+The biggest performance bottleneck is the actual data conversion
+of FileStream records into SQL tuples, which is done by the
+FillRow() function in Figure 5. This requires not only parsing of
+the original data, but also copying each attribute value from the
+FileStream buffer into a corresponding result tuple. As the
+FileStream buffer resides inside the CLR, the data has also to be
+copied and converted from the CLR sandbox into the SQL query
+engine. This adds a large overhead on the pure streaming
+performance as shown above.
+5.3 Data Analysis Capabilities
+Let us finally consider how well database systems support the The main reason is that the Perl script follows a typical sequential
+different data analysis phases of a typical genomics workflow: scripting approach to bio-data processing. As we see in Figure 8,
+it first reads all data into main memory (dark green line – CPU
+5.3.1 Primary Data Analysis read activity), before it then processes the data until finally
+Our approach starts from level-1 data – the short read sequences. writing the result back to disk. All throughout this processing,
+Hence the image analysis of the raw image data still has to be file- only about a quarter of the available CPU power is used (dark red
+centric. The only support needed is that the tools write the line) because it runs sequentially on just on of the four available
+resulting level-1 data into FileStreams managed by the DBMS. cores. In contrast, SQL Server automatically parallelized the
+This approach is consistent with the current practice of query and made use of all four cores, resulting in a much faster
+sequencing labs that keep level-0 data only for a few weeks for runtime (as shown in Figure 8 and Figure 9 below).
+quality control purposes, before deleting it.
+Figure 8 - Multi-Core-CPU Usage of SQL Query 1
+Recently, the Sequence Read Format (SRF) was proposed as a
+common container format for level-1 short-read data [16]. SRF
+files include not only the actual short reads and quality values, but
+also some core information from the image analysis steps such as
+intensity and signal-to-noise ratio values. In our experiments, we
+did concentrate on the currently still more common FastQ format.
+Our hybrid approach would however naturally extend to
+encapsulate SRF files as FileStreams too. 5.3.3 Tertiary Data Analysis
+The most interesting case for using a database engine for genomic
+5.3.2 Secondary Data Analysis data management is the tertiary data analysis phase.
+The core idea of the hybrid approach is to leverage on the existing
+In Section 4.2.3, we discussed a way for implementing the
+tools and algorithms for secondary data analysis such as MAQ by
+consensus calling step of a sequencing project in one SQL query
+allowing them to still work on the same input files. This requires
+using some user-defined aggregate functions. We conducted
+opening files through the new FileStream-aware file system APIs.
+some initial experiments with different versions of Query 3 on a
+The remaining access and access speed is unchanged.
+data set of 2 GB consensus data from just a single lane of human
+Alternatively, we can implement the alignment algorithms directly
+genome sequence data. The results again show how the query
+in the DBMS as stored procedures. Previous work showed that
+optimizer gives us parallelism for free, but they also highlight
+this is possible, although with limited scalability [13].
+some current limitations for sequence processing in databases.
+Figure 9 - Parallel Query Plan for Unique-Read Binning in SQL (Query 1)
+Figure 10 - Parallel Query Plan for Consensus Building in SQL (Query 3; excerpt)
+Figure 10 above shows the query execution plan for Query 3 explored different physical data representations for it, including a
+(note: due to lack of space, only an excerpt with the core parallel novel hybrid design that wraps level-1 sequence data as
+join is shown – the remaining upper execution plan, with the FileStreams so that existing tools can still be used. Based on this,
+second parallelized aggregate and the projection, is truncated on we demonstrated how the integration of modern programmability
+the left). This query runs on the normalized database schema features with declarative SQL queries, such as CLR-based user-
+which stores short reads centrally in a Read table and links to the defined functions and aggregates, can be used for secondary and
+remaining information via foreign keys. The query hence first has tertiary data analysis.
+to join the alignments with the short read tables to retrieve the
+Our experimental results show that a normalized database in
+sequences for each alignment. Due to physical data independence,
+combination with the FileStream BLOB storage can reduce the
+we can choose appropriate clustered indexes on those tables so
+storage requirements as compared to purely file-based approaches.
+that the query processor can do this join in about 7 seconds (with
+We also demonstrated how declarative querying of biological data
+a warm buffer pool) by using a parallel merge join. This
+can be concise, flexible, and how a database query processor can
+corresponds to about 1.6 million alignments per second.
+provide transparent parallel processing – given the right physical
+The overall performance is dominated by the next processing step. design choices. We also identified some performance bottlenecks
+If we pivot each aligned sequence using the PivotSequence user- due to missing native data types and the difficulties for the query
+defined TVF as discussed in Section 4.2.3, we produce a huge optimizer to determine the selectivity and the optimal
+intermediate result on the temporary tablespace, which we then parallelization steps for UDTs and UDAs.
+have to group for the base call and sequence assembly steps. Overall, we believe a database-centric approach can bring many
+Although conceptually clean, this approach means blocking data modeling and performance advantages to the management of
+operations in the execution path and large amounts of disk writes high-throughput genomic data.
+for the intermediate results. Hence it is not practical.
+For fastest performance, the database needs to use a non-blocking, 6.1 Future Work
+parallelized query plan and to processes the alignments in order. There are several interesting directions for future work: We have
+When we scan once over all alignments in ascending order of seen that the bioinformatics area can benefit a lot from conceptual
+alignment positions, we can develop a UDA that builds the modeling. But more work needs to be done to successfully
+consensus sequence in a sliding-window fashion. Two issues propagate and apply the principles of good data design and
+remain: The query optimizer has to find a partitioning of the input physical data independence needs to the scientific community.
+data that allows for parallel processing of separate alignment
+Our case study so far did just scratch the surface of the actual
+streams even though alignments on the partition borders overlap
+secondary data analysis stage that requires efficient alignment
+the next partition – and hence need to be considered in both.
+algorithms. It would be interesting to investigate how a set of core
+Secondly, the final result is one consensus sequence per
+functions and alignment algorithms such as MAQ could be
+chromosome – which in the case of the Human genome means a
+integrated into database systems. There were already some
+resulting sequence string of more than 100 MBytes.
+approaches to do so for the popular BLAST alignment algorithm
+Consensus calling hence needs an approach to efficiently handle a [18]. But none has looked into multi-sequence alignments for
+large internal BLOB result, such as a specific sequence data type high-throughput sequencing yet. We also did not study
+that supports streaming inside a database engine. A more thorough appropriate indexing. Previous studies, e.g. on integrating BLAST
+evaluation of this tertiary data analysis step is planned, but we are into database systems, showed though that efficient indexing
+currently lacking the required full set of alignment data from plays a key role in performance optimizations for sequence
+several DNA samples of the same individual for this experiment. alignment in databases [7][13].
+Our investigation of the storage requirements demonstrated that it
+6. SUMMARY would be beneficial to introduce specific genomic sequence data
+In this paper, we outlined an approach to data management for types that support internal compression to reduce the storage
+high-throughput sequencing workflows by leveraging the data requirements for large-scale genomic experiments. Furthermore,
+modeling, storage, query, and extensibility tools of relational one of the benefits of declarative querying over large amounts of
+DBMSs. We developed an E-R model for genomic data and data is the possibility to introduce automatic parallelisation.
+However, our performance results in Section 5 showed that there [6] FASTQ Format Specification. URL:
+defined functions and aggregates. We are currently looking into
+[7] E. Hunt: “Indexed Searching on Proteins Using a Suffix
+these technical aspects and further performance improvements.
+Sequoia.” IEEE Data Engineering Bulletin, 27(3):24-31,
+Besides those system engineering aspects, there are also many 2004.
+interesting problems on the data model side. Short-read sequence
+data is probabilistic data as represented by the quality values
+www.illumina.com/downloads/GenomeAnalyzer_SpecSheet.pdf
+associated with each read. However, so far many algorithms
+[9] Maq Tool: Mapping and Assembly with Qualities. URL:
+simply ignore those quality values, and also our own conceptual
+model does not integrate these aspects well, resulting in separate
+probabilistic databases hence seems natural. msdn.microsoft.com/en-us/library/bb933993(SQL.100).aspx
+A final important, also quality-related aspect is data provenance [11] MSDN: Page Compression Documentation. URL:
+alignment algorithm with certain parameters was used to align
+[12] L. A. Rowe, M. Stonebraker: “The POSTGRES Data
+them against (a specific version of) the Human reference genome?
+Model”. In: Proceedings of VLDB 1987, p. 83-96.
+These are central questions to control the quality of sequencing
+results and to identify potential problems or missing data. Our [13] U. Röhm and T-M. Diep. “How to BLAST your Database -
+current approach does not cover these data provenance aspects. A Comparison Study of Stored Procedures for BLAST
+Recently, there is a lot of interest in the database community on Searches”. In: Proceedings of DASFAA'2006, pp. 807-816.
+data provenance management and it will be interesting to see how [14] R. Sears, C. van Ingen and J. Gray: "To BLOB or Not To
+those approaches can be adapted for high-throughput genomics. BLOB: Large Object Storage in a Database or a Filesystem?”
+Acknowledgements Microsoft Technical Report MSR-TR-2006-45, April 2006.
+We are grateful to Matt Wood and Roger Pettett from the Sanger [15] Todd Smith. FinchTalk BLOG article, March 2008.
+Olson from Geospiza, Inc., Seattle, for many fruitful discussions. [16] Sequence Read Format initiative. URL:
+7. REFERENCES
+[17] SQLServer Online Books: “CLR Table-Valued Functions”,
+[2] A. Acheson et al: “Hosting the .NET Runtime in Microsoft [18] S. Stephens, J.Y. Chen, J.Y., and S. Thomas: “ODM
+SQL Server.” In: Proceedings of the 2004 ACM SIGMOD BLAST: Sequence homology search in the RDBMS”. IEEE
+Conference, pp.860-865, 2004. Data Engineering Bulletin, 27(3): 20–23, 2004.
+[3] J.A. Blakeley, M. Henaire, C. Kleinerman, I. Kunen, A. [19] U.S. Department of Energy Office of Science: “Human
+Prout, B. Richards, and V. Rao: ".NET Programmability and Genome Project Information”, 2008.
+Extensibility in Microsoft SQL Server." In: Proceedings of
+[20] V. E. Velculesco and K. W. Kinzler. ”Gene Expression
+ACM SIGMOD, 2008.
+Analysis goes Digital”. Nature Biotechnology, 25(8), pp.
+[4] J.A. Blakeley, S. Muralidhar, A. Nori: “The ADO.NET 878-880, August 2007.
+Entity Framework: Making the Conceptual Level Real.” In:
+Proceedings of ER Conference, 2006.
+[5] J. A. Blakeley, S. Ozer, C. van Ingen and A.S. Szalay: "SQL
+Server: A Data Platform for Scientific and Engineering
+Applications." Microsoft Technical Report, March 2008.

@@ -1,0 +1,800 @@
+AFLOW: an automatic framework for high-throughput materials discovery
+Stefano Curtaroloa,b,(cid:63), Wahyu Setyawana, Gus L. W. Hartc, Michal Jahnateka, Roman V. Chepulskiia,
+Richard H. Taylora, Shidong Wanga, Junkai Xuea, Kesong Yanga, Ohad Levyd,
+Michael J. Mehle, Harold T. Stokesc, Denis O. Demchenkof, Dane Morgang1,2,3,4,5,6,7,8
+1a Department of Mechanical Engineering and Materials Science, Duke University, Durham, NC 27708
+2b Department of Physics, Duke University, Durham, NC 27708
+3c Department of Physics and Astronomy, Brigham Young University, Provo, Utah 84602
+4d Department of Physics, NRCN, P.O. Box 9001, Beer-Sheva 84190, Israel
+5e U.S. Naval Research Laboratory, 4555 Overlook Avenue, SW, Washington DC 20375
+6f Department of Physics, Virginia Commonwealth University, Richmond, VA 23284
+7g Department of Materials Science and Engineering, 1509 University Avenue, Madison, WI 53706
+8(cid:63) Corresponding author email: stefano@duke.edu; tel: +1 919 660 5506; fax: +1 919 6608963
+Recent advances in computational materials science present novel opportunities for structure
+discoveryand optimization, includinguncovering ofunsuspectedcompoundsand metastablestruc-
+tures, electronic structure, surface and nano-particle properties. The practical realization of these
+opportunities requires systematic generation and classification of the relevant computational data
+byhigh-throughputmethods. InthispaperwepresentAflow(AutomaticFlow),asoftwareframe-
+work for high-throughput calculation of crystal structure properties of alloys, intermetallics and
+inorganiccompounds. TheAflowsoftwareisavailableforthescientificcommunityonthewebsite
+of the materials research consortium, aflowlib.org. Its geometric and electronic structure analysis
+and manipulation tools are additionally available for online operation at the same website. The
+combination of automatic methods and user online interfaces provide a powerful tool for efficient
+quantum computational materials discovery and characterization.
+I. INTRODUCTION of structures and compositions, a key philosophy of the
+HT method is to calculate a priori as many different
+quantities as it is computationally feasible. Properties
+A new class of software tools to assess material prop-
+and property correlations are then extracted a posteri-
+erties has emerged from two parallel theoretical ad-
+ori.
+vancements: quantum-mechanical computations based
+ThispaperdescribestheHTframeworkAflow which
+ondensityfunctionaltheory(DFT),andinformaticsdata
+we have been developing over the last decade. The code
+mining and evolutionary structure screening strategies.
+and manuals describing its many operation options are
+Joined together, these methods make it possible to effi-
+freely available for download at aflowlib.org/aflow.html
+cientlyscreenlargesetsofmaterialstructureswithmany
+[36]. Some of its capabilities may also be oper-
+different combinations of elements, compositions and ge-
+ated interactively online at a dedicated web page
+ometrical configurations. The practical realization of
+aflowlib.org/awrapper.html.
+such schemes necessitates a high-throughput (HT) ap-
+proach, which involves setting up and performing many
+ab initio calculations and then organizing and analyz-
+ing the results with minimal intervention by the user. II. SOFTWARE AND STRUCTURE DATABASE
+The HT concept has already become an effective and ef-
+ficienttoolformaterialsdiscovery[1–8]anddevelopment The high-throughput framework Aflow, is an assem-
+[9–13]. Examples of computational materials HT appli- blage of software tools comprising over 150,000 lines
+cations include combinatorial discovery of superconduc- of C++ code. It is written for UNIX systems (GNU-
+tors [1], Pareto-optimal search for alloys and catalysts Linux, Mac OSX) with the GNU suite of compilers. Its
+[14, 15], data-mining of quantum calculations applying main features are fully multi-threaded and parallel. It
+principle-componentanalysistouncovernewcompounds is designed to run on top of any software for structure
+[5–7, 16–25], Kohn-anomalies search in ternary lithium- energy calculation and is currently optimized for first-
+borides [26–28], and multi-optimization techniques used principles calculations by Vienna Ab Initio Simulation
+forthestudyofhigh-temperaturereactionsinmulticom- Package (VASP) [37] (porting to other DFT packages,
+ponent hydrides [29–31]. such as Quantum Espresso [38] is underway). The code
+In its practical implementation, the HT approach uses offersseveraloptionsforrunningtheDFTpackage,onei-
+some sort of automatic optimization technique to screen therasinglestructureoronsetsofstructures,bysearch-
+a library of candidate compounds and to direct further ingthroughsubfolderscontainingaflow.ininputfilesand
+refinements. The library can be a set of alloy prototypes running those that have not been calculated yet.
+[7, 32] or a database of compounds such as the Pauling Aflow makes it possible to automatically calculate a
+File[33]ortheICSDDatabase[34,35]. Ratherthancal- suite of physical observables over a specified class or a
+culatingonetargetphysicalquantityoveralargenumber large database of structures with little human interven-
+]ics-lrtm.tam-dnoc[
+1v5175.8031:viXra
+tion to set up the input files, run the calculations, and 20 atoms/cell), and a similar number of hcp-derived su-
+collate and plot the results. It can also be used to assist perstructures (all those containing up to 24 atoms/cell)
+in the setup of standardized calculations of individual enumeratedformallyusingthealgorithmofRefs.[42]and
+cases. To maximize the usefulness of the large amount [43](aderivativesuperstructureisastructurewhoselat-
+of information produced by the HT approach, the data tice vectors are multiples of those of a parent lattice and
+must be generated and represented in a consistent and whose atomic basis vectors correspond to lattice points
+robust manner. This is especially true when the goal of the parent lattice). In practice only a few hundred
+is, as in many materials science applications, to simul- of these structures are usually calculated for each alloy
+taneously optimize multiple properties. For instance, in system, but they are useful in constructing cluster ex-
+catalyst design [39] and superconducting materials de- pansions [44–47] which can be employed in synergy with
+velopment [27, 28], both thermodynamics and electronic theHTcalculationstoexaminestructuralconfigurations
+structureareessentialtotheeffectivenessofthematerial. more thoroughly than is possible with a purely HT ap-
+If started as a common Unix daemon through the queue proach [16].
+of a computer cluster, Aflow can generate, run, correct
+and converge many calculations per day, with minimum
+human input. III. BASIC OPERATION
+Thebackboneofthesoftwareistheimplementationof
+ground-state energy calculations to identify stable and
+At the beginning of a calculation, the starting struc-
+meta-stable structures. In addition, it addresses phase
+ture, or structures, are selected from the database. The
+diagramconstruction,electronicbandstructure,phonon-
+database structural description contains the lattice pa-
+spectra and vibrational free-energy, surface stability and
+rameters and atomic positions of the prototype com-
+adsorption of contaminants on surfaces, electron-phonon pound. Aflow then adjusts the lattice parameters (us-
+coupling and superconductivity, local atomic environ-
+ing a weighted average of the pure element volumes) for
+ment expansion [40], and cluster expansion. The code
+the specified elements and creates an input file with all
+is being developed continuously with new applications
+thenecessaryparametersforrelaxations,staticandband
+integrated into it periodically.
+structure runs. This entire procedure requires only the
+One of the most difficult challenges in HT database label of a structure in the Aflow database. It may be
+generation is responding automatically to the failure of performed with equal ease for only one structure with a
+a calculation. The most common cause is insufficient specific composition or for a large set of structures with
+hardware resources. Precaution must be taken, for ex- many combinations of elements, with a single command.
+ample, to estimate the memory requirement of the tasks For multiple structures or compositions this command
+and group jobs so that they do not hamper each other creates a set of subfolders, each including a single input
+if running on the same node. The second most com- file, through which Aflow runs automatically until all
+mon cause of interruption is due to runtime errors of structures and compositions are calculated.
+the ab initio calculation itself. These errors include in- A HT computational framework must contain a gen-
+consistent reciprocal and k lattice meshes, inconsistent eral, reliable, andstandardizedelectronicstructureanal-
+atom locations, ill-defined geometries, too few electronic ysis feature. For example, it must automatically deter-
+bands to include all the electrons in the system, internal mine the Brillouin Zone (BZ) integration path for the 14
+inconsistencies arising in the convergence process, and Bravais Lattices (with their 24 Brillouin zones) [48] and
+many others. Aflow is capable of detecting most of changethebasis(latticevectors)intoastandardizedba-
+these problems, altering the input accordingly and run- sis so that data can be compared consistently between
+ningagain. Thisautomaticrestartingofrunsisachieved different projects. Although BZ integration paths have
+by diagnosing the error message, correcting the appro- appearedintheliteratureinthelastfewdecades[49–53],
+priate parameters, and restarting the calculation. astandardizeddefinitionofthepathsforallthedifferent
+As of this writing, the Aflow database includes cases has been, to the best of our knowledge, missing,
+∼400 experimental prototypes taken primarily from the and mistakes in the literature for less-common Brillouin
+Pauling File [33] with some additions from the ICSD zones are not uncommon. This component of Aflow
+[34,35]andtheNavyCrystalLatticedatabase[41]. The was discussed in detail in a separate publication [48].
+most current list of these experimental prototypes can Aflow computes structure total energies and elec-
+be viewed by either using the command-line version of tronic band structures using vasp with pseudotentials
+Aflow or the online tool described in Sec. IV. Occa- and accuracy chosen by the user. As a default, Aflow
+sionally, fully relaxed calculations by Aflow (cell vol- employsprojectoraugmentedwave(PAW)pseudopoten-
+umeandshapeandthebasisatomcoordinatesinsidethe tials with GGA exchange correlation functionals [54, 55]
+cell) turn up as ground state structures that do not yet as parameterized by Perdew-Burke-Ernzerhof [56]. Each
+have known experimental prototypes [7, 16–25]. When structure is fully relaxed twice with a convergence tol-
+identified, theyarealsoaddedtothestructuredatabase. erance of 1 meV/atom using dense grids of 3,000–6,000
+The Aflow database also includes a few million bcc- k-points per reciprocal atom. At the beginning of these
+and fcc-derived superstructures (those containing up to structural relaxation steps, a spin-polarized calculation
+Ag2Ba1Sn2_ICSD_25332 (BCT2) Density of States (States/eV)
+-2 -1 0 1 2
+(cid:61)(cid:61)(cid:61) (cid:69)(cid:20)
+(cid:69)(cid:21)
+(cid:155)(cid:155)(cid:20)(cid:20) (cid:60)(cid:60)(cid:20)(cid:20)
+(cid:49)(cid:49) (cid:51)(cid:51)(cid:51)
+(cid:140)(cid:140)(cid:140)
+(cid:155)(cid:155) (cid:60)(cid:60) (cid:59)(cid:59)(cid:59) (cid:69)(cid:22)
+Γ XY Σ Γ Z Σ 1 N P Y 1 Z|XP
+AFLOW - www.aflowlib.org consortium
+FIG. 1: Left: Electronic band structure of Ag BaSn , ICSD structure # 25332, calculated along the Brillouin Zone path
+shown in the inset. Right: The electronic density of states of the same structure. Both automatically generated using the
+Aflow framework.
+is performed for all structures. If the magnetization is tions to run commands or scripts before and after the
+smaller than 0.025 µ /atom, the spin is turned off for main program is performed in each folder. This allows
+the next relaxations and subsequent calculations to en- Aflowtogenerateinputfilesontheflydependingonthe
+hance the calculation speed. After this, the structure is results of different calculations, so that ad-hoc optimiza-
+changedintoastandardform[48],andanotherelectronic tion can be implemented by the user. It also improves
+relaxation is performed using fixed coordinates for the theflexibilityofrecoveryfromacrashoranunconverged
+lattice vectors and atomic positions. This static run is run and increases the overall versatility and throughput
+implemented with a much denser grid of 10,000–30,000 of the calculation.
+points to get accurate charge densities and density of
+states for the calculation of the band structure. The
+Monkhorst-Packscheme[57]isemployedinthegridgen-
+IV. STRUCTURE ANALYSIS TOOLS
+eration except for hexagonal, fcc and rhombohedral sys-
+temsinwhichΓ-centeredgridisselectedforfasterconver-
+gence. Thisprocessisperformedinonecalculation,with Aflow offers structure analysis and manipulation
+the single input file Aflow creates as described above. tools which are also useful to users who do not need
+At the completion of such a calculation Aflow invokes to perform HT calculations or to create databases for
+appropriate Matlab or Gnuplot scripts for data anal- datamining. These users may prepare standard unit
+ysis and visualization. All these steps are usually per- cell input files and extract the appropriate k-points
+formedautomatically,buttheuseralsohastheoptionto path using the command version of Aflow, called
+operate them through the web interface. An example of Aconvasp, or the online interface on our website
+a computed electronic band structure and standard BZ aflowlib.org/awrapper.html, (shown in Figure 2). Runs
+path appears in Figure 1. shouldthenbeperformedaccordingtothefollowingpro-
+tocol: Unit cells must first be reduced to standard prim-
+Aflow’s capability to continuously search subfolders itive, then appropriately relaxed by Aflow. Before the
+for calculations to run is not limited to DFT calcula- static run, the cells should be reduced again to standard
+tions. An“alien”modeisalsoimplemented,whichallows primitive, since symmetry and orientation might have
+Aflowtoexecuteothertasksinahighthroughputfash- changed during the relaxation. The user should then
+ion. Forinstance,themanythousandsofgrandcanonical perform the static run and then project the eigenvalues
+MonteCarlocalculationsusedinarecentsurfacescience along the directions which are specified in the “k-path”
+absorption project [58, 59] were directed and performed option. If the user is running Aflow and vasp, the web
+by Aflow. In addition, Aflow is equipped with op- interface can also prepare the input file, aflow.in, which
+Energy Materials Laboratory - Curtarolo Group
++33.5C +33.2C +32.5C +34.5C - AFLOW v30306 [2011-11-08] - Calcs = 12677 - 50300 - 145837
+home news/press people research publications courses aflow aconvasp-online "binary alloy library" aflowlib.org
+S. Curtarolo S. Wang K. Yang R. Chepulskyy R. Taylor J. Xue O. Levy G. Hart W. Setyawan
+Acknowledgement. We want to thank SWT Technology for donating the new materials.duke.edu server, which hosts the aflowlib.org database and the aconvasp-online engine. With more cores (24) and memory (64GB) we can finally
+increase the size and number of concurrent online jobs. The queries are also faster. Thanks SWT.COM!
+Mailing List. Soon this page will be updated with many more options and features. If you use it regularly, please register by sending me an email (stefano duke edu), so I can add you to the "aconvasp-news" list. We have hundreds of users
+per day converting and flipping poscars !
+ACONVASP online
+Curtarolo Group Duke University
+ACONVASP assists you with the poscar manipulation.
+Few easy tasks of aconvasp can be reproduced by this online cgi interface. 4
+will perform all the mentioned tasks. The conversion aflow/aconvasp VERSION aflow HELP aconvasp HELP apennsy HELP
+Normal Primitive (fast)
+file stored in the database, or supplied by the user in the Minkowski lattice reduction Niggli Standardized form
+WYCKOFF-CAR/ABCCAR to POSCAR (read aconvasp.pdf for definition of wyckcar/abccar)
+input box Input POSCAR. The operations implemented POSCAR to ABCCAR
+Bring atoms in the cell Cartesian coordinates Fractional coordinates
+on the web interface are the following: Data (a,b,c,alpha,beta,gamma) Extended Data (a,b,c,alpha,beta,gamma lattices, point group)
+Lattice Type of the crystal Lattice Type of the lattice Pearson symbol
+Space Group (PLATON) New Space Group (FINDSYM) New Findsym output
+• Normal Primitive; Generates a primitive cell in the Point Group Lattice Matrices Point Group Crystal Matrices
+most compact form (not necessarily unique). Factor Group Crystal Matrices and Translations Identical atoms Sites Simmetries
+(with respect to the reciprocal vectors generated from the standard primitive lattice vectors).
+• Standard Primitive; Chooses a primitive cell such List of prototypes of AFLOW
+List of Bands (reference needed)
+thattheWigner-Seitzcelldefinedbythereciprocal List of Libraries (reference needed)
+vectors coincides with one of the possible 24 Bril- Test for development
+reference (if required, otherwise leave it empty)
+louin zones [48–50].
+• Standard Conventional; Generates a conventional Start Reset (be patient)
+unit cell (not necessarily primitive). Input POSCAR (put your poscar):
+CuPt/309 - (309) - CuPt7 Ca7Ge [AB7] (309) (htqc library)
+-122.124500
+• Minkowskilatticereduction;Generatesamaximally- 0 1 . . 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 . . 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 . . 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+1.00000000000000 1.00000000000000 0.00000000000000
+compact cell (not necessarily unique). 1 7
+0.00000000000000 0.00000000000000 0.00000000000000 Cu
+• Niggli Standardized form; Generates a cell that con- 0.50000000000000 0.00000000000000 0.00000000000000 Pt
+0.00000000000000 0.50000000000000 0.00000000000000 Pt
+forms to the Niggli standard form [60]. 0.00000000000000 0.00000000000000 0.50000000000000 Pt
+0.00000000000000 0.50000000000000 0.50000000000000 Pt
+0.50000000000000 0.00000000000000 0.50000000000000 Pt
+• WYCKOFF-CAR/ABCCAR to POSCAR; Generates 0 0 . . 5 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 . . 5 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 . . 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 P P t t
+a POSCAR file from a structure file containing the
+standard crystallographic information.
+• POSCAR to ABCCAR; Generates a structure file Example of WYCKOFF-CAR (cut/paste it, then "wyckoff to poscar", then convert to standard primitive for the RHL cell, or standard conventional for the HEX cell):
+containing lattice parameters (rather than lattice FLiIBG_MS.1 2R:-3m I#n16p6 uhRt4 -i nPtRBe r73f a1c80e501f(oR)r (2t0h06e) structure analysis tools of
+vectors) from a POSCAR file. A1 1 . 0 3 1 f.l05o8 w3.0.58U 16s.e06r s90 m90a 1y20 a16p6p 2l y these tools to a structure included
+iDniretchtedatabaseorentertheirownstructureintheinputbox.
+0.0 0.0 0.085833333333 Li M(6c)
+• Bring atoms in the cell; Remaps atomic coordinates T h0.e0 0t.o0 o0l.s333i3n3c33l3u33d33e Bs y mB(6mc)etryanalysis,formatconversions,and
+to lie inside the unit cell. transforming structures between equivalent representations
+(primitive versus conventional, etc.).
+Energy Materials Laboratory - Curtarolo Group - Mechanical Engineering and Materials Science - Duke University, 144 Hudson Hall, Box 90300, Durham NC 27708
+• Cartesian coordinates; Converts the atomic coordi-
+nates in a structure file to Cartesian coordinates
+(from lattice coordinates). The user interface also provides access to the software
+manuals, under the buttons marked aflow HELP, acon-
+• Fractional coordinates; Converts atomic positions
+vasp HELP and apennsy HELP, and to the current list of
+fromfractionalcoordinates(i.e,latticeordirectco-
+experimental prototypes in the Aflow database under
+ordinates) to Cartesian coordinates.
+List of prototypes of AFLOW.
+• DataandExtendedData;Generateslatticeparame-
+ters(celllengthsandangles)andotherinformation
+(volume, reciprocal lattice, symmetry information, V. EXAMPLE APPLICATIONS
+etc.).
+1 of 1 11/9/11 9:22 AM
+A. Vibration spectra and free energy
+• Symmetry Information; Lattice Type of the crystal
+and the lattice, Pearson symbol, Space group and
+Wyckoff positions, Point Group Lattice Matrices, Aflow can calculate phonon dispersion curves us-
+Point Group Crystal Matrices and factor Group ing three different approaches: the direct force constant
+Crystal Matrices and Translations. method, following the definition of Ref. [62, 63] and
+description of Ref. [64], the linear response method
+• Identicalatomsandsitesymmetries;Identifieswhich for PAWs [65], and the frozen phonon method as im-
+atomsinastructurecorrespondtothesameWyck- plementedintheFrozslcodeofH.StokesandL.Boyer
+off positions. [66–68].
+In the first method, the atomic displacements neces-
+• K-pathinthereciprocalspace;Providesdirectionsin
+sary to fully determine the dynamical matrix are pre-
+k-spaceneededforbandstructurecalculationsand
+scribed automatically, the forces are calculated by vasp
+provides a picture of the corresponding Brillouin
+and mapped onto symmetry-equivalent directions by
+zone and path.
+Aflow. The method is general and can treat low-
+• Interstitial Cages Positions; provides all the geomet- symmetrystructuresaseasilyashigh-symmetrysystems,
+ric locations of interstitials in the structure. minimizinguser-timeoverhead. Toreducecomputational
+Γ X W X U|K Γ L X
+Rh [FCC,FCC,cF4] (STD_PRIM) [FCC,FCC,cF4] (STD_PRIM)
+0 500 1000 1500 2000
+Temperature (K)
+)llec/Vem(
+0 500 1000 1500 2000
+Temperature (K)
+0 500 1000 1500 2000
+Temperature (K)
+FIG. 3: Top: Phonon
+dispersion curves for face-
+centered cubic rhodium.
+Solid lines are computed
+frequencies, dots are ex-
+perimental results [61].
+The phonon density of
+states is shown on the
+right hand side. Bottom:
+Vibrational free energy,
+vibrational entropy, and
+specific heat calculated
+automatically using the
+Aflow framework.
+dynamical matrix [69, 70], to reproduce the correct LO-
+TO splitting (splitting between longitudinal and trans-
+(001) (110) (111) verseopticalphononfrequencies). Forthelinearresponse
+method as implemented in vasp, Aflow sets up the in-
+put files, runs and converges the calculation automati-
+cally. Aflow uses the generated dispersion curves to
+calculate the vibrational contribution to the free energy,
+entropy and specific heat (see examplein Figure 3). The
+whole task is performed by the APL library of Aflow.
+In the frozen-phonon approach, Aflow-Frozsl, the
+user sets up an aflow.in input file containing instructions
+in the Frozsl format [68]. To perform the calculation
+Aflow repeatedly calls Frozsl to generate all the ir-
+reducible representations of the phonons, calculate the
+various geometries and the phonon spectrum in the re-
+quested k points or paths. The code is multi-threaded:
+the various irreducible representations can be tackled si-
+multaneouslyinacomputerclusterwhileanAflowdae-
+monwaitsfortheircompletiontoproducethespectrum.
+For instance, the several thousand calculations of Ref.
+[71] were rapidly addressed by this method.
+FIG. 4: The supercells of (001), (110), and (111) slabs of fcc
+binary L1 structure built by Aconvasp. We chose to implement all three approaches for con-
+venience. While the first gives more information in the
+whole Brillouin Zone, the second and the third can be
+used to rapidly scan spectra at particular k points, such
+efforts, the symmetry of the supercells is fully employed as when searching for Kohn anomalies [28]. Currently,
+and only the unique atoms are distorted along the min- theFrozsl/Findsymsourcepackagesaremaintainedby
+imum independent directions required for the construc- the Aflow team. They are included in the Aflow dis-
+tion of the force constant matrix. When necessary, we tribution and have been modified to compile with the
+uselinearresponse[65]forthenon-analyticalpartofthe GNU suite.
+B. Design of high-index surfaces in complex This option replaces the cumbersome manual generation
+multicomponent compounds ofnano-particlestructurefiles,usuallyemployedinstud-
+ies of such particles, and should enable investigation of
+Surface segregation, adsorption, chemisorption, cat- largesetsofnano-particlesinahigh-throughputfashion.
+alytic reaction and other surface phenomena are of ul- Figure 5 shows examples of the nanoparticle generation.
+timate importance in many areas of modern technology,
+including catalysis, corrosion protection, batteries, elec-
+tronics etc. In most theoretical studies of surface effects,
+itisnecessarytoknowtheexactpositionsofsurfaceand
+subsurfaceatoms. Incasesoflow-indexsurfacesandsim-
+plecompounds,theconstructionofasurfacecanbedone
+manually. However, the technologically interesting high-
+index surfaces [72, 73] and multicomponent compounds
+withcomplexunderlyingcrystallatticesrequireanauto-
+mated tool.
+FIG. 5: Nano-particles based on the L1 structure built by
+The input file used for the surface construction de- 3
+Aconvasp, with radii of 5˚A (left), 8˚A (center) and 12˚A
+scribes the initial bulk crystal structure, denoted by the
+(right).
+corresponding Aflow database label. The structure
+may have an arbitrary complex crystal lattice with any
+number of atom types. The generated surface file con-
+tainsthecompletedata(bothdirectandCartesiancoor-
+dinates)fortheconstructedsurfacesupercell. TheMiller D. Topological identification of interstitial sites
+indices (hkl) are based on the Bravais lattice that cor-
+responds to the unit cell of the bulk crystal structure. An additional feature of Aflow allows users to iden-
+An example of (001), (110), and (111) supercell slabs
+tifyinterstitialsitesinsideanycrystallographicstructure.
+of the fcc binary L1 structure are shown in Figure 4.
+0 Usingasinputafilespecifyingtheatomicpositionsinthe
+Aflow can easily build a supercell containing a prede-
+structureunitcell,itreturnsthelocation,radiusandco-
+termined number N of atomic planes with given Miller
+f ordination of each site. The algorithm identifies quadru-
+indices (hkl) of a given crystal structure. A supercell
+pletsofnon-coplanaratoms,wherethefirstatombelongs
+may also contain a number N of “empty” (hkl)-planes,
+e to the unit cell and the others are separated by less than
+without actual atoms. In the last case, a periodically re-
+thelongestdiagonaloftheunitcell. Cagesaredefinedby
+peatedsupercellrepresentstheslabsseparatedbyempty
+spherestouchingallfouratomsofthequadrupletthatdo
+space. Such slab construction allows one to study sur-
+not contain any atoms. An interstitial position is found
+face effects, e.g. surface energy, surface stress, and sur-
+ifacenterofacageisinsidetheunitcell. Byconsidering
+face segregation, from first principles [73–78]. The ob-
+allthepossiblecombinations,symmetricallyinequivalent
+tained surface data may also be effectively used in sim-
+interstitialscanbeidentifiedthroughcalculationoftheir
+ulation of nanoparticles [73, 78]. The variation of N
+f site symmetry (with the space group of the unit cell).
+and N is important for studying convergence with re-
+e Notethatinunitcellswithcomplexarrangements,many
+spect to slab width and inter slab distance, respectively.
+oftheinterstitialpositionscanbeextremelyclose. Thus,
+Within (hkl)-planes, the constructed supercell consists
+adjacent interstitial atoms located in any of those close
+ofp ×p two-dimensionalprimitiveunitcells, wherep ,
+1 2 1 positions could deform the nearby local atomic environ-
+p = 1,2,... are specified. Large p and p are used to
+2 1 2 ment and relax to the same final location. Hence, the
+introduce surface defects, e.g. vacancy or solute atoms,
+number of symmetrically inequivalent cages can be fur-
+far enoughfrom each other todiminish their interaction.
+ther reduced by agglomeration of such a set of positions
+For instance, all the surfaces studied in Ref. [73] were
+intoasingleinterstitialsite,uponinsertionofinterstitial
+produced with this method.
+atoms.
+Given the host cell geometry and the interstitial
+species, the occupation of the final irreducible cages can
+C. Nanoparticle generation be automatically simulated by Aflow, which calculates
+their energies, entropy and solubility in the small con-
+Starting from an input crystal structure, a specified centration limit [79, 80]. These operations are imple-
+radius and required separation, Aconvasp generates a mentedinamulti-threadedmannertoacceleratethecal-
+structure file of a nano-particle of that radius made of culation in a multi-core environment. Figure 7 presents
+thesamelatticeandseparatedasspecifiedfromitsnear- an example of the output of a multi-threaded intersti-
+est neighbors. The origin of the particle may be set tialpositionsearchperformedonlinethroughourservers
+to the origin of the unit cell, an atom in the crystal (aflowlib.org/awrapper.html), for the AgZr -L1 struc-
+structure or any point in Cartesian or fractional coor- ture, using the interface of Figure 2. Here Aflow finds
+dinates. The radius and separation distance are in ˚A. 14 cages: 6 octahedral and 8 tetrahedral. Reduction
+str.pgroup.size()=8
+(Ag 1 Zr 5 and Ag 2 Zr 4 ) and three tetrahedral positions s s s t t t r r r . . . a f p g g g r r r o o o u u u p p p . . _ s s x i i t z z a e e l ( ( . ) ) s = = i 4 8 ze ()=8
+AgZr/11 - (11) - FCC [AB3] (11) (htqc library)
+text. Figure 6 shows these octahedral and tetrahedral 3.143228 5.444232 5.444232 109.4712 90.0000 90.00000
+Direct(4) [A1B3]
+0.000000 0.000000 0.000000 Ag 00[00]*_(1)
+interstitials in the standard conventional representation 0.500000 0.000000 0.500000 Zr 01[01]*_(2)
+0.500000 0.500000 0.000000 Zr 02[01]
+0.000000 0.500000 0.500000 Zr 03[03]*_(1)
+3 osswrite=1
+roughness=1.07500000000000
+structureisshown,insteadoftheprimitiveoS8. Thetwo str.scale=1.00000000000000
+size of the grid=108
+SCANNING STABLE CAGES (4 points)
+unique octahedrons are blue and the three unique tetra- x(fract) y(fract) z(fract) S radius(A) T C P coordination thread
+0.500000 0.250000 0.250000 X 2.2225 - 6 4 [Ag(0),Zr(1),Zr(2),Zr(3),Ag(0),Zr(3)] ithread=0
+hedra are in pink. The interstitial atom is in the center 0 0 . . 0 0 0 0 0 0 0 0 0 0 0 0 0 0 . . 3 1 7 2 5 5 0 0 0 0 0 0 0 0 . . 1 3 2 7 5 5 0 0 0 0 0 0 X X 1 1 . . 9 9 2 2 4 4 8 8 - - 4 4 4 4 [ [ A A g g ( ( 0 0 ) ) , , Z Z r r ( ( 2 1 ) ) , , Z Z r r ( ( 3 3 ) ) , , Z Z r r ( ( 2 1 ) ) ] ] i i t t h h r r e e a a d d = = 1 0
+0.000000 0.250000 0.750000 X 2.2225 - 6 4 [Zr(1),Zr(3),Zr(1),Zr(2),Ag(0),Zr(2)] ithread=19
+of the polytopes. 0 1 . . 0 0 0 0 0 0 0 0 0 0 0 0 0 0 . . 7 2 5 5 0 0 0 0 0 0 0 0 0 0 . . 2 7 5 5 0 0 0 0 0 0 0 0 X X 2 2 . . 2 2 2 2 2 2 5 5 - - 6 6 4 4 [ [ Z Z r r ( ( 2 1 ) ) , , Z Z r r ( ( 3 2 ) ) , , Z Z r r ( ( 2 1 ) ) , , Z Z r r ( ( 1 3 ) ) , , A A g g ( ( 0 0 ) ) , , Z Z r r ( ( 1 2 ) ) ] ] i i t t h h r r e e a a d d = = 1 1 9 5
+0.500000 0.375000 0.625000 X 1.9248 - 4 4 [Zr(1),Zr(3),Zr(2),Zr(3)] ithread=1
+0.500000 0.125000 0.875000 X 1.9248 - 4 4 [Zr(1),Ag(0),Zr(2),Ag(0)] ithread=6
+1.000000 0.750000 0.250000 X 2.2225 - 6 4 [Zr(2),Zr(1),Zr(2),Zr(3),Ag(0),Zr(1)] ithread=15
+0.000000 0.625000 0.875000 X 1.9248 - 4 4 [Zr(3),Zr(2),Zr(2),Ag(0)] ithread=22
+0.500000 0.875000 0.125000 X 1.9248 - 4 4 [Zr(2),Ag(0),Zr(1),Ag(0)] ithread=13
+0.500000 0.625000 0.375000 X 1.9248 - 4 4 [Zr(2),Zr(3),Zr(1),Zr(3)] ithread=0
+0.500000 0.750000 0.750000 X 2.2225 - 6 4 [Zr(3),Zr(2),Zr(1),Ag(0),Zr(3),Ag(0)] ithread=13
+0.000000 0.875000 0.625000 X 1.9248 - 4 4 [Zr(3),Zr(1),Zr(1),Ag(0)] ithread=5
+UNIQUE=14 - cage4 radius max=2.2225985 - cage4 radius min=1.9248268 -
+REDUCIBLE: 14
+PERFORMING REDUCTION:
+x(fract) y(fract) z(fract) S radius(A) T C P coordination
+1.000000 0.250000 0.750000 X 2.2225 1 6 4 [Zr(1),Zr(2),Zr(1),Zr(3),Ag(0),Zr(2)]
+0.500000 0.250000 0.250000 X 2.2225 2 6 4 [Ag(0),Zr(1),Zr(2),Zr(3),Ag(0),Zr(3)]
+0.000000 0.625000 0.875000 X 1.9248 3 4 4 [Zr(3),Zr(2),Zr(2),Ag(0)]
+0.500000 0.375000 0.625000 X 1.9248 4 4 4 [Zr(1),Zr(3),Zr(2),Zr(3)]
+0.500000 0.125000 0.875000 X 1.9248 5 4 4 [Zr(1),Ag(0),Zr(2),Ag(0)]
+IRREDUCIBLE: 5
+IRREDUCIBLE/REDUCIBLE summary: 12/38
+x(fract) y(fract) z(fract) S radius(A) T C P coordination
+1.000000 0.250000 0.750000 X 2.2225 1 6 4 [Zr(1),Zr(2),Zr(1),Zr(3),Ag(0),Zr(2)]
+equiv 1.000000 0.750000 0.250000 type=1
+equiv 0.000000 0.250000 0.750000 type=1
+equiv 0.000000 0.750000 0.250000 type=1
+0.500000 0.250000 0.250000 X 2.2225 2 6 4 [Ag(0),Zr(1),Zr(2),Zr(3),Ag(0),Zr(3)]
+equiv 0.500000 0.750000 0.750000 type=2
+0.000000 0.625000 0.875000 X 1.9248 3 4 4 [Zr(3),Zr(2),Zr(2),Ag(0)]
+equiv 0.000000 0.875000 0.625000 type=3
+equiv 0.000000 0.375000 0.125000 type=3
+equiv 0.000000 0.125000 0.375000 type=3
+0.500000 0.375000 0.625000 X 1.9248 4 4 4 [Zr(1),Zr(3),Zr(2),Zr(3)]
+equiv 0.500000 0.625000 0.375000 type=4
+0.500000 0.125000 0.875000 X 1.9248 5 4 4 [Zr(1),Ag(0),Zr(2),Ag(0)]
+equiv 0.500000 0.875000 0.125000 type=5
+IRREDUCIBLE=12 REDUCIBLE=38
+aflow VERSION 30308: [Stefano Curtarolo - 2003-2010]
+[AFLOW] CAGES IN AFLOW.IN FORMAT
+[VASP_POSCAR_MODE_EXPLICIT]START.cages_T1
+AgZr/11 - (11) - FCC [AB3] (11) (htqc library) R=2.2226 T=1 C=6 P=4 [Zr(1),Zr(2),Zr(1),Zr(3),Ag(0),Zr(2)]
+3.143228 5.444232 5.444232 109.4712 90.0000 90.00000
+Direct(5) [A1B1C3]
+0.000000 0.000000 0.000000 Ag
+1.000000 0.250000 0.750000 H
+0.500000 0.000000 0.500000 Zr
+0.500000 0.500000 0.000000 Zr
+0.000000 0.500000 0.500000 Zr
+[VASP_POSCAR_MODE_EXPLICIT]STOP.cages_T1
+FIG. 6: 6-coordinated (blue) and 4-coordinated (pink) inter- [VASP_POSCAR_MODE_EXPLICIT]START.cages_T2
+AgZr/11 - (11) - FCC [AB3] (11) (htqc library) R=2.2226 T=2 C=6 P=4 [Ag(0),Zr(1),Zr(2),Zr(3),Ag(0),Zr(3)]
+stitialsitesintheL1 3 structure,foundinatopologicalsearch 1 1 3 3 . 14 3228 5.444232 5.444232 109.4712 90.0000 90.00000
+by Aconvasp. D i r e 0 c . t 0 ( 0 5 0 ) 0 0 [ 0 A 1 B 1 0 C . 3 0 ] 0 00 00 0.000000 Ag
+0.500000 0.250000 0.250000 H
+0.500000 0.000000 0.500000 Zr
+0.500000 0.500000 0.000000 Zr
+0.000000 0.500000 0.500000 Zr
+[VASP_POSCAR_MODE_EXPLICIT]STOP.cages_T2
+[VASP_POSCAR_MODE_EXPLICIT]START.cages_T3
+AgZr/11 - (11) - FCC [AB3] (11) (htqc library) R=1.92483 T=3 C=4 P=4 [Zr(3),Zr(2),Zr(2),Ag(0)]
+3.143228 5.444232 5.444232 109.4712 90.0000 90.00000
+E. Apennsy: automatic analysis 1 1 3
+Direct(5) [A1B1C3]
+0.000000 0.000000 0.000000 Ag
+0.000000 0.625000 0.875000 H
+0.500000 0.000000 0.500000 Zr
+0.500000 0.500000 0.000000 Zr
+The results of high-throughput Aflow runs are an- [ V AS 0 P . _ 0 P 0 O 0 S 0 C 0 A 0 R _ M O 0 D . E 5 _ 0 E 0 X 0 P 0 L 0 I C I T 0 ] . S 5 T 0 O 0 P 0 . 0 c 0 a g e Z s r _ T 3
+alyzed and manipulated for further processing by the [ A V g A Z S r P / _ 1 P 1 O S - C A ( R 1 _ 1 M ) O D - E _ F E C X C P L [ I A C B I 3 T ] ] S ( T 1 A 1 R ) T . c ( a h g t e q s c _ T l 4 ib rary) R=1.92483 T=4 C=4 P=4 [Zr(1),Zr(3),Zr(2),Zr(3)]
+Apennsy module. The basic operation of this module 1 1 3 3 . 14 3228 5.444232 5.444232 109.4712 90.0000 90.00000
+Direct(5) [A1B1C3]
+is the production of a system-specific data file that in- 0 0 . . 0 5 0 0 0 0 0 0 0 0 0 0 0 0 . . 0 3 0 7 0 5 0 0 0 0 0 0 0 0 . . 0 6 0 2 0 5 0 0 0 0 0 0 A H g
+0.500000 0.000000 0.500000 Zr
+cludes information on all the computed structures, their 0.500000 0.500000 0.000000 Zr
+0.000000 0.500000 0.500000 Zr
+[VASP_POSCAR_MODE_EXPLICIT]STOP.cages_T4
+[VASP_POSCAR_MODE_EXPLICIT]START.cages_T5
+AgZr/11 - (11) - FCC [AB3] (11) (htqc library) R=1.92483 T=5 C=4 P=4 [Zr(1),Ag(0),Zr(2),Ag(0)]
+tal prototype and space group, and the binary convex 1.000000
+3.143228 5.444232 5.444232 109.4712 90.0000 90.00000
+hull. It requires as input the output files generated by Direct(5) [A1B1C3]
+0.000000 0.000000 0.000000 Ag
+the Aflow run for the computed system. 0 0 . . 5 5 0 0 0 0 0 0 0 0 0 0 0 0 . . 1 0 2 0 5 0 0 0 0 0 0 0 0 0 . . 8 5 7 0 5 0 0 0 0 0 0 0 H Z r
+0.500000 0.500000 0.000000 Zr
+0.000000 0.500000 0.500000 Zr
+For example, in a binary alloy system, the convex hull [VASP_POSCAR_MODE_EXPLICIT]STOP.cages_T5
+at zero-temperature is used to create the phase diagram.
+To construct the convex hull, Apennsy finds the min- FIG.7: Outputofamulti-threadedsearchofinterstitialcages
+imum energy structure at each composition, and calcu- in the L1 3 structure, showing two octahedral positions with
+lates their formation enthalpies r = 2.2225˚A(Ag 1 Zr 5 and Ag 2 Zr 4 ) and three tetrahedral po-
+sitions with r = 1.9248˚A (Ag Zr , Ag Zr and Zr ). The
+H =E(x)−xE −(1−x)E , (1) cell geometries including these interstitials are given in the
+bottom part of the printout.
+where E and E are the energies of the pure elements
+and E(x) is the energy of the alloy with concentration
+x of element A. Apennsy then identifies the extremal structures,i.e.,thosethatliebelowthetie-linesconnect-
+ing their neighbors at adjacent compositions. These ex- [90]. InarelatedHeyd-Scuseria-Ernzerhof(HSE06)func-
+tremal structures are the stable structures in the binary tional the Fock exchange interactions are separated into
+system and constitute its convex hull. Apennsy plots long- and short-range parts. The short range part in-
+the convex hull automatically using Gnuplot or Mat- cludes25%ofexactexchangeand75%ofsemi-localGGA
+lab. exchange, while the long-ranged part is replaced with
+The module can also be used to print the computed an approximate semi-local GGA expression [91]. The
+data in formats appropriate for use as input for other splitting is accomplished by introducing the screening of
+codes. For example, it can print all the bcc (or fcc or the exchange interactions (similar to the screened ex-
+hcp)-based structures with the total energy per unit cell change approach) with optimal screening length of ap-
+or energy per atom. This is useful for cluster expansion proximately 7-10 ˚A. This approach presents a middle
+codes such as uncle [47]. Another format is used for case between the GGA calculation (no exact exchange)
+automatic miscibility determination. All these data files and the PBE0 hybrid functional (all exchange is long
+can be generated off-line by operating Apennsy on a ranged). TheHSE06functionaleliminatessomeunphys-
+library of input files, or on-line by selecting a specific ical features of the exact exchange approach. It also has
+system and the requested option at the Aflow web- thecomputationaladvantageofbetterconvergenceofthe
+siteaflowlib.org(“binaryalloylibrary”entry)[36]. Addi- long-ranged exchange part, since screening out the long
+tional options of Apennsy provide data that is external range exact exchange greatly reduces the cost of calcu-
+to the structure calculations, such as predictions of sys- latingthenon-localexchangeinteraction. Onealsooften
+tem miscibility following Miedema and Hume-Rothery finds it useful to tune the amount of exact exchange for
+mixing rules [81, 82]. a particular material (the so called α-tuned hybrid func-
+tionals) in order to obtain the best agreement of com-
+puted band-gap with experiment. This is particularly
+useful in cases where the correct value of the band-gap
+VI. FUTURE DEVELOPMENTS:
+is critical. For example, in the calculations of defect en-
+HIGH-THROUGHPUT HYBRID FUNCTIONALS
+CALCULATIONS ergetics, tuning the band-gap of the host material in the
+bulkandthenrunningcalculationsforsupercellscontain-
+ing impurities and defects has been shown to produce
+The local (LDA) and semi-local (GGA) approxima-
+results in very good agreement with experiment [92] .
+tions to the DFT, expanded with “+U” techniques [83],
+The hybrid functional calculations are computation-
+have been incredibly successful in describing a wide va-
+ally more demanding than LDA/GGA calculations, due
+riety of materials properties, particularly those related
+to the need to fully calculate the non-local Fock ex-
+to the ground state. In some cases, however, the draw-
+change integrals. For example, a bulk ZnO HSE06 cal-
+backsoftheseapproximationspresentaninsurmountable
+culation (8 × 8 × 6 Γ-centered k-point mesh, with 40
+obstacle. One of the most illustrative areas is the ener-
+irreducible k-points, 400 eV cutoff) using vasp takes
+getics of defects in wide band-gap semiconductors. For
+approximately 5 hours on 8 CPU’s. The same set up
+example, in the case of oxygen vacancies in ZnO, the
+for the GGA/PBE (+U) calculation takes less than a
+defect formation energies and thermodynamic transition
+minute. The memory requirements in this case, for a
+levels obtained by different LDA/GGA approaches vary
+HSE06 calculation, are also increased by a factor of five
+by several eV [84]. Similar problems exist in DFT cal-
+compared to those of GGA. The scaling of the computa-
+culations of optical properties of insulators and semicon-
+tional cost varies for different hybrid functionals, and is
+ductors,propertiesofcorrelatedmaterials,reactionener-
+approximatelyO(N2.5)forsmallsystemsizes,andlinear
+getics and adsorption of small molecules [85, 86]. An af-
+forHSE06beyond15˚A andforPBE0beyond100˚A.Us-
+fordable and accurate approach to overcome these prob-
+ingplanewavesthescalingofhybridfunctionalmethods
+lems does not exist yet. The state of the art many-body
+is (N N )2N log(N ), which is approximately
+methods, such as self-consistent GW [87] exhibit excel- bands k FFT FFT
+linear with the number of atoms in the bulk [89]. The
+lent agreement with experiments, but suffer from high
+standard (semi-) local DFT(+U) methods using plane
+computational cost. The hybrid functional methods[88]
+waves normally scale as O(N3).
+representapragmaticcompromisebetweenthelocaland
+nonlocal many-body approaches. The results of hybrid
+functional calculations are often in excellent agreement
+withcomputationallyexpensivecuttingedgemany-body A. Framework of DFT+U and Hybrid Functional
+methods,yetfavorablescalingallowsroutinecalculations calculations
+of a few hundred atoms in the unit cell [89] .
+In a hybrid functional calculation the LDA exchange HT-DFT+U: Within the high-throughput frame-
+correlationpartofthedensityfunctionalismixedwitha work, Aflow currently employs the DFT+U technique
+Fock-type exchange part in varying proportions. For ex- andallowstheusertochoosetheappropriateparameters.
+ample,thepopularPerdew-Burke-Ernzerhofhybridfunc- As default, Aflow takes advantage of the Dudarev [93]
+tional (PBE0) contains 25% of the exact exchange, 75% formalism within GGA+U. The values of U are listed in
+of GGA exchange, and 100% of GGA correlation energy Table I.
+is often better, since ZnO produces one of the largest
+TABLE I: Values of U parameters in eV for the Dudarev
+eff LDA/GGA band-gap errors. The HSE06 band-gaps for
+GGA+U approach implemented in Aflow. From Refs. [48,
+narrow and medium gap semiconductors, with the stan-
+94, 95] and references therein.
+dard ratio of the Fock exchange, are in good agreement
+Ti V Cr Mn Fe Co Ni Cu Zn Ga withexperiment. Forwideband-gapsemiconductorsand
+4.4 2.7 3.5 4.0 4.6 5.0 5.1 4.0 7.5 3.9 insulators the gaps, although underestimated, present a
+Nb Mo Tc Ru Rh Pd Cd In significant improvement over LDA/GGA values [88]. In
+2.1 2.4 2.7 3.0 3.3 3.6 2.1 1.9 addition, hybrid functionals improve effective mass esti-
+Ta W Re Os Ir Pt mation for almost all systems, typically yielding values
+2.0 2.2 2.4 2.6 2.8 3.0 within a few percent of experiment [97].
+La Ce Pr Gd Nd Sm Eu Tm Yb Lu A fully functional, consistent and robust Aflow
+7.5 6.3 5.5 6.0 6.2 6.4 5.4 6.0 6.3 3.8 framework with hybrid functionals is planned for 2012.
+O1Zn1_ICSD_26170 (HEX) Density of States (States/eV)
+HT-DFT+Hybrid: We are currently expanding p
+the Aflow framework to perform HSE06 calculations, 6 d
+and we present some preliminary results. The exten- 4
+sion is not trivial: the calculations of electronic struc- 2
+ture using hybrid functionals differ from the standard 0
+LDA/GGA ones, with or without “+U”. One cannot
+computethebandsinthefamiliarnon-selfconsistentway
+of the LDA/GGA because non-local exchange is not de-
+termined by the pre-computed charge density. There- -6
+fore to obtain the eigenvalues for strings of k-points the -8
+0 5 10 15 20
+following recipe is being implemented. First, Aflow AFLOW - www.aflowlib.org consortium
+performs a standard LDA/GGA calculation. Second,
+a hybrid functional run is performed starting from the
+LDA/GGAwavefunctionsonthesamek-pointmeshand
+energycutoffchosenbyAflow. Thenumberofbandsis
+dynamically adjusted to achieve full convergence. Then,
+to facilitate efficient use of computational resources, it
+is further adjusted to include only a few bands over the
+highest occupied state. Third, the electronic structure
+is computed by performing a hybrid functional run ex-
+plicitly defining the same k-point mesh in addition to
+the desired k-path as specified in the high symmetry ex-
+amples of Ref. [48]. The crucial step here is to set the
+mixing weights of the extra k-path to zero, while keep-
+ing the original mesh intact. Since the orbitals at the
+extra k-path do not contribute to the total energy, and
+the wavefunctions on the original mesh are converged as
+input, it is only necessary to converge the orbitals at
+the extra k-points mesh with the appropriate vasp in-
+structions. The band structure calculation following this
+recipe will take approximately the same amount of time
+as a regular total energy hybrid calculation since the or-
+bitals at the standard mesh are pre-converged.
+As an example Figure 8 shows the HSE06 band struc-
+ture computed along the standard high symmetry lines.
+Comparisons can be drawn with the PBE+U electronic
+structure of Ref. [96]. The HSE06 calculation used
+the standard value of α = 0.25. (Note that by using
+α = 0.375 the band-gap can be brought to agreement
+with experiment.) The value of the band-gap is con-
+siderably improved E = 2.48 eV in comparison with
+GGA and PBE+U values of E =0.7 eV and E =1.82
+eV,respectively(thephenomenologicallycorrectedvalue
+is 3.36 eV [94]). In other materials this improvement
+(cid:75) M K (cid:75) A L H A|LM|K H
+AFLOW - www.aflowlib.org consortium
+FIG.8: HSE06hybridfunctionalbandstructureofZnO.The
+HSE06 gap is 2.48 eV. LDA/GGA gap is 0.7 eV while the
+PBE+U value is 1.82 eV [96]. Standard HSE06 parameters
+wereused,theratioofexactexchangeis0.25andthescreen-
+ing parameter is 0.2 ˚A−1.
+VII. SUMMARY
+We describe the Aflow software package for HT cal-
+culations of material properties. It should be helpful to
+the materials scientist seeking to determine properties of
+alloyandcompoundstructures. Thecode,andoperation
+manuals describing its features, are freely available for
+download at aflowlib.org/aflow.html. The structure ma-
+nipulation and analysis capabilities of Aflow are also
+available online at the Aconvasp-online entry of this
+website.
+VIII. ACKNOWLEDGMENTS
+The authors acknowledge Gerbrand Ceder, Marco
+Buongiorno-Nardelli, Leeor Kronik, Natalio Mingo, and
+Stefano Sanvito for fruitful discussions. Research
+supported by ONR (N00014-11-1-0136, N00014-10-1-
+0436, N00014-09-1-0921), NSF (DMR-0639822, DMR-
+0908753), and the Department of Homeland Security
+- Domestic Nuclear Detection Office. We are grateful
+for extensive use of the Fulton Supercomputer Center
+at Brigham Young University and Teragrid resources
+(MCA-07S005). SC acknowledges support by the Fein- berg fellowship at the Weizmann Institute of Science.
+[1] X. D. Xiang, X. Sun, G. Briceno, Y. Lou, K.-A. Wang, 214110.
+H. Chang, W. G. Wallace-Freedman, S.-W. Chen, P. G. [25] O. Levy, J. Xue, S. Wang, G. L. W. Hart, S. Curtarolo,
+Schultz, Science 268 (1995) 1738–1740. Phys. Rev. B 85 (2012) 012201.
+[2] Y.-M.Chiang,D.R.Sadoway,M.K.Aydinol,Y.-I.Jang, [26] A.N.Kolmogorov,S.Curtarolo,Phys.Rev.B73(2006)
+B. Huang, G. Ceder, Nature 392 (1998) 694. 180501(R).
+[3] G. H. Jo´hannesson, T. Bligaard, A. V. Ruban, H. L. [27] M. Calandra, A. N. Kolmogorov, S. Curtarolo, Phys.
+Skriver,K.W.Jacobsen,J.K.Nørskov,Phys.Rev.Lett. Rev. B 75 (2007) 144506.
+88 (2002) 255506. [28] A. N. Kolmogorov, M. Calandra, S. Curtarolo, Phys.
+[4] D. P. Stucke, V. H. Crespi, Nano Lett. 3 (2003) 1183. Rev. B 78 (2008) 094520.
+[5] S. Curtarolo, D. Morgan, K. Persson, J. Rodgers, [29] C.Wolverton,D.J.Siegel,A.R.Akbarzadeh,V.Ozolins,
+G. Ceder, Phys. Rev. Lett. 91 (2003) 135503. J. Phys.: Conden. Matt. 20 (2008) 064228.
+[6] D.Morgan,G.Ceder,S.Curtarolo,Meas.Sci.Technolog. [30] D. J. Siegel, C. Wolverton, V. Ozolins, Phys. Rev. B 76
+16 (2005) 296. (2007) 134102.
+[7] S. Curtarolo, D. Morgan, G. Ceder, Calphad 29 (2005) [31] A. R. Akbarzadeh, V. Ozolins, C. Wolverton, Advanced
+163. Materials 19 (2007) 3233–3239.
+[8] C.C.Fischer,K.J.Tibbetts,D.Morgan,G.Ceder,Nat. [32] T. B. Massalski, H. Okamoto, P. R. Subramanian,
+Mater. 5 (2006) 641. L. Kacprzak (Eds.), Binary Alloy Phase Diagrams,
+[9] H. Koinuma, I. Takeuchi, Nat. Mater. 3 (2004) 429–438. American Society for Metals, Materials Park, OH, 1990.
+[10] J. L. Spivack, J. N. Cawse, D. W. Whisenhunt, B. F. [33] P. Villars, M. Berndt, K. Brandenburg, K. Cenzual, J.
+Johnson, K. V. Shalyaev, J. Male, E. J. Pressman, J. Y. Daams,F.Hulliger,T.Massalski,H.Okamoto,K.Osaki,
+Ofori, G. L. Soloveichik, B. P. Patel, T. L. Chuck, D. J. A. Prince, H. Putz, and S. Iwata, J. Alloys Compound.
+Smith,T.M.Jordan,M.R.Brennan,R.J.Kilmer,E.D. 367 (2004) 293–297.
+Williams,AppliedCatalysisA:General254(2003)5–25. [34] A.D.Mighell,V.L.Karen,ActaCryst.A49(1993)c409.
+[11] T.R.Boussie,G.M.Diamond,C.Goh,K.A.Hall,A.M. [35] A.Belsky,M.Hellenbrandt,V.L.Karen,P.Luksch,Acta
+LaPointe, M. Leclerc, C. Lund, V. Murphy, J. A. W. Cryst. B58 (2002) 364–369.
+Shoemaker, U. Tracht, H. Turner, J. Zhang, T. Uno, [36] S. Curtarolo, W. Setyawan, R. H. Taylor, S. Wang,
+R.K.Ros´en,J.C.Stevens,J.Am.Chem.Soc.125(2003) J. Xue, K. Yang, G. L. W. Hart, S. Sanvito,
+4306–4317. M. Buongiorno Nardelli, N. Mingo, and O. Levy,
+[12] R. A. Potyrailo, B. J. Chisholm, W. G. Morris, J. N. AFLOWLIB.ORG: a distributed materials prop-
+Cawse, W. P. Flanagan, L. Hassib, C. A. Molaison, erties repository from high-throughput ab ini-
+K. Ezbiansky, G. Medford, H. Reitz, J. Comput. Chem. tio calculations, in press, Comp. Mat. Sci.,
+5 (2003) 472–478. doi=10.1016/j.commatsci.2012.02.002 (2012).
+[13] R. A. Potyrailo, I. Takeuchi, Measurement Science and [37] G. Kresse, J. Hafner, Phys. Rev. B 47 (1993) 558–561.
+Technology 16 (2005) 1. [38] P.Giannozzi,S.Baroni,N.Bonini,M.Calandra,R.Car,
+[14] T. Bligaard, G. H. Johannesson, A. V. Ruban, H. L. C. Cavazzoni, D. Ceresoli, G. L. Chiarotti, M. Cococ-
+Skriver,K.W.Jacobsen,J.K.Nørskov,Appl.Phys.Lett. cioni, I. Dabo, A. Dal Corso, S. de Gironcoli, S. Fabris,
+83 (2003) 4527. G. Fratesi, R. Gebauer, U. Gerstmann, C. Gougoussis,
+[15] M. P. Anderson, T. Blidgaard, K. E. L. A. Kustov, A. Kokalj, M. Lazzeri, L. Martin-Samos, N. Marzari,
+J. Greeley, T. Johannessen, C. H. Christensen, J. K. F. Mauri, R. Mazzarello, S. Paolini, A. Pasquarello,
+Nørskov, J. Catal. 239 (2006) 501. L.Paulatto,C.Sbraccia,S.Scandolo,G.Sclauzero,A.P.
+[16] O.Levy,G.L.W.Hart,S.Curtarolo,J.Am.Chem.Soc. Seitsonen,A.Smogunov,P.Umari,R.M.Wentzcovitch,
+132 (2010) 4830. J. Phys.: Conden. Matt. 21 (2009) 395502.
+[17] O. Levy, G. L. W. Hart, S. Curtarolo, Acta Mater. 58 [39] J. K. Nrskov, T. Bligaard, J. Rossmeisl, C. H. Chris-
+(2010) 2887–2897. tensen, Nat. Chem. 1 (2009) 37.
+[18] O. Levy, R. V. Chepulskii, G. L. W. Hart, S. Curtarolo, [40] P. Villars, in: J. H. Westbrook, R. L. Fleisher (Eds.),
+J. Am. Chem. Soc. 132 (2010) 833. Crystal Structures of Intermetallic Compounds, Wiley,
+[19] R.H.Taylor,S.Curtarolo,G.L.W.Hart,Phys.Rev.B New York, 1994, pp. 1–49.
+81 (2010) 024112. [41] M. Mehl, Naval Research Laboratory Crystal Structure
+Soc. 132 (2010) 6851. [42] G. L. W. Hart, R. W. Forcade, Phys. Rev. B 77 (2008)
+[21] O. Levy, G. L. W. Hart, S. Curtarolo, Phys. Rev. B 81 224115.
+(2010) 174106. [43] G. L. W. Hart, R. W. Forcade, Phys. Rev. B 80 (2009)
+[22] R.H.Taylor,S.Curtarolo,G.L.W.Hart,Phys.Rev.B 014120.
+84 (2011) 084101. [44] J. M. Sanchez, F. Ducastelle, D. Gratias, Physica A 128
+[23] O. Levy, M. Jahnatek, R. V. Chepulskii, G. L. W. Hart, (1984) 334–350.
+S. Curtarolo, J. Am. Chem. Soc. 133 (2011) 158–163. [45] D. de Fontaine, Cluster Approach to Order-Disorder
+[24] M.Jahnatek,O.Levy,G.L.W.Hart,L.J.Nelson,R.V. Transformations in Alloys, volume 47 of Solid State
+Chepulskii,J.Xue,S.Curtarolo,Phys.Rev.B84(2011) Physics, Academic Press, New York, 1994.
+Mater. 4 (2005) 391. [72] N. Tian, Z.-Y. Zhou, S.-G. Sun, Y. Ding, Z. L. Wang,
+[47] D. Lerch, O. Wieckhorst, G. L. W. Hart, R. W. For- Science 316 (2007) 732–735.
+cade,S.Mu¨ller,Model.Simul.Mater.Sci.Eng.17(2009) [73] R.V.Chepulskii,S.Curtarolo,ACSNano5(2011)247–
+055003. 254.
+[48] W. Setyawan, S. Curtarolo, Comp. Mat. Sci. 49 (2010) [74] V. Fiorentini, M. Methfessel, J. Phys.: Conden. Matt. 8
+299. (1996) 6525–6529.
+[49] C.J.Bradley,A.P.Cracknell,Themathematicaltheory [75] A.V.Ruban,H.L.Skriver,J.K.Nørskov,Phys.Rev.B
+of symmetry in solids: Representation theory for point 59 (1999) 15990–16000.
+groupsandspacegroups,ClarendonPress,Oxford,1972. [76] A. U. Nilekar, A. V. Ruban, M. Mavrikakis, Surf. Sci.
+[50] G. Burns, A. M. Glazer, Space Groups for Solid State 603 (2009) 91 – 96.
+Scientists, Academic Press, Boston, 1990. [77] N. E. Singh-Miller, N. Marzari, Phys. Rev. B 80 (2009)
+[51] S. C. Miller, W. F. Love, Tables of Irreducible Repre- 235407.
+sentations of Space Groups and Co-Representations of [78] R.V.Chepulskii,W.H.Butler,A.vandeWalle,S.Cur-
+Magnetic Groups, Pruett Press, Boulder, 1967. tarolo, Scr. Mater. 62 (2010) 179–182.
+[52] O. V. Kovalev, Irreducible Representations of the Space [79] R. V. Chepulskii, S. Curtarolo, Phys. Rev. B 79 (2009)
+Groups, Gordon and Breach, New York, 1965. 134203.
+[53] A. Casher, M. Glucky, Y. Gur, The Irreducible Repre- [80] R.V.Chepulskii,S.Curtarolo,ActaMaterialia57(2009)
+sentations of Space Groups, W. A. Benjamin Inc., New 5314.
+York, 1969. [81] A. R. Miedema, P. F. de Chatel, F. R. de Boer, Physica
+[54] W. Kohn, L. J. Sham, Phys. Rev. 140 (1965) A1133. B&C 100B (1980) 1.
+[55] P. E. Blo¨chl, Phys. Rev. B 50 (1994) 17953. [82] W. Hume-Rothery, The Metallic State, Oxford Univer-
+[56] J. P. Perdew, K. Burke, M. Ernzerhof, Phys. Rev. Lett. sity Press, Oxford, 1931.
+77 (1996) 3865–3868. [83] V. I. Anisimov, F. Aryasetiawan, A. I. Lichtenstein, J.
+[57] H. J. Monkhorst, J. D. Pack, Phys. Rev. B 13 (1976) Phys.: Conden. Matt. 9 (1997) 767.
+5188. [84] S. Lany, A. Zunger, Phys. Rev. B 78 (2008) 235104.
+[58] W.Setyawan,R.D.Diehl,S.Curtarolo,Phys.Rev.Lett. [85] L. A. Curtiss, K. Raghavachari, P. C. Redfern, J. A.
+102 (2009) 055501. Pople, J. Chem. Phys. 106 (1997) 1063.
+[59] R. D. Diehl, W. Setyawan, S. Curtarolo, J. Phys.: Con- [86] G. Kresse, A. Gil, P. Sautet, Phys. Rev. B 68 (2003)
+den. Matt. 20 (2008) 314007. 073401.
+[60] P. Niggli, Handbuch der Experimentalphysik, volume 7, [87] M. Shishkin, M. Marsman, G. Kresse, Phys. Rev. Lett.
+Akademische Verlagsgesellschaft, 1928. 99 (2007) 246403.
+[61] A.Eichler,K.-P.Bohnen,W.Reichardt,J.Hafner,Phys. [88] M. Marsman, J. Paier, A. Stroppa, G. Kresse, J. Phys.:
+Rev. B 57 (1998) 324. Conden. Matt. 20 (2008) 064201.
+[62] A. A. Maradudin, E. W. Montroll, G. H. Weiss, I. P. [89] J. Paier, R. Hirschl, M. Marsman, G. Kresse, J. Chem.
+Ipatova, Theory of Lattice Dynamics in the Harmonic Phys. 122 (2005) 234102.
+Approximation, Academic Press, New York, 1971. [90] J. P. Perdew, M. Ernzerhof, K. Burke, J. Chem. Phys.
+[63] O. Madelung, Introduction to solid-state theory, 105 (1996) 9982.
+Springer-Verlag, 3 edition, 1996. [91] J. Heyd, G. E. Scuseria, M. Ernzerhof, J. Chem. Phys.
+[64] G. Kresse, J. Furthmu¨ller, J. Hafner, J. Phys.: Conden. 118 (2003) 8207.
+Matt. 9 (1997) 7861. [92] F. Oba, A. Togo, I. Tanaka, J. Paier, G. Kresse, Phys.
+[65] M. Gajdoˇs, K. Hummer, G. Kresse, J. Furthmu¨ller, Rev. B 77 (2008) 245202.
+F. Bechstedt, Phys. Rev. B 73 (2006) 045112. [93] S. L. Dudarev, G. A. Botton, S. Y. Savrasov, C. J.
+[66] H. T. Stokes, Ferroelectrics 164 (1995) 183–188. Humphreys, A. P. Sutton, Phys. Rev. B 57 (1998) 1505.
+[67] L. L. Boyer, H. T. S. M. J., Mehl, Ferroelectrics 164 [94] W. Setyawan, R. M. Gaume, S. Lam, R. S. Feigelson,
+(1995) 177–181. S. Curtarolo, ACS Comb. Sci. 13 (2011) 382–390.
+[68] H. T. Stokes, L. L. Boyer, FROZSL, [95] S.Wang,Z.Wang,W.Setyawan,N.Mingo,S.Curtarolo,
+www.physics.byu.edu/∼stokesh/isotropy.html (2002). Phys. Rev. X 1 (2011) 021012.
+[69] X. Gonze, C. Lee, Phys. Rev. B 55 (1997) 10355–10368. [96] aflowlib.org/material.php?proto name=O1Zn1 ICSD 26170
+[70] Y. Wang, J. J. Wang, W. Y. Wang, Z. G. Mei, S. L. ZnO ICSD #26170.
+Shang,L.Q.Chen,Z.K.Liu,J.Phys.: Condens.Matter [97] Y.-S. Kim, M. Marsman, G. Kresse, F. Tran, P. Blaha,
+22 (2010) 202201. Phys. Rev. B 82 (2010) 205212.
+[71] K. M. Poduska, L. Regev, E. Boaretto, L. Addadi,
+S. Weiner, L. Kronik, S. Curtarolo, Advanced Materials

@@ -1,0 +1,562 @@
+]MB.oib-q[
+2v09040.9051:viXra
+GEOMETRIC COMBINATORICS AND COMPUTATIONAL
+MOLECULAR BIOLOGY: BRANCHING POLYTOPES FOR RNA
+ELIZABETHDRELLICH,ANDREWGAINER-DEWAR,HEATHERA.HARRINGTON,
+QIJUNHE,CHRISTINEHEITSCH,ANDSVETLANAPOZNANOVIĆ
+Abstract. Questions in computational molecular biology generate various
+discrete optimization problems, such as DNA sequence alignment and RNA
+secondarystructureprediction. However,theoptimalsolutionsarefundamen-
+tally dependent on the parameters used in the objective functions. The goal
+of a parametric analysis is to elucidate such dependencies, especially as they
+pertain to the accuracy and robustness of the optimal solutions. Techniques
+fromgeometriccombinatorics,includingpolytopesandtheirnormalfans,have
+beenusedpreviouslytogiveparametricanalysesofsimplemodelsforDNAse-
+quencealignmentandRNAbranchingconfigurations. Here,wepresentanew
+computational framework, and proof-of-principleresults, which give the first
+complete parametric analysis of the branching portion of the nearest neigh-
+bor thermodynamic model for secondary structure prediction for real RNA
+sequences.
+1. Motivation
+Overthe pastfour decades,improvementsin biotechnologyhavegreatlyacceler-
+atedtheamountofbiologicalsequencedataavailable. Yet,afundamentalchallenge
+incomputationalmolecularbiologyremainstoreliablyinferfunctionalinformation
+from the linear encoding of DNA, RNA, and protein molecules.
+As articulated in the central dogma of molecular biology, genetic information is
+stored in DNA from which it is transcribed into messenger RNA, and then trans-
+lated into proteins by ribosomal and transfer RNA. However, as always in biology,
+a wealth of complexity lurks below the surface of this basic principle. Historically,
+most interest was focused on DNA sequences (as the cellular genome) and protein
+structures(asthecellularmachinery). Sincetheearly2000’s,though,attentionhas
+increasinglyturnedto RNAasmanymorecriticalfunctions havebeenrevealed,in-
+cluding gene splicing, editing, and regulation.
+LikeDNA,RNAisasequenceofnucleicacids,abbreviatedA,C,G,andU(instead
+of T), which form the familiar Watson-Crickpairings. Unlike the canonicaldouble-
+stranded DNA helix, most RNA molecules are naturally single-stranded and the
+intra-sequence base pairings are an integral component of the three-dimensional
+structure. This is in contrast to the more subtle amino acid interactions which
+govern the formation of protein structures. However, knowing the structure of a
+Theauthors’collaborationwasfundedbytheMathematicsResearchCommunitiesprogramof
+theAMS.S.PoznanovićwasalsosupportedinpartbyNSFgrantDMS-1312817. HAHgratefully
+acknowledgesthesupportofEPSRCFellowshipEP/K041096/1. C.Heitschwassupportedinpart
+byaCareerAwardattheScientificInterfacefromtheBurroughsWellcomeFund.
+2 DRELLICH,GAINER-DEWAR,HARRINGTON,HE,HEITSCH,ANDPOZNANOVIĆ
+protein or RNA molecule is critical to understanding and manipulating its cellular
+functions.
+The structure of an RNA molecule is understood hierarchically, from the lin-
+ear biochemical chain through the planar set of canonical base pairings to the 3D
+molecule,whosestructureincludesmorecomplicatedtertiaryinteractionslikepseu-
+doknots and base triples. Given the prevalence of RNA sequence data and the dif-
+ficulties, both experimental and computational, of determining 3D structures, the
+majority of attention has focused on the set of base pairs, known as the secondary
+structure. In particular, one seeks to answer: What are the native base pairs for a
+given RNA sequence? As explained below, it is possible to efficiently compute an
+optimal secondary structure under the current Nearest Neighbor Thermodynamic
+Model (NNTM). However, when these minimum free energy (MFE) predictions
+are compared to structures derived from information-theoretic means, the current
+gold-standard, the average accuracy for longer ribosomal RNA sequences is only
+40%. Hence, it is criticalto understandwhich aspects ofRNA base pairingare not
+captured well by the NNTM.
+One known weakness of the current model is the energy function which governs
+the branching of an RNA secondary structure. For computational reasons, the
+entropic cost is modeled as an affine function with three parameters. A very nat-
+ural question to ask is: How does the optimal secondary structure depend on the
+branching loop parameters?
+Such a question is an example of a parametric analysis, which illuminates the
+dependencies of the solution on the underlying optimization parameters. As we
+illustrate here, methods from geometric combinatorics, specifically polytopes and
+their normal fans, can be used to answer this question, and others including accu-
+racy and stability. The outline of this paper is as follows. Section 2 contains the
+basicRNAterminologyandabriefoverviewofthegeometrictoolsneededforpara-
+metric analysis. In Section 3 we first give background on the NNTM, specifically
+the way the multibranch loops are scored. Then we introduce branching polytopes
+and explain how to compute them using the software pmfe which we have made
+available online. Finally, we present a few biological questions and discuss math-
+ematical problems related to the branching polytopes they raise. The paper ends
+with a summary in Section 4.
+2. Background
+2.1. Computational molecular biology. Nucleotide sequences can be modeled
+as strings over a finite alphabet. The questions related to DNA and RNA are
+amenable to analysis using discrete mathematical techniques from algebra, combi-
+natorics,andtopology. Wereferthereadertothefollowingreferencesformathemat-
+ical approaches for studying computational molecular biology [8, 36, 25, 12, 24, 2].
+Ofparticularinteresthere aretechniques fromgeometriccombinatorics,whichcan
+inform parametric analysis of models arising from optimization questions, such as
+DNA sequence alignment and RNA secondary structure prediction.
+Previous parametric analyses in molecular biology have primarily focused on
+DNA. Given sequences of DNA, an important problem is to find regions that have
+been evolutionary conserved. The first step requires aligning the sequences by
+adding spaces to the sequences until they are the same length. The DNA se-
+quence alignment problem is to find the best alignment between sequences given
+BRANCHING POLYTOPES FOR RNA SEQUENCES 3
+some scoring function [35]. The optimal solution can be determined via dynamic
+programmingoptimization which scores various features and provides globalalign-
+ment. The optimization fundamentally depends on parameters, and the notion of
+‘bestmatching’sequencesmaydependonthevalueoftheseparameters. Techniques
+from geometric combinatoricscan be used [35, 5] to analyze systematically how se-
+quencealignmentdependsontheseparameters. Themathematicalbackgroundwill
+be presented in Section 2.2.
+The problem we focus on here is prediction of the secondary structure of a
+singlegivenRNA sequence. Unlike DNA, whichtypically formsa fully base-paired
+double helix, RNA typically exists as a single strand whose bases can pair with
+one another to form diverse and complex secondary structures. The secondary
+structure of a given RNA molecule serves as a scaffold for the 3D structure [32].
+As shown in Fig. 1, an RNA secondary structure consists of stacked base pairs
+(helices) and single-strandedregions (loops). The degree of a loop is the number of
+helices emerging from it (or, equivalently, the number of base pairings in the loop).
+Hairpin loops have degree 1, internal loops have degree 2, and multibranch loops
+havedegreegreaterthan2;eachRNAmoleculealsohasa(possiblyempty)exterior
+loop,whichincludestheunpairedbasesnotcontainedinotherloops. Figure1shows
+a secondary structure with all of these substructures labeled.
+Internal loop Helix
+U C C A AU A
+G A C G U C G C A A C A
+C UC U G C A G C G UU G U C
+Exterior loop Multibranch loop Hairpin loop
+Figure 1. Secondary structure of RNA with substructures.
+Thebasepairingsinthesecondarystructurearedifficulttodetermineexperimen-
+tally, necessitating mathematical models to predict the structure [40]. Indeed sec-
+ondary structure prediction has been an active area of researchfor severaldecades
+(see survey in [19]). One approach for predicting secondary structure is calculat-
+ing the free thermodynamic energy ofthe RNA molecule accordingto the standard
+NNTM[17,33]. Inthismodel,basesthatbondaregenerallyenergeticallyfavorable
+and stabilize the RNA with a negative free energy, whereas unpaired bases are en-
+ergetically disfavorable and destabilize the RNA with a positive free energy. Each
+substructure is assigned an energy value, and the total energy of the secondary
+structure is determined by summing over its substructures [17, 33].
+If we further assume that secondary structure has no crossing base pairs, we
+could then generate secondary structure of an RNA sequence recursively over its
+subsequences. This allows us to compute the minimum energy structure efficiently
+4 DRELLICH,GAINER-DEWAR,HARRINGTON,HE,HEITSCH,ANDPOZNANOVIĆ
+using a dynamic programming algorithm. This approach is widely studied, and
+several software packages are available to perform the appropriate computations;
+widely-used implementations include RNAfold from the Vienna RNA package [13],
+mfold[41],andRNAstructure[26]. However,theoptimalstructurefoundusingthe
+thermodynamic model is often not the correctone. The prediction depends on the
+thousands of parametervalues in the objective function, affecting the substructure
+prediction.
+Current versions of the scoring model [17, 33] have over eight thousand param-
+eters, but we focus our attention on three related to multibranch loops such as
+that at the center of Fig. 1. (We will discuss some details of the model and its
+parameters in Section 3.1.) We perform parametric analysis using geometric com-
+binatorics, which has previously been applied to a simplified tree model of RNA
+basepairingthatfocusesonbranchingconfigurations[14],andextendthistostudy
+the branchingof realRNA sequences under theTurner99 NNTM parameters. In
+the next section we introduce the required combinatorial and geometric notions to
+carry out this parametric analysis.
+2.2. Polytopesand geometriccombinatorics. TheoptimizationoftheNNTM
+objective function, with an emphasis on branching loop calculations, can be pre-
+sented as a simple linear programming (LP) problem, and thus well-established
+mathematical tools can be used to tackle the optimization problem parametrically.
+To analyze optimization problems with large sets of feasible solutions, such as all
+possiblesecondarystructuresthatcouldformfromaparticularsequenceofRNA,a
+(relatively)concisedescriptionof the possibilities is required. This canbe achieved
+by constructing the convex polytope associated with the LP problem at hand.
+The theory of convex polytopes and normal fans is well-developed, so we will
+not reproduce it here. Rather we present just the definitions needed for a rigorous
+description of the results in Section 3. More information on these applications of
+polytopes is given in [24, 31, 4]; readers wishing to gain a thorough understanding
+of the theory can see [11, 39, 3].
+The theory of linear programming starts from the following question: Given a
+set of feasible solutions X in Rn and a vector A ∈ Rn , for which x ∈ X is the
+objective function Ax minimized?
+For a fixed A, this is a straightforward question; however as A varies, different
+vectors in the set X will minimize Ax. If X is a large or infinite set it may be
+simpler to deal with a geometric region containing X, than with the original set
+of feasible solutions itself. A convex polytope is a bounded region in Rn which can
+be described by a finite number of linear inequalities aix ≤ ci. A hyperplane is a
+supportinghyperplane forapolytopeP ifitintersectsP non-triviallybutnointerior
+point ofP is onthe hyperplane. A k-face ofP is a k-dimensionalintersectionof P
+with a supporting hyperplane. A 0-face is a vertex of P, a 1-faceis anedge, andso
+on, with the n−1 dimensional faces called facets. The (unique) n-face is defined
+to be the entire polytope.
+The convex hull of a set X is the smallest convex set containing X. If X is a
+finite set, its convex hull P is the set
+(1) P = bxx: each bx ≥0 and bx =1 .
+(x∈X x∈X )
+BRANCHING POLYTOPES FOR RNA SEQUENCES 5
+Equivalently, Eq. (1) can be used as a definition of a convex polytope—that is, a
+convex polytope is the convex hull of a finite set. It is a fundamental theorem in
+the field that these two definitions of convex polytopes are equivalent. Figure 2
+shows the convex hull of a finite set in R2.
+Figure 2. The convex hull of the set X: a polytope with four
+0-faces, four 1-faces, and one 2-face.
+Theboundaryofapolytopeistheunionofitsfacetsandcontainsallfacesexcept
+then-face. IfthepolytopeP istheconvexhullofasetX offeasiblesolutions,then
+the boundary of P contains all optimal solutions (i.e. all vectors that minimize
+Ax for non-zero A). Thus, studying the polytope rather than the original set X
+simplifies the optimization problem.
+Inpractice,however,computingthe convexhullofthe feasiblesetX istypically
+a hard problem. We usually know too little about the set of feasible solutions
+to construct the convex hull directly. In computational biology, it is usually the
+case that the feasible set is defined implicitly by some intrinsic rules of the linear
+programming problem. The real challenge, then, is to extract information about
+the feasible setfromthese intrinsic rules. Inthis chapter,we consider two different
+methods for constructing the convex hull: polytope propagation and incremental
+convex hull. We will discuss these methods further in Section 3.2.
+Thedualobjecttothe polytopeisitsnormal fan. Thenormalfanisacollection
+ofregionsofRn calledcones. IfF is afaceofthe polytope,the conecorresponding
+to F, denoted CF, is the set of all vectors B such that any point y∈F minimizes
+the product Bx—that is,
+:By≤Bx for all x∈P,y∈F}.
+Thenormalfanisrepresentedvisually,asinFig.3,bydrawingthevectorsB∈CF
+with their heads at the face F.
+The normal fan of a polytope of dimension d is a partition of the
+d-vector lies in some cone, and the cones are preserved by positive scalar multipli-
+cation. The cones from Fig. 3, for example, if drawn so that their heads are the
+origin, clearly fill the entire space R2, as shown in Fig. 4.
+Once we have constructed the convex hull of feasible solutions for a particular
+LP problem, the normal fan provides ways to discuss the stability of a parameter
+6 DRELLICH,GAINER-DEWAR,HARRINGTON,HE,HEITSCH,ANDPOZNANOVIĆ
+Figure 3. The cones corresponding to the vertices of polytope
+P, drawn “pointing into” their vertices. Also shown: the normal
+vectors to each 1-face of the polytope.
+vector A. If A is near the boundary of a cone of the normal fan, then a small
+change in A will result in a different point of the polytope optimizing the function.
+However if A is far from any boundaries of its cone, then small changes will not
+change which point of the polytope optimizes Ax.
+In Section 3 we use the NNTM free energy calculation as our objective function
+andthespaceofallfeasiblesecondarystructuresoveragivenRNAsequenceasthe
+point set. Treating this objective function as a linear functional and applyling the
+machinery of linear programming produces what we term the branching polytope,
+which we use to analyze the parameters in the model related to multibranch loops.
+Figure 4. The normal fan of the polytope fills R2.
+3. RNA branching polytope
+BRANCHING POLYTOPES FOR RNA SEQUENCES 7
+3.1. NNTM. In Sections 1 and 2.1, we introduced the discrete optimization par-
+adigm for RNA secondary structure prediction. Before we consider applications
+of geometric combinatorics for parametric analysis of this method, we review it in
+greater detail.
+Discrete optimization methods for RNA secondary structure prediction derive
+their objective function from the NNTM. If we make the standard simplifying as-
+sumption to forbid pseudoknots, we can formulate the free-energy minimization
+problemrecursively;dynamic programmingcan then be used to find the minimum
+energy and a traceback algorithm can determine a corresponding structure.
+ThespecificobjectivefunctionusedforNNTManalysishasevolvedsubstantially
+overtheyears(cf.[22,34,42]),withasignificantincreaseinthenumberofparame-
+ters. The Turner99 versionconsideredhere, obtained from the NearestNeighbor
+Database [33], has over eight thousand parameters representing the energy contri-
+butions of various small substructures—some (∼ 300) measured directly through
+experiments,others(∼7000inferredindirectly fromexperimentaldata,andfinally
+a handful through machine learning techniques to tune the model. Among those
+inferred through machine learning are three connected to multibranch loops, such
+as the one at the center of Fig. 1.
+In particular, the Turner99 version of the model we study assigns to a given
+multibranch loop the energy
+(2) ∆G =a+b·(# unpaired nucleotides)+c·(# branching helices)
+initiation
+where a, b, and c are three of the learned parameters. The free energy changes
+associatedwith multibranch loops have in fact been studied experimentally [6, 18].
+However, these results do not map neatly onto the linear function from Eq. (2),
+which is a computational simplification—a logarithmic dependence on loop size
+would be more biophysically accurate, but the dynamic programming approach
+requiresa recursivedecompositionthat wouldnotbe possiblewith sucha function.
+Recentworkhasledtothedevelopmentofnewapproachestoloopenergyestimation
+[38, 1], which rank structures more accurately but do not translate neatly into the
+discrete optimization setting.
+Rather than focus on specific values of parameters, we investigate the behavior
+of the model as a function of the parameters, hoping to gain some insight into
+(for example) how sensitive the model is to each one and whether certain families
+of sequences exhibit increased or reduced sensitivity. If we could compute the
+collection of all secondary structures T for a given sequence S, we could attack
+this question directly. Unfortunately, this collection is far too large to compute
+explicitly—the total number of secondary structures on n bases is known to grow
+exponentially with n [28], and specific sequences of biologically-relevant lengths
+may have 1050 or more possible structures—so we need to trim the problem down
+in scope.
+To do this, we mathematically reformulate the NNTM as a simple linear func-
+tional focusing on the branching loop energy calculations. For a given RNA se-
+quence, let T be a secondary structure with x multibranch loops, y unpaired nu-
+cleotidesinthosemultibranchloops,andzhelicesbranchingfromthosemultibranch
+loops. Let a = 3.4, b = 0, and c = 0.4 be the values of the parameters a,
+b, and c in the Turner99 assignment. Then the energy ∆G associated to the
+8 DRELLICH,GAINER-DEWAR,HARRINGTON,HE,HEITSCH,ANDPOZNANOVIĆ
+secondary structure T is given by
+(3) ∆GT =a
+for a “leftover” energy value w which can be computed using the model. We call
+the vector hx,y,z,wi the (branching) energy signature of the secondary structure
+T. Crucially, this energy signature does not actually depend on the Turner99
+values of a, b, and c; the numbers x, y, and z are simply the integer counts of
+certain substructures, while the leftover energy w represents the non-multibranch-
+loop components of the energy calculation including the energy of the helices that
+meet the multibranch loops. Treating all other energy components as a single
+variable w allows us to focus on the multibranch parameters exclusively while also
+linearizing the optimization problem.
+Let a, b, c, and d be four arbitraryrationals. For a given secondary structure T
+on a given RNA sequence, we can compute an associated parameterized energy:
+for the energy signature hx,y,z,wi of T.
+Givenaparticularparametervectorha,b,c,diandRNAsequenceS,wecanfind
+the secondary structure T which minimizes Eq. (4) using existing software; the
+details of this computation are discussed in Section 3.3. However, to understand
+how the model behaves for all possible values of the parameters a, b, and c, we
+will need to bring the powerful machinery of linear programming and polyhedral
+geometry to bear on the problem.
+3.2. Polyhedral methods and convex hulls. Although the collection of sec-
+ondarystructures fora givensequence is enormous,itis neverthelessfinite, andits
+correspondingenergy signaturesoccupy a bounded regionof R4. We thus shift our
+attention to this region—specifically, to the convex hull of the collection of signa-
+ture vectors for the sequence which we refer to as the branching polytope. Unlike a
+classical LP problem, in which the feasible region is explicitly defined by inequal-
+ities, the collection of all branching signatures is implicitly defined by the NNTM
+andtheRNAsequence. Asaresult,wehavelittleinformationaboutthebranching
+polytope. Onthe otherhand, we havea dynamic programmingalgorithmthatcan
+find an energy-minimizing RNA configurationfor any particular set of parameters.
+Henceitisnaturaltotrytoconstructtheconvexhullofthesignaturevectorsusing
+this dynamic programming algorithm.
+The first approach we consider is polytope propagation [23]. Polytope prop-
+agation has been used in parametric analysis of various problems, such as DNA
+sequence alignment and hidden Markov model for gene annotation [24]. This al-
+gorithm computes the convex hull by recursive convex hull and Minkowski sum
+computations on unions of polytopes. The recursions are related to the dynamic
+programmingalgorithmfor calculatingMFE structures. Namely, the dynamic pro-
+gramming algorithms we use involve decomposing a problem into a sum of smaller
+problems, each of which is a minimization problem involving only addition. The
+minimization operations can be translated into taking convex hulls of unions of
+polytopes, while the sums can be translated into polytope Minkowski sums, trans-
+porting the algorithm directly into the geometric domain.
+However,whilethetranslationfromdynamicprogrammingtopolytopealgebrais
+mathematically very elegant, polytope propagationmight not be the most efficient
+BRANCHING POLYTOPES FOR RNA SEQUENCES 9
+way to compute the RNA branching polytope. The intermediate polytope compu-
+tations required in this approach(convex hulls and Minkowski sum) are expensive
+forcomplicatedpolytopes,andthesecostsquicklyaddup. Infact,empiricalresults
+show that polytope propagation is often outperformed by incremental convex hull
+approaches, especially for high-dimensional models [5]. In addition, applying the
+polytope propagationapproachwouldrequirere-implementing the optimizational-
+gorithm from scratch without taking advantage of the existing fast, peer-reviewed
+software for NNTM prediction.
+As a result, we instead use a variant of the Beneath-and-Beyond approach. The
+coreideaofBeneath-and-BeyondwasintroducedbyGrünbaumin[11]asamethod
+to find the facets of the convex hull of a given point set. Huggins [15] developed
+his iB4e algorithm, which applies this idea to specialized LP problems such as
+ours. The basic idea of iB4e method is to build the convex hull incrementally—
+that is, to add one vertex at a time to an already constructed convex hull, by
+systematically solving LP problems to either expand the hull or confirm that some
+partofitmatchesthefinalhull. Theobjectivevectorsarechosensothataftereach
+iteration, either a new vertex of the convex hull is found or a facet of the convex
+hull is confirmed. This ensures that the method requires running the LP solver for
+no more than O(V +F) objective vectors, if the convex hull has V vertices and F
+facets. The algorithmiB4eapplies to abstractconvex-hull-findingproblems inany
+dimension, so we describe it here in full generality.
+Before the main loop of the algorithm can be applied, we must perform an
+initializationstep whichfinds a collectionofpoints whoseaffine hull is the same as
+the affine hull of the branching polytope we aim to construct. (Several approaches
+to this step are possible; for example in
+one might run the LP solver with the
+2nbasisvectorsh±1,0,...,0i,h0,±1,...,0i,...,h0,...,0,±1i.) Wethencompute
+the convex hull of these points and label all facets of the convex hull as ‘tentative,’
+as illustrated in Fig. 5a.
+We then beginthe mainloopofthe algorithm. Ateachstep, wepick atentative
+facet,useitsouternormalvectorasobjectivefunction,andapplytheLPsolverwith
+thisobjective. IfthesignatureoftheoptimalRNAstructurefortheseparametersis
+notoutsidethe knownhull,asillustratedinFig.5b, thatfacetbecomes‘confirmed’
+and the process is restarted with another tentative facet. However,if the resulting
+signatureisoutsidetheknownhull,asillustratedinFig.5c,weaddittothevertex
+set, compute the new convex hull, and label the newly added facets as tentative.
+The processis repeateduntil allfacets areconfirmed. In the case ofaparticular
+RNA sequence, the set of all possible secondary structures is finite and thus set of
+signaturesisalsofinite. Theprocessmustterminateanditsendresultistheconvex
+hull of the set of all solutions to the LP solver. This is the branching polytope,
+andoncewehavecomputeditwecaneasilycomputeitsnormalfanusingstandard
+methods and proceed to study the model.
+3.3. Computing the branching polytope with pmfe. It is conceptually natu-
+raltoapplytheBeneath-and-Beyondalgorithmtocomputethebranchingpolytope
+of a particular RNA sequence by treating the parametrized NNTM minimization
+problem as a linear program. However, coupling the two algorithms to perform
+the computation requires some care. We introduce the software pmfe, available
+10 DRELLICH,GAINER-DEWAR,HARRINGTON,HE,HEITSCH,ANDPOZNANOVIĆ
+(a) Initialization (b) Confirming a tentative facet
+(c) Extendinga tentativefacet
+Figure 5. The Beneath-and-Beyondalgorithm for polytope construction
+build and install the software are provided in the file README.md of that reposi-
+tory. Alternatively, a ready-to-use version of the software is available in a Docker
+container, posted publicly on the Docker hub as agdphd/pmfe.
+The pmfe package has three components (see Fig. 6): iB4e, findmfe, and
+scorer.
+• iB4eisanimplementationofHuggins’algorithmasaheader-onlytemplate
+library in C++, taking advantage of the CGAL computational geometry
+library [30] to handle the geometric computations.
+• findmfe takes a parameter vector P = ha,b,c,di and an RNA sequence
+S as input and returns as output a secondary structure on S which has
+minimal energy with respect to P. From the available software packages
+whichimplementNNTMoptimization,wechosetobasefindmfeonGTfold
+[20] because it is parallelized and thus able to take advantage of modern
+multi-core desktop computers. Some modifications were required to adapt
+it to our use. For computational efficiency, GTfoldperforms all arithmetic
+with fixed precisionoftwo decimal places;we convertedit to use arbitrary-
+precisionrationalarithmeticbasedontheGMPlibrary[10],whichincreases
+running time by an order of magnitude but ensures that the results are
+BRANCHING POLYTOPES FOR RNA SEQUENCES 11
+exact even when parameters are not multiples of 1/100. We also added
+aninterfaceto modify the multibranchparametersha,b,ciandthe dummy
+scaling parameter d programmatically, allowing the Beneath-and-Beyond
+algorithm to treat GTfold as a function of these four variables and call it
+repeatedly.
+• scorertakesanRNAsequenceS andasecondarystructureT andreturns
+the signature vector hx,y,z,wi of T according to Eq. (3). (In particular,
+it computes the value of w by computing the energy decomposition of T
+under the Turner99 parameters.)
+We combine these three components with the control flow illustrated in Fig. 6
+to create the pmfe software package. Given an RNA sequence S, the iB4e module
+repeatedly generates parameter vectors according to Huggins’ algorithm. Each of
+thesevectorsissenttothefindmfemoduleasaquery,whichgeneratesasecondary
+structurewithminimalenergy. Eachsuchsecondarystructureissenttothescorer
+moduletofinditssignaturevector,whichisthensentbacktoiB4easthe response
+to the query. After some number of iterations of this loop, the convexhull ofthese
+signaturepointssisfoundtobeequaltothebranchingpolytope,whichisreturned
+to the user. (For convenience, we in fact provide the user with a file containing
+both the signatures s and their associated structures T in condensed dot-bracket
+notation.)
+iB4e Polytope
+findmfe scorer
+Figure 6. Control flow of the pmfe software
+Since the softwarepmfewhich we introduce is complex andextensively modifies
+the peer-reviewed codebase of GTfold, we provide a testing framework to ensure
+correctness. Testsareavailabletoensurethatpmfereturnsthesamestructuresand
+scores as GTfold, using both the classical Turner99 parameters [17] and various
+modified parameter sets for a variety of natural and synthetic RNA sequences.
+Details for running these tests are available in the pmfe repository.
+We also provide a module rna_poly in the SageMath computer algebra system
+[29] which can be used to study the branching polytopes produced by pmfe. This
+canbeusedtogenerateavarietyofvisualizationsofthenormalfanofthebranching
+polytope. Inparticular,itprovidesasimpleinterfacefortakingthed=1sliceofthe
+12 DRELLICH,GAINER-DEWAR,HARRINGTON,HE,HEITSCH,ANDPOZNANOVIĆ
+fan,givinga polyhedralpartitionofR3 whoseregionsarecollectionsofparameters
+ha,b,ciwhichyieldthesamesecondarystructureforthesequenceunderstudy. The
+results are illustrated in Fig. 7, which shows the b = 0,d = 1 slice of the normal
+fan of the branching polytope for a H.sapiens tRNA sequence. The Turner99
+parametervalues a =3.4,c =0.4aremarkedwith a circlejust northeastofthe
+origin.
+0 10 20 30
+multibranch loop initiation penalty (a)
+H.sapiens tRNA
+b=0: 36 slices visible
+Figure 7. Theintersectionoftheparameterspacedecomposition
+for a H.sapiens tRNA sequence with b=0.
+3.4. Biologicalquestionsleadingtomathematicalproblems. TheRNAbranch-
+ingpolytopeandthe associatedpolyhedraldecompositionofthe three-dimensional
+multibranch parameter space obtained by intersecting its normal fan with d = 1
+encapsulate the dependency of the optimization on the parameters a,b,c. Various
+questions related to accuracy and stability can be addressed through the analy-
+sis of the polytope and the polyhedral decomposition. However, answering such
+questions in a manner that is biologically relevantrequires considerationof certain
+subtleties and this leads to interesting mathematical problems. Here we discuss a
+few biological questions that could be addressed through the parametric analysis
+and related mathematical problems that arise.
+Question 1: How robust is the optimization for a given RNA sequence?
+In the strictest sense, the prediction is sensitive if a variation of the parameters
+within an allowed margin of error produces different optimal secondary structures.
+This occurs if the distance of the Turner99 parameters (a ,b ,c ) from the
+boundary of the polyhedron that contains this point is smaller than the allowed
+marginof error. For example, Fig. 7 shows the position of (a ,b ,c ) within the
+polyhedral decomposition of a H.sapiens tRNA (only the b = 0 slice is depicted,
+which is the baseline value in Turner99). Its distance to the boundary is 0.13699
+BRANCHING POLYTOPES FOR RNA SEQUENCES 13
+and, for instance, optimization using a=3.39130,b=−0.14786,c=0.37391yields
+structures with a different signature.
+However, this by itself does not mean that the optimization is very sensitive;
+analysis of the structure space is required so that one can quantify the sensitivity.
+Namely, two structures with different signatures may still have a lot of structural
+similarities(forexample,verysimilarlonghelicesandbranchingpattern),inwhich
+case one would not necessarily say that the prediction is very sensitive. Moreover,
+since the structure-to-signaturemap is not one-to-one,when quantifying the struc-
+turaldifferencesintheoptimalstructuresoneactuallyneedstocomparetwosetsof
+structures,eachonecorrespondingtoagivensignature. Inshort,intheassessment
+of robustness we face the following problem.
+Problem 1: Defineagood representativeof theset of structuresthatcorrespond
+to the same signature.
+The problem of representing a whole set of structures by a single one has ap-
+peared before, for example in the context of compact representation of a sample
+of structures. However, the methods developed for this (e.g. sfold clustering [7]
+and profiling [27]) usually assume structural similarities of the elements in the set.
+Here, though, we are presented with a different set-up: the structures mapping
+to the same signature do not a priori have any common motifs. Therefore, choos-
+ing one consensus structure as the other methods do may not yield a reasonable
+representative of the whole set.
+Question 2: How much can the prediction of secondary structure be improved
+for a given sequence?
+For sequences for which the native structure has been obtained experimentally
+or via comparative sequence analysis, one could assess the accuracy of the NNTM
+by comparing it to the MFE structure. In fact, since the structures corresponding
+to all signatures on the boundary of the branching polytope can in practice be
+obtained fairly efficiently [37], one can precisely determine branching parameters
+that would yield a signature corresponding to a structure that is closest to the
+native one. However, here we again face the problem that besides the most accu-
+rate one, that signature corresponds to a whole set of MFE structures that might
+be very different from the native structure. In such a case, the almost accurate
+structure might be unrecognizable. Therefore, in assessing accuracy, the problem
+offinding agoodrepresentativestructureforagivensignatureis stillveryrelevant.
+Furthermore, even if we can solve this problem, the most accurate prediction ob-
+tainedthiswaymayrequireatripleofparameters(a,b,c)thatisverydifferentfrom
+(a ,b ,c ), which may not be very desirable. Namely, even though (a ,b ,c )
+99 99 99 99 99 99
+were not obtained experimentally, they still might have some biological relevance
+sincetheinitiationpointforthegeneticalgorithmusedwassuggestedbystabilities
+determined by optical melting for an RNA multibranch loop with three branching
+helices [17]. This suggests the following natural problem.
+Problem2: Maximizetheimprovementinaccuracywhileminimizingparameter
+change.
+One mathematical subproblem here is to formulate an objective function which
+appropriatelymeasuresthedifferencebetweentwoRNAsecondarystructures. While
+there are simple structure metrics that can be very efficiently computed (e.g. the
+base pair metric based on symmetric set difference), other metrics may be more
+appropriate to quantify the structural differences [21].
+14 DRELLICH,GAINER-DEWAR,HARRINGTON,HE,HEITSCH,ANDPOZNANOVIĆ
+Another importantsubproblemis formulatinganappropriatemetric to measure
+changes in parameter values. Standard metrics such as the p-metrics can be ap-
+plied, since the parameter vectors are taken from R4, but it is not clear which is
+most appropriate. Furthermore, careful consideration should be given to how each
+component of the parameter vector is weighted: a unit change in each coordinate
+may have significantly different impacts on the secondary structure. For example,
+since a given multibranch loop in a structure has several unpaired nucleotides, a
+small change (e.g. by 0.1) in b in general has bigger effects on the prediction than
+the same change in a.
+Question 3: Is there a choice of branching parameters that would improve the
+prediction accuracy for a family of sequences?
+Homologous sequences perform the same function in different species and they
+fold into essentially the same structure. However,their MFE prediction accuracies
+can vary significantly. For instance, within the tRNA family, the accuracy calcu-
+lated as the F-measure (the harmonic mean of the MFE sensitivity and positive
+predictive value against true positive base pairs) ranges from the minimal 0 to
+the maximal 1 [27]. Hence, it is natural to try to find a set of parameters which
+yieldsthehighestaccuracyforafamilyofsequences. Forthis,oneneedstoaddress
+the question: Are there any patterns in the dependency of the prediction on the
+parameters across a family of homologous sequences? Mathematically, one could
+phrasethis asaproblemoffinding similaritiesbetweenpolytopesin R4 orbetween
+polyhedral decompositions of R3. For example, Fig. 8 shows the b = 0 slice of
+the polyhedral decompositions for a tRNA sequence of L.delbrueckii. By visually
+comparing this figure to Fig. 7 one can notice similarities in the directions of the
+splitting hyperplanes. The challenge of course is to quantify such similarities. So,
+we face the following problem.
+Problem 3: Find a way to compare branching polytopes.
+Comparison of polytopes is a problem that has appeared before, for instance in
+relation to the traveling salesman problem in optimization [9]. Even in optimiza-
+tion problems when one works with relaxation polytopes that are, loosely speak-
+ing,“close,”comparingrelaxationsisnotwellunderstoodanddifferentcomparison
+methods havebeen suggested(e.g.[16]). In ourcase,anadditionalchallengeis the
+fact that the polytopes to be compared do not a priori satisfy any mathematically
+tractable assumptions for closeness.
+4. Conclusions
+The affine energy function which governs the branching of an RNA secondary
+structureundertheNNTMoptimizationisaknownweaknessofthethermodynamic
+model, and the methods from geometric combinatorics outlined here offer signifi-
+cant potential to assess its accuracy and stability through a parametric analysis.
+While simplified models are certainly more tractable, the new pmfe computational
+framework makes possible the analysis of branching polytopes for real RNA se-
+quences for the first time. As illustrated by the qualitative similarities between
+Fig.7 and Fig.8, this approachis capturing some interesting characteristicswhich
+are preserved between two different sequences. Moreover,as discussed, moving be-
+yondthequalitativecomparisonofpolytopeslicestoquantifytheirsimilaritiesand
+differences presents some interesting mathematical challenges. Consequently, it re-
+mains to be seen whether the observed patterns in these proof-of-principle results
+BRANCHING POLYTOPES FOR RNA SEQUENCES 15
+0 10 20 30
+multibranch loop initiation penalty (a)
+L.delbrueckii tRNA
+b=0: 38 slices visible
+Figure 8. The b = 0 slice of the parameter space decomposition
+for a L.delbrueckii tRNA sequence.
+areresultingfromthestructureofthethermodynamicoptimizationand/orthecod-
+ing ofstructuralmotifs in the basepairing ofthese RNA sequences. Resolvingthis
+dichotomy will reveal much about the interplay between mathematics and biology
+in the prediction of RNA secondary structures.

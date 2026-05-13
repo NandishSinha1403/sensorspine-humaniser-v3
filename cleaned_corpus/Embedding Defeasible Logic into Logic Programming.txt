@@ -1,0 +1,1127 @@
+1v5501150/sc:viXra
+Toappear inTheory and Practice of Logic Programming (TPLP) 1
+Embedding Defeasible Logic into Logic
+Programming
+Grigoris Antoniou
+Institute of Computer Science, FORTH, Greece
+antoniou@ics.forth.gr
+David Billington
+School of ICT, Griffith University, Australia
+d.billington@griffith.edu.au
+Guido Governatori
+School of ITEE, University of Queensland, Australia
+guido@itee.uq.edu.au
+Michael J. Maher
+National ICT Australia, c/o UNSW, Australia
+mmaher@cse.unsw.edu.au
+submitted 20 September 2004; revised 12 October2005; accepted 8 November 2005
+Defeasiblereasoningisasimplebutefficientapproachtononmonotonicreasoningthathas
+recentlyattractedconsiderableinterestandthathasfoundvariousapplications.Defeasible
+logic and its variants are an important family of defeasible reasoning methods. So far no
+relationship hasbeenestablished between defeasible logic and mainstream nonmonotonic
+reasoning approaches.
+Inthispaperweestablishcloselinkstoknownsemanticsoflogicprograms.Inparticular,
+we give a translation of a defeasible theory D into a meta-program P(D). We show that
+undera condition of decisiveness, thedefeasible consequences of D correspond exactly to
+thescepticalconclusionsofP(D)underthestablemodelsemantics.Withoutdecisiveness,
+theresult holds onlyin onedirection (all defeasible consequencesof D are includedin all
+stable models of P(D)). If we wish a complete embedding for the general case, we need
+touse theKunen semantics of P(D), instead.
+KEYWORDS:Defeasiblelogic, stablesemantics,Kunensemantics,non-monotoniclogic.
+1 Introduction
+Defeasible reasoning is a nonmonotonic reasoning (Marek and Truszczynski 1993)
+approach in which the gaps due to incomplete information are closed through the
+useofdefeasiblerulesthatareusuallyappropriate.Defeasiblelogicswereintroduced
+and developed by Nute (1994) over several years. These logics perform defeasible
+reasoning,whereaconclusionsupportedbyarulemightbeoverturnedbytheeffect
+2 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+ofanotherrule.Roughly,apropositionpcanbedefeasiblyproved(+∂p)onlywhen
+a rule supports it, and it has been demonstrated that no applicable rule supports
+¬p;thisdemonstrationmakesuseofstatements−∂qwhichmeanintuitivelythatan
+attempttoproveq defeasiblyhasfailedfinitely.Theselogicsalsohaveamonotonic
+reasoning component, and a priority on rules. One advantage of Nute’s design was
+that it was aimed at supporting efficient reasoning,and in our work we follow that
+philosophy.
+Defeasible reasoning has recently attracted considerable interest. Its use in vari-
+ousapplicationdomainshasbeenadvocated,includingthemodellingofregulations
+andbusinessrules(Morgensten 1998;Antoniou et al. 1999),modellingofcontracts
+(Grosof et al. 1999;Grosof 2004;Governatori2005),legalreasoning(Prakken 1997;
+Governatoriet al. 2005),agentnegotiations(Governatoriet al. 2001),modellingof
+agentsandagentsocieties(Governatori and Rotolo 2004;Governatoriand Padmanabhan2003;
+Governatoriet al. 2004),andapplicationstotheSemanticWeb(Bassiliades et al. 2004;
+Antoniou 2002). In fact, defeasible reasoning (in the form of courteous logic pro-
+grams (Grosof 1997; Grosof et al. 1999)) provides a foundation for IBM’s Business
+RulesMarkupLanguageandforcurrentW3Cactivitiesonrules(Grosof and Poon 2003;
+Grosof et al. 2002). In addition, defeasible theories, describing policies of business
+activities,canbeminedefficientlyfromappropriatedatasets(Johnston and Governatori2003).
+Therefore defeasible reasoning is a promising subarea in nonmonotonic reasoning
+as far as applications and integration to mainstream IT is concerned.
+Recenttheoreticalworkondefeasiblelogicshas:(i)establishedsomerelationships
+tootherlogicprogrammingapproacheswithoutnegationasfailure(Antoniou et al. 2000);
+(ii)analysedtheformalpropertiesoftheselogics(Antoniou et al. 2001;Maher 2000;
+Maher 2001) as well as formal semantics for them in form of model theoretic se-
+mantics(Maher 2002)andargumentationsemantics(Governatori et al. 2004),and
+(iii) has delivered efficient implementations (Maher et al. 2001).
+However the problem remains that defeasible logic is not firmly linked to the
+mainstream of nonmonotonic reasoning, in particular the semantics of logic pro-
+grams.Thispaperaimsatresolvingthisproblem.Weusethetranslationofadefea-
+sibletheoryDintoalogicmeta-programMproposedin(Maher and Governatori1999).
+For this translation we can show that, for the propositional case:
+p is defeasibly provablein D ⇐⇒ p is included in all stable models of M. (∗)
+However this result can only be shown under the additional condition of decisive-
+ness: the absence of cycles in the atom dependency graph.
+If we wish to drop decisiveness, (∗) holds only in one direction, from left to
+right. We show that if we wish the equivalence in the general case, we need to
+use another semantics for logic programs,namely Kunen semantics (Kunen 1987).
+In addition the possibility of cycles in the atom dependency graph of a defeasible
+theory prevents Defeasible Logic to be characterised by well-founded semantics
+(Gelder et al. 1991).ItispossibletomodifyDefeasibleLogictoaccommodatewell-
+founded semantics (Maher and Governatori1999) even if this results in a more
+expensive computational model.
+Thepaperisorganisedasfollows.Sections2and3presentthebasicsofdefeasible
+Embedding Defeasible Logic into Logic Programming 3
+logic and logic programming semantics, respectively. Section 4 presents our trans-
+lation of defeasible theories in logic programs, while section 5 contains the main
+results.
+2 Defeasible Logic
+2.1 A Language for Defeasible Reasoning
+A defeasible theory (a knowledge base in defeasible logic) consists of five different
+kinds of knowledge: facts, strict rules, defeasible rules, defeaters, and a superiority
+relation.
+Facts are literals that are treated as known knowledge (given or observed facts
+of a case).
+Strict rules are rules in the classical sense: whenever the premises are indisputable
+(e.g. facts) then so is the conclusion. An example of a strict rule is “Emus are
+birds”. Written formally:
+Defeasible rules are rules that can be defeated by contrary evidence. An example
+of such a rule is “Birds typically fly”; written formally:
+bird(X)⇒flies(X).
+The idea is that if we know that something is a bird, then we may conclude that it
+flies, unless there is other, not inferior, evidence suggesting that it may not fly.
+Defeaters are rules that cannot be used to draw any conclusions. Their only use is
+topreventsomeconclusions.Inotherwords,theyareusedtodefeatsomedefeasible
+rules by producing evidence to the contrary. An example is “If an animal is heavy
+then it might not be able to fly”. Formally:
+The main point is that the information that an animal is heavy is not sufficient
+evidence to conclude that it doesn’t fly. It is only evidence against the conclusion
+thataheavyanimalflies.Inotherwords,wedon’twishtoconclude¬fliesifheavy,
+we simply want to prevent a conclusion flies.
+The superiority relation among rules is used to define priorities among rules, that
+is, where one rule may override the conclusion of another rule. For example, given
+the defeasible rules
+r : bird(X) ⇒flies(X)
+r′ : brokenWing(X) ⇒¬flies(X)
+which contradict one another, no conclusive decision can be made about whether
+a bird with brokenwings can fly. But if we introduce a superiority relation > with
+r′ > r, with the intended meaning that r′ is strictly stronger than r, then we can
+indeed conclude that the bird cannot fly.
+It is worth noting that, in defeasible logic, priorities are local in the following
+4 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+sense:Tworulesareconsideredtobe competingwithoneanotheronlyiftheyhave
+complementaryheads.Thus,sincethesuperiorityrelationisusedtoresolveconflicts
+amongcompetingrules,itisonlyusedtocompareruleswithcomplementaryheads;
+the information r >r′ for rules r,r′ without complementary heads may be part of
+the superiority relation, but has no effect on the proof theory.
+2.2 Formal Definition
+Inthispaperwerestrictattentiontoessentiallypropositionaldefeasiblelogic.Rules
+with free variables are interpreted as rule schemas, that is, as the set of all ground
+instances;in suchcaseswe assumethat the Herbranduniverseis finite. We assume
+thatthereaderisfamiliarwiththenotationandbasicnotionsofpropositionallogic.
+If q is a literal, ∼q denotes the complementary literal (if q is a positive literal p
+then ∼q is ¬p; and if q is ¬p, then ∼q is p).
+Rulesaredefinedoveralanguage(orsignature)Σ,thesetofpropositions(atoms)
+and labels that may be used in the rule.
+A rule r : A(r) ֒→ C(r) consists of its unique label r, its antecedent A(r) (A(r)
+may be omitted if it is the empty set) which is a finite set of literals, an arrow ֒→
+(which is a placeholder for concrete arrowsto be introduced in a moment), and its
+head (or consequent) C(r) which is a literal. In writing rules we omit set notation
+for antecedents and sometimes we omit the label when it is not relevant for the
+context.Therearethreekindsofrules,eachrepresentedbyadifferentarrow.Strict
+rules use →, defeasible rules use ⇒, and defeaters use ❀.
+Given a set R of rules, we denote the set of all strict rules in R by R , and the
+setofstrictanddefeasiblerulesinRbyR .R[q]denotesthesetofrulesinRwith
+consequent q.
+A superiority relation on R is a relation> on R.When r >r ,then r is called
+superior to r , and r inferior to r . Intuitively, r >r expresses that r overrules
+2 2 1 1 2 1
+r ,shouldbothrulesbeapplicable.>mustbeacyclic(thatis,itstransitiveclosure
+must be irreflexive).
+A defeasible theory D is a triple (F,R,>) where F is a finite set of facts, R a
+finite set of rules, and > an acyclic superiority relation on R.
+2.3 Proof Theory
+A conclusion of a defeasible theory D is a tagged literal. A conclusion has one of
+the following four forms:
+• +∆q,whichisintendedtomeanthattheliteralq isdefinitelyprovable,using
+only strict rules.
+• −∆q, which is intended to mean that q is provably not definitely provable
+(finite failure).
+• +∂q, which is intended to mean that q is defeasibly provable in D.
+• −∂q which is intended to mean that we have proved that q is not defeasibly
+provable in D.
+Embedding Defeasible Logic into Logic Programming 5
+Provabilityis defined below. It is based on the concept of a derivation (or proof)
+in D = (F,R,>). A derivation is a finite sequence P = P(1),...,P(n) of tagged
+literals satisfying the following conditions. The conditions are essentially inference
+rulesphrasedasconditionsonproofs.P(1..i)denotestheinitialpartofthesequence
+P of length i.
++∆: If P(i+1)=+∆q then either
+Thatmeans,toprove+∆qweneedtoestablishaproofforqusingfactsandstrict
+rules only. This is a deduction in the classicalsense – no proofs for the negation of
+q needtobeconsidered(incontrasttodefeasibleprovabilitybelow,whereopposing
+chains of reasoning must be taken into account, too).
+To prove −∆q, i.e. that q is not definitely provable, q must not be a fact. In
+addition, we need to establish that every strict rule with head q is known to be
+inapplicable.Thus for everysuchrule r there mustbe atleastoneantecedenta for
+which we have established that a is not definitely provable (−∆a).
++∂: If P(i+1)=+∂q then either
+(2.3.2) ∃t∈R [q] such that
+Let us illustrate this definition. To show that q is provable defeasibly we have
+two choices: (1) We show that q is already definitely provable; or (2) we need to
+argue using the defeasible part of D as well. In particular, we require that there
+mustbe a strictordefeasible rulewith headq whichcanbe applied(2.1).Butnow
+we need to consider possible “attacks”, that is, reasoning chains in support of ∼q.
+To be more specific: to prove q defeasibly we must show that ∼q is not definitely
+provable(2.2).Also(2.3)wemustconsiderthe setofallruleswhicharenotknown
+to be inapplicable and which have head ∼q (note that here we consider defeaters,
+too,whereastheycouldnotbe usedtosupportthe conclusionq;this isinlinewith
+the motivation of defeaters given above). Essentially each such rule s attacks the
+conclusion q. For q to be provable, each such rule s must be counterattacked by a
+rule t with head q with the following properties: (i) t must be applicable at this
+point,and(ii) t mustbe strongerthan (i.e.superiorto) s.Thus eachattackonthe
+conclusion q must be counterattackedby a stronger rule.
+6 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+(2.3) ∃s∈R[∼q] such that
+(2.3.2) ∀t∈R [q] either
+To prove that q is not defeasibly provable, we must first establish that it is not
+definitely provable. Then we must establish that it cannot be proven using the
+defeasible partof the theory.There are three possibilities to achievethis: either we
+have established that none of the (strict and defeasible) rules with head q can be
+applied(2.1);or∼q isdefinitely provable(2.2);orthere mustbe anapplicable rule
+s with head ∼q such that no applicable rule t with head q is superior to s.
+Ingeneraltheinferenceconditionsforanegativeprooftag(i.e.,−∆,−∂)explore
+all the possibilities to derive a literal (with a given proof strength) before stating
+that the literal is not provable (with the same proof strength). Thus conclusions
+with these tags are the outcome of a constructive proof that the corresponding
+positive conclusion cannot be obtained. As a result, there is a close relationship
+between the inference rules for +∂ and −∂, (and also between those for +∆ and
+−∆).Thestructureoftheinferencerulesisthesame,buttheconditionsarenegated
+in some sense. To be more precise the inference conditions for a negative proof tag
+are derived from the inference conditions for the corresponding positive proof tag
+by applying the Principle ofStrong Negationintroducedin (Antoniou et al. 2000).
+The strong negationof a formula is closely related to the function that simplifies a
+formula by moving all negations to an innermost position in the resulting formula
+and replaces the positive tags with the respective negative tags and vice-versa.
+The elements of a derivation are called lines of the derivation. We say that a
+tagged literal L is provable in D = (F,R,>), denoted by D ⊢ L, iff there is a
+derivation P in D such that L is a line of P.
+Defeasiblelogiciscloselyrelatedtoseveralnon-monotoniclogics(Antoniou et al. 1999).
+In particular, the “directly skeptical” semantics of non-monotonic inheritance net-
+works(Horty et al. 1987)canbeconsideredaninstanceofinferenceinDLoncean
+appropriate superiority relation, derived from the topology of the network, is fixed
+(Billington et al. 1990).
+AdefeasibletheoryDiscoherent1 iffornoliteralpbothD ⊢+∆pandD ⊢−∆p,
+and D ⊢ +∂p and D ⊢ −∂p; and relatively consistent if whenever D ⊢ +∂p and
+D ⊢+∂∼p, for some p, then also D ⊢+∆p and D ⊢+∆∼p. Intuitively, coherence
+says that no literal is simultaneously provable and unprovable. Consistency says
+that a literal and its negation can both be defeasibly provable only when it and
+its negation are definitely provable; hence defeasible inference does not introduce
+1 Notice that here coherent has a different meaning than other works on logic programmingfor
+example(AlferesandPereira1993a;AlferesandPereira1993b).
+Embedding Defeasible Logic into Logic Programming 7
+inconsistency. A logic is coherent (relatively consistent) if the meaning of each
+theory of the logic, when expressed as an extension (i.e., when we consider the set
+of all the consequences of the theory), is coherent (relatively consistent), that is it
+isnotpossibletoproveaformulaanditsnegationunlessthe monotonicpartofthe
+theory proves them.
+Proposition 2.1 (Billington 1993)
+Defeasible logic is coherent and relatively consistent.
+Consistency and coherence address the issue whether and how it is possible to
+derive“conflicts”fromdefeasibletheories.Ontheothersidewecanaskunderwhich
+conditions defeasible theories arecomplete, inthe sense that for everyliteralin the
+theoryitispossibletodecide whetherthe literalis provable/nonprovablefromthe
+theory.
+In the rest of this section we will study conditions under which it is possible to
+guarantee completeness of a defeasible theory.
+Givena defeasible theory D =(F,R,>) a literal q is strictly unknowable in D iff
+D 6⊢ +∆q and D 6⊢ −∆q. A literal is defeasibly unknowable in D iff D 6⊢ +∂q and
+D 6⊢ −∂q. A literal is unknowable in D iff it is either strictly unknowable in D or
+defeasibly unknowable in D.
+Thedependency graph ofD,DG(D),isthedirectedgraphdefinedasfollows:the
+set of points of DG(D) is {{q,∼q}:q is a literal in D}. The set of arcs of DG(D)
+restricted to the literals that are unknowable in D, i.e., the set of points of U(D)
+is {{q,∼q}:q is unknowable in D}.
+The next Lemmata show the mutual relationships among unknowable literals in
+a Defeasible theory, and general properties of graphs of unknowable literals.
+Let D =(F,R,>) be a Defeasible Theory. The out-degree of U(D) is at least 1.
+We have to considertwo cases:strictly unknowableliterals anddefeasibly unknow-
+able literals.
+Letqbeastrictlyunknowableliteral,thenthereisapoint{q,∼q}inU(D).Then,
+bydefinition,D 6⊢+∆q andD 6⊢−∆q.2 Henceq ∈/ F and∀r ∈R [q]∃a∈A(r)such
+that D 6⊢ +∆a. Since D 6⊢ −∆q and q ∈/ F, then ∃r ∈ R [q] such that ∀a ∈ A(r)
+D 6⊢ −∆a. So ∃r ∈ R [q] ∃a ∈ A(r) such that D 6⊢ +∆a and D 6⊢ −∆a. Thus
+({q,∼q},{a,∼a}) is an arc in U(D).
+If q is a defeasibly unknowable literal then we reason as follows: let {q,∼q} be
+the point in U(D) corresponding to q. Then D 6⊢+∂q and D 6⊢−∂q.
+Since D 6⊢+∂q we have the following:
+2 Thecaseof∼q isidentical.
+8 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+a1) D 6⊢+∆q and
+a2) one of the following three holds:
+a2.2) D 6⊢−∆∼q; or
+a2.3) ∃s∈R[∼q] such that
+a2.3.1) ∀a∈A(s) D 6⊢−∂a, and
+a2.3.2) ∀t∈R [q] either
+Since D 6⊢−∂q we have the following.
+b1) D 6⊢−∆q; or
+b2) All of the following three hold:
+b2.2) D 6⊢+∆∼q, and
+b2.3) ∃s∈R[∼q] either
+b2.3.1) ∃a∈A(s),D 6⊢+∂a; or
+b2.3.2) ∃t∈R [q] such that
+By a1, D 6⊢ +∆q. If b1 holds then q is strictly unknowable and we can repeat the
+first part of the proof. So suppose that b2 holds.
+Ifa2.1holdsthenbyb2.1∃r ∈R [p]∃a∈A(r)suchthataisdefeasiblyunknow-
+able inD. Thus ({q,∼q},{a,∼a})is anarcin U(D). If a2.2holds then by b2.2 ∼p
+is a strictly unknowable literal in D, and we have already proved the property in
+this case.
+Sosupposethata2.3holds.Ifb2.3holdsthen∃s∈R[∼p]∃a∈A(s)suchthatais
+a defeasibly unknowableliteralin D. Thus ({q,∼q},{a,∼a})is anarc in U(D). So
+suppose that b2.3.2 holds. Then t > s and so a2.3.2 holds. Hence ∃t ∈ R [q]∃a ∈
+A(t) such that a is defeasibly unknowable in D. Thus ({q,∼q},{a,∼a}) is an arc
+in U(D).
+Therefore in all cases the out-degree of {q,∼q} is at least 1.
+Given a graph, a walk is an alternating sequence of vertices and edges, with each
+edgebeingincidentto the verticesimmediately preceedingandsucceedingitinthe
+sequence.
+The set ofpoints in a walk W in the dependency graphof a theoryD is denoted
+by Points(W). A walk W ends in a cycle iff W is finite and the last point of W
+occurs at least twice. A walk is complete iff either
+1. Points(W) is infinite; or
+2. a point in W has out-degree zero; or
+3. W ends in a cycle.
+Let D =(F,R,>) be a defeasibly theory. Then the following are equivalent.
+1. There is a literal which is unknowable in D.
+Embedding Defeasible Logic into Logic Programming 9
+2. U(D) is not empty.
+3. There is a walk in U(D).
+4. There is a complete walk in U(D).
+5. There is a complete walk in U(D) and whenever W is a complete walk in
+U(D) then either Points(W) is infinite or W ends in a cycle.
+1 and 2 are clearly equivalent. If 2 holds then by Lemma 2.1, 3 holds. If 3 holds,
+then 4 holds since every walk can be extended to a complete walk. By Lemma 2.1,
+every point in U(D) has out-degree of at least 1, and so if 4 holds, then 5 holds. If
+5 holds since walks are not empty 2 holds.
+A defeasible theory D is called decisive iff the dependency graphof D is acyclic.
+The following proposition provides a sufficient condition to determine complete-
+ness of a defeasible theory.
+Theorem 2.1
+If D is decisive, then for each literal p:
+(a) either D ⊢+∆p or D ⊢−∆p
+(b) either D ⊢+∂p or D ⊢−∂p.
+We prove the contrapositive, i.e., suppose there are unknowable literals. If there
+are unknowable literals then by Lemma 2.2, there is a walk in U(D) such that
+Points(W)isinfinite orW ends inacycle.Since there areonlyfinitely manyrules
+inD,Points(W)isfinite,thusW endsinacycle.ThusU(D)hasacycleandU(D)
+is a subgraph of DG(D), thus D is not decisive.
+Not every defeasible theory satisfies this property. For example, in the theory
+consisting of the single rule
+neither −∂p nor +∂p is provable.
+Notice, however, that there are complete non decisive theories. If we extend the
+above theory with the rule
+and the superiority relation > is defined as r > r then we can prove both −∂p
+and +∂¬p, thus the resulting theory is not decisive, but complete.
+2.4 A Bottom-Up Characterization of Defeasible Logic
+Theprooftheoryprovidesthebasisforatop-down(backward-chaining)implemen-
+tation of the logic.In fact the Deimos system (Maher et al. 2001) is based directly
+on the proof theory described above. However, there are advantages to a bottom-
+up(forward-chaining)implementation.Inparticularthis presentationofDefeasible
+Logicprovidesa both a settheoretic and a declarativecomputationalmodel ofthe
+10 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+logiccomparedtotheproceduralcharacterisationofthe top-downdefinitions.This
+allows us to describe a defeasible theory as an extension (i.e., set of all conclusions
+provable from it) and to deal with finite as well as infinite theories. This is not
+possible in the other approach since derivations are required to be finite sequences
+of (tagged) literals and they are described in term of combinatorial constructions.
+Furthermore, a bottom-up definition of the logic provides a bridge to later con-
+siderations.For these reasons we now provide a bottom-up definition of Defeasible
+Logic.
+We associate with D an operator T which works on 4-tuples of sets of literals.
+We call such 4-tuples an extension.
+∃t∈R[q] such that
+∼q ∈+∆, or
+∀t∈R[q] either
+The set of extensions forms a complete lattice under the pointwise containment
+ordering3,with⊥=(∅,∅,∅,∅)asitsleastelement.Theleastupperboundoperation
+is the pointwise union4, which is represented by ∪.
+The sequence of repeated applications of T to ⊥, called the Kleene sequence of
+T , is defined as follows:
+• T ↑α= T ↑β if α is a limit ordinal.
+3 (a1,a2,a3,a4)≤(b1,b2,b3,b4)iffai⊆bi fori=1,2,3,4.
+4 Given two n-tupleof sets a=(a1,...,an)and b=(b1,...,b2) the pointwiseunion of aand b
+isdefinedasfollows:a∪b=(a1∪b1,...,an∪bn).
+Embedding Defeasible Logic into Logic Programming 11
+Proposition 2.2
+T is monotonic and the Kleene sequence from ⊥ is increasing. Thus the limit
+F = (+∆ ,−∆ ,+∂ ,−∂ ) of all finite elements in the sequence exists, and T
+has a least fixpoint L =(+∆ ,−∆ ,+∂ ,−∂ ). When D is a finite propositional
+defeasible theory F =L.
+WeprovebyinductionthatT ispointwisemonotonic.Theotherpropertiesfollow
+from standard and well-know set theoretic arguments.
+The inductive base is trivial since the elements of ⊥ are ∅.
+Fortheinductivestepwehavefourcases,wheretheinductivehypothesisamounts
+Case+∆.Letusinvestigatethereasonswhyp∈+∆n:ifp∈F,then,trivially,for
+allm p∈+∆m;hencep∈+∆n+1.Otherwise∃r ∈R [p]suchthatA(r)⊆+∆n−1.
+By inductive hypothesis A(r)⊆+∆n. Therefore p∈+∆n+1.
+Case −∆. Trivial since −∆n+1 =−∆n∪S, for some set of literals S.
+Case +∂.Ifp∈+∂n becausep∈+∆n−1,thenbyinductive hypothesisp∈+∆n
+suchthatA(t)⊆+∂n−1andt>s.Byinductivehypothesis,if(i)thenA(r)⊆+∂n,
+if (ii) then ∼p ∈ −∆n, if (iii) then A(s)∩−∂n 6= ∅, and if (iv) then A(t) ⊆ +∂n.
+Therefore every time the conditions for p being in +∂n are satisfied, so are those
+for p being in +∂n+1.
+Case −∂.Firstofall,bydefinition, −∂n ⊆−∆n,thenwehavethree possibilities
+toaddaliteralpto−∂n+1.(i)∀r ∈R [p]A(r)∩−∂n−1 6=∅.byinductivehypothesis
+inductive hypothesis +∆n−1 ⊆ +∆n, thus p ∈ −∂n+1. (iii) ∃s ∈ R[∼p] such that
+and ∀t ∈ R[p] either A(t)
+6= ∅ or t 6> s. By inductive
+hypothesis +∂n−1 ⊆ +∂n and −∂n−1 ⊆ −∂n. Therefore, also in this case, p ∈
+The extension F captures exactly the inferences described in the proof theory.
+Theorem 2.2
+Let D be a finite propositional defeasible theory, q a literal and
+is the limit of all finite elements of the Kleene sequence from ⊥ via T .
+Then:
+12 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+We prove the theorem by induction on the length of derivations in one direction
+and on the number of iterations of the operator T in the other.
+Case +∆, Inductive base ⇒.P(1)=+∆q.Thismeansthateitherq ∈F orthat
+there exists a rule r ∈ R [q] such that A(r) = ∅. In both cases q ∈ +∆1. In the
+first case by definition, in the second since ∅ ⊆ +∆0 = ∅. By the monotonicity of
+T , q ∈+∆ .
+Inductive step. We assume that the theorem holds for proofs of length up to n,
+and P(n+1)=+∆q. Here we consider only the cases different from the inductive
+base. Thus there exists a rule r ∈ R [q] such that ∀a ∈ A(r), +∆a ∈ P(1..n).
+By inductive hypothesis a ∈ +∆ . Let +∆m be the minimal set of literals in the
+KleenesequencedefinedbyT containingallsuchas.ClearlyA(r)⊆∆m+1.Hence,
+by the monotonicity of T , q ∈+∆ .
+Inductive base ⇐. If q ∈ +∆1, then either q ∈ F or ∃r ∈ R [q] : A(r) ⊆ +∆0,
+that is A(r)=∅. In both case we have that +∆q is a single line proof of q.
+Inductive step. We have that q ∈ +∆n+1 and the property holds up to +∆n. If
+q ∈+∆n+1 because q ∈F, then, as in the previous case,+∆q is a single line proof
+of q. Otherwise ∃r ∈ R [q] : A(r) ⊆ +∆n. By inductive hypothesis ∀a ∈ A(r),
+D ⊢ +∆a . Let a ,...,a be an enumeration of the literals in A(r), and let P(a )
+be a proof of a . We concatenate the P(a )s and we append +∆q at the end. It is
+immediate to verify that the sequence thus obtained is a proof of +∆q.
+Case −∆, Inductive base ⇒. P(1) = −∆q iff p ∈/ F and ¬∃r ∈ R such that
+C(r)=q. On the other hand −∆0 =∅, so the set of literals satisfying ∀s∈R [q]:
+A(s)∩−∆0 6= ∅ is the set of literals not appearing as the consequent in a strict
+rule in D. Moreoverthe definition of relative complement gives us
+Therefore q ∈−∆1, and by the monotonicity of T , q ∈−∆ .
+Inductive step. Let us assume that the property holds up to n and P(n+1) =
+−∆p. This implies 1) p∈/ F and 2) ∀r ∈R [p]∃q ∈A(r) such that −∆q ∈P(1..n).
+By inductive hypothesis, for some m, q ∈ −∆m and so A(r) ∩−∆m 6= ∅, thus
+p∈=∆m+1 and therefore by the monotonicity of T it is in −∆ .
+Inductivebase⇐.Aswehaveseen−∆1 ={p|¬∃r ∈R ∧p∈/ F},thus,vacuously,
+we have a single line proof of −∆q.
+Inductive step.Letusassumethatthepropertyholdsupton,andletussuppose
+that q ∈/ −∆n, but q ∈ −∆n+1. This implies that q ∈/ F and ∀r ∈ R [q] : A(r)∩
+−∆n 6= ∅. This means that ∀r ∈ R [q] ∃a ∈ A(r) such that D ⊢ −∆a . Let P(a)
+beaderivationofa,andP(a ),...,P(a )betheconcatenationoftheproofsofsuch
+as. We append −∆q at the end and we obtain a proof of −∆q, thus D ⊢−∆q.
+Cases +∂ and −∂. Inductive base, ⇒. The tags +∂ and −∂, as well as the
+correspondingsetsofliterals,dependoneachother,sowewill carryoutthe proofs
+Embedding Defeasible Logic into Logic Programming 13
+simultaneously.Moreover,since the tags +∆and −∆(and the sets ofliteralcorre-
+sponding to them) are independent from +∂ and −∂ –and we have already proved
+the theorem for them– we assume, without any loss of generality, that derivations
+in defeasible logic consist only of defeasible tagged literals.
+Case P(1) = +∂q. This is possible if 1) q ∈ +∆ , or 2) ∼q ∈ −∆ and ∃r ∈
+R [q] suchthat A(r)=∅ and there are no rules for ∼p.For 1)by the definition of
+T there exists an n such that q ∈ +∆n, then q ∈ +∂n+1; by the monotonicity of
+T q ∈+∂ . For 2) we have that A(r) is included in every +∂n, and the condition
+beginning with ∀r ∈R[∼q] is vacuously satisfied since R[∼q]=∅. Let −∆m be the
+minimal set in the Kleene sequence generated by T such that ∼q ∈ −∆m. Then
+we can conclude that q ∈+∂n+1; therefore q ∈+∂ .
+Case P(1) = −∂q. First of all, let us consider the following decomposition of
+Now P(1)=−∂q is possible if D ⊢−∆q and either
+1. D ⊢+∆q or
+From the previous cases we have q ∈ −∆ and for 1) ∼q ∈ +∆ . Let n be the
+minimum number of iterations of T such that both q ∈−∆n and q ∈+∆n; then
+by construction q ∈+∂n+1. For 2) we obtain that q ∈−∂∩ n+1 and q ∈−∂
+the conditions are vacuously satisfied. Finally 3) implies that A(s) ⊆ +∂n for any
+n and ∀t∈R[q],t6>s; thus q ∈−∂n+1 for some n such that q ∈+∆n.
+Inductive step.
+Case P(n+1) = +∂q. Let us assume that the inductive hypothesis holds for
+derivations of length up to n. We only show the cases different from the induc-
+tive base. This means that we have cases corresponding to clause 2) of the proof
+conditions for +∂. From the inductive hypothesis we have A(r) ⊆ +∂ for some
+r ∈ R [q] (clause 2.2), ∀s ∈ R[∼q] either A(s) ∩ −∂ 6= ∅ (clause 2.3.1) or
+∃t ∈ R [q] : t > s and A(t) ⊆ +∂ (clause 2.3.2). By the monotonicity of T
+we get that a minimum n such that +∂n and−∂n that satisfy the above condition
+exists. Therefore q ∈+∂n+1 and consequently q ∈+∂ .
+Case P(n+1) = −∂q. Here we have 1) q ∈ −∆ , and either 2) ∼q ∈ +∆ or
+3) the clause 2.1 of the proof condition for −∂ is not vacuously satisfied: in such a
+case ∀r ∈R [p]:
+14 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+2.1 ∃p∈A(r) such that −∂q ∈P(1..n); by inductive hypothesis p∈−∂ , so for
+2.3 ∃s∈R[∼q] such that
+2.3.1 ∀a ∈ A(s)+∂a ∈ P(1..n); by inductive hypothesis each q ∈ +∂ ,
+therefore for some m, A(s)⊆+∂m; or
+2.3.2 ∀t ∈ R[q] either t 6> s, or ∃a ∈ A(t) such that −∂q ∈ P(1..n). By
+inductive hypothesis a∈−∂ , then, for some m A(t)∩−∂m 6=∅.
+Alsointhis caseitis immediate to see thateachconditionhasbeen reducedto the
+correspondentcondition required for the construction of −∂m+1, therefore, for the
+smallest m satisfying the above three conditions we can conclude q ∈−∂m+1, and,
+by the monotonicity of T , q ∈−∂ .
+Inductive base, ⇐.
+Case q ∈+∂1.Ifq ∈+∂1 becauseitisin+∆ ,thenwehavethatD ⊢+∆q.Let
+P be a proof of +∆q; we append +∂q at the end of P obtaining a proof of +∂q.
+For the other case we have
+In this case it is easy to verify that +∂q is a single line proof for q.
+Case q ∈−∂1. Here we have that q ∈−∆ and the following three cases:
+2. R [q]=∅
+In the first case, we have already proved that D ⊢ +∆q and D ⊢ −∆q. So let P
+the concatenationof the proofsof +∆q and−∆q. We append −∂q atthe end of P
+and we obtain a derivation of −∂q. For 2) the sequence −∆q,−∂q is vacuously a
+derivationof−∂q,andfor3)theconcatenationofaproofof−∆q and−∂q satisfies
+condition 3 of the definition of −∂.
+Inductive step. We assume that the theorem holds up to +∂n and −∂n. Fur-
+thermoreitis worthnoting thatthe constructionof derivationofdefeasible literals
+in Defeasible Logic and the construction of the corresponding sets of literals are
+invertible, i.e., each time the top-down (procedural) condition requires something
+tobeprovable,thebottom-up(set-theoretic)conditionsatisfiesanappropriateset-
+theoretic condition. But we have seen that, granted the inductive hypothesis the
+proof-theoretic condition and the set-theoretic one coincide.
+Case q ∈ +∂n+1. The difference with the inductive base is that now we replace
+inductive hypothesis we have ∀a ∈ A(r) : D ⊢ +∂a , ∀a ∈ A(t) : D ⊢ +∂a ,
+and ∃a ∈ A(s) : D ⊢ −∂a . Let P be a concatenation of the derivations of the
+just mentioned tagged literals. We append +∂q at the end of P and we obtain a
+derivation of +∂q.
+Embedding Defeasible Logic into Logic Programming 15
+Case q ∈ −∂n+1. First of all we can use an argument similar to the previous
+case. Here the main difference with the inductive base is that we have to consider
+that the set of supportive rules for q is not empty and we have to consider the
+case where ∀r ∈ R [q],A(r) ∩−∂n 6= ∅. By inductive hypothesis we have that
+∀r ∈R [q]∃a ∈A(r):D ⊢−∂a .Atthisstagewecanconcatenatethederivations
+ofsucha swiththeotherrequiredderivationsandweappend−∂qattheend.Again
+we can verify that the resulting sequence is a proof for −∂q.
+2.5 Beyond Propositional Defeasible Logic
+The restriction of Theorem 2.2 to finite propositional theories derives from the
+formulation of the proof theory; proofs are guaranteed to be finite under this
+restriction. Defeasible Logic has a constructive proof theory that guarantees the
+explainability of conclusions (i.e., for every conclusion we derive, it is possible
+to provide a full proof with justification of the essential steps). In addition the
+proof theory defines the classical defeasible logic of (Antoniou et al. 2001) and
+(Billington et al. 1990).
+On the other hand, the bottom-up semantics does not need this restriction, and
+so can be used in conjunction with predicate defeasible logic rules that represent
+infinitelymanypropositionalrules.Thisalsomeansthatunderthischaracterisation
+defeasible logic can be supplemented with function symbols. In the following we
+will take advantage of this opportunity and provide a more elegant and general
+characterisation under the Kunen semantics (Section 3.2 and 5.3), while in the
+remaining sections we stick to the original definition.
+3 Semantics of Logic Programs
+Nowthatwehavepresenteddefeasiblelogicandhavedevelopedthetechnicalprop-
+erties that will be needed later on, we turn to the theme of this paper: establish
+formalconnectionsbetweendefeasiblelogicandlogicprogrammingsemantics.This
+sectionpresentsthebasicsofthesemanticsthatwillbeusedinsubsequentsections
+A logic program P is a finite set of program clauses. A program clause r has the
+A←B ,...,B ,not C ,...,not C
+where A,B ,...B ,C ,...,C are positive literals. A program clause with vari-
+ables is considered to represent the set of its ground instances.
+In this paper we will make use of two well-known logic programming seman-
+tics: stable model semantics (Gelfond and Lifschitz 1988) and Kunen semantics
+(Kunen 1987).Inthefollowingwepresentthembrieflyforthesakeofcompleteness.
+3.1 Stable Model Semantics
+Let M be a subset of the Herbrand base. We call a ground programclause
+A←B ,...,B ,not C ,...,not C
+16 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+irrelevant w.r.t. M if at least one C is included in M. Given a logic program P,
+ground(P) is the set of ground instances of the logic program P, and we define
+the reduct of P w.r.t. M, denoted by PM, to be the logic program obtained from
+ground(P) by
+1. removing all clauses that are irrelevant w.r.t. M, and
+2. removing all premises not C from all remaining programclauses.
+Note that the reduct PM is a definite logic program, and we are no longer faced
+withtheproblemofassigningsemanticstonegation,butcanusetheleastHerbrand
+model instead.
+M isastablemodelofP iffM =M PM,whereM PM istheleastHerbrandmodel
+of the reduct of P.
+3.2 Kunen Semantics
+Kunensemantics(Kunen 1987)isa3-valuedsemanticsforlogicprograms.Apartial
+interpretation is a mapping from ground atoms to one of the three truth values t,
+f and u, which denote true, false and unknown, respectively. This mapping can be
+extended to arbitrary formulas using Kleene’s 3-valued logic.
+Kleene’struthtablescanbesummarizedasfollows.Ifϕisabooleancombination
+ofatomswithtruthvalueoneoft,fandu,itstruthvalueistiffallpossiblewaysof
+putting torfforthe variousu-valuesleadtoa valuetbeing computedinordinary
+(2-valued) logic; ϕ gets the value f iff ¬ϕ gets the value t; and ϕ gets the value
+u otherwise. These truth values can be extended in the obvious way to predicate
+logic, thinking of the quantifiers as infinite conjunctions or disjunctions.
+TheKunensemanticsofaprogramP isobtainedfromasequence{I }ofpartial
+interpretations, defined as follows:
+1. I (a)= u for every atom a.
+2. I (a)= t iff there is a programclause
+A←B ,...,B ,not C ,...,not C
+and a ground substitution σ such that a=Aσ and that
+3. I (a)= f iff for all clauses
+A←B ,...,B ,not C ,...,not C
+in the program, and all ground substitutions σ, if a=Aσ then
+4. I (a)= u if neither 2. nor 3. applies.
+WeshallsaythattheKunensemanticsofP supportsaformulaϕ,writtenP |= ϕ,
+iff there is an interpretation I , for some finite n, such that I (ϕ)= t.
+Embedding Defeasible Logic into Logic Programming 17
+4 A Translation of Defeasible Theories into Logic Programs
+In this section we describe a meta-program M in a logic programming form that
+expresses the essence of the defeasible reasoning embedded in defeasible logic first
+introduced in (Maher and Governatori1999). M consists of the following clauses.
+We first introduce the predicates defining classes of rules, namely
+supportive rule(Name,Head,Body):-
+strict(Name,Head,Body).
+supportive rule(Name,Head,Body):-
+defeasible(Name,Head,Body).
+rule(Name,Head,Body):-
+supportive rule(Name,Head,Body).
+rule(Name,Head,Body):-
+defeater(Name,Head,Body).
+Next we introduce the clauses defining the predicates corresponding to +∆, −∆,
++∂,and−∂.Theseclausesspecifythestructureofdefeasiblereasoningindefeasible
+logic.Arguablytheyconveytheconceptualsimplicityofdefeasiblelogicmoreclearly
+than the proof theory.
+c1 definitely(X):-
+fact(X).
+c2 definitely(X):-
+strict(R,X,[Y ,...,Y ]),
+definitely(Y ),...,definitely(Y ).
+c3 defeasibly(X):-
+definitely(X).
+c4 defeasibly(X):-
+not definitely(∼X),
+supportive rule(R,X,[Y ,...,Y]),
+defeasibly(Y ),...,defeasibly(Y ),
+not overruled(R,X).
+c5 overruled(R,X):-
+rule(S,∼X,[U ,...,U ]),
+defeasibly(U ),...,defeasibly(U ),
+not defeated(S,∼X).
+c6 defeated(S,∼X):-
+supportive rule(T,X,[V ,...,V ]),
+defeasibly(V ),...,defeasibly(V ).
+18 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+The first two clauses address definite provability, while the remainder address
+defeasible provability. The clauses specify if and how a rule can be overridden by
+another, and which rules can be used to defeat an overriding rule, among other
+aspects of the structure of defeasible reasoning in defeasible logic.
+We have permitted ourselves some syntactic flexibility in presenting the meta-
+program. However, there is no technical difficulty in using conventional logic pro-
+gramming syntax to represent this program.
+Finally, for a defeasible theory D = (F,R,>), we add facts according to the
+following guidelines:
+1. fact(p). for each p∈F
+2. strict(r ,p,[q ,...,q ]). for each rule r :q ,...,q →p∈R
+i 1 n i 1 n
+3. defeasible(r ,p,[q ,...,q ]). for each rule r :q ,...,q ⇒p∈R
+i 1 n i 1 n
+4. defeater(r ,p,[q ,...,q ]). for each rule r :q ,...,q ❀p∈R
+i 1 n i 1 n
+5. sup(r ,r ). for each pair of rules such that r >r
+5 Properties of the Translation
+5.1 Embedding under Stable Model Semantics
+We establish relationships between D and its translation M. To do so we must
+select appropriate logic program semantics to interpret not in clauses c4 and c5.
+First we consider stable model semantics.
+The aim of this section is twofold. On one hand it established a relationship
+betweenDefeasible Logicandstablesemantics.This connectionisobtainedviathe
+representation of the meta-program for Defeasible Logic as a Default Theory. In
+this way we are able to use the well-know and well-understoodlink between stable
+semantics and Default Logic to simplify the proofs of our results and, at the same
+time, it opens the way to investigations on the similarities and differences over
+the two non-monotonic formalisms. Furthermore it will enable further studies on
+relationships between semantics for default logic and defeasible logic.
+To this end we briefly rehearse the basic definitions of default logic.
+5.1.1 Basics of Default Logic
+A default δ has the form ϕ:ψ1,...,ψn with closed formulas ϕ, ψ ,...,ψ , χ. ϕ is
+the prerequisite pre(δ), ψ ,...,ψ the justifications just(δ), and χ the consequent
+A default theory T is a pair (W,Def) consisting of a set of formulas W and a
+countable set Def of defaults.
+Let δ = ϕ:ψ1,...,ψn be a default, and E a deductively closed set of formulas. We
+say that δ is applicable to E iff ϕ∈E, and ¬ψ ,...,¬ψ 6∈E.
+Let Π = (δ , δ , δ ,...) be a finite or infinite sequence of defaults from Def
+withoutmultipleoccurrences(modellinganapplicationorderofdefaultsfromDef).
+We denote by Π[k] the initial segment ofΠ of length k, providedthe length ofΠ is
+at least k.
+Embedding Defeasible Logic into Logic Programming 19
+• In(Π)=Th(W∪{cons(δ) | δ occursin Π}),where Thdenotes the deductive
+closure.
+Π is called a process of T iff δ is applicable to In(Π[k]), for every k such that δ
+occursinΠ.ΠissuccessfuliffIn(Π)∩Out(Π)=∅,otherwiseitisfailed. Πisclosed
+iff every default that is applicable to In(Π) already occurs in Π.
+Antoniou (1997) showed that Reiter’s (1980) original definition of extensions is
+equivalent to the following one: A set of formulas E is an extension of a default
+theory T iff there is a closed and successful process Π of T such that E =In(Π).
+5.1.2 Stable Models and Default Logic
+The Default Logic interpretation of a ground program clause Cl
+A←B ,...,B ,not C ,...,not C
+is given by the default
+B ∧...∧B :¬ C ,...,¬ C
+df(Cl)= .
+We define df(P), the default logic interpretation of the logic program P, to be the
+default theory (W,D) with W =∅ and D ={df(Cl) | Cl ∈ground(P)}.
+Theorem 5.1 (Antoniou 1997)
+Let P be a logic program, and M a subset of the Herbrand base. M is a stable
+model of P iff Th(M) is an extension of df(P).
+5.2 The Meta-Program as a Default Theory
+Accordingtotheprevioussection,themeta-programofsection4canbeequivalently
+viewed as the following default theory T(D)=(W(D),Def(D)).
+The predicate logic part W(D) contains:
+1. fact(p) for each p∈F
+2. strict(r ,p,[q ,...,q ]). for each rule r :q ,...,q →p∈R
+i 1 n i 1 n
+3. defeasible(r ,p,[q ,...,q ]). for each rule r :q ,...,q ⇒p∈R
+i 1 n i 1 n
+4. defeater(r ,p,[q ,...,q ]). for each rule r :q ,...,q ❀p∈R
+i 1 n i 1 n
+5. sup(r ,r ). for each pair of rules such that r >r
+And the following defaults (actually default schemas) are elements of Def(D):
+d = fact(X):
+1 definitely(X)
+strict(R,X,[Y1,...,Yn])∧definitely(Y1)∧...∧definitely(Yn):
+2 definitely(X)
+d = definitely(X):
+3 defeasibly(X)
+20 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+supportiverule(R,X,[Y1,...,Yn])∧defeasibly(Y1)∧...∧defeasibly(Yn):
+¬definitely(∼X),¬overruled(R,X)
+4 defeasibly(X)
+rule(S,∼X,[U1,...,Un])∧defeasibly(U1)∧...∧defeasibly(Un):¬defeated(S,∼X)
+5 overruled(R,X)
+sup(T,S)∧supportiverule(T,X,[V1,...,Vn])∧defeasibly(V1)∧...∧defeasibly(Vn):
+6 defeated(S,X)
+d = strict(Name,Head,Body):
+7 supportiverule(Name,Head,Body)
+d = defeasible(Name,Head,Body):
+8 supportiverule(Name,Head,Body)
+d = supportiverule(Name,Head,Body):
+9 rule(Name,Head,Body)
+d = defeater(Name,Head,Body):
+10 rule(Name,Head,Body)
+Nowletus proveatechnicalresultonthis defaulttheory.Itprovidesa condition
+on D under which T(D) has at least one extension.
+Let D be a decisive defeasible theory. Then T(D) has at least one extension.
+IftheatomdependencygraphofD isacyclicwecandefine anarbitrarytotalorder
+≫onatomswhichrespectsthedependencygraph.Weproceedtoconstructaclosed
+and successful process Π as follows:
+1. First apply instantiations of d and d in any order. These defaults have no
+justification, so success cannot be jeopardized.
+2. Thenproceedtoprovedefeasibly(p)ordefeasibly(¬p)usingtheremaining
+defaults, in the order of ≫.
+3. For eachatomp,try to applyfirstdefaults d ,thend ,then d andfinally d .
+If the defaults can be applied in this order only, the process Π cannot fail.
+4. Π is closed when we have carried out step 3 for all atoms p.
+The question is whether the order specified in 3 can always be respected. This is
+the case because Y , U and V use atoms appearing before X in the total order.
+The argument in more detail: we analyze the situation where an instantiation of
+d withphasimpactonanearlierapplicationofd withinstantiation∼q.Suppose
+defeasibly(p) is derived using default d at stage k, and suppose it is then used
+to prove overruled(r,q) later in the process Π, where defeasibly(q) was derived
+in Π at a stage l <k. But then p occurs in the body of a rule with head predicate
+q, so q depends on p, so it must appear after p in ≫. So, according to 2 above, d
+with instantiationq cannothavebeen applied before d with instantiationp,so we
+have a contradiction.
+A similar argument applies to the interplay between defaults d and d .
+Embedding Defeasible Logic into Logic Programming 21
+In general, T(D) may not have any extension if the condition of the Lemma is
+not satisfied. For example consider D consisting of the rules:
+Let us now analyze the application of defaults in T(D).
+Because of r we derive immediately overruled(r ) using d with instantiation
+r for R and r for S. r cannot be defeated using d because there is no stronger
+rule.Nointeractionwithotherdefaultscanpreventthis applicationofd ,soitcan
+appear at the beginning of any process, without loss of generality.
+Thenwecanapplyd toderivedefeasibly(p),assuming¬overruled(r ,p)(∗).
+Now that defeasibly(p) is derived, we can apply d to derive defeasibly(q),
+assuming ¬overruled(r ,q).
+We apply d with instantiation r for S and r for R to derive overruled(r ,p).
+This contradicts the previous assumption (∗), so the process is failed.
+Thereisnowayanydefaultsalongthe processabovecanbeblockedbyapplying
+another default instead. So there can be no extension.
+We are now able to prove the main results, namely the relationships between
+Defeasible Logic and the stable semantics interpretation of the meta-program de-
+scribing provability in Defeasible Logic.
+Theorem 5.2
+(a) If D ⊢+∆p then definitely(p) is included in all stable models of M.
+(b) If D ⊢−∆p then definitely(p) is not included in any stable model of M.
+(c) IfD is decisivethenthe implications(a)and(b)arealsotrue inthe opposite
+direction.
+(a): Proof by induction on the length of derivations P in D. Let the claim hold for
+P(1..i), and let P(i+1) = +∆p. Let E be an extension of T(D), and E = In(Π)
+for a closed and successful process Π of T(D).
+Case 1: p ∈F. Then fact(p)∈W(D). Since d is applicable to In(Π) and Π is
+closed, we conclude definitely(p)∈In(Π)=E.
+Case 2: There is r ∈ R [p] such that +∆a ∈ P(1..i) for all a ∈ A(r). Since
+r ∈ R [p] we have strict(r,p,[q ,...,q ]) ∈ Def(D). Since +∆q ∈ P(1..i), for all
+j = 1,...,n, we conclude with Induction Hypothesis that definitely(q ) ∈ E =
+In(Π).Thus d is applicableto In(Π).Πis closedsodefinitely(p)∈In(Π)=E.
+(b): The proof goes by induction on the length of derivations P in D. Let the
+claim hold for P(1..i) and let P(i+1) = −∆p. Further let E be an extension of
+T(D). Then E =In(Π) for a closed and successful process Π of T(D).
+By the inference condition (−∆) we know p6∈F, thus fact(p)6∈W(D). (∗)
+Alsowe know∀r ∈R [p]∃a∈A(r):−∆a∈P(1..i).By inductionHypothesis we
+22 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+(∗)and(∗∗)showthatneitherd nord canbeusedtoderivedefinitely(p)inΠ.
+Buttheseare,byconstructionofT(D),theonlypossibilities.Thusdefinitely(p)6∈
+In(Π)=E.
+(c):Letdefinitely(p)∈E foranextensionE ofT(D).Suchanextensionexists
+becauseDisdecisive.Then,bypart(b)weconcludeD 6⊢−∆p.ThereforeD ⊢+∆p
+because D is decisive.Thus the opposite of (a) holds. The opposite of (b) is shown
+in an analogous way.
+Consider D ={ ⇒p, p ⇒q, q ⇒¬p}. As we have shown in section A.3, T(D)
+has no extension, so definitely(p) is included in all extensions of T(D). However
+D 6⊢+∆p. Thus the opposite of (a) does not hold, in general.
+ConsiderthetheoryDconsistingonlyofthestrictrulep→p.T(D)hasonlyone
+extension, E = Th(∅), and definitely(p) 6∈ E. However D 6⊢ −∆p. This shows
+that the opposite of (b) is not true, in general.
+Theorem 5.3
+(a) If D ⊢+∂p then defeasibly(p) is included in all stable models of M.
+(b) If D ⊢−∂p then defeasibly(p) is not included in any stable model of M.
+(c) IfD is decisivethenthe implications(a)and(b)arealsotrue inthe opposite
+direction.
+(c): Let defeasibly(p) ∈ E for an extension E of T(D). Such an extension exists
+becauseD isdecisive.Then,bypart(b)weconcludeD 6⊢−∂p.ThereforeD ⊢+∂p
+because D is decisive.Thus the opposite of (a) holds. The opposite of (b) is shown
+in an analogous way.
+Let D consist of the rules: p ⇒ p, p ⇒ q and ⇒ ¬q. Then defeasibly(¬q) is
+included in the only extension of T(D) but D 6⊢ ¬q. This shows that the opposite
+of (a) is not necessarily true if D is not decisive.
+A counterexample for the opposite direction of (b) is the defeasible theory con-
+sisting only of the rule p⇒p. defeasibly(p) is not included in the only extension
+of T(D), however −∂p cannot be derived from D.
+Parts(a) and(b) areshownconcurrently by induction on the lengthof a deriva-
+tionP inD.Suppose(a)and(b)holdforP(1..i)(InductionHypothesis).Consider
+an extension E of T(D), and let E = In(Π) for a closed and successful process Π
+of T(D).
+Case +∂: P(i+1)=+∂p. By the inference condition (+∂) there are two cases.
+Thefirstcaseisthat+∆p∈P(1..i).ByTheorem5.2,definitely(p)∈E =In(Π).
+Then the default d (with instantiation p for X) is applicable to In(Π). Since Π is
+closed we conclude defeasibly(p)∈In(Π)=E.
+The second case is as follows:
+Embedding Defeasible Logic into Logic Programming 23
+(3.2) ∃t∈R [q] such that
+From (2) we conclude
+using Theorem A.2. From (1) we get
+supportive rule(r,p,[q ,...,q ])∈W(D) (**)
+From (1) and Induction Hypothesis we get
+defeasibly(q )∈In(Π), for all i=1,...,n (***)
+Inthe followingwe showthatoverruled(r,p)6∈In(Π). Togetherwith (∗)-(∗∗∗)it
+showsthat the default d (with instantiationp for X)is applicable toIn(Π). Since
+Π is closed we get defeasibly(p)∈In(Π)=E.
+Consider s ∈ R[∼p]. In case (3.1) holds we have −∂a ∈ P(1..i) for an a ∈ A(s).
+By Induction Hypothesis we conclude defeasibly(a) 6∈ In(Π) = E. Thus default
+d cannot be applied with s instantiated for S.
+Incase(3.2)holds,it iseasily seenthat defaultd canbe usedfor the derivation
+ofdefeated(s,∼p).Thusdefeated(s,∼p)∈In(Π),andd cannotbeappliedwith
+s instantiated for S.
+Overallwe have shown that d fails to derive overruled(r,p).
+Case −∂: Let P(i + 1) = −∂p. From the (−∂) inference condition we know
+−∆ ∈ P(1..i). Therefore, by Theorem A.2, definitely(p) 6∈ E = In(Π). Thus
+default d cannot be used to derive defeasibly(p) in Π.
+Nextweshowthatd cannotbeused,either,toderivedefeasibly(p)inΠ.Then
+defeasibly(p)6∈In(Π)=E, andwe are finished. By the (−∂) inference condition
+there are three cases.
+Case 1: ∀r ∈ R [p]∃a ∈ A(r) : −∂a ∈ P(1..i). By Induction Hypothesis we
+conclude that for every strict or defeasible rule with head p there is at least one
+antecedent a such that defeasibly(a) 6∈ In(Π). Therefore, for every possible in-
+stantiationofRindefaultd the prerequisiteofd isnotinIn(Π).Thusd cannot
+be used to derive defeasibly(p) in Π.
+Case 2: +∆∼p ∈ P(1..i). Then no instantiation of d where the consequent
+is defeasibly(p) can be applied since ∼p ∈ In(Π) = E, by Theorem A.2 (and
+because Π is successful).
+Case 3: There is s∈R[∼p] such that:
+From (1) together with Induction Hypothesis we get:
+rule(s,∼p,[u ,...,u ])∧defeasibly(u )∧...∧defeasibly(u )∈In(Π) (*)
+Let t∈R [p].
+Case 3.1: t6>s. Thensup(t,s)6∈W(D). So, d with instantiationt for T cannot
+be used to derive defeated(s,∼p) in Π.
+24 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+Case 3.2: ∃a ∈ A(t) : −∂a ∈ P(1..i). Then, by inductive hypothesis, we have
+defeasibly(a) 6∈ In(Π). Again, d with instantiation t for T cannot be used to
+derive defeated(s,∼p) in Π.
+Overallwe have shown:
+From (∗) and (∗∗) we get that d with instantiation s for S and r for R can be
+applied to In(Π). Since Π is closed, we conclude overruled(r,p)∈In(Π). Since r
+waschosenarbitrarily,the defaultd cannotbe usedtoprovedefeasibly(p)inΠ,
+thus defeasibly(p)6∈E =In(Π).
+TheabovetwotheoremsshowthatifD isdecisive,thenthestablemodelseman-
+tics ofM correspondsto the provabilityindefeasible logic.Howeverpart(c) isnot
+true in the general case, as the following example shows.
+Example 5.1
+Consider the defeasible theory
+In defeasible logic, +∂¬p cannot be proven because we cannot derive −∂p. How-
+ever, defeasibly(¬p) is a sceptical conclusion of M under stable model semantics
+because it is included in the only stable model of M. ✷
+5.3 Embedding under Kunen Semantics
+Ifwe wishto haveanequivalenceresultwithout the conditionofdecisiveness,then
+we must use a different logic programming semantics, namely Kunen semantics.
+The domain of our interpretation is given by the set of the rule-names and the
+set of literals occurring in a defeasible theory D.
+1. α=fact(p) and p∈F;
+2. α=strict(r ,p,[q ,...,q ]) and r :q ,...,q →p∈R;
+i 1 n i 1 n
+3. α=defeasible(r ,p,[q ,...,q ]) and r :q ,...,q ⇒p∈R;
+i 1 n i 1 n
+4. α=defeater(r ,p,[q ,...,q ]) and r :q ,...,q ❀p∈R;
+i 1 n i 1 n
+5. α=sup(r ,r ) and hr ,r i∈>.
+1. α=fact(p) and p∈/ F;
+2. α=strict(r ,p,[q ,...,q ]) and r :q ,...,q →p∈/ R;
+i 1 n i 1 n
+3. α=defeasible(r ,p,[q ,...,q ]) and r :q ,...,q ⇒p∈/ R;
+i 1 n i 1 n
+4. α=defeater(r ,p,[q ,...,q ]) and r :q ,...,q ❀p∈/ R;
+i 1 n i 1 n
+5. α=sup(r ,r ) and hr ,r i∈/>.
+• I(α)=u otherwise.
+Embedding Defeasible Logic into Logic Programming 25
+The intuition behind this interpretation is that the predicates correspond to the
+elements of D.
+It is immediate to see that
+t r ∈R [p] and q ,...,q =A(r )
+i sd 1 l i
+I(supportive rule(r ,p,[q ,...,q ]))=
+(f otherwise
+t r ∈R[p] and q ,...,q =A(r )
+I(rule(r ,p,[q ,...,q ]))=
+(f otherwise
+Theorem 5.4
+Case 1, ⇒. We prove it by induction on the construction of +∆.
+Inductive base.
+p ∈ +∆1 iff p ∈ F or → p ∈ R, iff I(fact(p)) = t or I(strict(r,p,[])) = t,
+so either one of the ground instance definitely(p) :- fact(p) of the clause c1 or
+definitely(p):-strict(r,p,[]) of the clause c2 implies I (definitely(p))=t.
+Inductive step. Let us assume that the property holds up to n, and p∈+∆n+1.
+This means that either
+1. p∈F, for which we can repeat the same argument as the inductive base; or
+2. ∃r ∈R [p], say r such that A(r )⊆+∆n. This implies that, for some m
+I (strict(r ,p,[q ,...,q]))=t ,
+and, by inductive hypothesis, for each q (1≤j ≤l)
+I (definitely(q ))=t .
+Thus, by clause c2, I (definitely(p))=t.
+Case 1, ⇐.We useinductiononthe stepsonwhichdefinitely(p)is supported.
+Inductive base. In this case we have
+definitely(p):-fact(p) and I(fact(p))=t
+I (definitely(p))=t iff definitely(p):-strict(r,p,[]) and
+The first case amounts to  p ∈ F, but F ⊆ ∆n, for any n, therefore p ∈ +∆
+the second case we have a rule r such that A(r) = ∅ and so A(r) ⊆ +∆n, for any
+n, hence p∈+∆ .
+26 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+Inductive step. Let us assume that the property holds up to n, and
+I (definitely(p))=t.
+This is possible if there is either a ground instance of clause c1 definitely(p) :-
+fact(p), for which we repeat the argument of the inductive base, or a ground
+definitely(p):-
+strict(r,p,[q ,...,q]),
+definitely(q ), ..., definitely(q ).
+of clause c2 such that
+I (strict(r,p,[q ,...,q]))=t ,
+which implies r ∈R [p], and, for each q ,
+I (definitely(q ))=t .
+By inductive hypothesis, for some m, q ∈ +∆m, so A(r) ⊆ +∆m; therefore p ∈
+Case 2, ⇒. Also in this case we use induction on the construction of −∆.
+Inductive base. If p∈−∆ then
+1. p∈/ F, but p∈/ F iff I(fact(p))=f; this implies that all instances of c1 fails;
+is always false, therefore the condition can be satisfied only vacuously. This
+means R [p]=∅, which implies
+I(strict(r,p,[q ,...,q]))=f ,
+from which it follows that all ground instances of c2 fail.
+Since definitely(p) fails in all the cases we conclude I (definitely(p))=f, and
+I (not definitely(p))=t.
+Inductive step.Letusassumethatthe propertyholdsupton,p∈/ −∆n,andp∈
+−∆n+1.This implies that p∈/ F,so we canrepeatthe aboveargumentfor the first
+clause.If∀r ∈R [p](A(r)∩∆n 6=∅)issatisfied,wehavetwocases:ifitisvacuously
+weusetheargumentoftheinductivebase,otherwise,foreachruler,A(r)∩−∆n =
+q . From this we know that q ∈−∆n, and we can apply the inductive hypothesis;
+thus for some m, I (not definitely(q )) = t, then I (definitely(q )) = f.
+Thishappensforeachinstanceofclausec2,soI (definitely(p))=f,therefore
+I (not definitely(p))=t.
+Case 2, ⇐. The proof is by induction on the step on which not strictly(p) is
+supported.
+Embedding Defeasible Logic into Logic Programming 27
+Inductive base: n=1.
+I (not definitely(p))=t ⇐⇒ I (definitely(p))=f
+1) I(fact(p))=f, and
+2) ∀q,r, I(strict(r,p,[q
+definitely(q
+definitely(q ))=f
+1) implies p∈/ F; for 2), since definit
+elyis
+not a primitive predicate
+I(definitely(p))=u
+for every p, thus
+I(strict(r,p,[q ,...,q ]))=f
+for every q,r; this implies R [p]=∅, therefore p∈−∆1.
+Inductive step. Let us assume that it holds up to n. We can repeat the above
+reasoning, but we have to consider also the case where for each rule r ∈ R [p]
+and some q ∈A(r), I (definitely(q ))=f. So I (not definitely(q ))=t; by
+inductive hypothesis, q ∈ −∆ , then A(r)∩−∆ 6= ∅. Let −∆m be smallest set
+satisfying this property. By construction we have p∈−∆m+1, hence p∈−∆ .
+Cases 3 and 4 (⇒): Inductive base. The inductive base is trivial since it is easy
+to verify that both +∂1 and −∂1 are empty.
+Inductive step. We assume that the theorem holds up to +∂n and −∂n.
+Case p∈+∂n+1. If p∈+∂n+1 because p ∈+∆n, then we can use the following
+ground instance of clause c1
+defeasibly(p):-definitely(p).
+BytheinductivehypothesisI (definitely(p))=t,forsomeappropriatem,hence
+I (defeasibly(p))=t.
+Otherwise, there is a rule r ∈ R [p] such that (1) A(r) ⊆ +∂n and ∼p ∈ −∆n,
+and (2) for every rule s ∈ R[∼p] either (a) A(s)∩−∂n 6= ∅ or (b) there is rule
+t∈R [p] such that A(t)⊆+∂n and t>s.
+Let us consider an appropriate ground instance of clause c4:
+defeasibly(p):-supportive rule(r,p,[q ,...,q ]),
+not defeasibly(∼p),
+defeasibly(q ),...,defeasibly(q),
+not overruled(r,p).
+By construction I(supportive rule(r,p,[q ,...,q])) = t, and by the inductive
+hypothesis and (1), for some appropriate m, I (not definitely(p)) = t (from
+∼p∈−∆n), I (defeasibly(q ))=tforallq ∈A(r) sinceA(r)⊆+∂n,Therefore
+we have to show that
+I (notoverruled(r,p))=t .
+28 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+ThisisequivalenttoI (overruled(r,p))=f,thatmeansthatallthebodiesofthe
+appropriate ground instances of clause c5 are false in I . By construction for all
+rules r ∈R[∼p], I(rule(s,∼p,[qs,...,qs]))=t. Thus we have to prove that either
+I (defeasibly(qs))=f or I (not defeated(s,∼p))=f.
+Let us partition R[∼p] in two sets S′ = {s ∈ R[∼p] : A(s)∩ −∂n = ∅} and
+S = R[∼p]−S . By (2a) and the inductive hypothesis we have that for every
+I (defeasibly(qs))=f
+for some qs ∈ A(s). For the rules in S′′, on the other hand, we have to prove that
+I (not defeated(s,∼p))=f.
+I (not defeated(s,∼p))=f iff I (defeated(s,∼p))=t .
+Hence we need a ground instance of clause c6 evaluated as true in I . By (2b) for
+every rule in S′′ there is a rule t ∈ R [p] such that A(t) ⊆ +∂n and t > s. By
+construction we obtain
+I(supportive rule(t,p,[qt,...,qt]))=t and I(supportive rule(t,s))=t,
+and by the inductive hypothesis, for all qt ∈A(t), I (defeasibly(qt))=t.
+Case p∈−∂n+1. We have to show that not defeasibly(p) is supported by the
+Kunensemantics.Thismeansthatforsomem,I (not defeasibly(p))=t,which
+impliesI (defeasibly(p))=f.Accordinglywehavetoshowthatforeachinstance
+of clauses c3 and c4 an element of the body is not supported by the semantics.
+Let us examine clause c3:
+defeasibly(p):-definitely(p).
+But −∂n+1 ⊆ −∆n, therefore p ∈ −∆n. By the inductive hypothesis, for some m,
+I (not definitely(p))=t and I (definitely(p))=f.
+For clause c4
+defeasibly(p):-
+supportive rule(r,p,[q ,...,q]),
+not definitely(∼p),
+defeasibly(q ),...,defeasibly(q),
+not overruled(r,p).
+Let us examine the cases that imply that p∈−∂n+1.
+If ∼p ∈ +∆n, then, by the inductive hypothesis I (definitely(∼p)) = t and
+I (not definitely(∼p))=f.
+From the basic interpretation it is obvious that we have to consider only the
+rules for p, since I(supportive rule(r,p,[q ,...,q])) = t only if r ∈ R [p]. Let
+us partition R [p] as follows: R′ ={r∈R :A(r)∩−∂n 6=∅}, and R′′ =R−R′.
+If r∈R′, then by the inductive hypothesis, for some q ∈A(r),
+I (not defeasibly(q ))=t and I (defeasibly(q ))=f.
+If r ∈ R′′, then we have to show that, for some m, I (not overruled(r,p)) = f.
+This means that I (overruled(r,p))=t.
+Embedding Defeasible Logic into Logic Programming 29
+Let us examine again a relevant instance of clause c5:
+overruled(r,p):-
+rule(s,∼p,[qs,...,qs]),
+defeasibly(qs),...,defeasibly(qs),
+not defeated(s,∼p).
+Since p ∈ −∂n+1, there is a rule s such that s ∈ R[∼p] and A(s) ⊆ +∂n. By
+construction I(rule(s,∼p,[qs,...,qs])) = t, and by the inductive hypothesis, for
+every qs ∈A(s):
+I (defeasibly(qs))=t .
+HencewehavetoshowthatI(not defeated(s,∼p))=t,i.e.I(defeated(s,∼p))=
+f, from which we know that all appropriate substitutions of clause c6 fail.
+defeated(s,∼p):-
+supportive rule(t,p,[qt,...,qt]),
+defeasibly(qt),...,defeasibly(qt),
+sup(t,s).
+As we have seen R[p]6=∅, thus we consider two cases: i) t∈R′, and ii) t∈R′′.
+If t ∈ R′, then, by the inductive hypothesis, there exists a qt ∈ A(t) such that
+I (defeasibly(qt))=f.
+If t ∈ R ′′ , since p ∈ −∂n+1, we have that t 6> s, thus I(sup(t,s) = f). We have
+proved that I (defeated(s,∼p))= f, which then imply I (overruled(r,p)) =t.
+Thus, in all cases, I (defeasibly(p))=f and I (not defeasibly(p))=t.
+Inductive base, ⇐. For the inductive base we consider the literals supported
+by I ; however, according to clause c3 and clause c4, no literal defeasibly(p) /
+not defeasibly(p) is supported by I , thus we consider only definitely(p) and
+not definitely(p).
+If definitely(p) is supported by I we have to analyse two cases, a successful
+instance of clause c1
+definitely(p):-fact(p).
+or a successful instance of clause c2 with the following form:
+definitely(p):-strict(r,p,[ ])).
+In the first case I(fact(p)) = t and so p ∈ F and F ⊆ +∆m, for every m. In the
+second case we a rule r ∈R [p] such that, trivially A(r)⊆+∆0. Hence p∈+∆ .
+On the other hand I (not definitely(p)) =t iff I (definitely(p)) =f. This
+means that all appropriate substitution of the clauses c1 and c2 fail. From clause
+c1 we obtain I(fact(p)) = f and so p ∈/ F. The only case when c2 fails wrt I is
+when I(strict(r,p,[q ,...,q])) is false for all r,p,q. This implies that R [p] = ∅.
+It is now immediate to verify that the two conditions imply that p∈−∆1, and by
+the monotonicity of T, p∈−∆ .
+Inductive step. We assume that the property holds up to I , and we only show
+the cases different from the inductive base.
+30 G. Antoniou, D. Billington, G. Governatori and M.J. Maher
+Case I (definitely(p)) = t. Let us consider the following instance of clause
+c2:
+definitely(p):-
+strict(r,p,[q ,...,q]),
+definitely(q ),...,definitely(q ).
+Here I (strict(r,p,[q ,...,q])) =t, and for all q ∈ A(r), I (definitely(q )) =
+n 1 l i n i
+t. By construction r∈R [p], and by the inductive hypothesis A(r)⊆+∆ .
+Case I (not definitely(p)) = f. Besides the cases of the inductive base we
+havetoconsiderallgroundsubstitutionsofc2whereI (strict(r,p,[q ,...,q]))=
+t. It follows that for some q ∈ A(r), I (definitely(q )) = f. By the inductive
+hypothesis q ∈−∆ , hence for some m, for all r ∈R [p], A(r)∩−∆m 6=∅. Hence
+p∈−∆ .
+Case I (defeasibly(p)) = t. We have to consider two cases¿ The first corre-
+sponds to the following clause:
+defeasibly(p):-definitely(p).
+HereI (definitely(p))=t,therefore,bytheinductivehypothesisp∈+∆ ,thus
+there is an m such that p∈+∆m, and consequently p∈+∂m, and p∈+∂ .
+Otherwise we have
+defeasibly(p):-not definitely(∼p),
+supportive rule(r,p,[qr,...,qr]),
+defeasibly(qr),...,defeasibly(qr),
+not overruled(r,p).
+where I (not definitely(∼p)) = t, I (supportive rule(r,p,[qr,...,qr])) = t,
+andforallqrs,I (defeasibly(qr))=t.Byconstructionandtheinductivehypothe-
+sis∼p∈+∆ ,∃r ∈R [p],andA(r)⊆+∂ .MoreoverI (not overruled(r,p))=
+t,andthereforeI (overruled(r,p))=f.Thismeansthatallsubstitutionsofclause
+c5 are evaluated as false in I .
+If I (rule(s,∼p,[qs,...,qs]))=f, then R[∼p]=∅, and then trivially p∈+∂ .
+Otherwise we consider the substitutions such that I (rule(s,∼p,[qs,...,qs]))=
+t. For such substitutions either
+I (defeasibly(qs))=f, for some qs,
+I (not defeated(s,∼p))=f.
+In the first case, by the inductive hypothesis, qs ∈ −∂ . In the second case
+I (defeated(s,∼q)) = t. This implies I (supportive rule(t,p,[qt,...,qt])) = t,
+I (defeasibly(qt)) = t for all qt ∈ A(t), and I (supportive rule(t > s)) = t.
+Therefore, by construction and the inductive hypothesis, we obtain
+Embedding Defeasible Logic into Logic Programming 31
+This implies that there is a suitable m where all those conditions are satisfied and
+hence p∈+∂m+1, and consequently p∈+∂ .
+Case I (not defeasibly(p)) = t. The proof of this case is analogous to the
+previouscase.Indeedtheproofofnot defeasibly(p)correspondstotheconstruc-
+tivenegationofdefeasibly(p), andthe conditionsforp∈−∂n+1 arethe negation
+of those for p∈+∂n+1.
+6 Conclusion
+Wemotivatedandpresentedatranslationofdefeasibletheoriesintologicprograms,
+such that the defeasible conclusions of the former correspond exactly with the
+sceptical conclusions of the latter under the stable model semantics, if a condition
+of decisiveness is satisfied. If decisiveness is not satisfied, we have to use Kunen
+semantics instead for a complete characterization.
+This paper closes an important gap in the theory of nonmonotonic reasoning,in
+that it relates defeasible logic with mainstream semantics of logic programming.
+This result is particularly important, since defeasible reasoning is one of the most
+successful nonmonotonic reasoning paradigms in applications.
+Acknowledgements
+Preliminary version of the material included in this paper appeared at AAAI’99
+(Maher and Governatori1999) and ICLP’02 (Antoniou and Maher 2002).
+National ICT Australia is funded by the Australian Government’s Department
+of Communications, Information Technology and the Arts and the Australian Re-
+search Council through Backing Australia’s Ability and the ICT Centre of Excel-
+lence program.

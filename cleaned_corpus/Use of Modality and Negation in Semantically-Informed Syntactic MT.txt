@@ -1,0 +1,1113 @@
+Modality and Negation in SIMT
+Use of Modality and Negation in
+Semantically-Informed Syntactic MT
+KathrynBaker MichaelBloodgoodand
+U.S.Dept.ofDefense∗ BonnieJ.Dorr
+UniversityofMaryland∗∗
+ChrisCallison-Burchand LoriLevin
+NathanielW.Filardoand CarnegieMellonUniversity‡
+ChristinePiatko
+JohnsHopkinsUniversity†
+ScottMiller
+BBNTechnologies§
+This paper describes the resource- and system-building efforts of an eight-week Johns Hopkins
+UniversityHumanLanguageTechnologyCenterofExcellenceSummerCampforAppliedLan-
+guageExploration(SCALE-2009)onSemantically-InformedMachineTranslation(SIMT).We
+describeanewmodality/negation(MN)annotationscheme,thecreationofa(publiclyavailable)
+MN lexicon, and two automated MN taggers that we built using the annotation scheme and
+lexicon. Our annotation scheme isolates three components of modality and negation: a trigger
+(a word that conveys modality or negation), a target (an action associated with modality or
+negation) and a holder (an experiencer of modality). We describe how our MN lexicon was
+semi-automatically produced and we demonstrate that a structure-based MN tagger results in
+precisionaround86%(dependingongenre)fortaggingofastandardLDCdataset.
+We apply our MN annotation scheme to statistical machine translation using a syntactic
+framework that supports the inclusion of semantic annotations. Syntactic tags enriched with
+semanticannotationsareassignedtoparsetreesinthetarget-languagetrainingtextsthrougha
+processoftreegrafting.Whilethefocusofourworkismodalityandnegation,thetreegrafting
+procedureisgeneralandsupportsothertypesofsemanticinformation.Weexploitthiscapability
+byincludingnamedentities,producedbyapre-existingtagger,inadditiontotheMNelements
+∗ FortMeade,MD,klbake4@tycho.ncsc.mil
+∗∗ InstituteforAdvancedComputerStudiesandCenterforAdvancedStudyofLanguage,CollegePark,
+MD,bonnie@umiacs.umd.edu,meb@umd.edu
+† HumanLanguageTechnologyCenterofExcellence,Baltimore,MDandAppliedPhysicsLaboratory,
+Laurel,MD,{ccb,nwf}@cs.jhu.edu,christine.piatko@jhuapl.edu
+‡ Pittsburgh,PA,lsl@cs.cmu.edu
+§ Cambridge,MA,smiller@bbn.edu
+Submissionreceived:27March2011;revisedsubmissionreceived:28September2011;acceptedforpubli-
+cation:30November2011.ManuscriptwaspublishedinComputationalLinguistics38(2):411-438.Journal
+©2011AssociationforComputationalLinguistics
+1v28610.2051:viXra
+ComputationalLinguistics VolumeX,NumberY
+producedbythetaggersdescribedinthispaper.Theresultingsystemsignificantlyoutperformed
+alinguisticallynaïvebaselinemodel(Hiero),andreachedthehighestscoresyetreportedonthe
+NIST2009Urdu-Englishtestset.Thisfindingsupportsthehypothesisthatbothsyntacticand
+semanticinformationcanimprovetranslationquality.
+1.Introduction
+Thispaperdescribestheresource-andsystem-buildingeffortsofaneight-weekJohns
+Hopkins Human Language Technology Center of Excellence Summer Camp for Ap-
+pliedLanguageExploration(SCALE-2009)onSemantically-InformedMachineTranslation
+(SIMT) (Baker et al. 2010a, 2010b, 2010c, 2010d). Specifically, we describe our modal-
+ity/negation (MN) annotation scheme, a (publicly available) MN lexicon, and two
+automatedMNtaggersthatwerebuiltusingthelexiconandannotationscheme.
+Our annotation scheme isolates three components of modality and negation: a
+trigger(awordthatconveysmodalityornegation),atarget(anactionassociatedwith
+modalityornegation)andaholder(anexperiencerofmodality).TwoexamplesofMN
+taggingareshowninFigure1.
+(1) Input:AmericansshouldknowthatwecannothandoverDr.Khantothem.
+Output: Americans <TrigRequire should> <TargRequire know> that we <TrigAble can>
+<TrigNegationnot><TargNOTAblehand>overDr.Khantothem.
+(2) Input:Hemanagedtoholdgeneralelectionsintheyear2002,buthecannotbeignorantof
+thefactthattheworldatlargedidnotaccepttheseelections.
+Output:He<TrigSucceedmanaged>to<TargSucceedhold>generalelectionsintheyear
+2002, but he <TrigAble can> <TrigNegation not> <TargNOTAble be> ignorant of the fact
+thattheworldatlargedid<TrigNegationnot><TrigBeliefaccept>these<TargNOTBelief
+elections>.
+Modality/NegationTaggingExamples.
+Note that modality and negation are unified into single MN tags (e.g., the “Able”
+modality tag is combined with “NOT” to form the “NOTAble” tag) and also that
+MN tags occur in pairs of triggers (e.g., TrigAble and TrigNegation) and targets (e.g.,
+TargNOTAble).
+We apply our modality and negation mechanism to the problem of Urdu-English
+machinetranslationusingatechniquethatwecalltreegrafting.Thistechniqueincorpo-
+ratessyntacticlabelsandsemanticannotationsinaunifiedandcoherentframeworkfor
+implementing semantically-informed machine translation. Our framework is not lim-
+itedtothesemanticannotationsproducedbytheMNtaggersthatarethesubjectofthis
+paper and we exploit this capability to additionally include named-entity annotations
+producedbyapre-existingtagger.Byaugmentinghierarchicalphrase-basedtranslation
+ruleswithsyntacticlabelsthatwereextractedfromaparsedparallelcorpus,andfurther
+augmentingtheparsetreeswithmarkersformodality,negation,andentities(through
+thetreegraftingprocess),weproducedabettermodelfortranslatingUrduandEnglish.
+TheresultingsystemsignificantlyoutperformedthelinguisticallynaïvebaselineHiero
+model, and reached the highest scores yet reported on the NIST 2009 Urdu-English
+translationtask.
+Wenotethatwhileourlargestgainswerefromsyntacticenrichmentstothemodel,
+smaller(butsignificant)gainswereachievedbyinjectingsemanticknowledgeintothe
+syntacticparadigm.Verbalsemantics(modalityandnegation)contributedslightlymore
+Bakeretal. ModalityandNegationinSIMT
+gainsthannominalsemantics(namedentities)whiletheircombinedgainswerethesum
+oftheirindividualcontributions.
+Of course, the limited semantic types we explored (modality, negation and en-
+tities) are only a small piece of the much larger semantic space, but demonstrating
+success on these semantic aspects of language, the combination of which has been
+unexplored by the statistical machine translation community, bodes well for (larger)
+improvementsbasedontheincorporationofothersemanticaspects(e.g.,relationsand
+temporalknowledge).Moreover,webelievethissyntacticframeworktobewellsuited
+forfurtherexplorationoftheimpactofmanydifferenttypesofsemanticsonthequality
+ofmachine-translation(MT)output.Indeed,itwouldnothavebeenpossibletoinitiate
+thecurrentstudywithoutthefoundationalworkthatgaverisetoasyntacticparadigm
+thatcouldsupportthesesemanticenrichments.
+In the SIMT paradigm, semantic elements (e.g., modality/negation) are identified
+intheEnglishportionofaparalleltrainingcorpusandprojectedtothesourcelanguage
+(inourcase,Urdu)duringaprocessofsyntacticalignment.Thesesemanticelementsare
+subsequently used in the translation rules that are extracted from the parallel corpus.
+The goal of adding them to the translation rules is to constrain the space of possible
+translationstomoregrammaticalandmoresemanticallycoherentoutput.Weexplored
+whetherincludingsuchsemanticelementscouldimprovetranslationoutputintheface
+ofsparsetrainingdataandfewsourcelanguageannotations.Resultswereencouraging.
+Translation quality, as measured by the Bleu metric (Papineni et al. 2002), improved
+when the training process for the Joshua machine translation system (Li et al. 2009)
+usedintheSCALEworkshopincludedMNannotation.
+We were particularly interested in identifying modalities and negation because
+they can be used to characterize events in a variety of automated analytic processes.
+Modalitiesandnegationcandistinguishrealizedeventsfromunrealizedevents,beliefs
+from certainties, and can distinguish positive and negative instances of entities and
+events.Forexample,thecorrectidentificationandretentionofnegationinaparticular
+language—suchasasingleinstanceoftheword“not”—isveryimportantforacorrect
+representationofeventsandlikewisefortranslation.
+The next two sections examine related work and the motivation behind the SIMT
+approach.Section4definesthetheoreticalframeworkforourMNlexiconandautomatic
+MNtaggers.Section5presentstheMNannotationschemeusedbyourhumanannota-
+torsanddescribesthecreationofaMNlexiconbasedonthisscheme.Section6presents
+two types of MN taggers—one that is string-based and one that is structure-based—
+and evaluates the effectiveness of the structure-based tagger. Section 7 then presents
+implementationdetailsofthesemantically-informedsyntacticsystemanddescribesthe
+resultsofitsapplication.Finally,Section8presentsconclusionsandfuturework.
+2.RelatedWork
+Thedevelopmentofannotationschemeshasbecomeanareaofcomputationallinguis-
+tics development in its own right, often separate from machine learning applications.
+Some projects began as strictly linguistic projects that were later adapted for compu-
+tational linguistics. When an annotation scheme is consistent and well developed, its
+subsequent application to NLP systems is most effective. For example, the syntactic
+annotationofparsetreesinthePennTreebank(Marcus,Marcinkiewicz,andSantorini
+1993) had a tremendous effect on parsing and on Natural Language Processing in
+general.
+ComputationalLinguistics VolumeX,NumberY
+In the case of semantic annotations, each tends to have its unique area of focus.
+Whilethelabelingconventionsmaydiffer,alayerofmodalityannotationoververbrole
+annotation,forexample,canhaveacomplementaryeffectofprovidingmoreinforma-
+tion, rather than being viewed as a competing scheme. We review some of the major
+semanticannotationeffortsbelow.
+Propbank(Palmer,Gildea,andKingsbury2005)isasetofannotationsofpredicate-
+argument structure over parse trees. First annotated as an overlay to the Penn Tree-
+bank, Propbank annotation now exists for other corpora. Propbank annotation aims
+to answer the question Who did what to whom? for individual predicates. It is tightly
+coupled with the behavior of individual verbs. FrameNet (Baker, Fillmore, and Lowe
+1998), a frame-based lexical database that associates each word in the database with
+a semantic frame and semantic roles, is also associated with annotations at the lexical
+level.WordNet(Fellbaum1998)isaverywidelyusedonlinelexicaltaxonomywhichhas
+beendevelopedinnumerouslanguages.WordNetnouns,verbs,adjectivesandadverbs
+are organized into synonym sets. PropBank, FrameNet, and WordNet cover the word
+sensesandargument-takingpropertiesofmanymodalpredicates.
+The Prague Dependency Treebank (Hajicˇ et al. 2001; Böhmová, Cinková, and Ha-
+jicˇová 2005) (PDT) is a multi-level system of annotation for texts in Czech and other
+languages, with its roots in the Prague school of linguistics. Besides a morphological
+layer and an analytical layer, there is a Tectogrammatical layer. The Tectogrammatical
+layerincludesfunctionalrelationships,dependencyrelationsandco-reference.ThePDT
+also integrates propositional and extra-propositional meanings in a single annotation
+framework.
+The Penn Discourse Treebank (PDTB) (Webber et al. 2003; Prasad et al. 2008) an-
+notates discourse connectives and their arguments over a portion of the Penn Tree-
+bank. Within this framework, senses are annotated for the discourse connectives in
+a hierarchical scheme. Relevant to the current work, one type of tag in the scheme is
+the Conditional tag, which includes hypothetical, general, unreal present, unreal past,
+factualpresent,andfactualpastarguments.
+The PDTB work is related to that of Wiebe, Wilson, and Cardie (2005) for estab-
+lishingthe importanceof attributinga belief orassertion expressedin textto itsagent
+(equivalenttothenotionofholderinourscheme).Theannotationschemeisdesignedto
+capturetheexpressionofopinionsandemotions.InthePDTB,eachdiscourserelation
+and its two arguments are annotated for attribution. The attribute features are the
+Sourceoragent,theType(assertionpropositions,beliefpropositions,factsandeventu-
+alities),scopalpolarity,anddeterminacy.Scopalpolarityisannotatedonrelationsand
+theirargumentstoidentifycaseswhenverbsofattributionarenegatedonthesurface
+but the negation takes scope over the embedded clause. An example is the sentence
+“HavingthedividendincreasesisasupportiveelementinthemarketoutlookbutIdon’t
+think it’s a main consideration.” Here, the second argument (the clause following but) is
+annotatedwitha“Neg”marker,meaning“Ithinkit’snotamainconsideration.”
+Wilson,Wiebe,andHoffman(2009)describetheimportanceofcorrectlyinterpret-
+ingpolarityinthecontextofsentimentanalysis,whichisthetaskofidentifyingpositive
+andnegativeopinions,emotionsandevaluations.Theauthorshaveestablishedasetof
+features to distinguish between positive and negative polarity and discuss the impor-
+tance of correctly analyzing the scope of the negation and the modality (e.g., whether
+thepropositionisassertedtoberealornotreal).
+AmajorannotationeffortfortemporalandeventexpressionsistheTimeMLspec-
+ification language, which has been developed in the context of reasoning for question
+answering(Saurí,Verhagen,andPustejovsky2006).TimeML,whichincludesmodality
+Bakeretal. ModalityandNegationinSIMT
+annotation on events, is the basis for creating the TimeBank and FactBank corpora
+(Pustejovskyetal.2006;SauríandPustejovsky2009).InFactBank,eventmentionsare
+markedwiththeirdegreeoffactuality.
+Recent work incorporating modality annotation includes work on detecting cer-
+tainty and uncertainty. Rubin (2007) describes a scheme for five levels of certainty,
+referred to as Epistemic modality, in news texts. Annotators identify explicit certainty
+markers and also take into account Perspective, Focus, and Time. Focus separates
+certainty into facts and opinions, to include attitudes. In our scheme, focus would be
+covered by want and belief modality. Also, separating focus and uncertainty can allow
+theannotationofbothononetriggerword.Prabhakaranetal.(2010)describeascheme
+forautomaticcommittedbelieftagging.Committedbeliefindicatesthewriterbelieves
+the proposition. The authors use a previously annotated corpus of committed belief,
+non-committed belief, and not applicable (Diab et al. 2009), and derive features for
+machine learning from parse trees. The authors desire to combine their work with
+FactBankannotation.
+The CoNLL-2010 shared task (Farkas et al. 2010) was about the detection of cues
+for uncertainty and their scope. The task was described as “hedge detection,” that is,
+finding statements which do not or cannot be backed up with facts. Auxiliary verbs
+suchasmay,might,can,etc.areonetypeofhedgecue.Thetrainingdatafortheshared
+task included the BioScope corpus (Szarvas et al. 2008), which is manually annotated
+with negation and speculation cues and their scope, and paragraphs from Wikipedia
+possiblycontaininghedgeinformation.Ourschemealsoidentifiescuesintheformof
+triggers, but our desired outcome is to cover the full range of modalities and not just
+certaintyanduncertainty.Toidentifyscope,weusesyntacticparsetrees,aswasallowed
+intheCoNLLtask.
+Thetextualentailmentliteratureincludesmodalityannotationschemes.Identifying
+modalities is important to determine whether a text entails a hypothesis. Bar-Haim et
+al.(2007)includepolaritybasedrulesandnegationandmodalityannotationrules.The
+polarity rules are based on an independent polarity lexicon (Nairn, Condorovdi, and
+Karttunen2006).Theannotationrulesfornegationandmodalityofpredicatesarebased
+on identifying modal verbs, as well as conditional sentences and modal adverbials.
+Theauthorsreadthemodalityoffparsetreesdirectlyusingsimplestructuralrulesfor
+modifiers.
+Earlier work describing the difficulty of correctly translating modality using ma-
+chinetranslationincludes(SigurdandGawrónska1994)and(Murataetal.2005).Sigurd
+et al. (1994) write about rule based frameworks and how using alternate grammatical
+contructions such as the passive can improve the rendering of the modal in the target
+language.Murataetal.(2005)analyzethetranslationofJapaneseintoEnglishbyseveral
+systems, showing they often render the present incorrectly as the progressive. The
+authors trained a support vector machine to specifically handle modal contructions,
+whileourmodalannotationapproachisapartofafulltranslationsystem.
+We now consider other literature, relating to tree-grafting and machine transla-
+tion. Our tree-grafting approach builds on a technique used for tree augmentation in
+Miller et al. (2000), where parse-tree nodes are augmented with semantic categories.
+In this earlier work, tree nodes were augmented with relations, while we augmented
+tree nodes with modality and negation. The parser is subsequently retrained for both
+semantic and syntactic processing. The semantic annotations were done manually by
+students who were provided a set of guidelines and then merged with the syntactic
+trees automatically. In our work we tagged our corpus with entities, modality, and
+negation automatically and then grafted them onto the syntactic trees automatically,
+ComputationalLinguistics VolumeX,NumberY
+forthepurposeoftrainingastatisticalmachinetranslationsystem.Anaddedbenefitof
+theextractedtranslationrulesisthattheyarecapableofproducingsemantically-tagged
+Urduparses,despitethefactthatthetrainingdatawereprocessedbyonlyanEnglish
+parserandtagger.
+Relatedworkinsyntax-basedMTincludesthatofHuangandKnight(2006),where
+a series of syntax rules are applied to a source language string to produce a target
+language phrase structure tree. The Penn English Treebank (Marcus, Marcinkiewicz,
+and Santorini 1993) is used as the source for the syntactic labels and syntax trees are
+relabeledtoimprovetranslationquality.Inthiswork,node-internalandnode-external
+information is used to relabel nodes, similar to earlier work where structural context
+was used to relabel nodes in the parsing domain (Klein and Manning 2003). Klein
+andManning’smethodsincludelexicalizingdeterminersandpercentmarkers,making
+morefine-grainedVPcategories,andmarkingthepropertiesofsisternodesonnodes.
+All of these labels are derivable from the trees themselves and not from an auxiliary
+source.Wangetal.(2010)employthistypeofnodesplittinginmachinetranslationand
+reportasmallincreaseinBLEUscore.
+Weusethemethodsdescribedin(ZollmannandVenugopal2006;Venugopal,Zoll-
+mann,andVogel2007)toinducesynchronousgrammarrules,aprocesswhichrequires
+phrase alignments and syntactic parse trees. Venugopal et al. (2007) use generic non-
+terminalcategorysymbols,asin(Chiang2005),aswellasgrammaticalcategoriesfrom
+theStanfordparser(KleinandManning2003).Theirmethodforruleinductiongener-
+alizes to any set of non-terminals. We further refine this process by adding semantic
+notationsontothesyntacticnon-terminalsproducedbyaPennTreebanktrainedparser,
+thusmakingthecategoriesmoreinformative.
+Intheparsingdomain,theworkofPetrovandKlein(2007)isrelatedtothecurrent
+work.Inthiswork,rulesplittingandrulemergingareappliedtorefineparsetreesdur-
+ing machine learning. Hierarchical splitting leads to the creation of learned categories
+that have linguistic relevance, such as a breakdown of a determiner category into two
+subcategoriesofdeterminersbynumber,i.e.,thisandthatgrouptogetherasdosomeand
+these.Weaugmentparsetreesbycategoryinsertionincaseswhereasemanticcategory
+isinsertedasanodeinaparsetree,aftertheEnglishsideofthecorpushasbeenparsed
+byastatisticalparser.
+3.SIMTMotivation
+As in many of the frameworks described above, the aim of the SIMT effort was to
+provide a generalized framework for representing structured semantic information,
+suchasmodalityandnegation.Unlikemanyoftheprevioussemanticannotationefforts
+(where the emphasis tends to be on English), however, our approach is designed to
+be directly integrated into a translation engine, with the goal of translating highly
+divergentlanguagepairs,suchasUrduandEnglish.Assuch,ourchoiceofannotation
+scheme—illustrated in the trigger-target example shown in Figure 1—was based on a
+simplified structural representation that is general enough to accommodate divergent
+modality/negation phenomena, easy for language experts to follow, and straightfor-
+wardtointegrateintoatree-graftingmechanismforMT.Ourobjectiveistoinvestigate
+whetherincorporatingthissortofinformationintomachinetranslationsystemscould
+produce better translations, particularly in settings where only small parallel corpora
+areavailable.
+It isinformative to lookat anexample translation tounderstand the challengesof
+translating important semantic elements when working with a low-resource language
+Bakeretal. ModalityandNegationinSIMT
+Urdu English
+set lines tokens types tokens types
+training 202k 1.7M 56k 1.7M 51k
+dev 981 21k 4k 19k 4k
+devtest 883 22k 4k 19-20k 4k
+test 1792 42k 6k 38-41k 5k
+Thesizeofthevariousdatasetsusedfortheexperimentsinthispaperincludingthetraining,
+development(dev),incrementaltestset(devtest)andblindtestset(test).Thedev/devtestwasa
+splitoftheNIST08Urdu-Englishtestset,andtheblindtestsetwasNIST09.
+Source Reference prper-eS-SCIAMLTE M MTT o uotuptuptut
+!" !"# $% &'( )!*% +, -.!/!, Nagas Set Fire in Assam Has Imposed a Fire in Assam
+-0#01* 23 +4 506 78( +, -0'9:!;< !/!, =>?@( AB5 +4 CDE On Wednesday, angry Naga tribesmen set 10 On Wednesday, the tribal mini pur enraged ten
+F!GH !I3J4 KH% 5L, 7GE 04 schools in Manipur on fire. schools was also burnt.
+M9N( +4 O8'#!/!, &'( 3PD>H 74 -BQ18'* RE!S( +4 T'#06 According to police, hundreds of armed According to the police, the number of
+$% &'( -.!/ U'H +4 J/ !N;'* 5BP 71'9/ +4 )!*% +, -0'9:!;< tribesmen of Nagaland set three villages of hundreds of armed tribesmen in the ratio of
+Gulleki and Sisagar in Assam. assam and three set the fire in the village.
+A large number of natives have vacated the After this attack. Local residents in large
+04 -0<WX +, -BD8Y!E 7(!Z( &'( 3PD>H VQE D>E +4 [9\] 2P area after this attack. numbers to the areas.
+F^_ !I3J4 7#!`
+Nagaland claims that Assam state is occupying Claim of assam. That this is the some regions.
+J6 -0S` a>E +4 2P )!*% b*!I5 [4 ^_ !HJ4 cV0X3 O8'#!/!, some of its territory.
+F^_ aE!< While of assam has said that this to some
+While Assam state says that Nagaland has areas of his into custody
+04 -0<WX a>E +4 2P [4 ^_ !,[4 !4 )!*% b*!I5 [1;d occup!i"ed some of its areas.
+F^_!G45 +# &'( +e;< +86P +, O8'#!/!, A separate state of on 19 establishment of
+Nagaland was established as a free state in assam happened in Which the majority of the
+&'( fg*JH T',P )!'< J6 50h +4 b*!I5 i#P jIP !4 O8'#!/!, 1963 which was created by dividing Assamese people of the districts was made.
+kWlP +#PB bIJm4P 74 -0'9:!;< !/!, +4 )!*% +Nd !GH PB_ cities with Naga majority.
+F!GH !'/ !I!8E +4 J4 nNZ8(04 The state tribes for the establishment of the
+Naga tribes started armed struggle for the 19$156 armed declare struggle of the
+UoGp 0* T',P +'# +4 )!'< +4 O8'#!/!, b*!I5 +, =:!;< !/!, creation of Nagaland state in 1956. beginning of.
+F7GH 74 q!XBJY 74 3[d BDd M9N( &'(
+The separatist Socialist Council of Nagaland Separatist Council of National organization is
+!4 O8'#!/!, r% =N,04 sN9Y0* =8@', n't8H D8N6 7/Du'9X has been claiming for a long time that for the the demand for a long time that ‘greater’, for
++'# +4 )!'< +4 !O8'#!/!, JgIJ/" [4 ^_ P_5 [;#!S( +* [vJX creation of ‘Greater Nagaland,’ all the Naga the establishment of the assam, mini pur and
+!4 -0<WX !/!, )!w +4 KI3J6 =p!,B5P 5BP 506 78( x)!*% areas of Assam, Manipur and Arunachal all pradesh areas should be included with.
+F+I_!p !,B_ y!zP +* O8'#!/!, Pradesh should be joined with Nagaland.
+The government of claim thousands of believes
+Jg'(094 -B5PA_ 74 2P [4 ^_ 7HJ4 cV0X3 b(01] 74 O8'#!/!, The Nagaland government claims that that the earth of assam.
+thousands of kilometers of its land lies in the
+Assamese part. But has been accused of assam that the power
+of this on a large region has taken in the affairs
++4 2P J6 5BA +4 b<!h +, O8'#!/!, [4 ^_ )P~#P !4 )!*% U1'# But Assam accused Nagaland for occupying a and one Place, vice Center of which he is also
+7(!t?,P04 )!Z( jIP 5BP ^_ !'# +# &'( +e;< 04 +S` ^QE q[E very large part of its land by force and setting
+F&I_ +H[4 O8'#P0', _B +Nd ^_ !G45 !8E 7GE ~4J( :!, !4 50(P up a second centre of administrative affairs
+which they call Nevaland.
+AnexampleofUrdu-Englishtranslation.ShownareanUrdusourcedocument,areference
+translationproducedbyaprofessionalhumantranslator,andmachinetranslationoutputfroma
+phrase-basedmodel(Moses)withoutlinguisticinformation,whichisrepresentativeof
+state-of-the-artMTqualitybeforetheSIMTeffort.
+pair. Figure 2 shows an example taken from the 2008 NIST Urdu-English translation
+task, and illustrates the translation quality of a state-of-the-art Urdu-English system
+(prior to the SIMT effort). The small amount of training data for this language pair
+(see Table 1) results in significantly degraded translation quality compared, e.g., to an
+Arabic-Englishsystemthathasmorethan100timestheamountoftrainingdata.
+ComputationalLinguistics VolumeX,NumberY
+Standard Hierarchical Rules Syntactic Enhancements Semantically Informed Rules
+Theevolutionofasemanticallyinformedapproachtooursynchronouscontextfreegrammars
+(SCFGs).Atthestartofsummerthedecoderusedtranslationruleswithasinglegeneric
+non-terminalsymbol,latersyntacticcategorieswereused,andbytheendofthesummerthe
+translationrulesincludedsemanticelementssuchasmodalitiesandnegation,aswellasnamed
+entities.
+The output in Figure 2 was produced using Moses (Koehn et al. 2007), a state-of-
+the-art phrase-based MT system that by default does not incorporate any linguistic
+information (e.g., syntax or morphology or transliteration knowledge). As a result,
+wordsthatwerenotdirectlyobservedinthebilingualtrainingdatawereuntranslatable.
+Names,inparticular,areproblematic.Forexample,thelackoftranslationforNagaland
+and Nagas induces multiple omissions throughout the translated text, thus producing
+severalinstanceswheretheholderofaclaim(orbelief)ismissing.Thisisbecauseoutof
+vocabularywordsaredeletedfromtheMosesoutput.
+We use syntactic and semantic tags as higher-order symbols inside the translation
+rulesusedbythetranslationmodels.Genericsymbolsintranslationrules(i.e.,thenon-
+terminal symbol “X”) were replaced with structured information at multiple levels of
+abstraction, using a tree-grafting approach that we describe below. Figure 3 illustrates
+theevolutionofthetranslationrulesthatweused,firstreplacing“X”withgrammatical
+categoriesandthenwithcategoriescorrespondingtosemanticunits.
+Thesemanticunitsthatweexaminedinthiseffortweremodalitiesandnegation(in-
+dicationsthatastatementrepresentssomethingthathas/hasn’ttakenplaceoris/isn’t
+a belief or an intention) and named entities (such as people or organizations). Other
+semanticunitssuchasrelationsbetweenentitiesandevents,werenotpartofthiseffort,
+but we believe they could be similarly incorporated into the framework. We chose to
+examinesemanticunitsthatcanonicallyexhibittwodifferentsyntactictypes:verbal,in
+thecaseofmodalityandnegation,andnominal,inthecaseofnamedentities.
+Although used in this effort, named entities were not the focus of our research
+efforts in SIMT. Rather, we focused on the development of an annotation scheme for
+Bakeretal. ModalityandNegationinSIMT
+modalityandnegationanditsuseinMT,whilerelyingonapre-existingHMM-based
+tagger derived from Identifinder (Bikel, Schwartz, and Weischedel 1999) to produce
+entity tags. Thus, the remainder of this paper will focus on our modality/negation
+annotation scheme, two MN taggers produced by the effort, and on the integration of
+semanticsintheSIMTparadigm.
+4.ModalityandNegation
+Modality is an extra-propositional component of meaning. In John may go to NY, the
+basicpropositionisJohngotoNYandthewordmayindicatesmodalityandiscalledthe
+triggerinourwork.VanderAuweraandAmman(2005)definecorecasesofmodality:
+John must go to NY (epistemic necessity), John might go to NY (epistemic possibility),
+John has to leave NY now (deontic necessity) and John may leave NY now (deontic pos-
+sibility). Larreya (2009) defines the core cases slightly differently as root and epistemic.
+Root modality in Larreya’s taxonomy includes physical modality (He had to stop. The
+road was blocked) and deontic modality (You have to stop). Epistemic modality includes
+problematicmodality(Youmustbetired)andimplicativemodality(Youhavetobemadto
+dothat).Manysemanticists(Kratzer2009;vonFintelandIatridou2009)definemodality
+asquantificationoverpossibleworlds.JohnmightleaveNYmeansthatthereexistsome
+possible worlds in which John leaves NY. Another view of modality relates more to
+a speaker’s attitude toward a proposition (Nirenburg and McShane 2008; McShane,
+Nirenburg,andZacharsky2004).
+We incorporate negation as an inextricably intertwined component of modality,
+using the term “modality/negation (MN)” to refer to our resources (lexicons) and
+processes(taggers).Weadopttheviewthatmodalityincludesseveraltypesofattitudes
+that a speaker might have (or not have) toward an event or state. From the point of
+view of the reader or listener, modality might indicate factivity, evidentiality, or senti-
+ment.Factivityisrelatedtowhetheranevent,state,orpropositionhappenedordidn’t
+happen.Itdistinguishesthingsthathappenedfromthingsthataredesired,planned,or
+probable.Evidentialitydealswiththesourceofinformationandmayprovidecluesto
+thereliabilityoftheinformation.Didthespeakerhavefirsthandknowledgeofwhathe
+orsheisreporting,orwasithearsayorinferredfromindirectevidence?Sentimentdeals
+withaspeaker’spositiveornegativefeelingstowardanevent,state,orproposition.
+Our project was limited to modal words and phrases—and their negations—that
+are related to factivity. However, beyond the core cases of modality we include some
+aspects of speaker attitude such as intent and desire. We included these because they
+areoftennotseparablefromthecorecasesofmodality.Forexample,Hehadtogomay
+includetheideasthatsomeonewantedhimtogo,thathemightnothavewantedtogo,
+thatatsomepointaftercoercionheintendedtogo,andthatatsomepointhewasable
+togo(Larreya2009).
+Our focus was on the eight modalities in Figure 4, where P is a proposition (the
+target of the triggering modality) and H is the holder (experiencer or cognizer of the
+modality). Some of the eight factivity-related modalities may overlap with sentiment
+or evidentiality. For example, want indicates that the proposition it scopes over may
+not be a fact (it may just be desired), but it also expresses positive sentiment toward
+thepropositionitscopesover.Weassumethatsentimentandevidentialityarecovered
+underseparatecodingschemes,andthatwordslikewantwouldhavetwotags,onefor
+sentimentandoneforfactivity.
+ComputationalLinguistics VolumeX,NumberY
+• Requirement:doesHrequireP?
+• Permissive:doesHallowP?
+• Success:doesHsucceedinP?
+• Effort:doesHtrytodoP?
+• Intention:doesHintendP?
+• Ability:canHdoP?
+• Want:doesHwantP?
+• Belief:withwhatstrengthdoesHbelieveP?
+EightModalitiesUsedforTagging.HstandsfortheHolderofthemodality,andPisthe
+propositionoverwhichthemodalityhasscope.
+5.TheModality/NegationAnnotationScheme
+The challenge of creating a MN annotation scheme was to deal with the complex
+scopingofmodalitieswitheachotherandwithnegation,whileatthesametimecreating
+asimplifiedoperationalprocedurethatcouldbefollowedbylanguageexpertswithout
+special training. Below we describe our MN annotation framework, including a set
+of linguistic simplifications, and then we present our methodology for creation of a
+publiclyavailableMNlexicon.Themodalityannotationschemeisfullydocumentedin
+asetofguidelinesthatwerewrittenwithEnglishexamplesentences(Bakeretal.2010c).
+TheguidelinescanbeusedtoderivehandtaggedevaluationdataforEnglishandthey
+alsoincludeasectionthatcontainsasetofUrdutrigger-wordexamples.
+DuringtheSCALEworkshop,someUrduspeakersusedtheguidelinestoannotate
+asmallcorpusofUrdubyhand,whichwereservedforfuturework.TheUrducorpus
+could be useful as an evaluation corpus for automatically tagged Urdu, such as one
+derivedfromruleprojectionintheUrdu-Englishmachinetranslationsystem,amethod
+wedescribefurtherinsection7.Also,althoughwedidnotannotateaverylargeUrdu
+corpus, more data could be manually annotated to train an automatic Urdu tagger in
+thefuture.
+5.1AnatomyofModality/NegationinSentences
+Insentencesthatexpressmodality,weidentifythreecomponents:atrigger,atarget,and
+aholder.Thetriggeristhewordorstringofwordsthatexpressesmodalityornegation.
+Thetargetistheevent,state,orrelationoverwhichthemodalityscopes.Theholderis
+theexperiencerorcognizerofthemodality.Thetriggercanbeawordsuchasshould,try,
+able,likely,orwant.Itcanalsobeanegativeelementsuchasnotorn’t.Often,modality
+or negation is expressed without a lexical trigger. For a typical declarative sentence
+(e.g., John went to NY), the default modality is strong belief when no lexical trigger is
+present.Modalitycanalsobeexpressedconstructionally.Forexample,Requirementcan
+beexpressedinUrduwithadativesubjectandinfinitiveverbfollowedbyaverbthat
+meanstohappenorbefall.
+Bakeretal. ModalityandNegationinSIMT
+5.2LinguisticSimplificationsforEfficientOperationalization
+Six linguistic simplifications were made for the sake of efficient operationalization of
+theannotationtask.Thefirstlinguisticsimplificationdealswiththescopeofmodality
+andnegation.Thefirstsentencebelowindicatesscopeofmodalityovernegation.The
+secondindicatesscopeofnegationovermodality:
+• Hetriednottocriticizethepresident.
+• Hedidn’ttrytocriticizethepresident.
+The interaction of modality with negation is complex, but was operationalized
+easilyinthemenuofthirteenchoicesshowninFigure5.Firstconsiderthecasewhere
+negationscopesovermodality.Fourofthethirteenchoicesarecompositesofnegation
+scopingovermodality.Forexample,theannotatorscanchoosetryornottryastwosep-
+arate modalities. Five modalities (Require, Permit, Want, Firmly Believe, and Believe)
+do not have a negated form. For three of these modalities (Want, Firmly Believe, and
+Believe), this is because they are often transparent to negation. For example, I do not
+believethatheleftNYsometimesmeansthesameasIbelievehedidn’tleaveNY.Merging
+thetwoisobviouslyasimplification,butitsavestheannotatorsfromhavingtomakea
+difficultdecision.
+The second linguistic simplification is related to a duality in meaning between
+require and permit. Not requiring P to be true is similar in meaning to permitting P to
+befalse.Thus,annotatorswereinstructedtolabelnotrequirePtobetrueasPermitPtobe
+false.Conversely,notPermitPtobetruewaslabeledasRequirePtobefalse.
+After the annotator chooses the modality, the scoping of modality over negation
+takesplaceasaseconddecision.Forexample,forthesentenceJohntriednottogotoNY,
+the annotator first identifies go as the target of a modality and then chooses try as the
+modality.Finally,theannotatorchoosesfalseasthepolarityofthetarget.
+The third simplification relates to entailments between modalities. Many words
+have complex meanings that include components of more than one modality. For ex-
+ample,ifonemanagedtodosomething,onetriedtodoitandoneprobablywantedto
+doit.Thus,annotatorswereprovidedaspecificity-orderedmodalitylistinFigure5,and
+wereaskedtochoosethefirstapplicablemodality.Wenotethatthislistcorrespondsto
+twoindependent“entailmentgroupings,”orderedbyspecificity:
+• {requires→permits}
+• {succeeds→tries→intends→isable→wants}
+Inside the entailment groupings, the ordering corresponds to an entailment relation,
+e.g., succeeds can only occur if tries has occurred. Also, the {requires → ... } entailment
+groupingistakentobemorespecificthan(orderedbefore)the{succeeds→...}entail-
+mentgrouping.Moreover,bothentailmentgroupingsaretakentobemorespecificthan
+believes,whichisnotinanentailmentrelationwithanyoftheothermodalities.
+The fourth simplification, already mentioned above, is that sentences without an
+overttriggerwordaretaggedasfirmlybelieves.Thisheuristicworksreasonablywellfor
+thetypesofdocumentswewereworkingwith,althoughonecouldimaginegenressuch
+asfictioninwhichmanysentencestakeplaceinanalternatepossibleworld(imagined,
+conditional,orcounterfactual)withoutexplicitmarking.
+ComputationalLinguistics VolumeX,NumberY
+• Hrequires[Ptobetrue/false]
+• Hpermits[Ptobetrue/false]
+• Hsucceedsin[makingPtrue/false]
+• Hdoesnotsucceedin[makingPtrue/false]
+• Histrying[tomakePtrue/false]
+• Hisnottrying[tomakePtrue/false]
+• Hintends[tomakePtrue/false]
+• Hdoesnotintend[tomakePtrue/false]
+• Hisable[tomakePtrue/false]
+• Hisnotable[tomakePtrue/false]
+• Hwants[Ptobetrue/false]
+• Hfirmlybelieves[Pistrue/false]
+• Hbelieves[Pmaybetrue/false]
+ThirteenMenuChoicesforModality/NegationAnnotation.
+The fifth linguistic simplification is that we did not require annotators to mark
+nested modalities. For a sentence like He might be able to go to NY the target word go
+is marked as ability, but might is not annotated for Belief modality. This decision was
+basedontimelimitsontheannotationtask;therewasnotenoughtimeforannotators
+todealwithsyntacticscopingofmodalitiesoverothermodalities.
+Finally,wedidnotmarktheholderHbecauseoftheshorttimeframeforworkshop
+preparation. We felt that identifying the triggers and targets would be most beneficial
+inthecontextofmachinetranslation.
+5.3TheEnglishModality/NegationLexicon
+Usingtheframeworkdescribedabove,wecreatedaMNlexiconthatwasincorporated
+intoaMNtaggingschemetobedescribedbelowinSection6.EntriesintheMNlexicon
+consistof:(1)Astringofoneormorewords:forexample,shouldorhaveneedof.(2)A
+partofspeechforeachword:thepartofspeechhelpsusavoidirrelevanthomophones
+suchasthenouncan.(3)AMNdesignator:oneofthethirteenmodality/negationcases
+describedabove.(4)Aheadword(ortrigger):theprimaryphrasalconstituenttocover
+caseswhereanentryisamulti-wordunit,e.g.,thewordhopeinhopefor.(5)Oneormore
+subcategorizationcodes.
+WeproducedthefullEnglishMNlexiconsemi-automatically.First,wegathereda
+smallseedlistofMNtriggerwordsandphrasesfromourmodalityannotationmanual
+(Bakeretal.2010c).Then,weexpandedthissmalllistofMNtriggerwordsbyrunning
+an online search for each of the words, specifically targeting free online thesauri (e.g.,
+thesaurus.com), to find both synonymous and antonymous words. From these we
+manually selected the words we thought triggered modality (or their corresponding
+Bakeretal. ModalityandNegationinSIMT
+String: Need
+Modality: Require
+Trigger: Need
+Subcat: V3-passive-basic–Morecitizensareneededtovote.
+Subcat: V3-I3-basic – The government will need to work continuously for at
+leastayear.Wewillneedthemtoworkcontinuously.
+Subcat: T1-monotransitive-for-V3-verbs – We need a Sir Sayyed again to
+maintainthissentiment.
+Subcat: T1-passive-for-V3-verb–Tentsareneeded.
+Subcat: Modal-auxiliary-basic–Heneednotgo.
+ModalityLexiconEntryforneed.
+negativevariants)andfilteredoutwordsthatwethoughtdidn’ttriggermodality.The
+resultinglistofMNtriggerwordsandphrasescontainedabout150lemmas.
+We note that most intransitive LDOCE codes were not applicable to modal-
+ity/negation constructions. For example, hunger (in the Want modality class) has a
+modal reading of “desire” when combined with the preposition for (as in she hungered
+forapromotion),butwedonotconsiderittobemodalwhenitisusedinthesomewhat
+archaic sentence He hungered, meaning that he did not have enough to eat. Thus the
+LDOCE code I associated with the verb hunger was hand-changed to I-FOR. There
+were43suchcases.OncetheLDOCEcodeswerehand-verified(andmodifiedaccord-
+ingly),themappingtosubcategorizationcodeswasapplied.
+We note that most intransitive LDOCE codes were not applicable to modal-
+ity/negation constructions. For example, hunger (in the Want modality class) has a
+modal reading of “desire” when combined with the preposition for (as in she hungered
+for a promotion), but not in its pure intransitive form (e.g., he hungered all night). Thus
+the LDOCE code I associated with the verb hunger was hand-changed to I-FOR.
+There were 43 such cases. Once the LDOCE codes were hand-verified (and modified
+accordingly),themappingtosubcategorizationcodeswasapplied.
+~bonnie/ModalityLexicon.txt. An example of an entry is given in Figure 6, for
+theverbneed.
+6.AutomaticModality/NegationAnnotation
+A MN tagger produces text or structured text in which modality or negation triggers
+and/ortargetsareidentified.Automaticidentificationoftheholdersofmodalitieswas
+beyond the scope of our project because the holder is often not explicitly stated in the
+sentenceinwhichthetriggerandtargetoccur.ThissectiondescribestwotypesofMN
+taggers—onethatisstring-basedandonethatisstructure-based.
+6.1TheString-basedEnglishModality/NegationTagger
+The string-based tagger operates on text that has been tagged with parts of speech
+by a Collins-style statistical parser (Miller et al. 1998). The tagger marks spans of
+words/phrases that exactly match MN trigger words in the MN lexicon described
+ComputationalLinguistics VolumeX,NumberY
+(NNP Pakistan)
+(SBAR (WDT which)
+(S (MD TrigAble could)
+(RB TrigNegation not)
+(VB B TargAble TrigSucceed
+TargNegation reach)
+(JJ TargSucceed semi-final))
+(PP (IN in) (DT a)
+(NN match) (PP (IN against)
+(ADJP (JJ South) (JJ African))
+(NN team))
+(PP (IN for) (DT the)
+(JJ fifth) (NN position))
+(VB D defeated)
+(NP (NNP South) (NNP Africa))
+Sampleoutputfromthestructure-basedMNtagger.
+above,andthatexactlymatchthesamepartsofspeech.Thistaggeridentifiesthetarget
+ofeachmodality/negationusingtheheuristicoftaggingthenextnon-auxiliaryverbto
+therightofthetrigger.Spansofwordscanbetaggedmultipletimeswithdifferenttypes
+oftriggersandtargets.
+We found the string-based modality/negation tagger to produce output that
+matched about 80% of the sentence-level tags produced by our structure-based tag-
+ger, the results of which are described next. While string-based tagging is fast and
+reasonably accurate in practice, we opted to focus on the in-depth analysis of modal-
+ity/negationofourSIMTresultsusingthemoreaccuratestructure-basedtagger.
+6.2TheStructure-basedEnglishModality/NegationTagger
+Thestructure-basedMNtaggeroperatesontextthathasbeenparsed(Milleretal.1998).
+Weusedaversionoftheparserthatproducesflattenedtrees.Inparticular,theflattener
+deletes VP nodes that are immediately dominated by VP or S and NP nodes that are
+immediatelydominatedbyPPorNP.TheparsedsentencesareprocessedbyTSurgeon
+rules.EachTSurgeonruleconsistsofapatternandanaction.Thepatternmatchespart
+ofaparsetreeandtheactionalterstheparsetree.Morespecifically,thepatternfindsa
+MNtriggerwordanditstargetandtheactioninsertstagssuchasTrigRequireand
+TargRequirefortriggersandtargetsforthemodalityRequire.Figure7showsoutput
+fromthestructure-basedMNtagger.(Notethatthesentenceisdisfluent:Pakistanwhich
+couldnotreachsemi-final,inamatchagainstSouthAfricanteamforthefifthpositionPakistan
+defeatedSouthAfricaby41runs.)TheexampleshowsthatcouldisatriggerfortheAbility
+modalityandnotisatriggerfornegation.ReachisatargetforbothAbilityandNegation,
+which means that it is in the category of “H is not able [to make P true/false]” in our
+codingscheme.ReachisalsoatriggerfortheSucceedmodalityandsemi-finalisitstarget.
+Bakeretal. ModalityandNegationinSIMT
+TheTSurgeonpatternsareautomaticallygeneratedfromtheverbclasscodesinthe
+MN lexicon along with a set of fifteen templates. Each template covers one situation
+such as the following: the target is the subject of the trigger; the target is the direct
+object of the trigger; the target heads an infinitival complement of the trigger; the
+target is a noun modified by an adjectival trigger, etc. The verb class codes indicate
+whichtemplatesareapplicableforeachtriggerword.Forexample,atriggerverbinthe
+transitiveclassmayusetwotargettemplates,oneinwhichthetriggerisinactivevoice
+and the target is a direct object (need tents) and one in which the trigger is in passive
+voiceandthetargetisasubject(tentsareneeded).
+In developing the TSurgeon rules, we first conducted a corpus analysis for forty
+of the most common trigger words in order to identify and debug the most broadly
+applicable templates. We then used LDOCE to assign verb classes to the remaining
+verbaltriggersintheMNlexicon,andweassociatedoneormoredebuggedtemplates
+witheachverbclass.Inthisway,theinitialcorpusworkonalimitednumberoftrigger
+wordswasgeneralizedtoalongerlistoftriggerwords.BecausetheTSurgeonpatterns
+are tailored to the flattened structures produced by our parser, it is not easily ported
+to new parser outputs. However, the MN lexicon itself is portable. Switching parsers
+wouldentailwritingnewTSurgeontemplates,butthetriggerwordsintheMNlexicon
+wouldstillbeautomaticallyassignedtotemplatesbasedontheirverbclasses.
+The following example shows an example of a TSurgeon pattern-action pair for a
+sentence like They were required to provide tents. The pattern-action pair is intended to
+beusedafterapre-processingstageinwhichlabelssuchas“VoicePassive”and“AUX”
+have been assigned. “VoicePassive” is inserted by a pre-processing TSurgeon pattern
+because, in some cases, the target of a passive modality trigger word is in a different
+location from the target of the corresponding active modality trigger word. “AUX” is
+inserted during pre-processing to distinguish auxiliary uses of have and be from their
+usesasmainverbs.Thepatternportionofthepattern-actionpairmatchesanodewith
+label VB that is not already tagged as a trigger and that is passive and dominates the
+string"required".TheVBnodeisalsoasistertoanSnode,andtheSnodedominatesa
+VBthatisnotanauxiliary(provideinthiscase).Theactionportionofthepattern-action
+pair inserts the string “TargReq” as the second daughter of the second VB and inserts
+thestring“TrigReq”astheseconddaughterofthefirstVB.
+VB=trigger !< /^Trig/ < VoicePassive < required $..
+(S < (VB=target !< AUX))
+insert (TargReq) >2 target
+insert (TrigReq) >2 trigger
+Verb-specific patterns such as this one were generalized in order to gain coverage
+of the whole modality lexicon. The specific lexical item, required, was replaced with a
+variable, as were the labels “TrigReq” and “TargReq.” The pattern was then given a
+name,V3-passive-basic,whereV3isaverbclasstagfromLDOCE(describedabovein
+Section5.3)forverbsthattakeinfinitivecomplements.WethenlookeduptheLDOCE
+verbclasslabelsforalloftheverbsinthemodalitylexicon.Usingthisinformation,we
+couldthengenerateasetofnew,verb-specificpatternsforeachV3verbinthemodality
+lexicon.
+6.3EvaluatingtheEffectivenessofStructure-basedMNTagging
+Weperformedamanualinspectionofthestructure-basedtaggingoutput.Wecalculated
+precision by examining 229 instances of modality triggers that were tagged by our
+ComputationalLinguistics VolumeX,NumberY
+(S (NP (DT A) (NN solution))
+(VP (MD-TrigBelief must)
+(VP (VB be)
+(VP (VBN-TargBelief found)
+ExampleofEmbeddedTargetHeadfoundinsideVPmustbefound.
+tagger from the English side of the NIST 09 MTEval training sentences. We analyzed
+precisionintwosteps,firstcheckingforthecorrectsyntacticpositionofthetargetand
+then checking the semantic correctness of the trigger and target. For 192 of the 229
+triggers(around84%),thetargetsweretaggedinthecorrectsyntacticlocation.
+For example, for the sentence A solution must be found to this problem shown in
+Figure 8, the word must is a modality trigger word, and the correct target is the first
+non-auxiliaryverbheadingaverbphrasethatiscontainedinthesyntacticcomplement
+of must. The syntactic complement of must is the verb phrase be found to this problem.
+Thesyntacticheadofthatverbphrase,be,isskippedbecauseitisanauxiliaryverb.The
+correct(embedded)targetfoundistheheadofthesyntacticcomplementofbe.
+The192modalityinstanceswithstructurallycorrecttargetsdonotallhaveseman-
+tically correct tags. In the example above, must is tagged as TrigBelief, where the
+correct tag would be TrigRequire. Also, because the MN lexicon was used without
+respect to word sense, words were sometimes erroneously identified as triggers. This
+includesnon-modalusesofwork(workwithrefugees),reach(reachadestination),and
+attack (attack a physical object), in constrast to modal uses of these words: work for
+peace (effort), reach a goal (succeed), and attack a problem (effort). Fully correct tagging
+ofmodalitywouldneedtoincludewordsensedisambiguation.
+For37ofthe229triggersweexamined,atargetwasnottaggedinthecorrectsyn-
+tacticposition.In12of37incorrectlytaggedinstancesthetargetsareinsidecompound
+nounsorcoordinatestructures(NPorVP),whicharenotyethandledbythemodality
+tagger.Theremaining25ofthe37incorrectlytaggedinstanceshadtargetsthatwerelost
+becausethetaggerdoesnotyethandleallcasesofnestedmodalities.Nestedmodalities
+occur in sentences like They did not want to succeed in winning where the target words
+wantandsucceedarealsomodalitytriggerwords.Propertreatmentofnestedmodalities
+requiresconsiderationofscopeandcompositionalsemantics.
+Nesting was treated in two steps. First, the modality tagger marked each word as
+a trigger and/or target. In They did not want to succeed in winning, not is marked as a
+trigger for negation, want is marked as a target of negation and a trigger of wanting,
+succeedismarkedasatriggerofsucceedingandatargetofwanting,andwinismarked
+as a target of succeeding. The second step in the treatment of nested modalities oc-
+curs during tree grafting, where the meanings of the nested modalities are composed.
+The tree grafting program correctly composes some cases of nested modalities. For
+example, the tag TrigAble composed with TrigNegation results in the target tag
+TargNOTAble,asshowninFigure9.Inothercases,wherecompositionalsemanticsare
+notyetaccommodated,thetreegraftingprogramremovedtargetlabelsfromthetrees,
+andthosecaseswerecountedasincorrectforthepurposeofthisevaluation.
+Inthe229instancesthatweexamined,therewere14inwhichalightverbornoun
+was the correct syntactic target, but not the correct semantic target. Decision would be
+a better target than taken in The decision should be taken on delayed cases on the basis of
+merit.Wecountedsentenceswithsemanticallylighttargetsascorrectinourevaluation
+Bakeretal. ModalityandNegationinSIMT
+(NP (EX there))
+(VP (VBZ is)
+(NP (NP (DT no) (NN difficulty))
+(SBAR (WHNP (WDT which))
+(S (VP (MD-TrigAble can)
+(RB-TrigNegation not)
+(VP (VB be)
+(VP-TargNOTAble (VBN-TargNOTAble solved)))))))))
+ExampleofModalityComposedwithNegation:TrigAbleandTrigNegationcombinetoform
+NOTAble.
+because our goal was to identify the synactic head of the target. The semantics of the
+targetisageneralissue,andweoftenfindlexico-syntacticfluffbetweenthetriggerand
+themostsemanticallysalienttargetinsentenceslikeWesucceededinourgoalofwinning
+thewarwhere“successinwar”isthesalientmeaning.
+With respect to recall, the tagger primarily missed special forms of negation in
+nounphrasesandprepositionalphrases:Therewasnoplacetoseekshelter.;Thebuildings
+should be reconstructed, not with RCC, but with the wood and steel sheets. More complex
+constructionalandphrasaltriggerswerealsomissed:PresidentPervaizMusharrafhassaid
+thathewillnotrestunlesstheprocessofrehabilitationiscompleted.Finally,wediscovered
+someomissionsfromourMNlexicon:Itisnotpossibleinthemiddleofwintertore-open
+theroads.Furtherannotationexperimentsareplanned,whichwillbeanalyzedtoclose
+suchgapsandupdatethelexiconasappropriate.
+Providing a quantitative measure of recall was beyond the scope of this project.
+At best we could count instances of sentences containing trigger words that were not
+tagged. We are also aware of many cases of modality that were not covered such
+as the modal uses of the future tense auxiliary will as in That’ll be John (conjecture),
+I’ll do the dishes (volition), He won’t do it (non-volition), and It will accommodate five
+(ability) (Larreya 2009). However, because of the complexity and subtlety of modality
+andnegation,itwouldbeimpracticaltocounteveryclause(suchasthenotrestunless
+clauseabove)thathadanuanceofnon-factivity.
+7.Semantically-InformedSyntacticMT
+This section describes the incorporation of our structured-based MN tagging into an
+Urdu-English machine-translation system using tree grafting for combining syntactic
+symbolswithsemanticcategories(e.g.modality/negation).WenotethatadefactoUrdu
+MN tagger resulted from identifying the English MN trigger and target words in a
+parallel English-Urdu corpus, and then projecting the trigger and target labels to the
+correspondingwordsinUrdusyntaxtrees.
+7.1RefinementofTranslationGrammarswithSemanticCategories
+We used synchronous context free grammars (SCFGs) as the underlying formalism
+forourstatisticalmodelsoftranslation.SCFGsprovideaconvenientandtheoretically
+groundedwayofincorporatinglinguisticinformationintostatisticalmodelsoftransla-
+tion,byspecifyinggrammarruleswithsyntacticnon-terminalsinthesourceandtarget
+ComputationalLinguistics VolumeX,NumberY
+TargNOTAble
+NP MD VB MDRB VB NP PP NP MD TrigRequire VB TargRequireMD TrigAble RBTrig V N B eg T a a ti r o g n NOTAble NP PP
+Americans should know that we can not hand over Dr. Khan to them . Americans should know that we can not hand over Dr. Khan to them .
+TrigRequire TrigAble TargNOTAble TrigRequire TrigAble TargNOTAble
+TargRequire TrigNegation TargRequire TrigNegation
+AsentenceontheEnglishsideofthebilingualparalleltrainingcorpusisparsedwithasyntactic
+parser,andalsotaggedwithourmodalitytagger.Thetagsarethengraftedontothesyntactic
+parsetreetoformnewcategorieslikeVP-TargNOTAbleandVP-TargRequire.Graftinghappens
+priortoextractingtranslationrules,whichhappensnormallyexceptfortheuseofthe
+augmentedtrees.
+languages. We refine the set of non-terminal symbols so that they not only include
+syntacticcategories,butalsosemanticcategories.
+Chiang (2005) re-popularized the use of SCFGs for machine translation, with the
+introductionofhishierarchicalphrase-basedmachinetranslationsystem,Hiero.Hiero
+usesgrammarswithasinglenon-terminalsymbol“X”ratherthanusinglinguistically
+informednon-terminalsymbols.Whenmovingtolinguisticgrammars,weuseSyntax
+Augmented Machine Translation (SAMT) developed by Venugopal et al. (2007). In
+SAMT the “X” symbols in translation grammars are replaced with nonterminal cate-
+goriesderivedfromparsetreesthatlabeltheEnglishsideoftheUrdu-Englishparallel
+corpus.1Werefinethesyntacticcategoriesbycombiningthemwithsemanticcategories.
+RecallthisprogressionwasillustratedinFigure3onpage8.
+WeextractedSCFGgrammarrulescontainingmodality,negationandnamedenti-
+ties using an extraction procedure that requires parse trees for one side of the parallel
+corpus.Whileitisassumedthatthesetreesarelabeledandbracketedinasyntactically
+motivatedfashion,theframeworkplacesnospecificrequirementonthelabelinventory.
+We take advantage of this characteristic by providing the rule extraction algorithm
+withaugmentedparsetreescontainingsyntacticlabelsthathavesemanticannotations
+graftedontothemsothattheyadditionallyexpresssemanticinformation.
+Ourstrategyforproducingsemantically-graftedparsetreesinvolvesthreesteps:
+1. TheEnglishsentencesintheparalleltrainingdataareparsedwitha
+syntacticparser.Inourwork,weusedthelexicalizedprobabilisticcontext
+freegrammarparserprovidedbyBasisTechnologyCorporation.
+2. TheEnglishsentencesareMN-taggedbythesystemdescribedaboveand
+named-entity-taggedbythePhoenixtagger(RichmanandSchone2008).
+3. Themodality/negationandentitymarkersaregraftedontothesyntactic
+parsetreesusingatree-graftingprocedure.Thegraftingprocedurewas
+1 Fornon-constituentphrases,compositeCCG-stylecategoriesareused(Steedman1999).
+Bakeretal. ModalityandNegationinSIMT
+Exampletranslationruleswithtagsformodality,negation,andentitiescombinedwithsyntactic
+categories.
+implementedasapartoftheSIMTeffort.Detailsarefurtherspelledoutin
+Section7.2.
+Figure10illustrateshowmodalitytagsaregraftedontoaparsetree.Notethatwhile
+we focus the discussion here on the modality and negation, our framework is general
+andwewereabletoincorporateothersemanticelements(specifically,namedentities)
+intotheSIMTeffort.
+Oncethesemantically-graftedtreeshavebeenproducedfortheparallelcorpus,the
+trees are presented, along with word alignments (produced by the Berkeley aligner),
+to the rule extraction software to extract synchronous grammar rules that are both
+syntacticallyandsemanticallyinformed.Thesegrammarrulesareusedbythedecoder
+toproducetranslations.Inourexperiments,weusedtheJoshuadecoder(Lietal.2009),
+the SAMT grammar extraction software (Venugopal and Zollmann 2009), and special
+purpose-builttree-graftingsoftware.
+Figure 11 shows example semantic rules that are used by the decoder. The verb
+phrase rules are augmented with modality and negation, taken from the semantic
+categories listed in Table 2. Because these get marked on the Urdu source as well as
+theEnglishtranslation,semanticallyenrichedgrammarsalsoactasverysimplenamed
+entity or MN taggers for Urdu. However, only entities, modality, and negation that
+occurredintheparalleltrainingcorpusaremarkedintheoutput.
+7.2Tree-GraftingAlgorithm
+Theoverallschemeofourtree-graftingalgorithmistomatchsemantictagstosyntactic
+categories.Therearetwoinputstotheprocess.Eachisderivedfromacommontextfile
+ofsentences.Thefirstinputisalistofstandoffannotationsforthesemanticallytagged
+wordsequencesintheinputsentences,indexedbysentencenumber.Thesecondisalist
+ofparsetreesforthesentencesinPennTreebankformat,indexedbysentencenumber.
+ComputationalLinguistics VolumeX,NumberY
+Require NOTRequire
+Permit NOTPermit
+Succeed NOTSucceed
+SucceedNegation NOTSucceedNegation
+Effort NOTEffort
+EffortNegation NOTEffortNegation
+Intend NOTIntend
+IntendNegation NOTIntendNegation
+Able NOTAble
+AbleNegation NOTAbleNegation
+Want NOTWant
+WantNegation NOTWantNegation
+Belief NOTBelief
+BeliefNegation NOTBeliefNegation
+Firm_Belief NOTFirm_Belief
+Firm_BeliefNegation NOTFirm_BeliefNegation
+ModalityTagswiththeirNegatedVersions.NotethatRequireandPermitareinadualrelation,
+andthusRequireNegationisrepresentedasNOTPermitandPermitNegationisrepresentedas
+NOTRequire.
+Table2liststhemodality/negationtypesthatwereproducedbytheMNtagger.For
+example,thesentenceThestudentsareabletoswimistaggedasThestudentsare(cid:104)TrigAble
+able(cid:105) to (cid:104)TargAble swim(cid:105). The distinction between “Negation” and “NOT” corresponds
+tothedifferencebetweennegationthatisinherentlyexpressedinthetriggeringlexical
+itemandnegationthatisexpressedexplicitlyasaseparatelexicalitem.Thus,Iachieved
+my goal is tagged “Succeed” and I did not achieve my goal is tagged as “NOTSucceed,”
+but I failed to win is tagged as “SucceedNegation,” and I did not fail to win is tagged as
+“NOTSucceedNegation.”
+The tree-grafting algorithm proceeds as follows. For each tagged sentence, we
+iterateoverthelistofsemantictags.Foreachsemantictag,thereisanassociatedword
+orsequenceofwords.Forexample,themodalitytagTargAblemaytagthewordswim.
+Foreachsemanticallytaggedword,wefindtheparentnodeinthecorresponding
+syntacticparsetreethatdominatesthatword.Forawordsequence,wefindandcom-
+paretheparentnodesforallofthewords.Eachnodeinthesyntaxtreehasacategory
+label.Thefollowingtestsarethenmadeandtreegraftsapplied:
+• Ifthereisasinglenodeintheparsetreethatdominatesallandonlythe
+wordswiththesemantictag,graftthenameofthesemantictagontothe
+highestcorrespondingsyntacticconstituentinthetree.Forexample,in
+Figure10,whichshowsthegraftingprocessformodalitytagging,the
+semantictagTargNOTAblethat“handover”receivesisgraftedontothe
+VBnodethatdominatesallandonlythewords“handover.”Thenthe
+semantictagTargNOTAbleispassedupthetreetotheVPnode,whichis
+thehighestcorrespondingsyntacticconstituent.
+• Ifthesemantictagcorrespondstowordsthatareadjacentdaughtersina
+syntacticconstituent,butlessthanthefullconstituent,insertanode
+Bakeretal. ModalityandNegationinSIMT
+Syntax Syntax
+Modality/Negation
+Modality/Negation
+26.4 26.6 26.7 26.9
+ResultsforarangeofexperimentsconductedduringtheSIMTeffortshowthescoreforour
+top-performingbaselinesystemsderivedfromahierarchicalphrase-basedmodel(Hiero).
+Substantialimprovementsobtainedwhensyntaxwasintroducedalongwithfeaturefunctions
+(FFs)andfurtherimprovementsresultedfromtheadditionofsemanticelements.Thescoresare
+lowercasedBleucalculatedontheheld-outdevtestset.
+dominatingthosewordsintotheparsetree,asadaughteroftheoriginal
+syntacticconstituent.Thenameofthesemantictagisgraftedontothenew
+nodeandbecomesitscategorylabel.Thisisacaseoftreeaugmentationby
+nodeinsertion.
+• Ifasyntacticconstituentselectedforgraftinghasalreadybeenlabeled
+withasemantictag,overlaytheprevioustagwiththecurrenttag.We
+chosetotaginthismannersimplybecauseoursystemwasnotsetupto
+handlethegraftingofmultipletagsontoasingleconstituent.Anexample
+ofthisoccursinthesentence“TheMuslimshadobtainedPakistan.”Ifthe
+NPnodedominatingPakistanisgraftedwithanamedentitytagsuchas
+NP-GPE,weoverlaythiswiththeNP-TargSucceedtaginamodality
+taggingscheme.
+• Inthecaseofawordsequence,ifthewordscoveredbythesemantictag
+fallacrosstwodifferentsyntacticconstituents,donothing.Thisisacaseof
+crossingbrackets.
+Our tree-grafting procedure was simplified to accept a single semantic tag per
+syntactic tree node as the final result. The algorithm keeps the last tag seen as the tag
+ofprecedence.Inpractice,weestablishedaprecedenceorderingformodality/negation
+tagsovernamedentitytagsbygraftingnamedentitytagsfirstandmodality/negation
+second.Ourintuitionwasthat,incaseofatie,finer-grainedverbalcategorieswouldbe
+ComputationalLinguistics VolumeX,NumberY
+morehelpfultoparsingthanfiner-grainednominalcategories.2 Incaseswhereaword
+was tagged both as a MN target and a MN trigger, we gave precedence to the target
+tag.Thisisbecause,whileMNtargetsvary,MNtriggersaregenerallyidentifiablewith
+lexicalitems.Finally,weusedthesimplifiedspecificityorderingofMNtagsdescribed
+inSection5.2toensureprecedenceofmorespecifictagsovermoregeneralones.Table2
+liststhemodality/negationtypesfromhighest(Requiremodality)tolowest(Negation)
+precedence.3
+7.3SIMTResults
+We evaluated our tree grafting approach by performing a series of translation experi-
+ments.Eachversionofourtranslationsystemwastrainedonthesamebilingualtraining
+data.Thebilingualparallelcorpusthatweusedwasdistributedaspartofthe2008NIST
+Open Machine Translation Evaluation Workshop.4 The training set contained 88,108
+Urdu-English sentence pairs, and a bilingual dictionary with 113,911 entries. For our
+development and test sets, we split the NIST MT-08 test set into two portions (with
+each document going into either test or dev, and preserving the genre split). Our test
+setcontained883Urdusentences,eachwithfourtranslationsintoEnglish,andourdev
+set contained 981 Urdu sentences, each with four reference translations. To extract a
+syntactically informed translation model, we parsed the English side of the training
+corpus using a Penn Treebank trained parser (Miller et al. 1998). For the experiments
+that involved grafting named entities onto the parse trees, we tagged the English side
+of the training corpus with the Phoenix tagger (Richman and Schone 2008). We word-
+aligned the parallel corpus with the the Berkeley aligner. All models used a 5-gram
+languagemodeltrainedontheEnglishGigawordcorpus(v5)usingtheSRILMtoolkit
+withmodifiedKNsmoothing.TheHierotranslationgrammarwasextractedusingthe
+Joshuatoolkit(Lietal.2009).Theothertranslationgrammarswereextractedusingthe
+SAMTtoolkit(VenugopalandZollmann2009).
+Figure12givestheresultsforanumberofexperimentsconductedduringtheSIMT
+effort.5Theexperimentsarebrokenintothreegroups:baselines,syntax,andsemantics.
+To contextualize our results we experimented with a number of different baselines
+thatwerecomposedfromtwodifferentapproachestostatisticalmachinetranslation—
+phrase-based and hierarchical phrase-based SMT—along with different combinations
+oflanguagemodelsizesandwordaligners.Ourbest-performingbaselinewasaHiero
+model.TheBleuscoreforthisbaselineonthedevelopmentsetwas22.9Bleupoints.
+After experimenting with syntactically motivated grammar rules, we conducted
+experiments on the effects of incorporating semantic elements (e.g., named entities
+and modality/negation) into the translation grammars. In our devtest set our taggers
+taggedonaverage3.5namedentitiespersentenceand0.35modality/negationmarkers
+per sentence. These were included by grafting modality, negation, and named-entity
+markers onto the parse trees. Individually, each of these made modest improvements
+2 Intestingwefoundthatgraftingnamedentitiesfirstandmodality/negationlastyieldedaslightlyhigher
+Bleuscorethanthereverseorder.
+3 Futureworkcouldincludeexploringadditionalmethodsofresolvingtagconflictsorcombiningtag
+typesonsinglenodes,e.g.byinsertingmultipleintermediatenodes(effectivelyusingunaryrewrite
+rules)orbystringingtagnamestogether.
+5 Theseexperimentswereconductedonthedevtestset,containing883Urdusentences(21,623Urdu
+words)andfourreferencetranslationspersentence.TheBleuscorefortheseexperimentsismeasuredon
+uncasedoutput.
+Bakeretal. ModalityandNegationinSIMT
+pre-SIMT SIMT Reference
+'first nuclear experiment in 1990 was' The First Nuclear Test Was in 1990. "First Nuclear Experiment conducted in
+T U w La h n o b o i r t k o m e i r n d a a g s t S o o t r r a e n y t d e # t h s U ! e # i n n b ! i l , e ! o f " v o o e k # r r m $ o N f e d a L r e t o d s io s i i g r n e % n a c e l $ t r o & L , ' r a a # o b r ( e f o N t r a h a a l e t t r o i e o t r a e n y d c a o h y l f n t i h c e a l T L t f h o a h e r b o m b o m e o r a r a o s t d k o i r r r o e e y f d c i L n t o o o d r f s e t o h A s f e i l t g a h U n m e e n o t r i e t s e a c N d r h e a n S t a ic t io a l a r n t e l e a a i s n l d , t L y e t a h l w l b e ig o o e N r r k n a a i c t n t o i e o g r , y n o , w a n i l t h 1 T d L co 9 e a h l 9 s b o la i 0 o m g b " r n a a o e s t r o a r R r t i y n io e o n e L f d a w A , w i m w t r h e h e n D o r c i c a h e a n a , L n s h i y v w a e S s o r t m r i w l k l o m e ri r t d a e te n a N n , s t a h t a h t e i i o s w f n o e b a r a o m l p o e o k r n in
+%!)'#"!( written with the cooperation of the cooperation of Diana steelman wrote. Director of Technical Intelligence of Los Alamos
+!#&'"%. National Laboratory.
+This book under the title of the spread of nuclear
+This book 'nuclear express: political history and expressway: the political history of the bomb and This book has been written with the title 'Nuclear
+the expansion of bomb' has been written, and this has been written and the two writers have Express:A Political History of the Bomb And its
+the two writers have also claimed that the claimed that the country also has made nuclear Proliferation,' and in this both the authors have
+country has made nuclear bomb is he or any bomb or any other country, Korea nuclear claimed that any country that has made an
+other country's nuclear secrets to # #(*+ or that secrets, or any of the other nuclear power atomic bomb has either stolen the nuclear
+of any other nuclear power cooperation is cooperation. secrets of another country or has had
+achieved. cooperation with some other nuclear power.
+T homas Reid said in a news %#($# T th h a o t m B a e!" s n a R z e ir i d B s h a u i t d to i n in a 1 n 9 i 9 n 0 te i r n v i t e h w e t e o r a th o e f n C e h w in s a T th h a o t m in a 1 s 9 R 9 e 0 e , d in s t a h i e d e in ra a o n f in B t e e n rv a i z e i w r B to h u U tt S o , N C e h w in s a
+interview that in 1990 in the era of Benazir The first nuclear bomb test. had conducted the experiment of Pakistan's first
+Bhutto China had the experience of Pakistan's nuclear bomb.
+first nuclear bomb. Thomas Reid said that on the basis of several
+T re h a o s m on a s s h re e d w s a a s id s t u h r a e t t o h n a t t h C e h i b n a a s h is a o d f t m he a ny r n e u a c s le o a n r s b to o m b b e li t e e v s e t. that China has the first T b co a h n s o i d m s u a o c s f t e s R d e e v t e h e d e ra s e l a x re i p d a e t s r h i o m a n t e s h n t e t h o a is f t P c C o a h n k in v is a in t a c h n e a 's d s f o ir n s t t he
+experience of Pakistan's first nuclear bomb. reasons of this bomb design and China nuclear bomb.
+r s e c a ie s n o t n is s t s in m th e e n t b io o n m ed b D de u s ri i n g g n t a h n e d c t o h n e v C er h s in a a tio n i w n i f t o h r m th a e t i s o c n ie o n b ti t s a t i s n . ed during the conversation T an h d o s in e f o re rm as a o t n io s n i n o c b l t u a d in e e t d h e w d h e ile s ig ta n lk o in f g th t e o b th o e m b
+with Information. He further said that this was the reason that scientists of China.
+He further said that this was the reason that only Pakistan only two weeks in 1998 and was able He further said that this was the reason why in
+two weeks in Pakistan in 1998 and within three to nuclear experiment in response to India's 1998, Pakistan was able to conduct a nuclear
+days in response to India's nuclear experience to nuclear experience within three days. experiment just in two weeks and three days in
+nuclear experiment was able to. response to India's nuclear experiment.
+T s r e th e u x h a s d p o p t d e m o t e r h n i a e n e s s n l y e U c r e n n e to d u i t b e c t r e h l e d e g e m a S a U r i n t n a e n d 1 t x i e e t 7 p e s d e d d h r t a h S i a e y a t d n s a t c t t i i e h e n n s e a 6 d w b n 1 e o d e s i m n p r w e i b t R a e t o u s f r t s h o in s e m i a f a a h c a l t o s n g T s r 1 h e u 7 a h s d d o p d d m o a q e n y u a n s s i s t . e n e R d u t a e e o c i s l l d e o t p h a n h i e t r g e a e U d p t x h n e r p e i e r t e i e m o f r d a i d m i c n S f t d e r t o t e n a h m d t t a e i t n t s t h h t h 6 a t e o e 1 t b R e U a o x u n n m p s d i e t s b e r i i . n a i d m h S e a t n a s t t e in s T s t r t o h e u h o i s d s o p k d m b o 1 e o n a 7 n m s s ly e d b R a c t e f o y a o e s r r t r d h f i a e o i a s w d r , l h s A a o o i m l l u e t r h t e . e o a r m i u c n g i a n u h d c t o A e le d m d a o r t e h e r t a h i x c t e p a i n e e a r x 1 l i r m p 9 e e e 6 a r n 1 d im t y R a e h u n n a s d t d s i i n i t a
+period. He further said that the experience of the atom He further said that the atom bomb, whose
+H t w h e a a s t f u P m r a t a h k d e is e r t a s fr a n o i m d m t a v h y e a r e t y t x h c p e a e r r n e ie u fu n c l c l l e y e a a o r n f b d w o m c h o a b n t i f w n id a 1 e s 9 n h 9 ce e 8 b v s e c o i r m e y n b c t i a P s r t a e s k f . u is ll t y a n a n in d M co a n y f i 1 d 9 e 9 n 8 c , e h o e n w P a a s k t is o t a m n a i ke e d sc x e i p v e e e n r l t o i i m s p t e e s d n h t w a w d it a h f s u e l d l x o c tr o n e n e m f i i d n e e 1 c n a 9 c r 9 e e 8 i a n b n y i d t . P P a a k k is is ta ta n n , i was
+was to meet on the Pakistani scientists. Thomas red when was this question that China When Thomas Reed was asked if China had
+T h In a h r s o e m p s r p a o o s v n i w d s a e e s d , H r t e h e d e s w n a u h id c e l a n e s a t h r C i t s h e i c q n h u a n e a o s n l t o i d o g n y In t t d h o i a a P t w a C k a h i s s in ta a n , h s a a a c i s d o p m in r m o r v e o id s n p e e o d n n t e s o m e P y t a o . k C is h ta in n a n , u P c a le ki a s r t a te n c a h n n d o l I o n g d y ia , h a e s p r a e r n o p d v li e i P d d a e k d th i s t a h ta t e I n n n . d u ia cl e w a a r s t e a c c h o n m ol m og o y n t e o n P e a m k y is o ta f n C , h h i e n a
+joint enemy of Pakistan. He said that the proof to this also exists in that
+He said that there is evidence that Dr. Abdul Dr. Abdul Qadeer Khan used the Chinese
+He said that it is also present proof of that Dr. Qadeer Khan has also used the Chinese design design, and, apart from this, the documents
+Abdul Qadeer Khan after the Chinese design. after did the documents from Libya in were also retrieved from Libya afterwards also proved this.
+apart from this, The # ##, obtained documents confirmed to them.
+in Libya were is also confirmed it from them. On a question whether the joint nuclear tests is T c o a r a ry n o o t u h t e n r u q c u le e a s r t io e n xp a e s r i t m o e w n h ts e t w h i e th r i o t t i h s e u r s s u , a h l e t o
+To another question whether the joint nuclear common, he said in Hanoi in the United States In said that in 1990 America openly conducted a
+tests is common, He said in #$!$% in the US the Nevada desert open detainees for Britain's nuclear experiment for Britain in the desert of
+Open in the desert of (!#($! servants for Britain's nuclear experiment. Nevada.
+nuclear experiment. He said that it also that Israel should also He said that we may also presume that Israel,
+He said that we are guesses also believed that provide access to the results of this experience. too, was given access to the results of this
+Israel should also provide access to the results experiment.
+o T f h t o h m e a th s is R e e i x d p a e n ri d e n th ce is . question was also is T C h h o in m a a 's s p r r e o d g r w a i m th o th f i n s u q c u le e a s r ti o p n ro w lif a e s ra w ti h o e n t . her T nu h c o l m ea a r s p R ro e l e if d e r w at a io s n a p ls r o o g a r s a k m e d is w a h c e ti t v h e e . r China's
+China's program of nuclear proliferation.
+On this Thomas Reid said that in 1991 to set up Thomas red said that in the Iranian city of China On this, Thomas Reid said that since 1991,
+in China !($-%( city of Iran nuclear installation with 491 in Spain, the raw material for nuclear China has been providing raw material,
+instructions for the raw material, and !# #(.#! installation instructions and provides. i s n tr s u tr c u tu ct r i e o n s s it , u a a n te d d d i e n s I i s g p n a s h f a o n r , t h a e c n ity u c in le I a r r a n.
+is provided.
+B pl e a s n i t d i e n s I r th a i n s , ) C *# h / in a a ls h o a . s provided of enrichment I e n n a ric d h d m itio e n n t t o p la th n is t , i n C C hi a n i a ro h . as also provided the B en e r s ic id h e m s e t n h t is p , l C an h t i n to a I h ra a n s a in ls K o a p ra ro j. vided an
+H P pr a e o k v s is i a d t i a e d n n t , h u t a h c t l r e o C a u h r g in t h e a c E , h g N n y o o p r l t o t , h g L y K i . b o y r a e a a , n I d ra Y n e , m Sy e r n ia i , s to H t E e g e c y h s p n a t o , id l L o t i g b h y y a a t t o C a N h n i d o n r a Y th e w m K o o e u r n l e d . a p , r I o ra v n id , e S n y u ri c a l , e P ar a kistan, H t a e n e c d h s n Y a o e id l m o t g e h y n a t t t o h C r I h o ra i u n n g a , h h S N a y s r o i a r b t , h e P e K a n o k p r i e s r t o a a v . n id , i E n g g y n p u t, c L le ib a y r a,
+AnexampleoftheimprovementstoUrdu-EnglishtranslationbeforeandaftertheSIMTeffort.
+OutputisfromthebaselineHieromodel,whichdoesnotuselinguisticinformation,andfrom
+thefinalmodel,whichincorporatessyntacticandsemanticinformation.
+over the syntactically-informed system alone. Grafting named entities onto the parse
+trees improved the Bleu score by 0.2 points. Modality/negation improved it by 0.3
+points. Doing both simultaneously had an additive effect and resulted in a 0.5 Bleu
+scoreimprovementoversyntaxalone.Thisimprovementwasthelargestimprovement
+that we got from anything other than the move from linguistically naïve models to
+syntacticallyinformedmodels.
+ComputationalLinguistics VolumeX,NumberY
+We used bootstrap resampling to test whether the differences in Bleu scores were
+statisticallysignificant(Koehn2004).Alloftheresultswereasignificantimprovement
+overHiero(atp≤0.01).Thedifferencebetweenthesyntacticsystemandthesyntactic
+system with NEs as not significant ( p=0.38). The differences between the syntactic
+system and the syntactic system with MN, and between the syntactic system and the
+syntacticsystemwithbothMNandNEswerebothsignificantat(p≤0.05).
+Figure 13 shows example output from the final SIMT system in comparison to
+the pre-SIMT results and the translation produced by a human (reference). An error
+analysisofthisexampleoutputillustratesthatSIMTenhancementshaveresultedinthe
+eliminationofmisleadingtranslationoutputinseveralcases:
+1. pre-SIMT:ChinahadtheexperienceofPakistan’sfirstnuclearbomb.
+SIMT:Chinahasthefirstnuclearbombtest.
+reference:ChinahasconductedtheexperimentofPakistan’sfirstnuclear
+bomb.
+2. pre-SIMT:thenuclearbombin1998thatPakistanmayexperience
+SIMT:theexperienceoftheatombombPakistaninMay1998
+reference:theatombomb,whoseexperimentwasdonein1998by
+3. pre-SIMT:HesaidthatitisalsopresentproofofthatDr.AbdulQadeer
+KhanaftertheChinesedesign
+SIMT:HesaidthatthereisevidencethatDr.AbdulQadeerKhanhasalso
+usedtheChinesedesign
+reference:HesaidthattheprooftothisalsoexistsinthatDr.Abdul
+QadeerKhanusedtheChinesedesign
+ThearticlepertainstoclaimsbyThomasReidthatChinaallowedPakistantodetonatea
+nuclearweaponatitstestsite.However,inthefirstexampleabove,thereaderispoten-
+tiallymisledbythepre-SIMToutputtobelievethatPakistanlaunchedanuclearbomb
+on China. The SIMT output leaves out the mention of Pakistan, but correctly conveys
+the firm belief that the bomb event is a test (closely resembling the term experiment in
+the human reference), not a true bombing event. This is clearly an improvement over
+themisleadingpre-SIMToutput.
+In the second example, the pre-SIMT output misleads the reader to believe that
+Pakistan is (or will be) attacked, through the use of the phrase may experience, where
+may is poorly placed. (We note here that this is a date translation error, i.e., the month
+of May should be next to the year 1998, further addingto the potential for confusion.)
+Unfortunately, the SIMT output also uses the term experience (rather than experiment,
+which is in the human reference), but in this case the month is correctly positioned in
+theoutput,thuseliminatingthepotentialforconfusionwithrespecttothemodality.The
+lack of a modal appropriately neutralizes the statement so that it refers to an abstract
+eventassociatedwiththeatombomb,ratherthananattackonthecountry.
+Inthethirdexample,wheretheChinesedesignusedbyDr.AbdulQandeerKhanis
+arguedtobeproofofthenucleartestingrelationshipbetweenPakistanandChina,the
+first pre-SIMT output potentially leads the reader to believe that Dr. Abdul Qadeer is
+aftertheChinesedesign(notthatheactuallyusedit),whereastheSIMToutputconveys
+thefirmbeliefthattheChinesedesignhasbeenusedbyDr.AbdulQadeer.Thisoutput
+verycloselymatchesthehumanreference.
+Bakeretal. ModalityandNegationinSIMT
+Note that even in the title of the article, the SIMT system produces much more
+coherent English output than that of the linguistically naïve system. The figure also
+showsimprovementsduetotransliteration,whicharedescribedin(Irvineetal.2010).
+ThescoresreportedinFigure12donotincludetransliterationimprovements.
+8.ConclusionsandFutureWork
+Wedevelopedamodality/negationlexiconandasetofautomaticMNtaggers,oneof
+which—thestructure-basedtagger—resultsin86%precisionfortaggingofastandard
+LDC data set. The MN tagger has been used to improve machine translation output
+byimposingsemanticconstraintsonpossibletranslationsinthefaceofsparsetraining
+data.Thetaggerisalsoanimportantcomponentofalanguage-understandingmodule
+forarelatedproject.
+We have described a technique for translation that shows particular promise for
+low-resource languages. We have integrated linguistic knowledge into statistical ma-
+chinetranslationinaunifiedandcoherentframework.Wedemonstratedthataugment-
+ing hierarchical phrase-based translation rules with semantic labels (through “graft-
+ing”)resultedina0.5Bleuscoreimprovementoversyntaxalone.
+Although our largest gains were from syntactic enrichments to the Hiero model,
+demonstrating success on the integration of semantic aspects of language bodes well
+foradditionalimprovementsbasedontheincorporationofothersemanticaspects.For
+example, we hypothesize that incorporating relations and temporal knowledge into
+the translation rules would further improve translation quality. The syntactic grafting
+framework is well-suited to support the exploration of the impact of many different
+types of semantics on MT quality, though in this article we focused on exploring the
+impactofmodalityandnegation.
+An important future study is one that focuses on demonstrating whether further
+improvementsinmodality/negationidentificationarelikelytoleadtofurthergainsin
+translation performance. Such a study would benefit from the inclusion of a more de-
+tailedmanualevaluationtodetermineifmodalityandnegationisadequatelyconveyed
+in the downstream translations. This work would be additionally enhanced through
+experimentationonotherlanguagepair(s)andlargercorpora.
+The work presented here represents the first small steps toward a full integration
+of MT and semantics. Efforts underway in DARPA’s GALE program have already
+demonstrated the potential for combining MT and semantics (termed distillation) to
+answer the information needs of monolingual speakers using multilingual sources.
+Properrecognitionofmodalitiesandnegationiscrucialforhandlingthoseinformation
+needs effectively. In previous work, however, semantic processing proceeded largely
+independently of the MT system, operating only on the translated output. Our ap-
+proach is significantly different in that it combines syntax, semantics, and MT into a
+single model, offering the potential advantages of joint modeling and joint decision-
+making. It would be interesting to explore whether the integration of MT with syntax
+and semantics can be extended to provide a single-model solution for tasks such as
+cross-language information extraction and question answering, and to evaluate our
+integratedapproach,e.g.,usingGALEdistillationmetrics.
+Acknowledgments
+We thank Aaron Phillips for help with conversion of the output of the entity tagger
+for ingest by the tree-grafting program. We thank Anni Irvine and David Zajic for
+ComputationalLinguistics VolumeX,NumberY
+their help with experiments on an alternative Urdu modality/negation tagger based
+on projection and training an HMM-based tagger derived from Identifinder (Bikel,
+Schwartz, and Weischedel 1999). For their helpful ideas and suggestions during the
+developmentofthemodalityframework,weareindebtedtoMonaDiab,EduardHovy,
+MargeMcShane,TerukoMitamura,SergeiNirenburg,BoyanOnyshkevych,andOwen
+Rambow.WealsothankBasisTechnologyCorporationfortheirgenerouscontribution
+of software components to this work. This work was supported, in part, by the Johns
+Hopkins Human Language Technology Center of Excellence (HLTCOE), by the Na-
+tional Science Foundation under grant IIS-0713448, and by BBN Technologies under
+GALE DARPA/IPTO Contract No. HR0011-06-C-0022. Any opinions, findings, and
+conclusionsorrecommendationsexpressedinthismaterialarethoseoftheauthorsand
+donotnecessarilyreflecttheviewsofthesponsor.

@@ -1,0 +1,669 @@
+CloudCV: Large Scale Distributed Computer
+Vision as a Cloud Service
+HarshAgrawal,ClintSolomonMathialagan,YashGoyal,NeelimaChavali,
+PrakritiBanik,AkritMohapatra,AhmedOsman,DhruvBatra
+Abstract We are witnessing a proliferation of massive visual data. Unfortunately
+scalingexistingcomputervisionalgorithmstolargedatasetsleavesresearchersre-
+peatedlysolvingthesamealgorithmic,logistical,andinfrastructuralproblems.Our
+goal is to democratize computer vision; one should not have to be a computer vi-
+sion, big data and distributed computing expert to have access to state-of-the-art
+distributedcomputervisionalgorithms.WepresentCloudCV,acomprehensivesys-
+temtoprovideaccesstostate-of-the-artdistributedcomputervisionalgorithmsasa
+cloudservicethroughaWebInterfaceandAPIs.
+HarshAgrawal
+VirginiaTech,e-mail:harsh92@vt.edu
+ClintSolomonMathialagan
+VirginiaTeche-mail:mclint@vt.edu
+VirginiaTeche-mail:ygoyal@vt.edu
+NeelimaChavali
+VirginiaTeche-mail:gneelima@vt.edu
+PrakritiBanik
+VirginiaTeche-mail:prakriti@vt.edu
+AkritMohapatra
+VirginiaTeche-mail:akrit@vt.edu
+AhmedOsman
+ImperialCollegeLondone-mail:ahmed.osman99@gmail.com
+DhruvBatra
+VirginiaTeche-mail:dbatra@vt.edu
+3v03140.6051:viXra
+2 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+1 Introduction
+ArecentWorldEconomicFormreport[18]andaNewYorkTimesarticle[38]de-
+clareddatatobeanewclassofeconomicasset,likecurrencyorgold.Visualcontent
+isarguablythefastestgrowingdataontheweb.Photo-sharingwebsiteslikeFlickr
+andFacebooknowhostmorethan6and90Billionphotos(respectively).Everyday,
+usersshare200millionmoreimagesonFacebook.Everyminute,usersupload72
+hours or 3 days worth of video to Youtube. Besides consumer data, diverse scien-
+tificcommunities(Civil&AerospaceEngineering,ComputationalBiology,Bioin-
+formatics, and Astrophysics, etc.) are also beginning to generate massive archives
+of visual content [22,36,47], without necessarily having access to the expertise,
+infrastructureandtoolstoanalyzethem.
+This data revolution presents both an opportunity and a challenge. Extracting
+valuefromthisassetwillrequireconvertingmeaninglessdataintoperceptualunder-
+standingandknowledge.Thisischallengingbuthasthepotentialtofundamentally
+change the way we live – from self-driving cars bringing mobility to the visually
+impaired,toin-homerobotscaringfortheelderlyandphysicallyimpaired,toaug-
+mentedrealitywithGoogle-Glass-likewearablecomputingunits.
+1.1 Challenges
+Inordertoconvertthisrawvisualdataintoknowledgeandintelligence,weneedto
+addressanumberofkeychallenges:
+• Scalability. The key challenge for image analysis algorithms in the world of
+big-data is scalability. In order to fully exploit the latest hardware trends, we
+mustaddressthechallengeofdevelopingfullydistributedcomputervisional-
+gorithms. Unfortunately, scaling existing computer vision algorithms to large
+datasets leaves researchers repeatedly solving the same infrastructural prob-
+lems: building & maintaining a cluster of machines, designing multi-threaded
+primitives for each algorithm and distributing jobs, pre-computing & caching
+featuresetc.
+Considerforinstancetherecentstate-of-the-artimagecategorizationsystemby
+theGoogle/Stanfordteam[37].Thesystemachievedanimpressive70%relative
+improvementoverthepreviousbestknownalgorithmforthetaskofrecogniz-
+ing20,000objectcategoriesintheImagenetdataset[28].Toachievethisfeat,
+thesystemrequiredasophisticatedengineeringeffortinexploitingmodelpar-
+allelismandhadtobetrainedonaclusterwith2,000machines(32,000cores)
+foroneweek.Whilethisisacommendableeffort,lackofsuchaninfrastructural
+supportandintimatefamiliaritywithparallelismincomputervisionalgorithms
+leaves most research groups marginalized, computer vision experts and non-
+expertsalike.
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 3
+• ProvablyCorrectParallel/DistributedImplementations.Designingandim-
+plementingefficientandprovablycorrectparallelcomputervisionalgorithmsis
+extremelychallenging.Sometaskslikeextractingstatisticsfromimagecollec-
+tionsareembarrassinglyparallel,i.e.canbeparallelizedsimplybydistributing
+theimagestodifferentmachines.ThisiswhereframeworksuchasMapReduce
+have demonstrated success. Unfortunately, most tasks in computer vision and
+machinelearningsuchastrainingafacedetectorarenotembarrassinglyparallel
+– there are data and computational dependencies between images and various
+stepsinthealgorithm.Moreover,foreachsuchparallelalgorithm,researchers
+mustrepeatedlysolvethesamelow-levelproblems:formulatingparallelizable
+components in computer vision algorithms, designing multi-threaded primi-
+tives, writing custom hardware wrappers, implementing mechanisms to avoid
+race-conditions,dead-locks,etc.
+• Reusability. Computer vision researchers have developed vision algorithms
+that solve specific tasks but software developers building end-to-end system
+find it extremely difficult to integrate these algorithms into the system due to
+differentsoftwarestacks,dependenciesanddifferentdataformat.Additionally,
+hardwaredesignershavedevelopedvariousdedicatedcomputervisionprocess-
+ing platforms to overcome the problem of intensive computation. However,
+these solutions have created another problem: heterogeneous hardware plat-
+forms have made it time-consuming and difficult to port computer vision sys-
+temsfromonehardwareplatformtoanother.
+1.2 CloudCV:Overview
+In order to overcome these challenges, we are building CloudCV, a comprehen-
+sive system that will provide access to state-of-the-art distributed computer vision
+algorithmsonthecloud.
+CloudCV today consists of a group of virtual machines running on Amazon
+WebServicescapableofrunninglargenumberoftasksinadistributedandparallel
+setting. Popular datasets used are already cached on these servers to facilitate re-
+searcherstryingtorunpopularcomputervisionalgorithmsonthesedatasets.Users
+canaccesstheseservicesthroughawebinterfacewhichallowsusertouploadafew
+imagesfromeitherDropboxorlocalsystemandobtainresultsreal-time.Forlarger
+datasets, the system enables to embed CloudCV services into a bigger end-to-end
+system by utilizing Python and Matlab APIs. Since the APIs are fairly easy to in-
+stallthroughstandardpackagemanagers,theresearcherscannowquicklyrunimage
+analysisalgorithmsonhugedatasetsinadistributedfashionwithoutworryingabout
+infrastructure,efficiency,algorithmsandtechnicalknow-how.Attheback-end,on
+recievingthelistofimagesandthealgorithmthatneedstobeexecuted,theserver
+distributesthesejobstoworkernodesthatprocessthedatainparallelandcommu-
+nicatetheresultstotheuserinrealtime.Therefore,theuserdoesnotneedtowait
+4 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+Fig.1:OverviewofCloudCV.
+fortheprocessingtofinishontheentiredatasetandcanmonitortheprogressofthe
+jobduetoreal-timeupdates.
+1.3 Application
+CloudCVwillbenefitthreedifferentaudiencesindifferentways:
+• Computer vision researchers: who do not have resources to or do not want
+to reinvent a large-scale distributed computer vision system. For such users,
+CloudCV can serve as a unified data and code repository, providing cached
+version of all relevant data-representations and features. We envision a sys-
+tem where a program running on CloudCV simply “calls” for a feature; if
+it is cached, the features are immediately loaded from distributed storage (
+HDFS [44]); if it is not cached, then the feature extraction code is run seam-
+lessly in the background and the results are cached for future use. Eventually,
+CloudCV becomes the ultimate repository for “standing on the shoulders of
+giants”.
+• Scientistswhoarenotcomputervisionexperts:buthavelargeimagecollec-
+tionsthatneedstobeanalyzed.Considerabiologistwhoneedstoautomatethe
+process of cell-counting in microscopy images. Today such researchers must
+find computer vision collaborators and then invest in the logistical infrastruc-
+turerequiredtorunlarge-scaleexperiments.CloudCVcaneliminateboththese
+constraints,byprovidingaccesstostate-of-the-artcomputervisionalgorithms
+andcompute-timeonthecloud.
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 5
+• Non-scientists:whosimplywanttolearnaboutcomputervisionbydemonstra-
+tion.Thereisatremendousdemandfromindustryprofessionalsanddevelopers
+for learning about computer vision. Massive Open Online Classes (MOOCs)
+like Udacity and Coursera have demonstrated success. CloudCV can build on
+this success by being an important teaching tool for learning computer vision
+bybuildingsimpleappsonthecloud.Imagineastudentwriting4linesofcode
+in CloudCV development environment to run a face-detector on a stream of
+imagescapturedfromhislaptopwebcam.
+2 RelatedEfforts
+BeforedescribingthearchitectureandcapabilitiesofCloudCV,letusfirstputitin
+context of related efforts in this direction. Open-source computer vision software
+canbebroadlycategorizedintothreetypes:
+• General-Purpose Libraries: There are a number of general purpose computer
+visionlibrariesavailableindifferentprogramminglanguages:
+– Python:OpenCV(viawrappers),PyVision[23]
+– .NET:AForge.NET[2].
+The most comprehensive effort among these is OpenCV, which is a library
+aimedatreal-timecomputervision.Itcontainsmorethan2500algorithmsand
+has been downloaded 5 million by 47K people [26]. The library has C, C++,
+Java and Python interfaces and runs on Windows, GNU/Linux, Mac, iOS &
+Androidoperatingsystems.
+• Narrow-FocusLibraries:Anumberoftoolboxesprovidespecializedimplemen-
+tationsforspecifictasks,e.g.CameraCalibrationToolbox[24],Structure-from-
+Motiontoolboxes[31,46,50],VisualFeaturesLibrary[49],anddeeplearning
+frameworkssuchasCaffe[32],Theano[19,21],Torch[16]etc.
+• Specific Algorithm Implementations: released by authors on their respective
+websites.Popularexamplesincludeobjectdetection[30],articulatedbody-pose
+estimation[51],graph-cutsforimagesegmentation[33],etc.
+Unfortunately,allthreesource-codedistributionmechanismssufferfromatleast
+oneoftheselimitations:
+1. LackofParallelism:Mostoftheexistinglibrarieshaveafairlylimitedorno
+supportforparallelism.OpenCVandVLFeatforinstancehavemulti-threading
+support, allowing programs to utilize multiple cores on a single machine. Un-
+fortunately, modern datasets are so large that no single machine may be able
+to hold all the data. This makes it necessary to distribute jobs (with computa-
+tional&datadependencies)onaclusterofmachines.CloudCVwillhavefull
+supportforthreelevelsofparallelism:i)singlemachinewithmultiplecores;ii)
+multiplemachinesinaclusterwithdistributedstorage;andiii)“cloudbursting”
+6 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+or dynamic allocation of computing resources via a professional elastic cloud
+computingservice(AmazonEC2[3]).
+2. BurdenontheUsernottheProvider:Today,computervisionlibrariesplace
+infrastructural responsiblities squarely on the user of these systems, not the
+provider.Theusermustdownloadthesaidlibrary,resolvedependencies,com-
+pile code, arrange for computing resources, parse bugs and faulty outputs.
+CloudCVwillreleasetheuserofsuchburdens–theuseruploadsthedata(or
+points to a cached database in the repository) and simply specifies what com-
+putationneedstobeperformed.
+Finally,wethatstressCloudCVisnotanothercomputervisiontoolbox.Ourfocusis
+notonre-implementingalgorithms,ratherwebuildonthesuccessofcomprehensive
+efforts of OpenCV, Caffe & others. Our core contribution will be to provide fully
+distributedimplementationsonthecloudandmakethemavailableasaservice.
+EffortsClosesttotheGoalofCloudCV: Therearemultipleonlineserviceswhich
+provide specific algorithms such as face, concept, celebrity [11] or provide audio
+and video understanding [5], personalized object detectors [17]. Unlike these ser-
+vices, CloudCV is an open-source architecture that aims to provide the capability
+to run a user’s own version of CloudCV on cloud services such as Amazon Web
+Services,MicrosoftAzure,etc.
+3 CloudCVBack-endInfrastructure
+In this section, we describe in detail all the components that form the back-end
+architectureofCloudCV.
+The back-end system shown in Fig. 2 mainly consists of a web-server that is
+responsible for listening to incoming job requests and sending real-time updates
+to the user. A job scheduler takes these incoming jobs and distributes them across
+numberofworkernodes.Thesystemusesanumberofopen-sourceframeworksto
+ensureanefficientdesignthatcanscaletoaproductionsystem.
+3.1 WebServers
+Theback-endconsistsoftwoserversthatareconstantlylisteningforincomingre-
+quests. We use a python based web-framework which handles Hypertext Transfer
+contains details about the job such as list of images, which executable to run, ex-
+itallowsonlyasinglerequest-responsepair,i.e.,foragivenrequesttheservercan
+only return one response after which the connection breaks and the server cannot
+communicate with the client unless client sends a request. This leads to serious
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 7
+Fig.2:UserscanaccessCloudCVusingawebinterface,PythonorMATLABAPI.Theback-end
+sockets.Thejobscheduleatthemasternodedistributesincomingjobsacrossmultiplecomputer
+servers(workernodes).
+limitations because a persistent real-time connection cannot be established for the
+server to send updates to the user. To solve this problem, we use the web-socket
+protocol(Socket.IO)ontopofanotherserver(Node.js)
+3.1.1 Django
+isbasedontheModelViewController(MVC)pattern.MVCdefinesawayofde-
+veloping software so that the code for defining and accessing data (the model) is
+separatefromrequestroutinglogic(thecontroller),whichinturnisseparatefrom
+theuserinterface(theview).
+Akeyadvantageofsuchanapproachisthatcomponentsarelooselycoupledand
+serve single key purpose. The components can be changed independently without
+affectingtheotherpieces.Forexample,adevelopercanchangetheURLforagiven
+partoftheapplicationwithoutaffectingtheunderlyingimplementation.Adesigner
+can change a page’s HTML code without having to touch the Python code that
+renders it. A database administrator can rename a database table and specify the
+8 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+changeinasingleplace,ratherthanhavingtosearchandreplacethroughadozen
+files.
+Scaling up to serve thousands of web request is a crucial requirement. Django
+adoptsa“sharenothing”philosophyinwhicheachpartoftheweb-stackisbroken
+downintosinglecomponentssothatinexpensiveserverscanbeaddedorremoved
+withminimumfuss.
+IntheoverallCloudCVback-endarchitecture,Djangoisresponsibleforserving
+theweb-pages,translatingrequestsintojobsandcallingthejobschedulertoprocess
+these jobs. The output of the algorithm that the job is running is pipelined to a
+messagequeuesystem.Thereceiverofthemessagequeuesystemsendstheoutput
+backtotheuser.InCloudCV,themessagequeuesystemisRedisandthereceiveris
+Node.js;bothoftheseareexplainedinthenexttwosections.
+3.1.2 Node.js
+Node.js[9]isanevent-drivenweb-frameworkthatexcelsinreal-timeapplications
+suchaspushupdatesandchatapplications.
+CloudCV uses Node.js for real-time communication with the user so that all
+updatesrelatedtoaparticularjobcanbecommunicatedtotheuser.
+Unlike traditional frameworks that use the stateless request-response paradigm
+suchasDjango,Node.jscanestablishatwo-waycommunicationwiththeclientso
+thatservercansendupdatestotheclientwithouttheneedfortheclienttoquerythe
+servertocheckforupdates.Thisisincontrasttothetypicalwebresponseparadigm,
+wheretheclientalwaysinitiatescommunication.Realtimecommunicationwiththe
+clientisimportantbecausecompletingajobthatcontainslargeamountsofdatawill
+takesometimeanddelayingcommunicationwiththeclientuntiltheendofjobis
+makesforapooruserexperienceandhavingtheclientquerytheserverperiodically
+iswasteful.
+Thedefactostandardforbuildingreal-timeapplicationsNode.jsapplicationsis
+via Socket.IO [13]. It is an event-based bi-directional communication layer which
+abstracts many low-level details and transports, including AJAX long-polling and
+WebSockets,intoasinglecross-browsercompatibleAPI.Wheneveraneventistrig-
+geredinsideNode.jsserver,aneventcallbackmechanismcansendaresponsetothe
+client.
+3.1.3 Redis
+Oneoftheuse-casesofrealtimecommunicationwiththeuseristheabilitytosend
+algorithm output to the user during execution. To make this possible, there needs
+tobeasysteminplacethatcanpipelinethealgorithmoutputtotheNode.jsserver,
+whichisresponsibleforcommunicatingtheoutputbacktoclient.
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 9
+Fig.3:FlowdescribingtheexecutionofajobstartingfromtheuserconnectingtotheCloudCV
+systemtotheback-endsendingresultstotheuserduringexecutionofthejobinreal-time.
+In case of CloudCV, this system is Redis [12], a high-performance in-memory
+key-valuedatastore.SincethedataisstoredinRAM(in-memory),lookingupkeys
+andreturningavalueisveryfast.
+Rediscanalsoactasamessagequeuebetweentwoprocesses–workerprocess
+executing a particular algorithm and the Node.js server. Whenever a text output is
+generated by the executable, the worker process sends the output string through
+Redis.Node.jstriggersaneventwheneveritreceivesthemessagefromthemessage
+queue.Themessageconsistsoftheoutputstring,andthesocketidoftheclientto
+whichthisoutputneedstobesent.Consequently,theeventhandlersendstheoutput
+stringtotheuserassociatedwiththatparticularsocketid.
+Fig.3describestheprocessofexecutingajobindetail.Theflowisasfollows:
+1. At the start of a job, the user establishes a two-way socket connection with
+theserver.Eachuserisrecognizedbytheuniquesocketidassociatedwiththis
+connection.
+2. The details about the job such as list of images to process, name of the func-
+tionalitythatneedstobeexecutedanditsassociatedparametersaresenttothe
+3. The server saves the image in the database and sends a response back to the
+user.
+4. The server then distributes the job to worker nodes by serializing all the data.
+An idle worker node pops the job from the queue, fetches the image from the
+networkfileserverandstartsexecutingthefunctionalityassociatedwiththejob.
+10 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+Fig.4:CeleryFlowChart.
+5. Whenevertheexecutablegeneratesanoutput,theworkernodeinformsthemas-
+ternodebysendingthegeneratedoutputthroughamessagequeue.
+6. Upon receiving the message, the master node sends the output to the client.
+Thisismadepossiblebytheevent-drivenframeworkofNode.js(asexplained
+inprevioussections).
+3.2 DistributedProcessingandJobScheduler
+3.2.1 Celery
+Celery[4]isanasynchronoustaskqueuebasedondistributedmessagepassing.The
+executionunits,calledtasks,areexecutedconcurrentlyonasingleormoreworker
+serversusingtheirmultiprocessingarchitecture.Taskscanexecuteasynchronously
+(inthebackground)orsynchronously(waituntilready).
+CloudCVinfrastructurecontainsheterogenousgroupofvirtualmachinesthatact
+asworkernodes,alsocalled‘consumers’.Themasternode(‘producer’)onreceiving
+a job request converts the request into a task by serializing the input data using
+format such as JSON [8] and sends it to a ‘broker’. The job of the broker is to
+receiveataskfromtheproducerandsendittoaconsumer.Brokerconsistsoftwo
+components:anexchangeandqueues.Basedoncertainbindingsorrules,exchange
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 11
+sends each task to a particular queue. For instance, GPU optimized tasks (such as
+image classification Section 4.1 are sent to ‘Classification Queue’ which are then
+processed by worker nodes that have GPUs. On the other hand, image stitching
+tasksthatutilizemultipleCPUsaresenttoCPU-onlymachinesvia‘ImageStitching
+Queue’.Aqueueissimplyabufferthatstoresthemessages.
+ThisprotocolisknownasAMQPProtocol[1]andCeleryabstractsawaydetails
+oftheprotocolefficiently,allowingthesystemtoscale.
+3.2.2 GraphLab
+GraphLab[39]isahigh-levelabstractionfordistributedcomputingthatefficiently
+and intuitively expressesdata and computational dependencieswith a sparse data-
+graph.UnlikeotherabstractionssuchasMap-Reduce,computationinGraphLabis
+expressedasavertexprogram,whichisexecutedinparalleloneachvertex(poten-
+tiallyondifferentmachines),whilemaintainingdataconsistencybetweenmachines
+andappropriatelocking.
+We implemented a parallel image stitching algorithm by creating GraphLab
+wrappers for the image stitching pipeline in OpenCV [26], a widely used open-
+sourcecomputervisionlibrary.Theimplementationisopen-sourceandisavailable
+intheGraphLab’scomputervisiontoolkit[14].
+3.3 Caffe-DeepLearningFramework
+Caffe[32]isadeeplearningframeworkinitiallydevelopedbytheBerkeleyVision
+group and now an open-source project with multiple contributors. In performance
+tests,itconsistentlyranksasofthefastestConvolutionNeuralNetwork(CNN)im-
+plementationsavailableonline.Caffeiswidelyusedinacademicresearchprojects,
+industrialapplicationspertainingtovision,speech,etc.Anumberofstate-of-the-art
+modelsimplementedinCaffeareavailablepubliclyavailablefordownload.
+CloudCV uses Caffe at the back-end to provide services such as classification,
+featureextractionandobjectdetection.CloudCValsoallowsaddinganewcategory
+toapre-trainedCNNmodelwithoutretrainingtheentiremodelandisdescribedin
+detailinSection4.3.
+3.4 Front-endPlatforms
+CloudCVcomputervisionalgorithmsareaccessibleviathreefront-endplatforms:
+1)Webinterface,2)PythonAPIs,and3)MatlabAPIs.
+12 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+(a)Uploadinterface (b)Terminalupdates
+(c)ResultVisualization
+Fig.5:(a)showstheuploadsection.Usercanuploadimageseitherfromhis/herdropboxorlocal
+disk, (b) shows the terminal which receives real-time progress updates from the server and (c)
+showsthevisualizationinterfaceforagivenjob.Noteinthiscasethetaskwasclassificationand
+theresultdisplayscategoryandcorrespondingconfidenceforagivenimage.
+3.4.1 Webinterface
+Modern web browsers offer tremendous capabilities in terms of accessing online
+org so that users can access CloudCV from any device via any operating system
+withouthavingtoinstallanyadditionalsoftware.
+AsillustratedinthescreencaptureinFig.5,userscantestCloudCVservicesby
+trying them out on a few images uploaded through local system or upload images
+fromthirdpartycloudstoragesuchasDropbox(showninFig.6).
+We are also working on providing user authentication such that users can have
+access to all the trained models, training images, and job history. This will enable
+theusertoseamlesslytransfertransferdataacrossmultipledatasources.
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 13
+(a)Uploadinterface (b)Terminalupdates
+Fig.6:Theweb-interfaceallowsusertouploadimagesandsavefeaturesormodelsfilesinside
+his/herDropboxaccount.(a)showstheuploadinterfacewhereausercanselectoneormultiple
+imagesand(b)showsthesaveinterfacewheretheusercansaveallthedatageneratedforthegiven
+jobinsideDropbox.Inthisexample,theuserwastryingtosavefeaturesextractedintheformof
+MatfilesinsideDropboxaccount.
+3.4.2 PythonAPI
+To enable building end-to-end applications on top of CloudCV, we make our ser-
+vicesaccessibleviaaPythonAPI.
+Pythonhasseensignificantgrowthintermsoflibrariesdevelopedforscientific
+computation because of its holistic language design. It also offers interactive ter-
+minal and user interface which makes data analysis, visualization and debugging
+easier.
+Loadingnecessarypackages:TousetheCloudCVPythonAPI,auseronlyneeds
+toimportthePCloudCVclass.
+from pcloudcv import PCloudCV
+import utility.job as uj
+import json
+Atthispoint,thepcloudcvobjectmaybeusedtoaccessthevariousfunctionali-
+tiesprovidedinCloudCV.ThesefunctionalitiesaredetailedinSection4.
+Setting the configuration path: When used in the above manner, the user needs
+toprovidedetailsaboutthejob(executablename,parametersettings,etc.)foreach
+suchAPIcall.Inordertoreducethisburden,ourAPIincludesaconfigurationfile
+thatstoresallsuchnecessaryjobinformation.Thecontentsofthisconfigurationfile
+areshownbelow.
+14 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+"exec": "classify",
+"maxim": 500,
+"config": [
+"name": "ImageStitch",
+"path": "dropbox:/1/",
+"output": "/home/dexter/Pictures/
+test_download",
+9 "params": {
+"warp": "plane"
+"name": "classify",
+"path": "local: /home/dexter/Pictures/
+test_download/3",
+"output": "/home/dexter/Pictures/
+test_download",
+17 "params": {
+"name": "features",
+"path": "local: /home/dexter/Pictures/
+test_download/3",
+"output": "/home/dexter/Pictures/
+test_download",
+24 "params": {
+"name": "decaf",
+"verbose": "2",
+Theusermaysimplyprovidethefullpathtotheconfigurationfile.
+#full path of the config.json file
+config_path = os.path.join(os.getcwd(), "config.json")
+dict = {"exec": "classify"}
+Creating PCloudCV object: To run a job, the user simply needs to create a
+PCloudCV object. The constructor takes the path to the configuration file, a dic-
+tionarythatcontainsoptionalsettingsforinputdirectory,outputdirectory,andexe-
+cutable,andabooleanparameterthattellstheAPIwhethertheuserwishestologin
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 15
+Fig.7:MATLABAPIScreenshot:UserscanaccessCloudCVserviceswithinMATLAB.These
+APIsruninbackgroundsuchthatwhiletheuseriswaitingforaresponse,theusercanrunother
+tasksandtheAPIcallisnon-blocking.showsthescreenshortoftheMATLABAPI.
+tohis/heraccountusingthirdpartyauthorization–GoogleaccountsorDropbox.If
+thebooleanparameterisfalse,thenthejobrequestistreatedasanonymous.
+p = PCloudCV(config_path, dict, True)
+3.4.3 MatlabAPI
+MATLABisapopularhighlevellanguageandinteractiveenvironmentthatoffers
+high-performance numerical computation, data analysis, visualization capabilities,
+and application development tools. MATLAB has become a popular language in
+academia,especiallyforcomputervisionresearchers,becauseitprovideseasyac-
+cess to thousands of low-level building-block functions and algorithms written by
+experts in addition to those specifically written by computer vision researchers.
+Therefore,CloudCVincludesaMATLABAPI,asshowninthescreenshot.Fig.7
+4 CloudCVFunctionalities
+WenowdescribethefunctionalitiesandalgorithmscurrentlyimplementedinCloudCV.
+16 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+Fig.8:Caffenetmodelarchitecture
+Fig.9:ClassificationPipeline
+4.1 Classification
+‘Image Classification’ refers to predicting the class labels of objects present in an
+image. This finds myriad applications in visual computing. Knowing what object
+isvisibletothecameraisanimmensecapabilityinmobileapplications.CloudCV
+imageclassificationtacklesthisprobleminthecloud.TheclassificationAPIcanbe
+invokedtogetalistoftopfiveobjectspresentintheimagewiththecorresponding
+confidencescores.
+CloudCVclassificationimplementationusesthe‘caffenet’model(bvlc referenc-
+e caffenet in Caffe) shown in Fig. 8 which is based on AlexNet [34] architecture.
+The AlexNet architecture consists of 5 convolutional layers and 3 fully connected
+layers.Thelastfullyconnectedlayer(alsoknownasfc8layer)has1000nodes,each
+nodecorrespondingtooneImageNetcategory.
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 17
+Fig.10:FeatureExtractionPipeline
+4.2 FeatureExtraction
+Ithasbeenshown[29,43]thatfeaturesextractedfromtheactivationofadeepcon-
+volutionalnetworktrainedinafully-supervisedfashiononanimageclassification
+task(withafixedbutlargesetofcategories)canbeutilizedfornovelgenerictasks
+that may differ significantly from the original task of image classification. These
+features are popularly called DeCAF features. A computer vision researcher who
+just needs DeCAF features on his dataset, is currently forced to set up the entire
+deep learning framework, which may or may not be relevant to them otherwise.
+CloudCValleviatesthisoverheadbyprovidingAPIsthatcanbeusedtoextractDe-
+CAFfeaturesonthecloudandthendownloadthemasa‘mat’fileforfurtheruse.
+CloudCVfeatureextractionimplementationusesthesamearchitectureasFig.8.
+TheDeCAFfeaturesaretheactivationsinthesecond-lastfullyconnectedlayer(also
+knownasfc7layer),whichconsistsof4096nodes.Thecaffenetmodelusesthefc7
+activations computed from of 10 sub-images – 4 corner regions, the center region
+andtheirhorizontalreflections.Therefore,theoutputisamatrixofsize(10,4096).
+4.3 TrainaNewCategory
+Theclassificationtaskdescribedaboveislimitedtoapre-definedsetof1000Ima-
+geNetcategories.Inanumberofsituations,ausermayneedaclassificationmodel
+with categories other than ImageNet but may not have sufficient data or resources
+to train a new model from scratch. CloudCV contains a ‘Train a New Category’
+capabilitythatcanbeusedtoefficientlyaddnewcategoriestotheexistingcaffenet
+modelwith1000ImageNetcategories.
+Thenewmodelisgeneratedbyappendingadditionalnodesinthelastfullycon-
+nected layer (fc8 layer) of the existing caffenet model. Each new node added cor-
+18 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+Fig.11:TrainaNewCategorypipeline
+responds to a new category. The weights and biases for these additional nodes are
+computedusingLinearDiscriminantAnalysis(LDA),whichisequivalenttolearn-
+ing a Gaussian Naive Bayes classifier with equal covariance matrices for all cate-
+gories.Allotherweightsandbiasesarekeptsameastheexistingcaffenetmodel.
+TheLDAweightvector(w )andbias(b )foranewcategorykarecomputedas:
+where,π isthepriorprobabilityofkthcategory,Σ isthecovariancematrixoffc7
+(secondlastfullyconnectedlayerincaffenetmodel)featurevectors,and µ isthe
+meanvectoroffc7featurevectorsofthegiventrainingimagesforthenewcategory.
+Thepriordistributionisassumedtobeuniformforthisdemo,thusthepriorprob-
+abilityπ isjustthereciprocalofnumberofcategories.Noticethatthecovariance
+matrixΣ canbecomputedofflineusingallimagesintheImageNettrainingdataset,
+and its inverse can be cached. This is the most computationally expensive step in
+calculatingthenewparameters(weightsandbiases),butisdoneonceoffline.The
+meanvector µ iscomputedfromthetrainingimagesforthenewcategoryinreal
+time,Thus,anewcategorycanbeaddedtothenetworkinstantaneously!
+We have also experimented with fine-tuning the softmax layer, and the entire
+networkfromthisLDAinitialization,however,thatisusefulonlywhensignificant
+trainingdataisavailableforthenewcategory.
+4.4 VIP:FindingImportantPeopleinGroupImages
+Whenmultiplepeoplearepresentinaphotograph,thereisusuallyastorybehindthe
+situationthatbroughtthemtogether:aconcert,awedding,apresidentialswearing-
+in ceremony (Fig. 12), or just a gathering of a group of friends. In this story, not
+everyoneplaysanequalpart.Someperson(s)arethemaincharacter(s)andplaya
+morecentralrole.
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 19
+Fig.12:VIP:Predicttheimportanceofindividualsingroupphotographs(withoutassumingknowl-
+edgeabouttheiridentities).
+(a)Sociallyprominentpeople. (b)Non-celebrities. (c)Equallyimportantpeople.
+Fig.13:Whoarethemostimportantindividualsinthesepictures?(a)thecouple(theBritishQueen
+andtheLordMayor);(b)thepersongivingtheawardandthepersonreceivingitplaythemainrole;
+(c)everyoneseemstobenearlyequallyimportant.Humanshavearemarkableabilitytounderstand
+socialrolesandidentifyimportantplayers,evenwithoutknowingidentitiesofthepeopleinthe
+images.
+Consider the picture in Fig. 13a. Here, the important characters are the couple
+whoappeartobetheBritishQueenandtheLordMayor.Noticethattheiridentities
+and social status play a role in establishing their positions as the key characters
+in that image. However, it is clear that even someone unfamiliar with the oddities
+andeccentricitiesoftheBritishMonarchy,whosimplyviewsthisasapictureofan
+elderlywomanandagentlemanincostumereceivingattentionfromacrowd,would
+considerthosetwotobecentralcharactersinthatscene.
+Fig. 13b shows an example with people who do not appear to be celebrities.
+We can see that two people in foreground are clearly the focus of attention, and
+twoothersinthebackgroundarenot.Fig.13cshowsacommongroupphotograph,
+whereeveryoneisnearlyequallyimportant.Itisclearthatevenwithoutrecognizing
+theidentitiesofpeople,weashumanshavearemarkableabilitytounderstandsocial
+rolesandidentifyimportantplayers.
+Goal.ThegoalofCloudCVVIPistoautomaticallypredicttheimportanceofindi-
+vidualsingroupphotographs.Inordertokeepourapproachgeneralandapplicable
+to any input image, we focus purely on visual cues available in the image, and do
+20 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+Fig.14:VIPPipeline.
+notassumeidentificationoftheindividuals.Thus,wedonotusesocialprominence
+cues. For example, in Fig. 13a, we want an algorithm that identifies the elderly
+woman and the gentleman as the two most important people that image without
+utilizingtheknowledgethattheelderlywomanistheBritishQueen.
+A number of applications can benefit from knowing the importance of people.
+Algorithmsforim2text(generatingsentencesthatdescribeanimage)canbemade
+morehuman-likeiftheydescribeonlytheimportantpeopleintheimageandignore
+unimportant ones. Photo cropping algorithms can do “smart-cropping” of images
+ofpeoplebykeepingonlytheimportantpeople.Socialnetworkingsitesandimage
+search applications can benefit from improving the ranking of photos where the
+queried person is important. Intelligent social robots can benefit from identifying
+importantpeopleinanyscenario.
+Who is Important? In defining importance, we can consider the perspective of
+threeparties(whichmaydisagree):
+• thephotographer,whopresumablyintendedtocapturesomesubsetofpeople,
+andperhapshadnochoicebuttocaptureothers;
+• the subjects, who presumably arranged themselves following social inter-
+personalrules;and
+• neutral third-party human observers, who may be unfamiliar with the sub-
+jectsofthephotoandthephotographer’sintent,butmaystillagreeonthe(rel-
+ative)importanceofpeople.
+Navigatingthislandscapeofperspectivesinvolvesmanycomplexsocialrelation-
+ships:thesocialstatusofeachpersonintheimage(anawardwinner,aspeaker,the
+President), and the social biases of the photographer and the viewer (e.g., gender
+or racial biases); many of these can not be easily mined from the photo itself. At
+itscore,thequestionitselfissubjective:iftheBritishQueen“photo-bombs”while
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 21
+youaretakingapictureofyourfriend,isshestillthemostimportantpersoninthat
+photo?
+InCloudCVVIP,toestablishaquantitativeprotocol,werelyonthewisdomof
+thecrowdtoestimatethe“ground-truth”importanceofapersoninanimage.Our
+relativeimportancemodelsaretrainedusingreal-valuedimportancescoresobtained
+usingAmazonMechanicalTurk.
+Pipeline.ThebasicflowofCloudCVVIPisshowninFig.14.First,facedetection
+isperformedusingthird-partyfacedetectors.Inourpublishedwork[41],weused
+Sky Biometry’s API [45] for face detection. CloudCV VIP uses OpenCV [25] to
+avoid network latency. For every pair of detected faces, features are extracted that
+describetherelativeconfigurationofthesefaces.Thesefeaturesarefedtoourpre-
+trainedregressorstoderivearelativeimportancescoreforthispair.Finally,thefaces
+aresortedindescendingorderofimportance.Themodelsandfeaturesaredescribed
+indetailinMathialaganetal.[41].Inordertobefastduringtesttime,CloudCVVIP
+doesnotuseDPMbasedposefeatures.
+4.5 GigapixelImageStitching
+ThegoalofImageStitchingistocreateacompositepanoramafromacollectionof
+images.Thestandardpipeline[27]forImageStitching,consistsoffourmainsteps:
+1. FeatureExtraction:distinctivepoints(orkeypoints)areidentifiedineachimage
+andafeaturedescriptor[20,40]iscomputedforeachkeypoint.
+2. Image/FeatureMatching:featuresarematchedbetweenpairsofimagestoesti-
+materelativecameratransformations.
+3. GlobalRefinement:ofcameratransformationparametersacrossallimages.
+4. Seam Blending: seams are estimated between pairs of images and blending is
+performed.
+ConsideradatagraphG=(V,E)whereeachvertexcorrespondstoaimageand
+twoverticesareconnectedbyanedgeifthetwoimagesoverlapincontent,i.e.cap-
+tureapartofthescenefromtwoviewpoints.Inthecontextofthisgraph,different
+stepsofthestitchingpipelinehavevastlydifferentlevelsofparallelism.Step1(fea-
+tureextraction)isvertex-parallelsincefeaturesextractionateachvertex/imagemay
+beruncompletelyindependently.Step2(image/featurematching)andstep4(seam
+blending)areedge-parallelsincethesecomputationsmaybeperformedcompletely
+independently at each edge in this graph. Together these steps are data-parallel,
+where parallelism is achieved simply by splitting the data onto different machines
+withnoneedforcoordination.
+Step3(globalrefinement)isthemostsophisticatedstepsinceitnotembarrass-
+inglyparallel.Thisglobalrefinementofcameraparameters,involvesminimizinga
+nonlinearerrorfunction(calledre-projectionerror)thatnecessarilydependsonall
+images[48],andultimatelyslowstheentirepipelinedown.
+22 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+(a)Data-GraphandPanorama.
+Feature Image/Feature Global Camera Seam
+Extraction Matching Refinement Blending
+Vertex Parallel Edge Parallel Edge Parallel
+(b)StitchingPipeline.
+Fig.15:GigapixelImageStitching
+We formulate this optimization as a “message-passing” operation on the data
+graph – each vertex simply gathers some quantities from its neighbors and makes
+local updates to its camera parameters. Thus, different image can be processed on
+different machines as long as they communicate their camera parameters to their
+neighbors.
+Thus, while this pipeline may not be data-parallel, it is graph-parallel show
+in Fig. 15b, meaning that data and computational dependencies are captured by
+asparseundirectedgraphandallcomputationcanbewrittenasvertex-programs.It
+isclearthatthinkingaboutvisualsensingalgorithmsasvertexprogramsisapow-
+erfulabstraction.
+The CloudCV image stitching functionality can be accessed through the web-
+interface,ascreenshotofwhichisshowninFig.16
+5 FutureWork
+5.1 DeepLearningGPUTrainingSystem-DIGITS
+ConvolutionalNeuralNetworks(CNNs)haveattractedsignificantinterestfromre-
+searchers in industry and academia, which has resulted in multiple software plat-
+forms for configuring and training CNNs. Most notable software platforms are
+Caffe,Theano,Torch7andCUDA-Convnet2.
+RecentlyNVIDIATM releasedDIGITS[10],aninteractiveDeepLearningGPU
+Training System, which provides access to the rich set of functionalities provided
+byCaffe[32]throughanintuitivebrowser-basedgraphicaluserinterface.DIGITS
+CloudCV:LargeScaleDistributedComputerVisionasaCloudService 23
+(a)Sampleimagesanduploadinterface. (b)Resultforthesampleimages.
+Fig.16:Imagestitchingwebinterface.
+complements Caffe functionality by introducing an extensive set of visualizations
+commonlyusedbydatascientistsandresearchers.MoreoversinceDIGITSrunsas
+awebservice,thisfacilitatesseamlesscollaborationbetweenlargeteamsenabling
+data,trainedCNNsmodelandresultssharing.
+5.1.1 DIGITSOverview
+Atypicalwork-flowofDIGITScanbesummarizedasfollows:
+• DataSource:Firsttheuserhastouploadthedatabasetobeusefortrainingand
+validationtoDIGITS.Currentlythedatabaseofimagehavetobestoredonthe
+samelocalmachinehostingDIGITS.
+• NetworkArchitecture:Twooptionsaresupportedfornetworkarchitecture:
+– touseastandardnetworkarchitecturesuchasAlexNet[35]
+– createacustomizedCNNwhereusercandefineeachlayerandassociated
+parameters.
+DIGITS also provides a tool to visualize the CNN architecture for visual in-
+spectionofthenetworktopology.
+• Training and Visualization: Users can train the newly defined network and
+track its progress real-time. The learning rate and accuracy of the model can
+be seen from real-time graph visualizations as training progresses. The user
+canaborttraininganytimeifhesuspectsthereisbuginthenetworkconfigura-
+tion.MoreoversimilartoCaffe,DIGITSsavemultiplesnapshotsoftheCNNas
+trainingprogressgivingtheusertheoptiontousespecificsnapshotstogenerate
+featureextraction.
+24 Agrawal,Mathialagan,Goyal,Chavali,Banik,Mohapatra,Osman,Batra
+5.1.2 IntegratingDIGITSwithCloudCV
+CloudCVclassificationfunctionalityusesCaffeasthesoftwareplatformtotrainand
+configure CNN. One of the main objectives of CloudCV is to enable non-experts
+theabilitytousecomputervisionalgorithmsasaservicethrougharichsetofAPI.
+In future work we will integrate CloudCV functionalities with DIGITS intuitive
+graphical user interface to provide an end-to-end system that can train a model,
+classify or extract features from these trained model, visualize results, etc. Future
+workinclude:
+• IntegratingtheDIGITScodebasewithCloudCV.
+• CurrentlyDIGITSonlysupportcreatingtrainingdataonthehostmachine.We
+plan to further extend data sources to include cloud storage such as Dropbox
+andAmazonS3.
+• Integerating DIGITS with Scikit-learn [42] - a rich machine learning python
+library-totraindifferentclassifiers(SupportVectorMachine,etc.)onfeatures
+extracted from intermediate layers of a CNN. Users will be able to tune the
+parametersoftheclassifierandseeimprovementinreal-time.
+• Extending Visualizations provided by DIGITS to include side by side plots to
+visualizeperformanceofdifferentclassifiersonaspecificdataset.
+• Supportingforauserworkspace,whereeachregisteredusercanhaveaprivate
+workspace. User data like job history, previous datasets, pre-trained models,
+previousoutputswillbesaved.
+Acknowledgements.ThisworkwaspartiallysupportedbytheVirginiaTechICTAS
+JFC Award, and the National Science Foundation CAREER award IIS-1350553.
+The views and conclusions contained herein are those of the authors and should
+notbeinterpretedasnecessarilyrepresentingtheofficialpoliciesorendorsements,
+eitherexpressedorimplied,oftheU.S.Governmentoranysponsor.

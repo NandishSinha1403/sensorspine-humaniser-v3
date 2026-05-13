@@ -1,0 +1,641 @@
+1v4007030/sc:viXra
+STATE COMPLEXES FOR METAMORPHIC ROBOTS∗
+A. ABRAMS† AND R. GHRIST‡
+Abstract. A metamorphic robotic system is an aggregate of homogeneous robot units which can
+individually and selectively locomote in such a way as to change the global shape of the system. We
+introduce a mathematical framework for defining and analyzing general metamorphic robots. This formal
+structure,combinedwithideasfromgeometricgrouptheory,leadstoanaturalextensionofaconfiguration
+spaceformetamorphicrobots—thestate complex—whichisespeciallyadaptedtoparallelization. We
+present an algorithm for optimizing reconfiguration sequences with respect to elapsed time. A universal
+geometricpropertyofstatecomplexes—non-positivecurvature—isthekeytoprovingconvergenceto
+thegloballytime-optimalsolution.
+1. Introduction. Inrecentyears,severalgroupsintheroboticscommunityhavebeen
+modeling and building reconfigurable or, more specifically, metamorphic robots (e.g.,
+[7,13,15,22,23]). Suchasystemconsistsofmultipleidenticalroboticcellsinanunderlying
+lattice structure which can disconnect/reconnect with adjacent neighbors, and slide, pivot,
+or otherwise locomote to neighboring lattice points following prescribed rules: see Fig. 1.1.
+There are as many models for such robots as there are researchers in the sub-field: 2-d
+and 3-d lattices; hexagonal,square,and dodecahedralcells; pivoting or sliding motion: see,
+e.g., [7, 13, 14, 15, 16, 6, 17, 22, 23] and the references therein. The common feature of
+these robots is an aggregate of lattice-based cells having prescribed local transitions from
+one shape to another.
+Fig. 1.1. Metamorphic systems may be built on a variety of lattice structures with sliding or pivoting
+motion.
+The primary challenge for such systems is shape-planning: how to move from one shape
+toanothervialegalmoves. Onecentralizedapproach[8,19]istobuildatransition graph
+whose verticesarethe variousshapes and whoseedges areelementary legalmovesfromone
+shape to the next. It is easily demonstratedthat the size ofthis graphis exponentialin the
+number of cells.
+We propose to extend the notion of a configurationspace to metamorphic robots in a novel
+manner. The idea: consider the transition graph described above as a one-dimensional
+skeletonofa higher-dimensionalcubicalcomplex,the state complex. Assume that froma
+givenstatetherearetwolegalmoveswhicharephysicallyindependent(or,moresuggestively,
+“commutative”): i.e., these movescanbe executedsimultaneously. Inthe transitiongraph,
+∗AA SUPPORTED BY NATIONAL SCIENCE FOUNDATION GRANT DMS-0089927. RG SUP-
+PORTEDBYNATIONALSCIENCEFOUNDATIONGRANTDMS-0134408.
+† DepartmentofMathematics,UniversityofGeorgia,Athens,GA30602,USA
+‡ DepartmentofMathematics,UniversityofIllinois,Urbana,IL61801, USA
+2 AARONABRAMS&ROBERTGHRIST
+this corresponds to the four edges of a square. For any pair of commutative moves, fill in
+the four edges of the graph with an abstract square 2-cell. Continue inductively adding k-
+dimensional cubes correspondingto k-tuples of physically independent motions. The result
+is a cubical complex which has several advantages over the transition graph:
+1. Simplicity. The state complex is often simpler than the transition graph: e.g.,
+the 1-d graph of an n-dimensional cube has n2n−1 edges. This figure belies the
+simplicity of the single cube.
+2. Speed. Geodesics on this complex cut across the diagonals of cubes whenever
+possible. One performs all possible commutative motions simultaneously, maxi-
+mizing parallelization and yielding a speed-up by a factor equal to the number of
+coordinated motions.
+3. Shape. The global geometry/topology of the state complex carries information
+about the metamorphic system. For certain examples, the topology of the state
+complex “converges”upon refining the lattice. In addition, only special geometries
+canbe realizedasthe statecomplexofalocalmetamorphicsystem: commutativity
+inreconfigurationleadstoanabhorrenceofpositivecurvatureinthestatecomplex.
+Sections 2 through 4 give definitions and examples of [abstract] metamorphic systems and
+theirstatecomplexes. Thenexttwosections(Sections5-6)detailtopologicalandgeometric
+features of the state complex.
+For large systems, the problem of computing the state complex and designing geodesics in
+order to perform shape planning is computationally infeasible, primarily because the size
+of the complex is often exponential in the number of robot cells. In addition, any control
+schemeinducedbygeodesicconstructionis necessarilycentralized. Severalresearchershave
+begun building decentralizedcontrolalgorithmsfor shape planning [5, 21, 20, 24, 25]. Such
+algorithms have the advantage of speed and scalability; however, the reconfiguration paths
+are typically not optimal.
+As an application of our techniques, we present in Sections 7-8 an algorithm for trajectory
+optimization which takes as its argument an arbitrary edge path in the transition graph.
+Algorithm8.2thenperformsatypeofcurve shorteningwithinthestatecomplex. Adeep
+theoremaboutthecurvatureofallstatecomplexes(Theorem6.2)isthenusedtoprovethat
+this algorithmreturnsa shape trajectorywhichis the globalminimum obtainablefromthis
+path with respect to elapsed time.
+Our definitions and theorems are phrased for systems involving “discrete” reconfiguration.
+More general types of robots which employ continuous reconfigurationfor locomotive gaits
+(such as the Polybot developed by M. Yim’s lab at Xerox PARC) are not covered by our
+definitions. Wenote,however,thatcertainlocomotivereconfigurablerobotscanbethought
+of as lattice-based tiles by amalgamating subsystems [14]. In addition, our definitions can
+easily be extended to more general non-lattice reconfigurable systems [3].
+2. A mathematical definition. While it is easy to generate examples of what is
+meant by a metamorphic robot, it is more challenging to write a clean mathematical defi-
+nition. We propose a set of definitions which is broad enough to include some non-obvious
+examples. The paper [6] suggests a similar type of structure using cellular automata rule
+sets.
+Alocalmetamorphicsystemisacollectionofstatesonalattice,whereeachstateisthought
+ofas anindicator function for the aggregate. Any state canbe modified by localrearrange-
+COMPLEXESFORMETAMORPHICROBOTS 3
+ments, these local changes being coordinated by a catalogue of models realized under the
+actions of isometries into the workspace. The adjective “local” refers to legality criteria:
+anywhere in the workspace at which a local change from the catalogue can be applied, it
+is legal to do so. To incorporate obstacles and basepoints into our systems, we distinguish
+betweenthe amountofinformationneeded to determine the legalityofanelementarymove
+(the “support” of the move) and the precise place in which modules are actually in motion
+(the “trace” of the move).
+Definition 2.1. Let L denote a lattice in Rk and let W ⊂ L be some workspace. The
+catalogue C for a local metamorphic system on W is a collection of generators. Each
+generator φ ∈ C consists of (1) the support, sup(φ) ⊂ L; (2) the trace of the move,
+tr(φ)⊂sup(φ); and (3) an unordered pair of local states Uˆ :sup(φ)→{0,1} satisfying1
+(cid:12) (cid:12)
+(cid:12) (cid:12)
+Otherwise said, the local states are equal on sup(φ)−tr(φ).
+Definition 2.2. An action of a generator φ∈C is a rigid translation Φ:sup(φ)֒→W.
+Given a state U : W → {0,1}, an action Φ is said to be admissible at U if Uˆ = U ◦Φ.
+In this case, we write
+φ[U]:= .
+(Note that Φ is left out of the notation.)
+Definition 2.3. A local metamorphic system on W is a collection of finite states
+{U :W →{0,1}}closedunderall possible admissible actions ofgenerators in thecatalogue
+C. (A state is finite if U =1 at only finitely many points of W.)
+Torepeat,thecatalogueandtheworkspacearethe“seeds”foralocalmetamorphicsystem.
+From this pair, all possible translations of the supports into W yield the actions. Then, a
+collection of states on the workspace is a local metamorphic system if, whenever an action
+Φ of a generator φ on a state U is admissible, then the corresponding state φ[U] is also
+included.
+A metamorphic system with obstacles O ⊂W satisfies in addition
+for each φ ∈ C. Obstacle sets count as legal positions for determining the admissibility of
+a move (the support of an action may intersect O), but no motion of metamorphic agents
+may incorporate the obstacle sites (the trace of an action must not intersect O).
+3. Examples. Some of the following examples are inspired by metamorphic robots
+already developed; other examples are more abstract.
+Example 3.1. [2-dhexwith pivots]We presenttwoslightly differentcatalogues,eachwith
+sixgenerators(orone,uptodiscreterotations),inFig.3.1. Bothofthesesystems,modeled
+after that of [7], have local moves which pivot a planar hexagon about a neighbor. For all
+generators presented, the trace is equal to the two central hexagons. In the first system,
+1AllgeneratorsareassumedtobenondegenerateinthesensethatUˆ 06=Uˆ 1.
+4 AARONABRAMS&ROBERTGHRIST
+the supportis chosensothatthe aggregatedoes notchangeits topologybut onlyits shape.
+The slightly smaller support of the second catalogue allows for local topology changes. To
+modelafixed“base”cell(whichis, say,affixedto apowersourceasin[17]), oneestablishes
+this cell as an obstacle O.
+Fig. 3.1. Two different catalogues for a 2-d hexagonal lattice system with pivots. Black cells are
+occupied, white are unoccupied. The local statesUˆ 0 and Uˆ 1 are shown for each generator.
+Example 3.2. [2-d square lattice] In Fig. 3.2, we display a generator for a planar system
+in which rows [as pictured] and columns [not pictured] of an aggregate of square cells can
+slide. There are in fact several generators represented in “shorthand,” one for each k ≥ 0.
+A dot inside a cell indicates that it can be either occupied or unoccupied, but if occupied,
+thenitsneighbor(indicatedbyanarrow)mustalsobeturnedon. Thisconditionguarantees
+that the aggregate does not disconnect (even locally) under slides. The trace of this set of
+generators is the entire middle row except the two endpoints. To keep the catalogue finite,
+one would include only those generators with k ≤ N, where N is the number of occupied
+cells in any state.
+PSfragreplacements
+Fig. 3.2. The row-sliding generators for a sliding-squares system.
+Example 3.3. [2-d articulated planar arm] Consider as a workspace W the set of edges
+in the planar integer lattice. The catalogue consists of two generators,pictured in Fig. 3.3.
+Beginning with a state having N vertical edges end-to-end, the metamorphic system thus
+generated models the position of an articulated robotic arm with fixed base which can (1)
+rotate at the top end and (2) flip corners as per the diagram.
+Fig. 3.3. A positive articulated robot arm [left]. One generator [center] flips corners and has as its
+trace the central four edges. The other generator [right] rotates the end of the arm, and has trace equal to
+the two activated edges.
+Ifoneincludesrotationsofthesegenerators,moreintricatetypesofconfigurationsarepossi-
+COMPLEXESFORMETAMORPHICROBOTS 5
+ble, including deadlocked configurations. Highly self-reconfigurable examples with multiple
+interacting arms can be realized by adding new generators: an “attach-detach” generator
+which allows endpoints of arms to merge (thus yielding a “marked point” at the attach-
+ment); and a “sliding” generator which allows this marked point to slide, having the effect
+of allowing the attached arms to trade segments. These generators are pictured (up to
+Euclidean symmetries) in Figure 3.4.
+Fig. 3.4. Additional generators allow for attachment and detachment of arm endpoints [left, center]
+and sliding of the coupling points [right].
+One of the benefits of writing down a rigorous definition of a metamorphic system is the
+discovery of systems which have little resemblance to the systems of, say, Fig. 1.1. In
+particular,ourdefinitionseasilyextendtometamorphicsystemswhicharenotlattice-based;
+the following example is especially interesting.
+Example 3.4. Consider a finite graph Γ in which every edge is assigned a length of one.
+(Every graph can be embedded in some Rk so as to have this property.) The catalogue
+consists of a single generator whose support and trace are precisely the closure of a single
+“abstract edge.” The local states of this generator consist of the pair Uˆ and Uˆ which
+evaluate to 1 on one of the endpoints and 0 on the other. The actions in this case are
+length-preserving maps from the abstract edge into Γ. The metamorphic system generated
+from a state U on Γ with N vertices evaluating to 1 mimics an ensemble of N unlabeled
+non-colliding Automated Guided Vehicles on Γ, cf. [11].
+More abstract examples of metamorphic examples include spaces of triangulations of poly-
+gons with edge-flipping as the generator, examples arising from word representations in
+group theory, and certain multi-step assembly processes [3].
+4. The state complex. In the robotics literature, one often models a configuration
+spaceforametamorphicsystemwithatransitiongraphwhichrepresentsactionsofelemen-
+tary moves on states. That is, the vertex set is the collection of all states {U }, and the
+edges are unoriented pairs of states which differ by the action of one generator. Transition
+graphs are discussed for shape-planning in several particular cases in the literature (planar
+hex case: [8, 19]). Our departure is to make the transition graph the 1-skeleton of a cubi-
+cal complex (an analogue of a simplicial complex, but made out of abstract cubes) which
+coordinates parallel or “commutative” motions.
+Definition 4.1. In a local metamorphic system, a collection of actions of (not necessarily
+distinct) generators {(φ ,Φ )} is said to commute if
+6 AARONABRAMS&ROBERTGHRIST
+Example 4.2. Two simple examples suffice to illustrate the difference betweencommuting
+and noncommuting actions. First, consider the pair of commuting moves for a planar
+hexagonal pivoting system, as represented in Fig. 4.1 [left]. Compare this with a planar
+Fig.4.1. Examples of commuting [left] and noncommuting [right] actions inplanar systems.
+slidingblockexampleasillustratedinFig.4.1[right]. Althoughthepairofmovesillustrated
+forms a square2 in the transition graph, this particular pair of actions does not commute.
+Physically,it is obviouswhy these moves are notindependent: sliding the column part-way
+obstructs sliding a transverse row. Mathematically, this is captured by the traces of the
+actions intersecting.
+The state complex has an abstract k-cube for each collection of k admissible commuting
+actions:
+Definition 4.3. The state complex S of a local metamorphic system is the following
+abstract cubicalcomplex. Each abstractk-cubee(k) of S is an equivalenceclass [U;(Φ )k ]
+1. (Φ )k is a k-tuple of commuting actions of generators φ ;
+2. U is some state for which all the actions (Φ )k are admissible; and
+3. [U ;(Φ )k ] = [U ;(Φ )k ] if and only if the list (β ) is a permutation of (α )
+0 αi i=1 1 βi i=1 i i
+and U =U on the set W − Φ (sup(φ )) .
+0 1 i αi αi
+The boundary of each abstract k-cube is the collection of 2k faces obtained by deleting the
+ith action from the list and using U and φ [U] as the ambient states. Specifically,
+αi i=1 αj j6=i αi αj j6=i
+Itfollowseasilythatthek-cellsarewell-definedwithrespecttoadmissibilityofactions. The
+proof of the following obvious lemma is given in detail to flesh out the previous definition.
+Lemma 4.4. (a) The 0-dimensional skeleton of S, S(0), is the set of states in the reconfig-
+urable system. (b) The 1-dimensional skeleton of S, S(1), is precisely the transition graph.
+2Theindividualroboticcellsarenotlabeled: onlytheshapeoftheaggregate isrecorded.
+COMPLEXESFORMETAMORPHICROBOTS 7
+proof: (a) Vertices of S consist of equivalence classes consisting of zero (i.e., no) actions
+of generators up to permutation, together with a state defined on the complement of the
+supports ofthe actions. As there are no actions, each0-cellis precisely a single state of the
+reconfigurable system.
+(b)A1-cellofS isanequivalenceclassoftheform[U;(Φ)]. Theonlyotherrepresentativeof
+theequivalenceclassis[φ[U];(Φ)];hence,the1-cellsarepreciselytheedgesinthetransition
+graph. Clearly, the boundary of [U;(Φ)] is the pair of 0-cells [U;(·)] and [φ[U];(·)]. ⋄
+For small numbers of cells, it is easy to illustrate the state complex.
+PSfragreplacements
+Fig. 4.2. The planar sliding square example [left] with two movable blocks [in black] and a p-by-q
+obstacle set [ingrey] yields a state complex S that istopologically a circle [right].
+Example 4.5. Consider the 2-dsquare lattice row/columnsliding system whose catalogue
+is illustrated in Fig. 3.2. If we consider a system with (occupied) obstacles in the form of a
+p-by-q rectangle generated from the state of Fig. 4.2 [left], one obtains a planar transition
+graph with 4(pq+1)+2(p+q) vertices and 8(pq+1)−2(p+q) edges. In contrast, the
+state complex is that of Fig. 4.2 [right]: this is topologically a circle, corresponding to the
+fact that the pair of free squares can circulate about the obstacle set through a sequence
+of slides. The large 2-d regions correspond to states in which the two free squares are on
+separate (but adjacent) sides of the obstacle set.
+Example 4.6. Consider the planar hex system of Fig. 3.1 [left] with a workspace W
+consisting ofa long channeloffour rows,the bottomrow being filled obstacles,andthe top
+row being non-occupied obstacles. A line of cells in one of the two free rows can “climb
+across” one by one, yielding the state complex of Fig. 4.3[right] (cf. the algorithm of [20]).
+This state complex is contractible for any length column.
+Fig.4.3. Foralineofhexagonsfilingoutofaconstrainedtunnel[left],thestatecomplexiscontractible
+[right]. Blackcellsrepresentoccupiedobstaclesets;thetoprowisanunoccupiedobstacleset. Afairlyshort
+tunnel isshown: for longer tunnels, the state complex is stillcontractible, but of higher dimension.
+8 AARONABRAMS&ROBERTGHRIST
+Example 4.7. The state complex associated to the positive articulated robot arm of
+Example 3.3 in the case N = 5 is given in Fig. 4.4. Note that there can be at most
+threeindependent motions(whenthe armisina“staircase”configuration);hencethe state
+complex has top dimension three. Notice also that although the transition graph for this
+system is complicated, the state complex itself is topologically trivial (contractible).
+Fig.4.4. Thestatecomplexofa5-linkpositivearmhasonecellofdimensionthree,alongwithseveral
+cells of lower dimension.
+Example 4.8. In the system of Example 3.4 with the graph being a K (the complete
+graph on five vertices) and N = 2, the state complex is a two-dimensional closed surface.
+A simple combinatorial argument (as in [1, 2]) reveals that the Euler characteristic is −5,
+implying that the state complex is non-orientable. If the AGV’s are labeled, the state
+complex becomes a closed orientable surface of genus 6.
+5. ThetopologyofS. Ifonelooksatatransitiongraphwithoutknowingtheparticu-
+larsofthemetamorphicsystem,verylittle informationcanbe extracted. Thispaperargues
+thatcompletingthetransitiongraphtothe statecomplexis“natural”—thestate complex
+simplifies the transition graph and endows it with topological and geometric content.
+Ourfirstexampleofnaturalityismotivatedbythedesiretobuildmetamorphicsystemswith
+largenumbers ofmicro-ornano-scalecells. While largenumbers ofcells wouldyielda type
+of continuum-limit convergence on the dynamics of shape change, the resulting transition
+graphs have no such convergence. The size of the transition graphgoes up exponentially in
+the number of cells; more ominous is thatthe topologyofthe transitiongraph(the number
+of basic cycles) blows up as well. This is not always so with the state complex: in certain
+key examples, the topology of S is either invariant or converges to a limiting type.
+We have already seen one such example of this stabilization. In Example 4.5, the state
+complexofapairofsquaresslidingalongarectangularobstacleofsizep-by-qistopologically
+a circle, independent ofp and q. This canbe interpretedas a type of convergence: consider
+theeffectofrefiningthe underlyinglatticestructure,increasingpandq whilemaintaininga
+pair of sliding squares. Then the dimension of the state complex remains the same, as does
+the topological type of the space. Intuitively speaking, the “limit” as this refining process
+is repeated yields a “topological” configuration space of two points sliding smoothly along
+the boundary of a rectangle, which can dock or un-dock at the corners.
+Example 5.1. Recallthe statecomplexassociatedtothe metamorphicsystemofN points
+onagraphΓ,Example3.4. ConsiderarefinementofΓwhichinsertsadditionalverticesalong
+edges. It follows from the techniques of [1] that the state complex of this refined system
+has the same topological type (up to homotopy equivalence) after a fixed bound on the
+refinement (N additional vertices per edge). Furthermore, this “stabilized” state complex
+is infacthomotopicto the topologicalconfigurationspace ofN non-collidingpoints ofΓ —
+COMPLEXESFORMETAMORPHICROBOTS 9
+precisely what one expects as the number of refinements goes to infinity.
+Example 5.2. RecallthepositivearticulatedrobotarmofExample3.3. Considerarefine-
+ment of the underlying lattice which shrinks the lattice by a factor of two (or, equivalently,
+which inserts an additional joint in the middle of each edge). This is a more dramatic
+changesincethe dimensionofthe statecomplexdoubles. Nevertheless,thetopologicaltype
+is invariant: the state complex remains contractible.
+Proposition 5.3. Let S denote the state complex of the positive articulated arm from
+Example 3.3 with N segments. The complexes S are all contractible.
+proof: For these articulated arms, there is a nice inductive structure on the state
+complexes. Fixing N, each state (vertex) in S is represented as a length N word in the
+symbols x and y, where x denotes the arm going to the right and y denotes the arm going
+up. In this language, the two generators are (1) transposing a subword xy ↔ yx, and (2)
+changing the last letter of the word.
+ConsiderthesubcomplexX ⊂S consistingofallcellswhoseverticeshavewordsbeginning
+withtheletterx. Likewise,letY denotethesubcomplexallofwhoseverticesbeginwiththe
+letter y. These subcomplexes are each a copy of S which we may assume inductively is
+contractible. One passes between the subcomplexes X and Y only when a move exchanges
+theinitialtwolettersofthewordfromxytoyx. Theconnectingsetisthushomeomorphicto
+S ×[−1,1] and attached to X and Y along S ×{−1} and S ×{1} respectively.
+N−2 N−2 N−2
+Again, by induction, these sets are contractible. A pair of contractible sets joined along
+contractible subsets is contractible. ⋄
+Thisshouldcomeasnosurprise: inthelimitasN →∞,thereconfigurablesystemapproxi-
+matestheconfigurationspaceofasmoothcurveoffixedlengthwhichispositiveinthesense
+that the curve is alwaysnondecreasinginthe horizontalandverticalcomponents. That the
+(infinite dimensional) space of such smooth curves is contractible is easily demonstrated:
+givenanysuchcurvewithendpointfixedattheorigininthe plane,pull theotherendalong
+the straight line connecting it to the origin until the strand is taut. Then, rotate the line
+segmentrigidly untilit is,say,vertical. This is a continuousdeformationonthe spaceofall
+smooth positive curves of fixed length to a single vertical segment.
+Itiscertainlynotthecasethatanarbitraryreconfigurablesystempossessessuchconvergence
+properties: the manner in which one refines the states is important. Still, we conjecture
+that state complexes can often be viewed as “discretizations” of some underlying smooth
+configuration space.
+6. The geometry of S. There are severalnatural waysto measure distances in state
+complexes. We first discuss the geometry arising from considering each cube of S to be
+Euclidean (i.e., flat), with unit side length; we call S with this metric a Euclidean cube
+complex. However, this does not imply that the complex, as a whole, is flat. Indeed, non-
+zero curvature can be concentrated at places where several cells meet. A simple example
+appears in Fig. 6.1: here, a surface built from flat 2-cells can be seen to have curvature
+which depends on the number of 2-cells incident to a vertex. Four incident cells implies
+zerocurvature;three cells implies positivecurvature;andfive ormorecells implies negative
+curvature. For a two-dimensional complex, this is equivalent to computing the total angle
+about a vertex.
+Such an extension of curvature to general metric spaces is made precise in Gromov’s work
+10 AARONABRAMS&ROBERTGHRIST
+Fig.6.1. Curvature about avertex ina 2-d Euclidean cubical complex: positive, zero, and negative.
+on curved metric spaces [12] (extending the classical work of Alexandrov, Busemann, and
+others) in which triangles with geodesic edges are used to measure curvature bounds. In
+brief,letX beametricspaceandp∈X apoint. ToboundthecurvatureofX atp,consider
+a small triangle T about p with geodesic edges of length a, b, and c. Build a comparison
+triangle T′ in the Euclidean plane whose sides also have length a, b, and c respectively.
+Choose a geodesic chord of T and measure its length d. In T′, measure the length d′ of the
+chord whose endpoints correspond to those of the chord in X.
+DefPinSfirtagiorenplac6e.m1e.ntsA metric space X is nonpositively curved (or NPC) if for every
+sufficiently small geodesic triangle T and for every chord of T, it follows that d≤d′.
+Fig.6.2. Comparison triangles measure curvature bounds.
+In other words, geodesic chords are no longer than Euclidean comparison chords. It should
+be stressedthat the NPC property is very special and highly desirable. Indeed, being NPC
+implies a variety of topological consequences reminiscent of smooth nonpositively curved
+manifolds.
+Despite the variety of (local) metamorphic systems, all state complexes share this special
+geometric property.
+Theorem 6.2. The state complex S of any local metamorphic system is nonpositively
+curved.
+The proof of this theorem is simple, but requires some additional machinery.
+Definition 6.3. Let X denote a complex (either simplicial or cubical) and let v denote
+a vertex of X. The link of v, ℓk[v], is defined to be the abstract complex which has
+one k-dimensional simplex for each (k + 1)-dimensional cube in X incident to v. The
+boundary relations are those inherited from X: namely, the boundary of a k-simplex in
+ℓk[v] represented by a (k+1)-cube in X is the set of all simplices represented by the faces
+of the (k+1)-cube.
+Links can be thought of as a simplicial version of the locus of points a small fixed distance
+from the vertex v.
+Definition 6.4. A Euclidean cube complex X satisfies the link condition if, for each
+COMPLEXESFORMETAMORPHICROBOTS 11
+vertex v ∈ X, ℓk[v] satisfies the following: for each k, if any k +1 vertices in ℓk[v] are
+pairwiseconnectedbyedgesinℓk[v],thenthoseverticesboundauniquek-simplexinℓk[v].
+An important and deep theorem of Gromov [12] asserts that a Euclidean cube complex is
+nonpositively curved if and only if it satisfies the link condition. This criterion makes it
+easy to prove Theorem 6.2.
+proof of theorem 6.2: Let U denote a vertex of S. Consider the link ℓk[U]. The
+0-cells of the ℓk[U] correspondto all edges in S incident to U; that is, actions of generators
+admissibleatthe stateU. Ak-cellofℓk[U]isthus acommutingsetofk+1oftheseactions
+based at U. The interpretation of the link condition for a state complex is as follows: if at
+U one has a set of k+1 admissible actions, {(φ ,Φ )}k+1, of which each pair commutes,
+then the full set of k+1 generators must commute [existence of the k-simplex in the link].
+Furthermore, they must commute in a unique manner [uniqueness of the k-simplex in the
+link].
+The proof of existence follows directly from Definition 4.1: any collection of pairwise com-
+mutative actions is totally commutative. We therefore have a (k +1)-dimensional cell in
+S which is the equivalence class [U;(Φ )k+1]. This is the representative in S of the k-
+simplex in ℓk[U]. To show uniqueness, consider any other k-simplex in ℓk[U] which has the
+same vertex set. This must correspond to a (k +1)-dimensional cube in S with actions
+(φ ,Φ )k+1 (up to some permutation) based at U. From Definition 4.3, this cell must be
+the same equivalence class, namely [U;(Φ )k+1]. ⋄
+Example 6.5. To see how the NPC property can fail, consider the following non-local
+metamorphic system. Recall the generator for the planar hexagonal system presented in
+Fig.3.1[right]which(alongwithitsrotations)allowsforlocaldisconnectionoftheaggregate.
+If we add to this system a global rule that requires the aggregateto be connected (for, say,
+considerations of power transmission), then we no longer have a local system, and positive
+curvaturemayexist. Fig.6.3showsaconfigurationinwhichthreeactionsoflocalgenerators
+act to disconnect the aggregate locally but not globally. These actions commute pairwise,
+and any two do not disconnect globally. However, performing all three actions disconnects
+the space and leads to an illegal state. Therefore, the corresponding state complex for this
+non-local system has a “corner” of positive curvature as a local factor. Note: the state
+complexwillnotbe two-dimensionalhere,butwillbe locallyaproductofthis withanother
+cubical complex. The positive curvature persists.
+Fig. 6.3. A generator which allows for local disconnection [left] admits configurations [center] for
+which pairs of actions leave the aggregate connected, but triples do not; this non-local system has positive
+curvature inthe state complex at this state [right].
+12 AARONABRAMS&ROBERTGHRIST
+7. Geodesics and time on S. Besides displaying a unifying geometric feature, the
+nonpositive curvature has implications for path-planning, and hence, the shape-planning
+problem.
+Corollary 7.1. Each homotopy class of paths connecting two given points of a state
+complex contains a unique shortest path.
+proof: This is well-known for NPC spaces. The only difficulty lies in proving that the
+d≤d′ inequalityfor sufficiently smalltrianglesimplies the d≤d′ inequalityfor all geodesic
+triangles which are contractible in the space: see [4]. Assume, then, that this inequality
+holdsingeneral,andconsiderapairofdistincthomotopicshortestpathsfrompoints pto q
+inS. Chooseanypointr ononeofthe twopaths. Thetwohalvesofthis pathbisectedbyr
+are themselves shortest paths from p to r and r to q respectively. Thus, there is a geodesic
+triangle in S whose comparisontriangle in the Euclidean plane is a degeneratestraightline
+fromp′ toq′. Thed≤d′ inequalityappliedtothesegmentfromrtoitscorrespondingpoint
+ontheothergeodesicshowsthatthesepointscoincide;thereforethetwoshortestpathsfrom
+p to q in S are identical. ⋄
+Fig. 7.1[left] gives a simple example of a 2-d cubical complex with positive curvature for
+which the above corollary fails.
+This corollaryis a key ingredient in the applications of NPC geometry to path-planning on
+a configuration space, since one expects geodesics on S to coincide with optimal solutions
+totheshapeplanningproblem. However,inthecontextofroboticsapplications,the goalof
+solving the shape-planning problem is not necessarily coincident with the geodesic problem
+on the state complex. Fig. 7.2[left] illustrates the matter concisely. Consider a portion of a
+state complex S which is planar and two-dimensional. To get from point p to point q in S,
+anyedge-pathwhichisweaklymonotoneincreasinginthehorizontalandverticaldirections
+is of minimal length in the transition graph. The true geodesic is, of course, the straight
+line, which is hardly a discrete object and thus more difficult to compute.
+Fig. 7.1. [left] A 2-d cube-complex (with positive curvature) possessing distinct homotopic shortest
+paths between a pair of marked points — note all edges have length one; [right] a 2-d cube-complex (with
+positive curvature) possessing an edge path (the thick line on the boundary) which is a locally (but not
+globally) shortest path. Any cube path near this path isstrictly longer.
+Given the assumption that each elementary move can be executed at a uniform maximum
+rate, it is clear that the true geodesic on S is time-minimal in the sense that the elapsed
+time is minimal among allpaths fromp to q. However,there is an envelopeof non-geodesic
+pathswhichareyettime-minimizing. Indeed,thetruegeodesicinFig.7.2[left]“slowsdown”
+some of the moves unnecessarily in order to maintain the constant slope.
+This leads us to define a second metric on S, one which measures elapsed time. Namely,
+insteadofthe Euclideanmetric onthe cellsofS, considerthe spaceS withthe ℓ∞ normon
+COMPLEXESFORMETAMORPHICROBOTS 13
+Fig. 7.2. [left] The true geodesic lies within an envelope of time-minimizing paths. No minimal
+edge-paths are time-minimizing; [right] a normal cube-path inan NPC complex (after[18]).
+each cell. (This is also called the supremum norm: a vector is measured by the maximum
+of its components in each coordinate direction.) The geodesics in this geometry represent
+reconfiguration paths which are time minimizing. Using the results of [18], one can prove
+that these geodesics are easily described using the notion of a cube path.
+Definition 7.2. A cube path from a vertex v to a vertex v is an ordered sequence of
+closed cubes {C }N in S which satisfy (1) C ∩C = v for some vertex v ; and (2) C
+i 1 i i+1 i i i
+is the smallest cell of S containing v and v . A cube path is said to be normal if in
+addition (3) for all i, St(C )∩C = v , where St(C ) is the star of C (the union of all
+i i+1 i i i
+closed cubes, including C , which have C as a face).
+Roughly speaking, a normal cube path is one which uses the highest dimensional cubes as
+early as possible in the path.
+Theorem 7.3. In any state complex S, there exists a unique normal cube path from p to
+q in each homotopy class. The chain of diagonals through this cube path minimizes time
+among all paths in its homotopy class.
+This resultfollowsfromTheorem6.2anda resultof[18](or,see the constructivealgorithm
+of Section 8 below for a proof of existence).
+This result (or, alternatively, the constructive algorithm in the next section) also implies
+that, in the category of homotopic cube-paths, there is no such thing as a strictly local
+minimum for length: if a cube path in S has the property that all nearby cube paths are
+longer (more cubes), then this cube path is a normal cube path and indeed is the shortest
+cube path within the homotopy class of paths. See Fig. 7.1[right] for a simple example of a
+cubecomplexwithsomepositivecurvaturethathasacubepathwhichislocallyofminimal
+length among cube paths, but not globally so.
+Thisisverysignificant. Bybeginningwithanypathinthe statecomplex,say,oneobtained
+viaafastdistributedalgorithmforshape-planning,onecanemployagradient-descentcurve
+shortening on the level of cube paths. The above results imply that any algorithm which
+monotonically reduces length must converge to the shortest path (in that homotopy class)
+and cannot be hung up on a locally minimal cube path. The presence of local minima is a
+persistent problem in optimization schemes: nonpositive curvature is a handy antidote.
+8. Optimizing paths. In cases where the state complex is sparse — local principal
+cells being of high dimension with few neighbors — it is possible to compress the size
+of the transition graph significantly. However, shape-planning via constructing all of S
+and determining geodesics is, in general, computationally infeasible: the total size of the
+14 AARONABRAMS&ROBERTGHRIST
+state complex is often exponential in the number of cells in the aggregate. We therefore
+assumethatsomeshapetrajectoryhasbeendetermined(byaperhapsadhocordistributed
+method) and turn to the problem of optimizing this trajectory. The nonpositive curvature
+of S allows for a time-optimization which does not require explicit construction of S. We
+detail an algorithm for transforming any given edge-path to a time-optimal normal cube
+path.
+From Definition 4.3, an n-dimensional cube C of S can be represented by a set of n com-
+mutative actions {Φ } along with an admissible state U. In the following algorithm, we
+suppressthe statefornotationalconvenienceandconsiderC asthe setofactions. Addition
+and subtractionis defined by adding or taking awayadmissible commutative actions to the
+list.
+Algorithm 8.1 (TimeGeodesic). Given: a cube path C ={C } in S.
+1: Let N := Length(C).
+2: Call ShrinkCubePath(C).
+3: If Length(C)<N then 1: else stop.
+Algorithm 8.2 (ShrinkCubePath). Given: a cube path C ={C } in S.
+1: Let i=1.
+2: Let X := Commute(C ;C ).
+3: Update C :=C +X;
+4: Update C :=C −X.
+5: Call ExciseTrivial(C ).
+6: Call CommonEdge(C ,C ).
+7: Call ExciseTrivial(C ;C ).
+8: If X =∅ then i=i+1.
+9: If C 6=∅ then 2: else stop.
+Subroutine 8.3 (Commute). Given: a pair of cubes C = {Φj } and C =
+j αi i=1..m j+1
+1: Let S := sup(Φj )
+2: Let T :=S
+3: For i=1.S.n return Φj+1 if
+Subroutine ExciseTrivial checks a cube for an empty list, removes these from the path,
+and reindexes the cube path, thus reducing the length. Subroutine CommonEdge checks a
+cube againstadjacent cubes in the sequence for common edges and deletes these, returning
+a genuine cube path (recall Definition 7.2).
+Subroutine Commute takes as its argument a pair of cubes C and C and returns those
+elements of C which commute with all elements of C . The following lemma is a manip-
+ulation of the definitions.
+Lemma 8.4. The result of Commute(C;C ) is precisely the set of edges in St(C )∩C .
+i i+1 i i+1
+Theorem 8.5. Given a cube path C, Algorithm 8.1 computes a globally time-optimal path
+in the homotopy class of C.
+COMPLEXESFORMETAMORPHICROBOTS 15
+PSfragreplacements
+Fig. 8.1. Three rounds of shortening an edge path C. Cube path length stabilizes after two calls to
+ShrinkCubePath. Three more calls produces a normal cube path.
+proof: Recallthatinthissetting,thelengthofacubepathreferstothenumberofcubes
+in the path; this equals the time required to execute the reconfiguration.
+Repeated calls to Algorithm ShrinkCubePatheventually leave a cube path fixed. To show
+this, note that the integer-valued function f(C) := i·dim(C ) decreases in each call to
+ShrinkCubePathwhich changes the path. Lemma 8P.4 implies that ShrinkCubePathleaves
+a cube path fixed if and only if it is a normal cube path. From Theorem 7.3, this yields a
+time-optimal path.
+However, Algorithm TimeGeodesiccalls ShrinkCubePathonly until the length of the cube
+pathisunchanged. Thusitremainstoshowthatoncethelengthofacubepathinunchanged
+byacalltoShrinkCubePath,thisisequaltothelengthoftheassociatednormalcubepath.
+To show this, assume that ShrinkCubePath stops without excising any trivial cubes (i.e.,
+shortening the length). We show that further calls merely redistribute actions earlier in
+the list C without deleting any permanently. Without a loss of generality, assume that the
+first call to ShrinkCubePathdoes not change the length of the cube path, but that in the
+subsequent call, the cube C is eliminated via C commuting with a portion of C : see
+the schematic of Fig. 8.2.
+C i+1 C i+1
+PSfragreplacements C i C i = C i
+C i−1 C i−1
+Fig. 8.2. Schematic of exchanging actions in sequential rounds. Each dimension in this cartoon
+represents a multi-dimensional cube.
+Since C is not eliminated in the first call, there must have been actions in C which
+did not commute with those of C but which are subsequently pushed backward in the
+secondcall. Inaddition, allthe actionsofC arecontainedin(“parallelto” inthe figure)
+the subset of C which commutes with C in the second call. This being the case, the
+commutativity of C with C would have occurred in the first call: contradiction. ⋄
+16 AARONABRAMS&ROBERTGHRIST
+It is not surprising that Algorithm 8.1 converges to a locally time-minimal solution. The
+interesting implication is that the cube-path obtained is the global minimum for all paths
+obtainable from the initial: there is no way to get a quicker reconfiguration path by first
+lengtheningthepathandthenshortening. Thisistheboonofnonpositivecurvature. Fig.8.1
+gives an example of paths generated by Algorithm 8.1.
+ThecomplexityofAlgorithm8.1dependsonboththecatalogueofgeneratorsforthesystem
+and the length N of the input edge path. However, the dependence on the catalogue
+arisesonly in Subroutine Commute,whichtests various pairs of subsets of the workspacefor
+disjointness; the sizes of these subsets are governed by the generators. Assuming a fixed
+catalogue,then, there isa constantboundonthe time requiredfor asingle callto Commute,
+and we may analyze the complexity of Algorithm 8.1 as a function of N alone.
+Notice that Algorithm 8.1 calls ShrinkCubePathat most N times, since it stops as soon as
+thelengthofthecubepathfailstodecrease. EachtimeanindividualloopofShrinkCubePath
+is executed, the quantity dim(C ) decreases. Since this quantity equals N initially,
+ShrinkCubePath calls the sPubroutines Commute, ExciseTrivial, and CommonEdge each at
+most N times. Each of these has a constant running time, with Commute being the only
+one depending on the particulars of the metamorphic system. Therefore the complexity of
+the entire Algorithm 8.1 is O(N2), with the constant determined by the running time of
+Commute.
+TheworstcaseforAlgorithm8.1seemstobeachievedinatotallyflat2-dstatecomplexbya
+pathconsistingoftwoperpendicularsegmentsoflengthN/2. (ThiscaserequiresN2/2runs
+of ShrinkCubePath.) The presence of true negative curvature in a state complex greatly
+increases the speed of convergence. On the other hand, a flat state complex is desirable for
+other reasons.
+It remains an important computational question to determine whether the homotopy class
+of the initial path (given, say, from a distributed algorithm) is optimal in the sense that
+its geodesic is the shortest among all homotopy classes. Interestingly, in contrast to the
+previous paragraph, this problem becomes quite a bit more difficult in the presence of
+negative curvature. From this point of view it is preferable to have a flat state complex.
+9. Discussion. Our principal contributions are:
+1. A mathematical definition ofametamorphicsystemwhichencompassmanymodels
+currently studied and suggests seemingly unrelated (and often simpler) systems.
+Given the difficulty of building large metamorphic systems, simpler examples pos-
+sessing the same formal structure may be valuable.
+2. The state complex, whose naturality is manifested on the level of its topology (S
+canbehomotopicallysimple)anditsgeometry(non-positivecurvatureisuniversal,
+mathematically helpful, and highly desirable for shape planning).
+There are drawbacks to this approach. Primary among them are the dual dilemmas that
+shape planning is inherently complex, and that there are many types of reconfiguration
+possible. A state complex approach is not meant for all systems. Indeed, it is possible to
+designdegeneratemetamorphicsystemswithlittle to nocommutativity. Nevertheless,pay-
+ing attention to the geometry lurking behind our higher-dimensional versions of transition
+graphs leads to a nontrivial result on the optimality of path-shortening.
+COMPLEXESFORMETAMORPHICROBOTS 17
+Asaninterestingside-note,weobservethatinthe presentcontext,the optimalreconfigura-
+tionpathisnotalwayscoincidentwithageodesicontheconfigurationspace. Thisprinciple
+holds in more generality.
+Finally, in this initial work, we have focused only on the first-order problem of shape plan-
+ning. We hope that the mathematical framework here suggested finds uses in more sophis-
+ticated task-planning problems for metamorphic and reconfigurable robots.
+Appendix A. Shape complexes.
+State complexes, despite their relative simplicity over the transition graph, nevertheless
+typicallycontainalargenumberofcells. Forlattice-basedsystems, andinsomeothercases
+as well, a much smaller complex called the shape complex can be used to encode all of the
+localreconfigurations,withoutlosinganyessentialinformationfromthestatecomplex. The
+idea is to exploit the symmetries of the domain.
+Considerthe(lattice-based)pivotinghexsystemofExample3.1. Theunderlyinglatticehas
+translational symmetry in two independent directions; so for instance, in the idealized case
+where the workspace is the entire (infinite) lattice with no obstacles, the state complex S
+sharesthese symmetries. Ifwe takeaquotientofS bythe actionsofthese twotranslations,
+we obtain the shape complex Sh. (The precise definition follows shortly.)
+ObservethatShismuchsmallerthanS;indeedeveniftheworkspaceisinfinite,thecomplex
+Sh is compact (provided the system consists of connected sets of, say, N cells). Yet, Sh
+carries substantially the same information as S. Whereas S keeps track of both the shape
+and the location of the aggregate,the quotient Sh ignores the location.
+Note that no information about the system is lost in the process of forming the quotient; S
+canbecompletelyreconstructedfromSh. Indeed,S isacovering space ofSh(withcovering
+transformationgroupequalto the groupofsymmetriesofthe lattice). InparticularSh and
+S share the same universal covering space, so Sh (just like S) is non-positively curved.
+Here is the definition of the shape complex; compare with Definition 4.3.
+Definition A.1. The shape complex Sh of a (lattice-based) local reconfigurablesystem
+istheabstractcubecomplexwhosek-dimensionalcubesareequivalenceclasses[U;(Φ )k ]
+1. (Φ )k is a k-tuple of commuting actions of generators φ ;
+2. U is some state for which all the actions (Φ )k are admissible; and
+3. [U ;(Φ )k ] = [U ;(Φ )k ] if and only if there is a translation T : L → L such
+0 αi i=1 1 βi i=1
+that the list (Φ ◦ T) is a permutation of (Φ ), and U = U ◦ T on the set
+The boundary of a k-cube is obtained just as it is in S.
+Example A.2. The shape complex for the system of Example 3.1 (with the generator of
+Fig. 3.1[left]) having a total of N =3 occupied cells is shownin Figure A.1. There are nine
+square cells. Two pairs of edges are identified according to the matching arrows, yielding
+a Mobius strip; additionally, the three black vertices are identified to one, as are the three
+white vertices. The shape complex is therefore a Mobius strip with some of the boundary
+points identified.
+18 AARONABRAMS&ROBERTGHRIST
+Fig.A.1. The shape complex for a pivoting hex system consisting of 3 robotic cells.
+Macros. Themostobviousadvantageoftheshapecomplexisthatthediscoveryofasingle
+shortest path in Sh simultaneously solves several state-changing problems in the complex
+S. This is particularly helpful in systems which require frequent transportation within the
+workspace (perhaps to perform various tasks in different areas). For instance, suppose the
+workspaceincludes severalnarrowcorridorsthroughwhichthe robotmusttravelatvarious
+times. At each encounter with such a corridor, it must change to a shape which is skinny
+enough to navigate the passageway. But this is the same problem at each corridor, even
+thoughitoccursindifferentplacesinthestatecomplex: thethreehexagonsinExampleA.2
+canmovefromatriangularshapetoalinearshapebythesamesequenceofmoves,wherever
+the problem may arise in L.
+In the shape complex, we view this as a single shortest-path problem, whose solution we
+may lift to various locations in the domain. In this sense a shortest path P in Sh can be
+viewed as a macro for solving state-changing problems in S.
+A drawback to the shape complex is that it neglects the shape of the workspace W. In
+the presence of obstacles or at the edge of W, a path P in Sh may fail to lift to a path
+in S. Thus before lifting a path P one must check that the actions are admissible at the
+appropriate locations in W.

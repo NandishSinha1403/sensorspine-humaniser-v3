@@ -1,0 +1,607 @@
+PopED lite:
+an optimal design software
+for preclinical pharmacokinetic and pharmacodynamic studies
+Yasunori Aoki ∗1, Monika Sundqvist2, Andrew C. Hooker1, and Peter Gennemark2
+1Pharmacometrics Research Group, Dept. Pharmaceutical Biosciences, Uppsala University,
+Box 591, SE-751 24, Uppsala, Sweden
+2CVMD iMed DMPK AstraZeneca R&D, SE-431 83 Mölndal, Sweden
+November 5, 2018
+Optimalexperimentaldesignapproachesareseldomusedinpre-clinicaldrugdiscovery. Mainreasonsfor
+thislackofusearethatavailablesoftwaretoolsrequirerelativelyhighinsightinoptimaldesigntheory,andthat
+thedesign-executioncycleofinvivoexperimentsisshort,makingtime-consumingoptimizationsinfeasible. We
+presentthepubliclyavailablesoftwarePopEDliteinordertoincreasetheuseofoptimaldesigninpre-clinical
+drugdiscovery. PopEDliteisdesignedtobesimple, fastandintuitive. Simple, togivemanyusersaccessto
+basicoptimaldesigncalculations.Fast,tofittheshortdesign-executioncycleandallowinteractiveexperimental
+design(testonedesign,discussproposeddesign,testanotherdesign,etc). Intuitive,sothattheinputtoand
+outputfromthesoftwarecaneasilybeunderstoodbyuserswithoutknowledgeofthetheoryofoptimaldesign.
+Inthisway,PopEDliteishighlyusefulinpracticeandcomplementsexistingtools. KeyfunctionalityofPopED
+liteisdemonstratedbythreecasestudiesfromrealdrugdiscoveryprojects.
+Keywords:optimalexperimentaldesign,pre-clinicaldrugdiscovery,model-baseddrugdiscovery.
+1 Introduction
+Poorly designed experiments often lead to uninformative experimental results. For example, poorly chosen
+dosageandobservation/samplingtimesinananimalexperimentcanleadtoinaccuratecharacterisationofdrug
+candidates. Inordertominimizetheriskofrunninguninformativeexperimentsindrugdiscovery,weintroducethe
+∗Correspondingauthor:yaoki@uwaterloo.ca
+]MQ.oib-q[
+1v85660.5051:viXra
+softwarePopEDlitethatsystematicallyincorporatesaprioriknowledgeaboutthecompoundandalgorithmically
+optimizestheexperimentaldesign.
+Decisions in preclinical drug discovery are largely based on inference of data from cell-based assays and
+animalsexposedtodrugcandidates. Accurateefficacyandsafetyestimatesofeachtestcompoundarepivotalfor
+proper compound ranking. Mathematical models are commonly used to formally integrate available information
+inordertogainsystem-levelunderstandingofpharmacologicaleffectsandtomakeinformeddecisions[10,20].
+These models are usually composed of two parts; the pharmacokinetics (PK) part representing what the body
+doestothedrug,andthepharmacodynamics(PD)partrepresentingwhatthedrugdoestothebody[9].
+Duringthecompoundselectionphaseofadrugdiscoveryproject,severalcompoundsaretested. Estimated
+modelparameters(e.g.,clearanceandpotency)areusedtoquantitativelycharacterisethecompound. Naturally,
+theuncertaintyofparameterestimatesmustbetakenintoaccount. Thedesignoftheexperiment(e.g.,whento
+takethebloodsamples,howmuchcompoundtoadminister)canhavelargeinfluenceontheparameterestimation
+uncertainty. Therefore,experimentaldesignofpreclinicalstudiesisacrucialcomponentofoverallsuccessindrug
+discovery.
+Currently, in a typical preclinical study, experiments are manually designed and sampling times are often
+fixed for all test compounds. Although there have been significant developments in optimal design for clinical
+studies [8, 11, 12, 13, 14], the use of optimal design in preclinical studies is still limited [17, 18]. Thus, we
+hypothesisethatthereissignificantroomforimprovementintheexperimentaldesignofpreclinicalstudies. For
+example,thepowerofpriorinformationfromsimilarcompoundsisnotfullytakenintoaccount.
+Initially,weattemptedtointroducealreadyexistingoptimaldesignsoftware[4,14]intoarealisticexperimental
+designworkflowofpre-clinicalPK/PDstudies. Duringthisattempt,welearnedhowpreclinicalexperimentswere
+designedindrugdiscoveryandidentifiedseveralcausesforoptimaldesignnotbeingusedinpre-clinicalstudies.
+Specifically,weidentifiedthreekeychallengesinutilizingtheideaofoptimaldesigninpreclinicalexperiments.
+Firstly, the currently available experimental design tools are developed by academic groups with the aim of
+delivering state of the art optimal design theories to a wide variety of applications. Therefore these software
+tools are developed for high functionality and high flexibility. However, flexibility incurs more user inputs which
+can demotivate unexperienced users and increase the risk of user errors. As the development of experimental
+designsforsimilarpreclinicalstudiesisoftendoneroutinely,thehighflexibilityisnotnecessaryandhindersusers
+whoarenotfamiliarwithoptimaldesignsoftwaretools.
+Secondly,mostofthecurrentlyavailablesoftwaretoolsaredesignedtobeusedforclinicalstudies. Foraclin-
+icalstudythetrueoptimalityofthedesignisdesirable,sincestudycostishighandsincethedesign-experiment
+cyclesareintheorderofmonths. Asaconsequence,currentlyavailablesoftwaretoolssacrificespeedofcompu-
+tationforoptimalityofthedesign. However,forpreclinicalstudies,thedesign-experimentcyclesareintheorder
+of weeks, and often the experimental designs are adjusted during discussions with experimentalists. Thus, an
+optimaldesignsoftwarethatrequiresconsiderablecomputationaltimeisnotsuitableforpreclinicalstudies.
+Thirdly, most of the optimal design software tools assume basic user knowledge in optimal design, and use
+optimal design terminology (e.g., D-optimal criterion, determinant of FIM,...) in the user interface to concisely
+communicatetheideabehindthesoftware. However,themajorityofpreclinicalexperimentalistsarenotusedto
+optimal design terminology and interpretation of the required user-input and software-output of these programs
+becomesanissue.
+To address these three challenges we have implemented the software PopED lite that is designed to be a
+simple,fastandintuitiveplaygroundforexperimentaldesigninthepreclinicalareaofdrugdevelopment. PopED
+2 Design Considerations
+Through our initial attempt of introducing pre-existing optimal design software tools to industrial drug-discovery
+teams, we observed that these were too complex for the relatively simple experimental design computations
+needed for preclinical PK/PD studies, too slow to fit into the compound-selection workflow, and too difficult to
+understand for users without prior knowledge in optimal design. PopED lite was designed to be simpler, faster
+and more intuitive compared to existing programs in order to bring optimal design into the regular workflow of
+preclinical animal experiments in the pharmaceutical industry. Together with an industrial drug-discovery team
+we conducted a retrospective study (Case Study 1) and with another team we designed experiments using a
+preliminaryversionofPopEDlite(Casestudy2)aswellaswiththecurrentversion(CaseStudy3). Throughthese
+casestudiesinadditiontothediscussionswithmanyotherpreclinicalexperimentalteams,wehaveattemptedto
+balancetheappropriateflexibility,accuracyandleveloftechnicality.
+Flexibility. PopED lite focuses on optimization of the dosage and PK/PD sampling (observation) times to
+improve the accuracy of the parameter estimates of fixed effect PK/PD models. Pre-clinical experiments are
+characterisedbyrelativelysmallgroupsizes,andanimalswithsmallgeneticdifferences. Themaininterestisto
+predictthehumansituation,andinthistranslationfocusisonaveragelevelsandnotonvariability,astranslation
+ofthelatterisassociatedwithveryhighuncertainty. Therefore,theuseofnonlinearmixedeffectmodellingisnot
+as central as in the clinical setting, and key questions can often be addressed by standard deterministic (fixed
+effect)PK/PDmodels.
+PopED lite implements standard compartmental PK models (1-, 2-, and 3-compartment models with linear
+and nonlinear elimination, and linear absorption), as well as commonly used PD models. For PD models, the
+user can alternatively input a regular mathematical expression in form of a function or an ordinarily differential
+equation. This choice of model flexibility is chosen to cover a wide range of possible PK/PD models and at the
+sametimeensuresoftwareusability.
+Accuracy. Wehavedecidedtodiscretizebothsamplingtimeanddosagesearchspace,sothattheoptimal
+designcanbechosenfromacombinationofpracticalsamplingschedulesandallowedpossibledosages.
+Wehaveobservedthatapreciselyoptimizedexperimentaldesignisseldompracticallyuseful. Forexample,
+in practice one can only sample every 5th minute and a discrete search space for sampling or dose times is
+sufficient. Bydiscretizingthesamplingtimeanddosagethedesignspacewillshrinktofinite,andwecanreduce
+thecomputationalcostforthedesignoptimizationwhileavoidingunrealisticallypreciseexperimentaldesigns.
+Wehavealsoobservedthataquicklyobtainedgood-enoughdesign,andnotnecessarilytheoptimal,isoften
+morevaluableinpreclinicalstudiesduetotheirtimeconstraints.
+LevelofTechnicality. Preclinicalstudiesaredesignedbycross-functionalteams(e.g.,biologists,chemists,
+and PK/PD-modellers), that generally lack training in numerical computation and information theory. Therefore,
+optimal-designspecificjargonshouldbeavoidedinthesoftwareinterface,andPopEDisdesignedtoonlydisplay
+terminology that is familiar to these teams. Then based on the information specified by the user, PopED lite
+chooses an appropriate design optimization strategy. In this way, PopED lite introduces the idea of optimal
+designtopreclinicalexperimentalists.
+In summary, the design philosophy of PopED lite is to create the simplest, fastest, most intuitive optimal
+design software that maintains the appropriate flexibility, accuracy and level of technicality for use in preclinical
+drugdiscovery.
+3 Material and Methods
+InPopEDlite,weobtainanoptimizedexperimentaldesignbysolvingaconstrainedoptimizationproblem,where
+each experimental design is evaluated using some function of the Fisher Information Matrix (FIM). The FIM is
+calculatedbasedonthePK/PDmodelstructure,possiblesetsofmodelparameters,andtheexperimentaldesign
+(see[3]foranintroductiontothefield).
+3.1 Overall Workflow and User Interface
+UserinputtoPopEDliteisenteredstepbystep;completionofonestepisrequiredbeforethenextstepappears.
+Thisincreasesusabilityandreducesusererrors. Theoptimaldesigniscalculatedinfivesteps(Figure1). Users
+areonlyrequiredtoinputnumbers, andasinglemathematicalexpressionincaseauser-specifiedPDmodelis
+desired.
+3.2 Computation related to the Fisher Information Matrix
+AccurateconstructionandcomputationoftheFIMisvitaltooptimaldesignsoftware,astheFIMisusedtoquantify
+thequalityoftheexperimentaldesign. InordertoassureappropriateFIMconstruction,theresidualerrormodel
+is automatically built using the estimated limit of quantifications and measurement errors provided by the user
+inStep2(Figure1)ofPopEDlite. Inaddition, sincetheFIMisasymmetricmatrixPopEDliteutilizesCholesky
+decomposition to calculate the determinant and inverse of the FIM. At each Cholesky decomposition, PopED
+litemonitorstheroundingerrorandalsocheckstheinvertibilityoftheFIM.IftheFIMoftheoptimizeddesignis
+singular,theprogramoutputsawarningmessagesayingthattheparameterscannotbeuniquelyidentifiedfrom
+theexperiment,insteadofstatingthattheFIMissingular. Naturally,thisfacilitatesuserinterpretation. Inaddition,
+ifthecomputationalerrorisdetectedwheninvertingtheFIM,PopEDliteoutputsawarningaswellasreportsthe
+correspondingCoefficientsofVariation(CVs)withaquestionmark(?), allowingtheusertointerprettheseCVs
+withcaution. AppendixAdescribesindetailhowtheFIMisconstructedinPopEDlite.
+3.3 PK/PD model simulation
+The majority of the computational cost for optimal design software originates from the computation of the FIM.
+This computational cost in calculating the FIM is reduced by hard-coding several PK and PD models in PopED
+lite. For user defined PD functions, PopED lite implements an expression parser based on the shunting-yard
+algorithm[6]. PopEDliteparsestheexpressiononlyoncetosavecomputationtime. Allsubsequentevaluations
+of the expression in the design optimization procedure reuse the parsed expression. For PK/PD models that
+requiresolvinga systemofordinarydifferential equations, we usetheRosenbrockmethod [16]implementedin
+theboostpackageintheOdinttoolbox[1]. TheJacobianoftherighthandsideofauserdefinedPDfunctionis
+approximatedusingaforwarddifferencescheme.
+PopED lite
+Step1: Select a structure of the model
+Administration route
+Pharmacokinetic model
+Pharmacodynamic mmodel
+Step2: Provide the best gguueess of the model parameters
+A priori information about the compound
+from previously run compounds Parameter values Estimated parameters from the experiment
+and in vitro studies Confidence of the guess
+Optimise for PK, PD, or all parameters
+Limit of quantification
+Measurement errorr
+Step3: Specify the experimmental design constraints
+Information about the experimental facility
+Number of observations
+Possible sampling time bin
+Timing and range of dosage
+Step4(optional): Specify tthhee optimization options
+Robust optimization criteria
+Parameters of Interest
+Redisual error
+Time/Dose discretization
+Optimization algorriitthm
+Step5: Inspect the Experiimmental Design
+Summaries of the CVs for various designs
+Design of the experiment
+Individual CVs
+Fisher information mmatrix
+Is the Experiment predictteed to be informative?
+Can we reduce the numbbeer of sampling points
+/duration of the experimeennt/amount of compound used?
+PDF of the experimental design report
+Experiment
+Will we re-run tthe experiment?
+Figure1: OverallworkflowofPopEDlite.
+3.4 Optimization Criteria
+PopEDlitechoosestheoptimizationcriteriafromD,Ds,ED,andEDsoptimaldesigns[3,7]tofittheoptimization
+needoftheuser. ForachosenPK/PDmodelstructure,theusercanspecifytheconfidencelevelofthebestguess
+ofthePK/PDparameters(Step2ofPopEDlite). Ifthereisnouncertainty,PopEDliteoptimizestheexperimental
+design using the D optimization criterion. Otherwise, it randomly generates sets of parameters following the
+uniformdistributionintherangespecifiedbytheuserandconductsEDoptimaldesign(bytakingtheexpectation
+ofthenaturallogarithmofthedeterminantoftheFIMforrandomlygeneratedsetsofparameters). Furthermore,
+the user can specify in Step 2 that PopED lite should optimize the design for parameter estimation accuracy of
+a subset of parameters; Ds or EDs optimization criteria will then be used. Note that these optimization criteria
+do not appear in the standard user interface and PopED lite interprets the optimization needs of the user and
+choosesacriterionautomatically.
+3.5 Optimization Algorithms
+Wehaveimplementeddiscreteoptimizationalgorithms,inordertoachievethedesiredspeedandalsotoobtain
+anexperimentaldesignthatmakessenseinpractice.
+By discretizing the sampling time, it is possible to reduce the search space (the design space) significantly.
+A key advantage of discretizing the sampling time is that model simulations are avoided during sampling time
+optimizationsincealltheelementsthatcanappearintheJacobianmatricescanbepre-calculated. Thisdramat-
+ically reduces the cost of computation especially when the model is defined by a system of ordinary differential
+equations(ODEs).
+Bydiscretizingthedosage,theusercanspecifythepossibledosesconsideringtheexperimentalconstraints
+and compound formulation constraints. As a result, in particular for single dose experiments, PopED lite can
+searchexhaustivelyforthedosageandhenceavoidtheriskoffindingalocallyoptimaldesign.
+Thesamplingtimeoptimizationisacombinatorialoptimizationproblem(e.g. choose6samplingpointsfrom
+420possiblesamplingpoints),whilethedoseoptimizationisasimplediscreteoptimizationproblem. PopEDlite
+implementsstochasticoptimizationalgorithmsforthesetwoproblemstoreducetheriskoffindingalocaloptimal
+design. ThetwoalgorithmsaredetailedinAppendixC.
+3.6 Implementation Framework
+PopEDlitewasimplementedusingtheQtframework[5]andoverallimplementationwasoptimizedusingInstru-
+ments [2]. The Qt framework was chosen, for its speed of computation, ease of deployment, and flexibility of
+GUI design. The Qt framework is based on C++, hence PopED lite takes advantage of the speed of compiled
+software. Most of the optimal design programs targeted for pharmaceutical drug development are written in in-
+terpreter based languages such as R and Matlab which is a major cause of slow computation. Typically one
+order of magnitude faster computation can be expected for compiler based language such as C++, C, or FOR-
+TRAN compared to interpreter based languages. The Qt is also a cross-platform framework so that PopED lite
+canbedeployedtobothUnix-basedplatformsandWindows-basedplatforms. WehavealsomadePopEDlitea
+standalone software to facilitate installation. As a result, PopED lite does not require any extra installation step
+andcanbestartedbysimplyclickingonaniconjustlikeanyotherAppsavailableonacomputer. Lastly,theQt
+frameworksupportsflexibleGUIdesignwithaunifiedlookandfeel.
+4 Case Studies
+WenowpresentthecasestudiesthatPopEDlitewasmotivatedby,developedfor,andusedin. Allcasestudies
+arebasedonproblemsencounteredinauthenticdrugdiscoveryprojects.
+4.1 Case study 1: Designing a mouse receptor-occupancy study to estimate test-
+compound potency
+This case study was run before the start of the development of PopED lite, and motivated the development of
+optimal design software specifically designed for preclinical studies. In a drug candidate optimization program,
+severalchemicallysimilarcompoundswereevaluatedinthemouse. Specifically,timeseriesdatafordrugexpo-
+sure and drug targeted receptor occupancy were generated from orally dosed mice. For the latter time-series,
+onemousewassacrificedforeachsamplingpointmakingexperimentaldesignhighlyimportantbothfromethical
+and cost perspectives. For the compound series, PK could be reliably modeled by a linear two-compartment
+model (1st order absorption, linear elimination ), and the distribution between drug-receptor complex (RC) and
+freereceptor(R)wasmodeledbyareceptorkineticmodelwithelementaryreactionsas
+dt on tot off
+where C denotes drug plasma concentration, R denotes the total receptor concentration, RC denotes the
+drug-receptor complex and k and k are kinetic parameters. The dissociation constant is derived as K =
+k /k , and reflects the potency of the test compound. The in vivo experiment was routinely conducted using
+a manually defined standard design. For one test compound, the CV of k was as high as 80% resulting in
+highuncertaintyinthepotencyestimate. ThereasonforthishighCVwasthatallobservationsafter16hrwere
+below the limit of quantification and hence not informative. To improve the estimate, a second experiment was
+planned. During the experimental planning, various simulations were run with manually designed experiments
+andtheexperimentaldesignwithtwodosesof40µmol/kg(attime0hand8h)andsamplingat8,16,16,24,and
+24hrswaschosenforthesecondexperiment(Figure2(a)). Bycombiningthefirstandthesecondexperiments,
+the predicted CV for k was 52%. Actual data generated using this design reduced the CV of k even more,
+downto22%,andthepotencycouldbereliablyderived.
+In a retrospective analysis we explain how this experiment could have been optimized even further using
+PopEDlite. Wefirsttriedtooptimizeforthesamplingscheduleonly,butdidnotfindsignificantimprovementon
+thepredictedCVfork andk . Inasubsequentstepweoptimizedforthedosingamountusinganoptimization
+criteriontakingtheaccuracyofallthemodelparametersintoaccount(EDoptimaldesign). Theproposeddesign
+alsofailed toimprove theCV fork andk . However, byoptimizing onlyfor thePD parameters (EDsoptimal
+design), the predicted CVs for k and k were reduced to 36 and 44%. As the predicted CVs of k and k
+off on off on
+fortheactualexperimentranwere52%and52%(seeFigure2(b)design0),wecanexpectfurtherreductionin
+theparameterestimationuncertaintywiththisdesign. Inaddition,thisoptimaldesignrequiresashortsampling
+period(0.3,0.7,3,4.1,and4.8hours),andonlyonedosingof2.8µmol/kgattime0.
+ByusingEDsoptimaldesignwithPDparametersastheparametersofinterest,itisnotunexpectedthatthe
+CVsofthePKparametersarerelativelyhighintheproposeddesign. However,evenifindividualPKparameters
+cannotbeidentifiedaccurately, theshapeofthePKprofilecanberoughlyestimatedfromtheobservation, and
+wecanestimatePDparametersaccuratelyusingarelativelysparsesamplingschedule.
+In summary, the retrospective analysis indicates that by using an optimal design software we could have
+reducedtherequiredamountofcompound,whichisoftenlimitedinpreclinicalstudies,andstudydurationwhile
+obtaining similarly accurate parameter estimates. This example also illustrates the importance of both dose
+and sampling time optimization as well as optimization focused on the parameters of interest (i.e. EDs optimal
+design).
+(a) PK(left)andPD(right)simulationofthemanuallydesignedexperimentforCasestudy1.Reddotsrepresentthesamplingtime.Redlines
+arethesimulationswithrandomparametersgeneratedfromtheparameterguesstimatesandtheiruncertainties.Theshadedareaisthe68%
+predictionintervaloftheobservationbasedonthemeasurementerror,LOQ,andparameterguesstimate.
+(b) GraphicaluserinterfaceofPopEDlite. Design0inthetable(thefirstline)isthemanualdesignandDesign1isthedesignoptimizedby
+PopEDlite.
+Figure2: Casestudy1. PopEDlitescreenshotofthesummaryoftheexperimentaldesigns. Design1giveslower
+CV%fork andk andrequireslessnumberofobservationsandamountofcompoundcomparedtoDesign0.
+4.2 Case study 2: Designing a dog study to estimate test compound potency
+PopEDlitewasdevelopedalongwithadrugdiscoveryprojectandapreliminaryversionofPopEDlitewasused
+todesignseveraldogexperiments. Thedrugdiscoveryprojectaimedatdecreasingthelevelofabiomarkerby
+more than 80% over 24 h. The compound concentration and biomarker response could be measured both in
+vitro and in vivo. However, several compounds displayed a time delay between concentration and effect in vivo
+that was not fully captured in the in vitro assay. To better understand the exposure-response relationship, the
+compoundwasadministeredtodogsinvivo, andexposureandbiomarkerwasfollowedovertime. ThePKwas
+thenmodeledusinga2-compartmentmodel. Thebiomarkerwasmodeledusingalinkmodel(1)coupledtoan
+Emaxmodel(2)
+whereC denotestheeffectiveconcentration,k denotestheequilibriumconstant,C denotestheplasmacon-
+centration, E denotes the biomarker concentration and IC signifies the concentration required to reach 50%
+inhibition(Emaxwasassumedtobeone). Becauseofthetimedelaybetweenconcentrationandresponse,itis
+not intuitively easy to propose sampling time-points that result in informative data. To increase the accuracy of
+theparameterestimatesapreliminaryversionofPopEDlitewasused.
+Thesamplingtimesofthefirstexperimentwasoptimizedbasedonthemodelparametersfrominvitrodata
+andpreviouslyruncompoundsinthechemicalseries. ThepredictedCVforIC fortheoptimizeddesignwas
+25%. WiththepreliminaryversionofPopEDlite,wewereonlyabletoconductDsoptimaldesign;uncertaintyof
+theinitialguessoftheparameterswasnotconsideredinthedesign. Theexperimentwasrunwiththeoptimized
+sampling time and fixed dosage of 0.44 µmol/kg; however, most of the PD measurements were below the limit
+ofquantificationandIC couldthereforenotbereliablyestimated(CVofIC wasover400%). Theimperfect
+experimental design was due to a poor estimate of IC based on in vitro data; about one order of magnitude
+different from that estimated from in vivo data. It was clear that the dosage should be reduced in the next
+experimentinordertoavoidPDmeasurementsbelowthelimitofquantification;however,itwasnotclearbyhow
+much.
+In the next experiment, we used a preliminary version of PopED lite to optimize the dose based on the
+estimated parameters from the first experiment. The preliminary version of PopED lite had a functionality to
+generatefeasiblesetsofmodelparameters(dataimportfollowedbybootstrapping)andthenrunED(s)optimal
+Figure3: CaseStudy2: Optimizedexperimentaldesignusingtheestimatedparametersfromthefirstexperiment.
+Figure4: RetrospectivestudyofCasestudy2
+designbasedonthesesets. ThepreliminaryversionofPopEDlitesuggestedthenewdosetobe0.04µmol/kg,
+andpredictedtheCVoftheIC tobe10%. TheexperimentwasrunwiththedesignsuggestedbyPopEDlite
+andtheresultingIC estimatehadaCVof7%.
+SimilaranalysiscanbedonewiththecurrentversionofPopEDlite,i.e.,with5%uncertaintiesinPKparame-
+tersand30%uncertaintiesinPDparameters(Figure3).
+Asaretrospectivestudyweincluded100%uncertaintytothepriorguessofthePDparameters,basedonthe
+in vitro data. As can be seen in Figure 4, using the EDs optimal criterion PopED lite suggested a dose of 0.08
+µmol/kg. Hence, we could have avoided the uninformative first experiment if the uncertainty of the initial guess
+of the parameters had been incorporated appropriately in the optimization of the experimental design. From
+this case study, we see that a poor initial guess of the parameter values leads to a poor experimental design.
+To avoid this problem, uncertainty in the prior guess of the parameters should be included in the experimental
+designcalculation. Basedonthiscasestudy,wehavemadeED/EDsoptimaldesigntobethedefaultsettingfor
+PopEDliterequiringtheusertospecifytheconfidenceleveloftheinitialguessoftheparameters.
+4.3 Case study 3: Designing a mouse study to investigate renal function
+ThelastcasestudydescribeshowthedeployedversionofPopEDlitewasproventobeausefultoolformotivating
+anexperimentaldesignthatwasdifferentfromthestandarddesignofapreclinicalstudy. Thepurposeofthestudy
+was to investigate renal function in an in vivo mouse model by measuring the glomerular filtration rate (GFR).
+The standard protocol for GFR measurement is to study clearance of a metabolically inert compound (inulin or
+sinestrin)thatisfreelyfiltered,notboundtoplasmaproteinsandnotsubjecttoreabsorption[19]. Thecompound
+is administered intravenously and the plasma concentration is followed over time. The clearance estimate is
+subsequentlyobtainedbyfittingastandardtwocompartmentPKmodeltotheconcentration-curve.
+In an initial study, a bolus intravenous injection of sinestrin, and standard sampling-points (3, 7, 10, 15, 35,
+55, 75 min) found in literature were used [15]. However, the compound had an extremely rapid distribution
+phase in plasma and only approximately 40% of the mice showed plasma curves that were possible to fit to a
+two-compartmentmodel.
+UsingPopEDlite,theimpactofchangingthesamplingtimeonthecertaintyoftheestimatescouldeasilybe
+demonstrated (Figure 5). If sampling was restrained to later than 3 minutes the uncertainty in the parameters
+wasmuchlargerthanifasamplecouldbetakenatlessthanoneminute. Specifically,wefirstobtainedroughes-
+timatesofthePKparametersfrompreviousranstudiesandliteraturevalues(V =3000µl,V =5000µl,CL=300
+µl/min,andQ =1000µl/min),andestimatedtheuncertaintyoftheseroughestimatestobeplusorminus30%.
+Then, we evaluated the standard design by calculating the predicted CVs. The CV of CL was predicted to be
+approximately38%forthisstudydesign. Wethencalculatedtheoptimalexperimentaldesignunderthedesign
+constraintthatsevensamplescouldbetakenanyminutebetween0minand75min. Forthenewdesign(1, 2,
+5, 10, 35, 75 min), the CV of CL was predicted to reduce to 4%. Although the proposed design deviated from
+thestandardprotocol,thePopEDlitecalculationsconvincedthedrugdiscoveryteamtorunthenewdesign. The
+resulting measurements from three mice were then modeled with a two-compartment model and the estimated
+CLhadaCVofonly2%. ThroughthissuccessfulintegrationofPopEDlitetoapreclinicalexperimentaldesign
+workflowweshowedthatevenforaveryroughinitialestimateoftheparameters,theexperimentaldesigncanbe
+improvedsignificantly.
+Figure5: Casestudy3. PopEDlitescreenshotofthesummaryoftheexperimentaldesigns. Design0isthestan-
+darddesignandDesign1isthedesignoptimizedbyPopEDlite. AllCVsarepredictedtodecreasesignificantly
+intheoptimizeddesign.
+5 Discussion and Concluding Remarks
+InthispaperwehavedemonstratedhowtheoptimaldesignsoftwarePopEDlitewasdesignedcollaborativelyby
+academicresearchersandpreclinicalexperimentalteamsinthepharmaceuticalindustry. Itisdesignedtofitinto
+a practical workflow, so that the use of an optimal design software can be the standard procedure in preclinical
+experimentdesigningandthushelptoincreasetheefficiencyofdrugdiscoveryinvivostudies.
+OurinitialattemptwastointroducethealreadyexistingsoftwarePopEDandcreateasimplifiedGUIforpre-
+clinicalexperiments. However,asweinvestigatedthepreclinicalexperimentaldesignworkflowinmoredetail,we
+realisedthatasignificantsimplificationtotheuser-softwareinteraction,athoroughoptimizationofthecomputa-
+tionalspeed,andadramaticreductionoftheleveloftechnicalityofthesoftwarewererequired. Toaddressthese
+issueswedecidedtoreconstructthesoftwarefromscratch. Thishasallowedustodesignthesoftware-userin-
+teractionfirstandthenimplementthenumericalcomputationenginestorealisethedesign. Tooptimizetheuser
+experience,wehaveimplementedthecomputationenginewithcarefultreatmentofthenumericalcomputational
+errors,newdiscreteoptimizationstrategies,andoptimizedcompiledcode.
+As the result of these optimizations, the optimal design calculation can be done in around ten seconds for
+models that do not have an ODE and around one minute for models with stiff ODEs (EDs optimal criteria used
+andtimemeasuredonMacBookProMid2014with2.5GHzIntelCorei7processrwith16GBofmemory). Future
+work may include improvement of the computational speed by parallelisation, further optimisation of the ODE
+solvers,andrefinementofthediscreteoptimisationalgorithm.
+Deploymentofresearchresultsthroughsoftwareisnotuncommoninthebiomedicalfieldandthosesoftware
+havethepotentialtobridgethegapbetweentheoreticallyorientedresearchersinacademiaandmorepractically
+oriented researchers in the industry. The development of PopED lite shows that a cross-disciplinary effort to
+designapurpose-specific”app"canbeapowerfulwayofintroducinganewresearchideatoindustry.
+6 Acknowledgements
+Authors would like to thank Dr. Sebastian Ueckert and Dr. Joakim Nyberg for valuable and stimulating discus-
+sions, Dr. Ron Keizer for sharing his experiences in software development in pharmacometrics and suggesting
+theQtframework,andtheUppsalaPharmacometricsResearchGroupandtheAstraZenecaCVMDDMPKmod-
+elingandsimulationsectionforusefulinputandsoftwaretesting.
+A Fisher Information Matrix
+Letf(θ;ξ)beavectorfunctionthatmapsfromthemodelparametersθ tothePKandPDpredictionofagiven
+experimentaldesignξ. Forexample,forastandardone-compartmentPKmodelwithanE PDmodelandan
+intra-venousbolusadministration,theparametervectorisdefinedas
+θ = [V,CL,E ,ED ]T. (3)
+The design vector ξ for a design with a single dose and N measurement points at times t ,t ,...,t is
+obs 1 2 Nobs
+ξ = [t ,t ,...,t ,dose amount]T. (4)
+Then,welettheithelementofthevectorf(θ;ξ)bethePKmodelpredictionattimet and(i+N )thelement
+representthePDmodelpredictionattimet (weassumebothPKandPDmeasurementsaremadeatthesame
+timepoints).
+WedefinetheFIMas
+whereJ isaJacobianmatrixoff withrespecttothemodelparametersθ,i.e.
+  . . . . . . ... . . .  
+∂f2Nobs ∂f2Nobs
+and Σ is a diagonal matrix representing the prior knowledge of the measurement error and the limit of quantifi-
+cation. Weinterpretthelimitofquantificationastheminimumvalueoftheresidualerror,forexample,assuming
+10%measurementerroronthePKobservations,E /10measurementerroronthePDobservationsand0.01
+and1tobethelimitofquantificationofPKandPDmeasurements(thesequantitiesarespecifiedbytheuserin
+Step2intheGUI),Σbecomes
+(cid:32)(cid:34)
+(cid:18)(cid:12)
+(cid:12) (cid:12) f 1
+(cid:12) (cid:12),0.01
+(cid:18)(cid:12)
+(cid:12) (cid:12) f 2
+(cid:12) (cid:12),0.01
+(cid:18)(cid:12)
+(cid:12) (cid:12) f Nobs
+(cid:12) (cid:12),0.01
+(cid:12)10(cid:12) (cid:12)10(cid:12) (cid:12) 10 (cid:12)
+(cid:18)(cid:12)
+(cid:12) (cid:12) E max
+(cid:12) (cid:12),1
+(cid:18)(cid:12)
+(cid:12) (cid:12) E max
+(cid:12) (cid:12),1
+(cid:18)(cid:12)
+(cid:12) (cid:12) E max
+(cid:12) (cid:12),1
+(cid:19)2 (cid:35)(cid:33)
+(cid:12) 10 (cid:12) (cid:12) 10 (cid:12) (cid:12) 10 (cid:12)
+Otheradvancedtechniquetohandlethelimitofquantificationcanbefoundin[21]andwillbeimplementedina
+futureversionofthesoftware.
+If J is a full-rank matrix and all the diagonal elements of Σ are nonzero, the FIM is a non-singular matrix.
+In such cases, we define the predicted standard deviation of the parameter estimation uncertainty of the ith
+parameter(PSD )tobethesquarerootoftheithdiagonalelementoftheinverseoftheFIM,i.e.
+Finally,thepredictedCVoftheithparameter(PCV )isdefinedas
+ThepredictedCVcanbethoughtofasthepredictedaccuracyoftheestimatedparameterfromtheexperiment
+conductedwiththedesignξassumingθisthetrueparameter.
+NotethatiftheJacobianisafull-rankmatrixandthelimitofquantificationissettobeapositivenumber,then
+FIMisanon-singularmatrix. InordertoreducethechanceofFIMbeingnumericallysingular, wesetthelower
+boundofthelimitofquantificationtobethesquarerootofthemachineaccuracy.
+OncetheFIMiscreated,wecomputetheCholeskydecompositionoftheFIM.Ifthedecompositionalgorithm
+breaksdown,PopEDliteannotatestheFIMasnumericallysingularandoutputsawarningthattheparameteris
+notidentifiable. Ifthedecompositioncanbecomputed,PopEDliterebuildstheFIMfromthedecompositionand
+compareseachelementtothecorrespondingelementoftheoriginalFIM.Ifthemaximumabsolutevalueofthe
+differenceinanelementismorethanthesquarerootofthemachineaccuracy,thereisasignificantinfluenceof
+theroundingerrorinthecomputationandPopEDliteoutputsawarning. Thedecompositionisstoredforfuture
+usage.
+B Optimization criterion
+There are several ways to quantify the goodness of the design using the FIM, see e.g. [3, 7]. PopED lite
+implementsEDandEDsoptimaldesignstobethedefault.
+B.1 Design optimization for all parameters (ED optimal design)
+Consider the case when the goal of the experiment is to accurately estimate all model parameters. One alter-
+native is to optimize for the sum (or squares of the sum) of the predicted CVs. However, for this approach the
+optimalityofthedesigncanbeinfluencedbythelinearreparameterizationofthemodel(see[3]foradetaileddis-
+cussion). Therefore,wechooseinsteadtoquantifythegoodnessoftheexperimentaldesignbythedeterminant
+of the FIM, which is independent of the linear reparameterization of the model. Taking uncertainty in the prior
+parameterinformationintoaccount,therobustoptimaldesigniscalculatedas
+where θ are the parameter vectors created uniformly randomly around the ”Guesstimated Parameter Value"
+with the bound specified as ”Confidence of Guesstimate" (specified in Step 2 of the GUI). Furthermore, N is
+thenumberofrandomlygeneratedparametervectorsθ (defaultissetto25forpracticalreasons;however,this
+settingcanbechangedinStep4oftheGUI).
+Note that a naive computation of the determinant of the FIM would often result in accumulation of rounding
+errors. In PopED lite the log of the determinant of the FIM is calculated by summing the log of the diagonal
+elements of its Cholesky decomposition and multiplying the sum by two. If Cholesky decomposition cannot be
+computed due to a singularity of the FIM, the log of the determinant of such matrices will be set to −1010 and
+not to negative infinity. In this way, PopED lite selects the experimental design with the least possibility of an
+unidentifiablesystem.
+Asalternativesto(10),thefollowingrobustcriteriaareimplementedinPopEDlite(canbesetinStep4inthe
+GUI):
+(cid:18) (cid:19)
+B.2 Design optimization for a subset of parameters (EDs optimal design)
+Asasecondoption,considerthecasewhenagivensubsetoftheparametersisofparticularinterest. Therobust
+optimaldesignisthencalculatedas
+N (cid:18) (cid:19)
+ξ∗ = argmin ξ (cid:88) log
+where \subset denotes the complement of the subset of the parameters of particular interest (i.e., subset of
+parameters of no-interest). If only one parameter is chosen to be of interest, the above optimization criterion
+reduces to optimizing for the CV for that particular parameter. EDs optimal design is used when the options
+"Optimize the Design for the parameter estimation accuracy of" is set to be either ”PK parameters only" or ”PD
+parametersonly"inStep2intheGUI.AsanalternativetoEq.(13),thefollowingcriterioncanbeoptionallyused
+inPopEDlite(Step4intheGUI):
+C Weighted Random Search Algorithms
+Inthisappendix,wedescribethediscreteoptimizationalgorithmswehaveimplementedinPopEDlite. Toavoid
+localconvergenceandtotakeadvantageofthediscretenatureoftheoptimizationproblem,wehaveconstructed
+stochastic algorithms to find an approximately optimal design in a reasonable computational time. These algo-
+rithmsaremadespecificallytoaddressthediscreteconstrainedoptimisationproblemthatappearedasaresult
+ofthedesignofPopEDlite.
+C.1 Sampling time optimization
+Consider the problem of choosing N observation points from N discrete possible observation points. For
+example,ifN =10andN =120thereareover1014possiblecombinationsandanexhaustivesearchisnot
+computationallyfeasible. Roughlyspeaking,ouralgorithmaimstorandomlysearchforthebestdesign;however,
+foreachiterationtheprobabilityoftherandomly chosenobservationpointsareadjustedbasedontheprevious
+evaluation of the experimental designs. The key feature of this weighted random search algorithm is that each
+individualweightisdefinedbythecombinationofapairofpossibleobservationpoints,andthatallweightsthen
+canbestoredinamatrix(i.e.,theithrowjthcolumnoftheweightmatrixrepresentstheprobabilityofchoosing
+ithpossibleobservationpointgivenjthpossibleobservationpointisalreadychosentobeanobservationpoint).
+Let φ(D) be a scalar function that takes a subset of natural numbers and returns a scalar value that we
+aimtomaximise(e.g.,thesubsetofthenaturalnumberscorrespondstothediscretetimepointsinthepossible
+observationtimewindowandthescalarvaluecorrespondstothedeterminantoftheFisherInformationMatrix),
+i.e.
+where D is the space of all the subsets of the natural numbers between 1 and N whose size is N . Note
+thatsizeofDisN !/((N −N )!N !)whichgrowsrapidlyasN increaseswhenN isfixed.
+disc disc obs obs disc obs
+AllthevectorsthatcanpotentiallyappearasarowoftheJacobian(6),foranydesign,thatisusedtoconstruct
+the FIM can be precomputed before the start of the sampling time optimization. Hence the evaluation of each
+experimentaldesigndoesnotrequireanyPK/PDmodelsimulationduringtheoptimizationandishencenotvery
+computationallyintensive. Asaresult,thecomputationalcostofstoringandcheckingalreadyevaluateddesigns
+exceeds the computational cost of the redundant evaluation of the same design. Thus the weighted random
+searchalgorithmforthesamplingtimeoptmizationallowstheredundantevaluationofthesamedesign.
+Thealgorithmisdefinedasfollows.
+Pseudocode
+ConstructanN ×N matrixAwithallelementsassignedto1. (ThismatrixAstoresthepairwiseweights
+fortherandomsearchandupdatedaftereachiteration.)
+Form=1,2,...,N
+Forl=1,2,...,N
+ResetthetemporaryweightmatrixB tobetheweightmatrixAandemptythesetD ,i.e.,
+B = A (16)
+Uniformlyrandomlychooseanaturalnumberbetween1andN andletitbeiandaddittothesetD .
+SettheithrowofthetemporaryweightmatrixB tobe0,i.e.,
+b =0 for all j =1,2,...,N . (18)
+Forn=2,3,...,N
+Randomlychooseanaturalnumberbetween1andN withtheprobability
+ki for k =1,2,...,N , (19)
+(cid:80)Ndiscb disc
+andletitbeiandaddittothesetD .
+SettheithrowofthetemporaryweightmatrixB tobe0sothattheithsamplingtimewillnotbe
+chosenagain,i.e.,
+b =0 for all j =1,2,...,N . (20)
+FindD∗ suchthat
+l=1,2,...,Ntest
+UpdatetheweightmatrixAasfollows
+a =a +1 for all (i,j)∈D∗ ×D∗ . (22)
+ReturnthebestsubsetD∗ suchthat
+m=1,2,...,Niter
+The search algorithm assumes that multiple observations at the same point are not allowed. Consequently,
+theprobabilityofselectinganalreadychosenpointisassignedzeroat(18)and(20). Ifmultiplesamplingforthe
+sametimepointisallowedthensimplyomit(18)and(20)fromthealgorithm. Ifsamplingfromtwoconsecutive
+discretepossibleobservationpointsisnotallowed(e.g. sincetheanimalneedstorestbetweensamplingpoints)
+therowsadjacenttotheithrowcanbesettozeroaswell.
+Note that the algorithm reduces to a pure random search if the weight matrix is not updated at (22). As a
+default,PopEDliteusestheweightedrandomsearchalgorithmforsamplingtimeoptimizationwithoutpossibility
+ofmultiplesamplingfromthesametimepoint.
+Further extension of the algorithm such as defining the weights as a tensor so that the weight given the
+combinationofmorethantwoobservationpointscanbestoredispossible.
+C.2 Dosage optimization
+ConsidertheproblemwhereN dosesaregivenandeachdoseneedstobechosenbetweend andd .
+doses min max
+We first discretize the possible dose range into N possible doses {d ,d ,d ,...d }, where d (cid:54)= d if i (cid:54)= j
+pd 1 2 3 Npd i j
+andd ≤d ≤d . WenowwishtoobtainavectorofN indices[i,j,k,l,...]tomaximisetheoptimization
+min i max doses
+criterionwhendoseamountd isgivenatthefirstdoseevent,d isgivenattheseconddoseevent,etc. Notethat
+there are (N
+)Ndoses possible dose combinations and that the number grows rapidly as N
+increases. It is
+thereforeoftennotfeasibletoconductanexhaustivesearchforamultipledoseexperiment. Instead,werandomly
+searchthroughthepossibledosecombinationsandselectthebestdosecombination. Tosavecomputationtime,
+thisweightedrandomsearchalgorithmisdesignedtoavoidevaluationofpreviouslyevaluateddesigns.
+Note that this optimization problem is fundamentally different from the sampling-time optimization problem,
+as for the sampling time optimization, we aim to find the optimal subset of indices (i.e., the order of the indices
+doesnotmatter)whileforthedosageoptimizationweaimtofindavectorofindices(i.e.,theorderoftheindices
+matters).
+For this dosage optimization algorithm, we construct an ordered tree to store the weights. This tree is con-
+structedbynodesstoringtheweightswandedgesstoringweightbiasesc. Eachpathofthetreerepresentsthe
+designofanexperiment,forexamplethepathreachesfromtheroottoaleaffollowingi,j,kthedgesrepresents
+theexperimentaldesignvector[i,j,k](i.e.,d asthefirstdose,d astheseconddoseandd asthelastdose).
+AnexampleofthetreeisdepictedinFigure6.
+Weightbiascdefinethefundamentalimportanceofthepossibledosagethatisrepresentedasedgesinthe
+tree. Forexample,ifthereare10possibledoselevelsforeachdosingtime,itiswisetosearchforareasonably
+good combination of high, medium, or low doses in a first step, and then fine tune the dose levels in a second
+step. Hence, in this case we put more weight bias to these three doses, and lower weight bias to the rest. By
+choosingtheweightbiascthisway,thealgorithmwillmostprobablyfirstsearchthroughtheoptimalcombination
+betweenhigh,mediumandlowdosesandthenconductthefinetuningduringtheremainingsearch. Weightbias
+cremainthesamethroughoutthesearch.
+Thevariablewisaweightoftheprobabilityofchoosingthedosagethatisrepresentedbytheedgeconnected
+totheparentnode. Forexample,w (theweightstoredinthenodethatcanbereachedbypathi,jfromtheroot
+Figure 6: An example of a tree for storing the weight for the weighted random search for dosage optimisation
+(N = 2, N = 3). In this example, the highest and lowest possible dosages have priorities on the search
+and the design vectors [111],[113],[131],[133],[311],[313],[331],[333] are more likely to be evaluated before
+otherdesignvectors.
+node)istheweightfortherandomchoicewherejthpossibledosageshouldbechosenasaseconddosagegiven
+ith possible dosage is chosen for the first dosage. The weight w depends on the weights of all the descendent
+nodes. Forthenodesthatareleavestheweightsw areinitiallydefinedasweightbiascoftheconnectingedge
+and after each evaluation of the design, the weight of the corresponding leaf is reduced to zero to avoid the
+redundantevaluationofthesamedesign. Hencetheweightswarerecalculatedaftereachdesignevaluation.
+WedescribethealgorithmmoreindetailusinganexamplewithN = 3. Theextensiontoothercasesis
+trivial.
+Theweightsofthenodesaredefinedasfollows:
+w = c w (24)
+w = c w (25)
+w = c for all i,j,k. (26)
+WeconsiderthecasewherewerandomlychooseN dosecombinationsandpickthebestdosecombination
+amongthem.
+Pseudocode
+Form=1,2,...,N
+• Randomlychooseanintegerlbetween1andN withtheprobabilityw /
+(cid:80)Npdw
+,andleti=l.
+pd l i=1 i
+• Randomlychooseanintegerlbetween1andN withtheprobabilityw /
+(cid:80)Npdw
+,andletj =l.
+pd il j=1 ij
+• Randomlychooseanintegerlbetween1andN withtheprobabilityw /
+(cid:80)Npdw
+,andletk =l.
+pd ijl k=1 ijk
+• Evaluatethedesign withdoseamountd atthefirst dosetime, doseamountd atthesecond dosetime,
+anddoseamountd atthethirddosetime. Ifthisdesignisbetterthantheonefoundpreviouslykeepthis
+design,elsediscard.
+• Let w = 0 so that the dose combination of ijk will not be redundantly evaluated during the following
+search.
+• Recalculatetheweightsfollowing(24)-(25).
+Returnthebestdesign.
+Note that, the weight calculation needs to be implemented recursively so that the weight can be calculated
+for any N . In addition, to reduce the computational cost of constructing the tree, we construct only the
+necessarypartofthetreetocalculatethenewweightsaftereachsearchiteration. Notethatthisalgorithmavoids
+theredundantevaluationofthedesign;henceifN issufficientlylargeforgivenN andN ,thesearch
+search doses pd
+isexhaustive. Inaddition,avoidingredundantevaluationofthesamedesigniscrucialforthedosageoptimisation
+aseachevaluationofthedesignrequiresPK/PDmodelevaluationandcanbecomputationallyintensive.
+TheweightbiascofthisalgorithmissettooneinthecurrentversionofPopEDlite. Futureworkmayinclude
+changingcdynamicallythroughoutthesearch.
+C.3 Simultaneous optimization of dose and sampling time
+Tooptimizebothdoseandsamplingtime,conductsamplingtimeoptimizationateachsearchiterationinthedose
+optimization.
+D Matrix/Vector Notations
+In this paper we denote a scalar quantity with a lower case letter e.g., a or c, a matrix with a capital letter, for
+example A, or M, and a vector quantity by a bold symbol of a lower case letter, e.g., v, a, unless otherwise
+specificallystated. Asanexceptiontothismatrixnotation,FisherInformationMatrixisdenotedasFIMtofollow
+theconventionofthenotationinthefield. InadditiontheithrowofthematrixM canbedenotedbyavectorm ,
+thejthrowofthematrixM canbedenotedbyavectorm andtheithrowjthcolumnofthematrixM canbe
+writtenbyascalarm .

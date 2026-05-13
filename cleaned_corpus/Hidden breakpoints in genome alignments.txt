@@ -1,0 +1,476 @@
+Hidden Breakpoints in Genome Alignments
+Birte Kehr1,2, Knut Reinert1, Aaron E. Darling3
+1 Department of Computer Science, Freie Universita¨t Berlin,
+Takustr.9, 14195 Berlin, Germany
+2 Max Planck Institute for Molecular Genetics, Ihnestr.63-73, 14195 Berlin, Germany
+3 Genome Center, University of California-Davis, Davis, CA 95616
+Abstract. During the course of evolution, an organism’s genome can
+undergochangesthataffectthelarge-scalestructureofthegenome. These
+changes include gene gain, loss, duplication, chromosome fusion, fission,
+and rearrangement. When gene gain and loss occurs in addition to other
+types of rearrangement, breakpoints of rearrangement can exist that are
+only detectable by comparison of three or more genomes. An arbitrarily
+largenumberofthese“hidden”breakpointscanexistamonggenomesthat
+exhibit no rearrangements in pairwise comparisons.
+Wepresentanextensionofthemultichromosomalbreakpointmedianprob-
+lem to genomes that have undergone gene gain and loss. We then demon-
+strate that the median distance among three genomes can be used to cal-
+culate a lower bound on the number of hidden breakpoints present. We
+provide an implementation of this calculation including the median dis-
+tance, along with some practical improvements on the time complexity of
+the underlying algorithm.
+We apply our approach to measure the abundance of hidden breakpoints
+in simulated data sets under a wide range of evolutionary scenarios. We
+demonstrate that in simulations the hidden breakpoint counts depend
+stronglyonrelativeratesofinversionandgenegain/loss. Finallyweapply
+currentmultiplegenomealignerstothesimulatedgenomes,andshowthat
+all aligners introduce a high degree of error in hidden breakpoint counts,
+andthatthiserrorgrowswithevolutionarydistanceinthesimulation. Our
+results suggest that hidden breakpoint error may be pervasive in genome
+alignments.
+1 Introduction
+Genome rearrangement plays a fundamental role in biological processes includ-
+ing cancer [8], gene regulation, and development [11] and a better understand-
+ing of genome rearrangement is expected to lend insight into these biological
+processes. The primary evidence for genome rearrangement in modern genomes
+comes from identifying rearrangement breakpoints in alignments of two or more
+genomes. Genome alignments and the rearrangement breakpoints they encode
+provide a basis for reconstructing genome rearrangement histories. The accurate
+reconstruction of rearrangement history depends intimately on whether genome
+alignments can accurately identify breakpoints.
+]NG.oib-q[
+1v4696.7021:viXra
+B. Kehr, K. Reinert, A.E. Darling 2
+When genomes have undergone gene loss in addition to rearrangement some
+breakpoints may only be detectable by comparison of three or more genomes.
+This class of breakpoints has received limited attention to date. We refer to
+such breakpoints as “hidden” breakpoints, since usage of these rearrangement
+breakpoints in an organism’s evolutionary history is not apparent from pairwise
+comparison of available genomes. Hidden breakpoints occur in regions of the
+genome conserved in some, but not all of the genomes under comparison. A
+simplest possible example of hidden breakpoints involves the three genomes A,
+B, C, with blocks 1, 2, 3 (see Fig.1).
+By extending a recent solution to the breakpoint median problem [14], we
+demonstrate that it is possible to calculate a hidden breakpoint count in three
+genomeswhenthereisgain andloss. Ourmethodisfounded onthepremise that
+a parsimonious reconstruction of the median genome would contain any sequence
+content present in at least two of the three genomes, while sequence content
+unique to a single genome would not be in the median. By comparing pairwise
+distances to the median distance, our method reveals some of the hidden break-
+points. Having implemented the method to calculate hidden breakpoint counts,
+we then conduct a simulation study to measure the abundance of hidden break-
+pointsunderarangeof differentgenomeevolutionparameters. Weapplycurrent
+multiple genome alignment systems to calculate alignments of the simulated se-
+quences. Finally, we count hidden breakpoints in the calculated alignments and
+compare with the true number of hidden breakpoints in the simulated sequences.
+We show that all tested genome alignment algorithms introduce error in hidden
+breakpoint estimation and characterize their error rates under a range of evolu-
+tionary parameters in simulation.
+2 Pairwise and Hidden Breakpoints
+Genome alignments consist of sequence regions that are aligned in two or more
+genomes. Each aligned sequence region, often called a synteny block or locally
+collinear block, is internally free from any rearrangement but may contain gaps.
+Herewesimplycalltheseregionsblocks. Weassignaninteger-valuedidentifierto
+each block of an alignment, using the sign of the integer to represent whether the
+blockoccursinagenomeintheforwardorinreverseorientation. Inthisway,the
+arrangement of a single genome g in a genome alignment can be represented as a
+sequence of signed integers: g =b b ... b , b ∈Z. Note that this sequence of
+integers does not necessarily represent all parts of the genome, i.e. there may be
+unaligned, unique segments in-between blocks. Genomes themselves may consist
+of one or multiple chromosomes with either linear or circular topology. When a
+genome contains multiple chromosomes, it cannot be represented as a single se-
+quenceofintegers,butratherasasetofsequences: g ={b ...b ,b ...b ,...}.
+1 i i+1 i+j
+Followingpreviousliteraturewedefinelinearchromosomestobeboundedbyzero
+length telomeres, acknowledging the discrepancy between this definition and its
+use in the biological literature to describe a string of nucleotides of length > 0
+near the ends of a linear chromosome. We use • to denote telomeres in a linear
+B. Kehr, K. Reinert, A.E. Darling 3
+A Rearrange
+Insert 3 2
+Fig. 1. Multiplealignment(left)andpossibleevolutionaryscenario(right)ofgenomes
+A, B, and C containing a rearrangement not detectable in pairwise comparison. In
+all three pairwise projections two of the blocks become unique leading to a breakpoint
+distance of 0.
+chromosome: • b ... b •.
+In the present work we investigate rearrangement breakpoints in groups of
+two or three genomes, although an alignment might contain many more genomes
+g ,...,g . Thisrequiresustodefineaprojection ofanalignmenttothoseblocks
+present in the current set of genomes. For three genomes g , g , and g with
+x,y,z ∈ {1,...,m} we denote the projection of the alignment as π , and a
+genome in the projected alignment by π (g). We define the projected genome
+π (g ) as the subsequence of g containing those blocks present in at least two
+of the genomes used for projection. We thus remove blocks that are unique to
+g , g , or g from consideration in the three-way comparison since they can not
+reveal direct evidence of rearrangement breakpoints.
+Two blocks b ,b that are consecutive within a genome (possibly with unique
+segments in-between) define an adjacency. In a pairwise projection of a genome
+alignment, apairwise breakpoint isanadjacencyfromonegenomethatismissing
+in the other. By counting breakpoints in one genome g relative to another
+g we can calculate the breakpoint distance d(g ,g ). Breakpoints at telomeres
+count only 1 in d(g ,g ), as only breakage and no fusion to another loose end
+has happened. When g and g have equal content d(g ,g ) is equivalent to the
+classicbreakpointdistance. Ifdifferentsetsofblocksarepresenting andg ,the
+breakpoint distance may be asymmetric, i.e. d(g ,g ) (cid:54)= d(g ,g ). For brevity
+we define d (g ,g ):=d(π (g ),π (g )).
+xyz x y xyz x xyz y
+Previousworkhasappliedpairwisebreakpointdistanceinasum-of-pairsscore
+for multiple genome alignment [4]. However, multiple alignments may reveal
+rearrangementsthatarenotvisibleinpairwiseprojections(seeexampleinFig.1),
+informationthatsum-of-pairsscoresdonotcapture. Thebreakageeventsofthese
+rearrangements are hidden by gain or loss of rearranged blocks or by breakpoint
+re-use. Wethususethetermhiddenbreakpoint torefertothisclassofbreakpoints.
+3 The Median Approach for Counting Breakpoints
+We now describe a method to compute a hidden breakpoint count H for three
+genomes. For alignments with m > 3 genomes, H can be calculated for all
+projections to three genomes.
+B. Kehr, K. Reinert, A.E. Darling 4
+A median genome:
+Fig. 2. Alignmentofthreegenomesandacorrespondingmediangenome. Thepairwise
+distances to the median M are d(g ,M)=1.5, d(g ,M)=0, and d(g ,M)=0.5.
+AmedianM forthreegenomesg ,g ,g withx,y,z ∈{1,...,m}isagenome
+formed on all blocks in π . The blocks in M are arranged such that the sum
+d := d (g ,M)
+is minimized (see Fig.2 for an example). This represents a generalization of
+previous definitions of a median genome, e.g. [14], to include all blocks in at
+least two out of three genomes g ,g ,g . Previous breakpoint median methods
+requiredblockstobeconservedamongall genomes. AswedescribeinSection3.3,
+removing the portion of d attributed to pairwise breakpoints yields a hidden
+breakpoint count. We note that our method only requires computation of d
+and does not depend on accurate reconstruction of the actual median genome,
+for which many possibilities with minimal d may exist. We also note that
+duplications are forbidden; each block may occur at most once per genome.
+We compute the median distance d by applying a recent polynomial time
+solution [14] to our generalization of the median definition. Following the proof
+of Theorem 1 in [14], we construct a graph from the genomes (see Sect.3.1 for
+details), and compute a maximum weight perfect matching which corresponds to
+a median genome [14]. Because counting hidden breakpoints requires only the
+median distance d and not the actual median, we are able to improve the time
+complexity of the solution from [14] by reducing the number of graph edges (see
+Sect.3.2)inputtotheperfectmatching. Notethatthisreductioneliminatessome
+valid medians, but the median distance d is unchanged.
+3.1 Graph Construction.
+Wefirstdescribethegraphasusedin[14]tocomputeamediangenome. Figure3
+(left) shows an example graph for the alignment from Fig.2. Given a genome
+alignment, the graph G=(V ∪T,E ∪E ∪E ) contains four vertices from two
+different vertex sets V and T for each block b of the alignment: A head vertex
+vh ∈ V representing the start of the block, a tail vertex vt ∈ V representing the
+endoftheblock,ahead telomere vertexth ∈T,andatail telomere vertextt ∈T.
+Thetelomereverticesth andtt representthepossibilitiesthatchromosomesstart
+or end with block b . It is necessary to have separate telomere vertices for each
+block to be able to find all (possibly multichromosomal) medians by the perfect
+B. Kehr, K. Reinert, A.E. Darling 5
+v 1 h v 1 t v 2 h v 2 t v 3 h v 3 t head and tail vertices v 1 h v 1 t v 2 h v 2 t v 3 h v 3 t
+1 2 3 E 1 2 3
+t 1 h t 1 t t 2 h t 2 t t 3 h t 3 t telomere vertices t 1 h t 1 t t 2 h t 2 t t 3 h t 3 t
+Fig. 3. Fullgraph(left)andasimplifiedgraph(right)fortheexamplealignmentfrom
+Fig.2. Thesimplifiedgraphissufficienttocalculatethemediandistanced . Linewidth
+indicates edge weights. Dotted edges have a weight of 0. Red edges form a maximum
+weight perfect matching that corresponds to the median genome shown in Fig.2.
+matching computation. All vertices from V are connected among each other by
+edges e ∈E , and all vertices from T are connected among each other by edges
+e ∈ E , i.e. the two subgraphs are complete. In addition, each head vertex vh
+is connected to its corresponding head telomere vertex th, and each tail vertex
+vt to its corresponding tail telomere vertex tt by edges e ∈ E . Initially, all
+edges have a weight of 0. We increase edge weights according to adjacencies in
+the genomes. For telomere adjacencies, we increase weights of edges in E by 1
+following [14]. For all other adjacencies we increase weights of edges from E by
+1. Depending on the orientation (sign) of the adjacent blocks, we increase the
+weight of the edge between a tail and head vertex, tail and tail, head and tail, or
+head and head vertex by 1. All edges in E keep a weight of 0.
+3.2 Reducing the Number of Edges.
+Having constructed the graph, we compute a maximum weight perfect matching.
+The running time of the most efficient maximum weight perfect matching algo-
+rithms (e.g. [9]) depends on the number of edges in the graph, which in our case
+is quadratic in the number of blocks. In the following we show how it is possible
+to reduce the number of edges by a linear factor.
+A perfect matching is a subset of the graph’s edges E ⊆E ∪E ∪E such
+that each vertex of the graph is incident to exactly one edge in the matching. A
+maximum weight perfect matching is the perfect matching that maximizes the
+sumofweightsofalledgese∈E . Figure3(left)demonstratesthatmanyofthe
+edgesinagraphconstructedasdescribedin3.1haveaweightof0,andhence,will
+not contribute to the weight of a maximum weight perfect matching. Still, some
+of those edges are necessary to allow a perfect matching of maximum weight, but
+notallofthem. Inthefollowingparagraphweexplainwhyedgeswithaweightof
+0inE betweenverticesvp andvq,withp,q ∈{h,t}andwithb ,b beingblocks,
+can be removed from the graph as well as corresponding edges in E between
+vertices tp and tq without affecting the weight of the resulting maximum weight
+perfect matching.
+Agraphthatwasconstructedasdescribedabovecanhavemultiplemaximum
+weightperfectmatchings. Givenanyofthesematchings,wecanreplacethesetof
+B. Kehr, K. Reinert, A.E. Darling 6
+edgesE ∩E bythoseedgesbetweenverticestp,tq ∈T,forwhichthematching
+contains an edge between vp,vq ∈ V. This replacement does not violate the
+matching property and does not affect the weight of the matching since all edges
+in E have a weight of 0. The matching may then contain some pairs of 0-weight
+edges from E and E connecting vertices vp,vq ∈ V and connecting vertices
+tp,tq ∈T. We can replace such pairs of edges by edges from E between vp and
+tp and between vq and tq, again without violating the matching property and
+affecting the weight of the matching. After this replacement none of the 0-weight
+edges from E and the corresponding edges from E are part of the matching.
+Therefore, a maximum weight perfect matching exists that does not use these
+pairs of edges, and we can remove them from the initial graph without affecting
+the weight of the resulting maximum weight perfect matching.
+3.3 Hidden Breakpoint Counts.
+A maximum weight perfect matching on the above described graph assigns each
+head or tail vertex to its telomere vertex or to another head or tail vertex by
+edges. Theseedgescorrespondtotheadjacenciesofamediangenome. Theedges
+that are not part of the matching but have a weight greater than 0, correspond
+to breakpoints among the median and one or more other genomes. Thus, by
+calculatingtheweightdifferenceoftheoriginalgraphandthematching,weobtain
+the total number of breakpoints d between the three original genomes g , g ,
+andg andthemediangenomeM. However,d overestimatestheactualnumber
+ofbreakpointsamongthethreegenomes. Themediangenomemaycontainblocks
+thatarenotpresentinoneofthegenomes,whichdisruptadjacenciesofblocksthat
+occur in the same order without rearrangement. These disrupted adjacencies are
+neither pairwise nor hidden rearrangement breakpoints. Therefore, we calculate
+a separate hidden breakpoint count
+H=d −f .
+Thesecondtermf removesthefractionofd whichisduetobreakpointsobserv-
+able in pairs of genomes including those disrupted adjacencies caused by unequal
+block content. f is defined as:
+1 (cid:88)
+f = d (g ,M )+d (g ,M ) .
+2 xyz a ab xyz b ab
+For the computation of f we use a median M of two genomes g , g , which is
+formedonallblocksofthetripletprojectionπ . WecancomputeM usingthe
+same approach as for a median of three genomes, i.e. construction of the graph
+andcomputationofamaximumweightperfectmatching. Themultiplicationby 1
+isrequiredbecausethedistancefromeachgenometoamedianiscountedexactly
+twice (to different medians).
+In the results section we discuss hidden breakpoints in alignments contain-
+ing arbitrarily many genomes. In alignments with more than three genomes, we
+B. Kehr, K. Reinert, A.E. Darling 7
+calculate H for all projections to three genomes and report the sum over all pro-
+jections. Likewise,forpairwisebreakpointswereportthesumoverallbreakpoints
+in pairwise projections.
+4 Simulating Evolution
+Wesimulatedgenomeevolutiontogeneratesetsofevolvedsequencesandgenome
+alignments relating them using the previously described method sgEvolver [3].
+Briefly, sgEvolver applies the standard Markov process model of evolution (spe-
+cificallyamarkedPoissonprocess),withmutationeventsincludingsubstitutions,
+insertions and deletions of three different size distributions, and inversions. In
+our simulation each of the mutation types has the following properties:
+Nucleotide substitutions follow an HKY process with a transition/transver-
+sionratioof4andbackgroundnucleotidefrequenciesA=0.265,C=0.235,
+T=0.265,G=0.235,asimplementedintheprogramseq-gen[12]. Gamma-
+distributed heterogeneity in substitution rates across sites was simulated
+with the shape parameter k =1.
+Indels comprise the first class of insertions and deletions. Indel lengths follow
+a Poisson distribution with λ=3.
+Small gain/loss events comprise the second insertion/deletion class and have
+lengths geometrically distributed with p=200.
+Large gain/loss events comprise the final size class of insertions and deletions
+and have lengths uniformly distributed between 10000 and 50000.
+Inversions follow a geometric length distribution with p=50000.
+These events were simulated on a phylogeny containing nine extant taxa. All
+insertion/deletioneventsaresimulatedtohaveuniformlyrandomdistributedpo-
+sitions in the genome. The rate of each event type is specified by a relative rate
+parameter;theexpectedeventcountpersiteonaparticularbranchofaphylogeny
+is the product of branch length and relative rate. The ancestral genome in our
+simulations is 1Mbp in size, and since insertions and deletions occur with equal
+probability,theexpectedgenomesizeremainsconstantthroughoutthesimulation
+process (though the variance grows).
+The approach used by sgEvolver to simulate insertions can also introduce
+duplications even though they are not directly modeled. In order to simulate
+insertions, sgEvolver maintains a finite pool of “donor” genomic material. When
+an insertion occurs, the sequence to insert is sampled uniformly at random from
+thedonormaterialpool. Thisapproachisintendedtomodelthetotalpoolofgene
+contentavailableinapopulation, sometimescalledapan-genome[10]. Whenthe
+simulation includes a large enough number of insertion events, especially “large
+gain/loss”, it becomes likely that the same material from the donor pool will
+be inserted more than once, effectively creating a duplication in the simulated
+B. Kehr, K. Reinert, A.E. Darling 8
+genome. sgEvolver does not keep track of the donor pool positions for insertion,
+and therefore the simulated genome alignments ignore possible duplications.
+Whensimulating1Mbpgenomes,thesimulationandsubsequentgenomealign-
+ment process is fast enough that we can analyze a large range of parameters in
+parallel on a compute cluster. We report results on various parameter ranges
+below.
+5 Hidden Breakpoints in Simulated Data
+In this section we examine the effect of inversion, gain/loss, and nucleotide sub-
+stitutionrateonpairwiseandhiddenbreakpoints. Weexpecthiddenbreakpoints
+to be driven by inversion and gain/loss, while nucleotide substitution may affect
+breakpointcountsincalculatedalignmentsbyincreasingthedifficultyofaccurate
+alignment.
+Wedescribetwosimulateddatasetsbelow,InvNt andInvGL,consistingof400
+and 200 genome alignments respectively. On each alignment of the datasets we
+computedthetruenumberofpairwisebreakpointsandhiddentripletbreakpoints
+(seeSect.5.1). TheninSect.5.3,wepresentcalculatedalignmentsofthesimulated
+sequences done with three different genome alignment systems. We discuss how
+calculated alignments generally overestimate breakpoint counts and relate this
+error to evolutionary rates and other measures of alignment accuracy.
+5.1 True Breakpoint Counts in Simulated Genome Alignments.
+The InvNt data set enables examination of the influence of the inversion and
+nucleotide substitution rate on the breakpoint counts. We expect nucleotide
+substitutions to have no effect on breakpoint counts in simulated alignments,
+although as we discuss later in calculated alignments a high substitution rate af-
+fects estimated breakpoint counts by making alignment difficult. We simulated
+400 alignments with inversion rates between 0 and 2×10−4 in steps of 1×10−5
+and nucleotide substitution rates between 0 and 1 in steps of 0.05. All three in-
+sertion/deletion rates were fixed: indels at 1×10−3, small gain/loss at 5×10−4,
+and large gain/loss at 2×10−5. Previous work has demonstrated that alignment
+algorithms can reconstruct highly accurate genome alignments at these relatively
+low insertion/deletion rates [4]. In the alignments we observe 0 to 3100 pairwise
+breakpoints and 0 to 1150 hidden triplet breakpoints (see Fig.4A). Despite these
+large ranges, the ratio between pairwise and hidden breakpoints stays constant.
+The coloring in Fig.4A (top) shows that with growing inversion rates, we obtain
+more breakpoints, both pairwise and hidden triplet breakpoints. As one would
+expect, the nucleotide substitution rate has no direct effect on the number of
+breakpoints (Fig.4A, bottom).
+IntheInvGLdatasetweexaminebreakpointcountsfordifferentlargegain/loss
+anddifferentinversionrates. InvGLconsistsof200alignmentswithlargegain/loss
+ratesbetween0and1×10−4 stepsize1×10−5 andagaininversionratesbetween
+0 and 2×10−4 in steps of 1×10−5. The other two insertion/deletion rates were
+fixedatthesamevaluesasabove,andthenucleotidesubstitutionrateat0.01. As
+B. Kehr, K. Reinert, A.E. Darling 9
+with InvNt, we observe more pairwise and hidden triplet breakpoints for grow-
+ing inversion rates (Fig.4D, top), but in contrast to InvNt, the ratio between
+pairwise and hidden breakpoint counts varies. The coloring in Fig.4D (bottom)
+demonstrates that this variation is due to different gain/loss rates: With growing
+gain/loss rate, we observe more hidden triplet breakpoints whereas the number
+of pairwise breakpoints goes down slightly. This result is consistent with our
+definition of hidden breakpoints. The slight decrease in pairwise breakpoints at
+higher gain/loss rates is due to removal of breakpoints by gene loss. The hidden
+breakpoint count is also affected by gene loss in the InvGL simulation, reaching
+a maximum at a gain/loss rate of about 0.8.
+5.2 Tested Alignment Programs and Evaluation Metrics.
+Having established the true counts of hidden triplet breakpoints under a range
+of evolutionary scenarios, we continue by evaluating whether some current algo-
+rithms can infer genome alignments with the correct number of hidden break-
+points. The algorithm to calculate hidden triplet breakpoints requires positional
+homology alignments, the method cannot be applied to genome alignments con-
+taining paralog alignments. For this reason we selected and applied three current
+programs that generate positional homology genome alignments: TBA, progres-
+siveMauve, and Mugsy.
+The Threaded Blockset Aligner (TBA) [2] constructs multiple genome
+alignments by a process of merging and filtering pairwise alignments generated
+by BLASTZ [13]. TBA requires specification of a phylogenetic guide tree, and
+for this we gave it the same topology used for simulation. We used TBA version
+2009-Jan-21, the most recent version publicly available at the time of this work.
+The progressiveMauve genome alignment algorithm [4] begins by identifying
+approximate multi-matches among input genomes, then progressively grouping
+these into locally collinear blocks and aligning nucleotides within these blocks.
+For grouping matches progressiveMauve applies a sum-of-pairs breakpoint scor-
+ing scheme, which penalizes pairwise breakpoints. In the present work we used
+progressiveMauve version 2011-02-02 with default options. Mugsy is a newer
+aligner [1] that also uses three steps as progressiveMauve, but differs in the de-
+tails of each step. For example, it uses a min-cut max-flow algorithm to partition
+themulti-matchesintoblocksunderasyntenyscore. WeusedMugsyv1r2.2with
+default options.
+For each alignment from the three aligners we computed the sum of hidden
+triplet breakpoint counts H. To assess the error that aligners introduce to align-
+ments in terms of breakpoints, we calculated the difference between the number
+ofbreakpointsincalculatedalignmentsandthenumberofbreakpointsinthetrue
+alignments. We also calculated a score that measures nucleotide alignment accu-
+racy independently of genome arrangement: We compared each pair of aligned
+nucleotides in the calculated alignments with the true alignment to obtain pre-
+cision and recall of nucleotide positional homology prediction, and combined the
+two values to an F score.
+B. Kehr, K. Reinert, A.E. Darling 10
+stniopkaerb
+A inversion rate:
+0 1·10-4 2·10-4
+pairwise breakpoints
+stniopkaerb
+0 1000 2000 3000 4000
+nt substitution rate:
+stniopkaerb
+D inversion rate:
+0 1·10-4 2·10-4
+pairwise breakpoints
+stniopkaerb
+0 1000 2000 3000 4000
+gain/loss rate:
+0 0.5·10-4 1·10-4
+inversion rate
+stniopkaerb
+0 0.5· 10-4 1· 10-4 1.5· 10-4 2· 10-4
+true count B
+progressiveMauve
+gain/loss rate
+stniopkaerb
+0 0.25· 10-4 0.5· 10-4 0.75· 10-4 1· 10-4
+true count E
+progressiveMauve
+0.6 0.7 0.8 0.9 1.0
+tniopkaerb
+progressiveMauve
+0.6 0.7 0.8 0.9 1.0
+tniopkaerb
+progressiveMauve
+Fig.4. Hiddentripletbreakpointcountsinsimulatedalignmentswithdifferentinversion
+and nucleotide substitution rates (InvNt, A–C), and 200 simulated alignments with
+different inversion and large gain/loss rates (InvGL, D–F).
+B. Kehr, K. Reinert, A.E. Darling 11
+5.3 Breakpoint Counts in Calculated Genome Alignments.
+WecomputedalignmentswithTBA,progressiveMauve,andMugsyonall600sets
+ofnineevolvedgenomesinthetwodatasetsInvNt andInvGL.Figures4Band4C
+show hidden triplet breakpoint counts of the alignments from InvNt, and Fig.4E
+and 4F for InvGL. In Fig.4B and 4E, we display the median of the hidden triplet
+breakpointcountsperprogramforalignmentssimulatedwithequalinversion(4B)
+or gain/loss rate (4E) as lines.
+In alignments calculated on InvNt we found that all three programs over-
+estimate the hidden breakpoint counts by a constant value independent of the
+inversion rate, suggesting a relationship with the constant gain/loss rate in this
+dataset. The two aligners that use an algorithm designed to minimize pairwise
+breakpointsintroducefeweradditionalhiddentripletbreakpointsthanTBA.The
+F score of most alignments is very good (> 0.95) except for some Mugsy align-
+ments. We recognize a trend that alignments with F scores closer to 1 have
+lower hidden triplet breakpoint errors. An exception are Mugsy alignments on
+sequences simulated with nucleotide substitution rates greater than 0.4. These
+Mugsy alignments have a very low recall suggesting the simulated genomes were
+too divergent to be aligned by Mugsy with its default settings.
+Calculated alignments of InvGL data show that the amount of gene gain/loss
+hasastrongeffectonthehiddentripletbreakpointerror. Theerrorissmallatlow
+rates of gain/loss, but grows quickly with the gain/loss rate. In Figure4F we see
+thataccuratealignmentsasmeasuredbyF havelowerhiddentripletbreakpoint
+error. We find that the F score drops with increasing gain/loss rates (data not
+shown), suggesting that genomes with high rates of simulated gain/loss may be
+generally difficult to align.
+6 Conclusions
+We have introduced the concept of hidden breakpoints in genome alignments
+and presented a method to calculate hidden triplet breakpoint counts. We have
+examined hidden breakpoint counts in simulated alignments evolved over a wide
+range of evolutionary parameters, and in alignments calculated by three different
+genome alignment algorithms on the same simulated datasets. We find that all
+tested genome aligners introduce a high degree of error in hidden breakpoint
+counts compared to the true count, and that this error grows with evolutionary
+distance in the simulation. Our results suggest that hidden breakpoint error may
+be pervasive in genome alignments. The error may in turn lead to erroneous
+inference of ancestral genomes and rearrangement history. Therefore, studies of
+the relationship between genome rearrangement history and biological processes
+could be improved by considering this error during the computation of genome
+alignments.
+Overall, the error in triplet breakpoint counts is of the same order of magni-
+tude as the pairwise breakpoint error. Methods such as the sum-of-pairs break-
+point score in progressiveMauve reduce the pairwise breakpoint error, but may
+not effectively reduce hidden breakpoint error. The max-flow min-cut algorithm
+B. Kehr, K. Reinert, A.E. Darling 12
+employed by Mugsy appears to yield the most precise block and breakpoint esti-
+mates,butonlywhensubstitutionratesarelowenough. Itispossiblethattheuse
+of a more sensitive matching method such as promer [6] or another approximate
+matching approach would enable Mugsy to produce high accuracy results also
+at higher levels of sequence divergence. Future alignment systems would benefit
+from approaches that either explicitly or implicitly consider hidden breakpoints.
+Limitations. The presented concept of hidden breakpoints has some limita-
+tions. First, the pairwise breakpoint distance is a lower bound for the number of
+breakage events that happened during evolution because several rearrangement
+events may use the same breakpoint. The hidden breakpoint count described
+here improves the estimate of breakage events, but it remains a lower bound to
+the actual number of breakage events that happened during evolution. A further
+limitationisthatthecurrentapproachdoesnotdirectlygiverisetoamethodfor
+phylogenetic inference on genome arrangement. Others have demonstrated prac-
+tical algorithms for phylogenetic inference on genome arrangement using DCJ
+medians with gene gain and loss [16]. Although our median algorithm could be
+used in such a context, there is no constraint on the number or topology of chro-
+mosomesinmediangenomesandthismightyieldinferredancestralgenomesthat
+are extremely biologically unlikely. Another limitation is the perfect-matching
+based median approaches cannot handle duplicated blocks in the alignments. Fi-
+nally,wehaveonlyderivedaformulatocalculatehiddenbreakpointsamongthree
+genomes but some hidden breakpoints may be identifiable only among 4 or more
+genomes. We leave identification of hidden breakpoints in 4 or more genomes,
+and analysis of genomes with duplications as future work.
+Acknowledgements.
+This work was enabled by funding from the DFG through the Dahlem Research
+School. We have implemented the calculation of breakpoint counts using the

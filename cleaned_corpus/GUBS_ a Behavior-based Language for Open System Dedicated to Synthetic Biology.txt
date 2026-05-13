@@ -1,0 +1,504 @@
+GUBS, a Behavior-based Language for Open System
+Dedicated to Synthetic Biology
+AdrienBasso-Blandin FranckDelaplace
+IBISClab. IBISClab.
+EvryUniversity EvryUniversity
+abasso@ibisc.univ-evry.fr franck.delaplace@ibisc.univ-evry.fr
+Inthisarticle, weproposeadomainspecificlanguage, GUBS(GenomicUnifiedBehaviorSpecifi-
+cation),dedicatedtothebehaviouralspecificationofsyntheticbiologicaldevices,viewedasdiscrete
+opendynamicalsystems. GUBSisarule-baseddeclarativelanguage.Bycontrasttoaclosedsystem,a
+programisalwaysapartialdescriptionofthebehaviourofthesystem.Thesemanticsofthelanguage
+accountstheexistenceofsomehiddennon-specifiedactionsthatpossiblyalterthebehaviourofthe
+programmed devices. The compilation framework follows a scheme similar to automatic theorem
+proving,aimingatimprovingsyntheticbiologicaldesignsafety.
+1 Introduction
+Synthetic biology is an emerging scientific field combining the investigative nature of biology with the
+constructive nature of engineering [22] to design synthetic biological systems. The issue is to devise
+newfunctionality/behaviourthatdoesnotexistinnature. Then,thefieldofsyntheticbiologyislooking
+forwardprinciplesandtoolstomakethebiologicaldevicesinter-operableandprogrammable[19]. Syn-
+thetic biology projects were first focusing on the design and the improvement of small genetic devices
+comparabletologicalgatesforelectroniccircuits[23,11]. Recently,projectshaveattemptedtodevelop
+largebio-systemsintegratingdifferentdeviceswithasalong-termgoal,thedesignofde-novosynthetic
+genome [16]. In this endeavour, the computer-aided-design (CAD) environments play a central role by
+providing the required features to engineer systems: specification, analysis, and tuning [4, 20, 25, 12].
+PioneerapplicationsshowthevaluablepotentialofsuchenvironmentsinIGEMcompetition.
+Currently, the design specifies the structural assembly of DNA sequences (biobrick) as in GENO-
+CAD [7]. Although this description is indispensable to provide a finalized specification of devices, the
+abstraction level seems inappropriate for tackling large bio-systems. The required size of programs for
+sequence description likely makes the task error-prone and un-come-at-able. In the same way as large
+softwares cannot be programmed in binary, large biological systems cannot be described as aDNA se-
+quenceassembly. Then,scalingupthecomplexityofthesyntheticbiologicalsystemsneedstocomplete
+the structural description by an additional abstract programming layout based on a high-level program-
+ming language and harness the automatic conversion of the design specification into a DNA sequence,
+like compilers. High level programming language for synthetic biology is announced as a key mile-
+stone for the second wave of synthetic biology to overcome the complexity of large synthetic system
+design[22]. Nonetheless,inthisdomain,languagetechnologyisstillinitsinfancyandtransformingthis
+visionintoaconcreterealityremainsadauntingchallenge.
+Such high-level language should describe the devices in term of functionalities, offering the ability
+to program the behaviour directly instead of the structure supporting this behaviour. Indeed, behaviour
+specification contributes to accurately document the device by adding its behavioural description, to
+GabrielCiobanu(Ed.):MembraneComputingand
+BiologicallyInspiredProcessCalculi(MeCBIC2012)
+30 GUBS,aBehavioralLanguageforSyntheticBiology
+assess its functionality automatically and formally, notably by generating test-benches from this spec-
+ification, and to get a relative independence to technology because different biological structures can
+carryoutthesamefunctionality. Inthisframework,thecomponentsareselectedandorganizedautomat-
+ically or semi-automatically to generate a structural description of the device at compile phase whose
+behaviourcomplieswiththespecifiedfunction. Asuchapproachhasbeenalreadyachievedinhardware
+by using languages as VHDL [1] or VERILOG [24] to overcome the growing complexity of electronic
+circuits. However, the major difference in synthetic biology relates to the openness of biological sys-
+tem. Thereby,theissueistoproposeabehaviourallanguageforopensystems. Moreprecisely, GUBS is
+a rule-based declarative language dedicated to the behavioural specification of discrete open dynamical
+systemsforsyntheticbiologyinteractingwithitsenvironment. GUBSsymbolicallydefinesthebehaviours
+to provide a relative independence from structures by postponing the biological component selection at
+compile phase. Within this framework, the compiler translates the behavioural specification to a struc-
+turaldescriptionofadevicewhosebehaviourcarriesthefunctionalfeaturesdefinedbyaprogram. The
+proposedcompilationmethodisinspiredbyautomatedtheoremproving.
+Afterintroducingthemainfeaturesof GUBS language(Section2),wedefinethesemanticsof GUBS
+basedonhybridlogic. Then,wedetailtheproof-basedprinciplesgoverningthecompilation(Section3)
+illustrated with a complete example (Section 4). After a survey of the related works, Section 5, we
+conclude(Section6).
+2 GUBS language
+Inthissection,wedescribethemainfeaturesofGUBS.
+Constantandvariables. In GUBS,twokindsofobjectsaredistinguished: theconstantsandthevari-
+ables. Theconstantsdesignatethepre-definedobjectsinacorpusofknowledge. Inbiology,theconstants
+may refer to proteins or genes of interest. For example, the agent LacZ refers to LacZ protein or gene.
+By convention, their name starts with a capital letter. The variables refer to an abstraction of these pre-
+definedobjectsandcanbepotentiallyreplaced(substituted)byanyconstant. Byconvention,thevariable
+namesstartwithaminusculeletter.
+Agents,attributesandstates. Theagentsrepresentthebiologicalobjects. Theirdifferentobservable
+states characterize their different behaviours. The behaviours actually define the different capacities
+for actions on the state of the other agents. They are characterized symbolically by a set of attributes
+categorizingthesedifferentcapacities. Therealsignificanceoftheattributesisamatterofconventionde-
+pendingonthetargetedrealization(e.g.,proteinpathways,genenetwork)andwillbeaddressedthrough
+examples. Forinstance, theregulatoryactivityofageneisobservationallyrelatedtothresholdsof RNA
+transcriptsconcentration. Atagiventhreshold,ageneregulatesagivensetofgeneswhereasatanother
+one the regulation applies to another set of genes (See Figure 1). The different thresholds define the
+levels of gene activities leading to different regulatory activities. For a gene G, if we identify three dif-
+ferent kinds of regulatory activities, the state of this gene will be defined by three different attributes
+{Low,Mid,High} that characterize symbolically three possible behaviours. For example, G(Low) ex-
+pressesthefactthatagentGisinstateLowandthenreadyfortheactioncorrespondingtothisattribute.
+In some cases, a single state is sufficient to qualify the capacity for the action of the agent. Hence, the
+agentisidentifiedtoitscapacity. Then,GmeansthatagentGisavailable.
+A.Basso-BlandinandF.Delaplace 31
+By contrast, G(Low) signifies that the state of the agent differs from Low (G when an agent has
+a single capacity). It is worth to point out that, not being in a state defined by an attribute, does not
+necessarily means that the agent state is in another attribute. Indeed, for open systems the state of the
+agentscouldbeofanysortthatdoesnotnecessarilybelongtothepre-definedattributes.
+Two kinds of relations on attributes are defined: an order, ≺, meaning “less capacity than” and an
+inequality,≉,meaning“differentcapacitythan”. ThenLow≺Midimpliesthatthecapacityfortheaction
+of Mid includes the capacity related to Low. Usually, in gene regulatory model [14], the set of genes
+regulated at a given level will also be regulated at a higher level. By contrast, in signalling pathways,
+the phosphorylation of a protein induces a conformational change of the structure leading to a specific
+signalling potentiality not occurring in the unphosphosrylated conformation. Assuming that Phos and
+UnPhos respectively represents the phosphorylated and the unphosphorylated conformations of protein
+P,wehavePhos≉UnPhos. Then,P(Phos)impliesP(UnPhos)implicitly. Theattributesandtherelation
+between attributes will be declared as follows: G∶∶{Low≺Mid,Mid≺High},P∶∶{Phos≉UnPhos}. A
+simplesetofattributesreplacestherelationsifunknownandnospecificrelationissetbetweenattributes.
+Finally, the description of the agent state is extended to a collection of agent states as follows: g +
+...+g ,meaningthatalltheagentstates,g,areobservedconcomitantly.
+Trace, event, and history. A GUBS program describes a behaviour, its interpretation is based on the
+observations of designed systems. Then, the issue is to formalize the notion of behaviour observa-
+tion. To this end, we focus on the notion of trace that symbolically represents the evolution of some
+quantities related to the agents of interest by the evolution of these agent states. A trace can be ob-
+tained from experiments by establishing a correspondence between measurements of some quantities
+(e.g., RNA transcript concentration) and attributes of agents. Formally, a trace, (T t ) 1≤t≤m , is a finite se-
+quence of agent state sets where each set contains the agent states at a given instant. For instance, the
+evolution of a concentration evolving from Low to High for G may be described by the following trace
+of 6 instants: ({G(Low)},{G(Low)},{G(Mid)},{G(Mid)},{G(Mid)},{G(High)}), . However, all the events in a
+1 2 3 4 5 6 7
+trace are not necessarily relevant with regards to the behaviour description. For example, if we focus
+on the evolution from Low to High for G , only three events are relevant for the behaviour description:
+G(Low),G(Mid),G(High); without accounting the intermediary evolution stages occurring between.
+Then, thebehaviourrecognitionalwaysemphasizesthekeyeventsinatraceentailingitscontractionto
+showtheirsuccession. Suchacontractedseriesiscalledaconsistenthistoryoftheexpectedbehaviour.
+Generally speaking, an history is related to a chronological division of a trace into periods where the
+eventsofaperiodrepresentalltheagentstatesoccurringateachinstant. Then,anhistoryisasequence
+of these event sets. Given a trace (T) , and a chronological division, (d) , corresponding to a
+t 0≤t≤m i 1≤i≤n
+sequenceofthestartingdatesforeachperiod,thehistoryisasequenceofagentstatesoccurringineach
+period,(H) ,suchthateachH =⋃ T. Hence,aconsistenthistoryispurposelymadetopoint
+i 1≤i<n i di ≤t<di+1 t
+thecharacteristiceventstepsofabehaviourdescriptionout.
+In the previous example, a chronological division1 of the trace leading to an history consistent with
+the expected evolution from Low to High for G is (1,3,6,7) which corresponds to following discrete
+time-intervals ([1,2],[3,5],[6,6]). The resulting history is: ({G(Low)},{G(Mid)},{G(High)}). Notice that
+(1,2,4,7)alsofits. However,thechronologicaldivision(1,3,7)leadstoaninconsistenthistorybecause
+the level Mid is not seen as an intermediary event in the history (See also Figure 1 depicting the trace
+and consistent history of the dependences). The formal definition of the consistency in the scope of the
+semanticswillbegiveninSection2.1.
+1Step7isinsertedasanextrasteptocomplywiththedefinitionofthechronologicaldivision.
+32 GUBS,aBehavioralLanguageforSyntheticBiology
+q. c⊙→e q. c⊕→e
+Figure 1: The curves represent the typical behaviours of the causal dependences based on the time
+evolution of a quantity (q) related to agents c and e (e.g., RNA transcript for gene regulation). The
+symbolic agent states c and e are here both associated to the maximal threshold of the quantity. The
+symbolic trace (T) is issued from a periodic sampling of the evolution by identifying whether c or e
+occur. A consistent history (H) complying to a causal dependence definition is represented below the
+trace. Thefirstgraphicillustratesthenormalcausality: c◯→e,thesecondthepersistent: c⊙→eandthe
+thirdtheremanentone: c⊕→e.
+Behavioral dependence and observation spot. A behavioural dependence identifies a relation be-
+tweenbehavioursasacausalrelationonevents. Basically,thedependencesshoulddefinethecontrolof
+agentsonanother. However,thedefinitionofthecausalityalsoneedstotackletheopennessofasystem
+by adapting it to this context. A seminal definition of the causality, proposed by Hume [17], is formu-
+lated in terms of regularity on events: “[we may define] a cause to be an object, followed by another,
+and where all the objects similar to the first are followed by objects similar to the second”. Although
+this definition appropriately characterizes the notion of control, the openness of the system implies to
+account the environment actions that possibly alter the causal dependence chain. For example, a pro-
+grammed activation G —→G may be contradicted by an existing inhibition G —→G addressing the
+sametargetgeneG . Hence,whileG isactive,itmayappearthatG willnotbeactivebecausethereg-
+ulatorystrengthofG isgreaterthantheregulatorystrengthofG ,contradictingtheexpectedactivation
+byahiddeninhibition. Hence,pushedtothelimit,thisconsiderationpreventstheabilitytodescribeany
+behaviourcausallybecauseanyprogrammedactioncanbeunexpectedlypreemptedbyanexternalone.
+However, by assuming that the design always describes a new functionality which is not observed
+naturally, the effect becomes the event indicating the effectiveness of a causal relation. As no cause
+externaltothedescriptioncantriggertheeffect,theover-determinationbyunknowncausesisprevented,
+then insuring that the program is the sole device entailing the expected effect in the biological system.
+Hence, the definition of the causal dependence will be governed by the effect leading to the following
+definitionofthedependence: “ifeffectewouldoccurthencoccurs”. Moreover,thescopeoffuture(resp.
+past) is narrowed to a closest future (resp. past) period, representing the fact that a response is always
+expectedinagivendelay. Noticethat,theproposeddefinitioncircumventstheaforementionedproblem
+A.Basso-BlandinandF.Delaplace 33
+illustratedbythehiddeninhibitionbecauseiftheeffectdoesnotoccurthequestionoftheexistenceofa
+causeismeaningless. ThisdefinitionissomehowequivalenttothecausalclaimsproposedbyLewis[18]
+intermsofcounter-factualconditionals,i.e.,“Ifchadnotoccurred,ewouldnothaveoccurred”.
+Threebehaviouraldependencesaredefinedin GUBS: thenormaldenotedby◯→,persistent by⊙→,
+and remanent by ⊕→. Informally, for normal dependence the cause precedes the effect providing the
+effectisobserved;forpersistentdependencethecausestillprecedestheeffectbutitismaintainedwhile
+the effect is observed; and for remanent dependence, the effect is maintained despite the cause has dis-
+appeared. Thesedependencessymbolizecommonbiologicalinteractions. Forinstance,ingeneticengi-
+neering,therecombinationenablestheemergenceofaregulatedgeneoranhereditarytraitpermanently.
+Asuchmechanismtypifiestheremanentdependenceinbiology. Therelationsbetweengeneexpression
+at steady state are symbolized by persistent dependence. The behavioural dependences are defined as
+follows(seeSection2.1fortheirformalization):
+• c◯→e: ifeoccursthencoccursintheclosestpast.
+• c⊙→e: ifeoccursthencoccursintheclosestpastandalsocurrently.
+• c⊕→e: if e occurs then, either e occurs in the closest past or the dependence complies to the
+propertyofthenormaldependence.
+Figure1exemplifiesthecorrespondencebetweenexperimentaltraces,symbolictracesandthehistoryfor
+thecausaldependences. Allthedependencesareextendedtoasetofcausesandasetofconsequences,
+i.e., c +...+c ◯→e +...+e . For example, let us define the activation and the inhibition as follows:
+g —→g ≡g ⊙→g ,g ◯→g and g —→g ≡g ⊙→g ,g ◯→g , the program depicting a negative
+1 2 1 2 1 2 1 2 1 2 1 2
+regulatorycircuitwithtwogenes,i.e.,g —→g ,g —→g ,is: {g ⊙→g ,g ◯→g ,g ⊙→g ,g ◯→g }.
+1 2 2 1 1 2 1 2 2 1 2 1
+The observation spots describe the set of observations expected in a trace. For instance, observ-
+ing that gene G is at level high is written Obs::G(High). As the activation of a dependence lies on
+the observation of the effect, the observation spot is used to determine which effects must be necessar-
+ily observed. For example, in the negative regulatory circuit, the characteristic observation spots are:
+obs ::g +g ,obs ::g +g .
+1 1 2 2 1 2
+Compartment & Context. A compartment encloses a set of dependences making them local to the
+compartment. For instance,C{g ◯→g } describes a normal dependence occurring in compartmentC.
+The compartments are hierarchically organized and all the compartments are included in another ex-
+ceptfortheoutermostone. Althoughthecompartmentsdirectlyrefertothecompartmentalizedcellular
+organization (e.g., nucleus, mitochondria), they are also used to emphasize the isolation of some inter-
+actions by syntactically enclosing the dependences into a compartment. C.s refers to an agent state in
+compartmentC.
+A context refers to a stimulus acting on the system, as environmental conditions or external sig-
+nalling. The application of a context c to a set of dependences b is written [c]b where c is either a
+variableoraconstant. Thismeansthatdependencesofbaretriggeredwhenthecontextcispresent. For
+instance, recently Ye et al. [26] explore the opto-genetics signalling to control the expression of target
+transgenes. The blue-light induces the expression of transgene (tg) via a signalling cascade leading to
+thebindingof NFAT transcriptionfactortoaspecificpromoter(PNFAT). Thefollowingprogramusinga
+context summarizes the process: [BlueLight]{NFAT⊙→tg}. A context can be decomposed to several
+contexts,[k ,...,k ]b,meaningthatalltheconditionsmustbemettotriggerthedependencesofb. The
+interpretationisequivalenttoacontextcascading,[k ][k ]...[k ]b. Moreover,theobservationspotsand
+theattributedefinitionarecontextinsensitive.
+34 GUBS,aBehavioralLanguageforSyntheticBiology
+2.1 Semanticsof GUBS
+The interpretation of GUBS is a formula such that the set of all the models validating it defines all the
+possible histories complying to the programmed behaviour. The interpretation is based on multi-modal
+hybridlogicwiththe“Always”operator,H(A,@).
+Hybridlogic. Inwhatfollows,werecalltheformalsyntaxandsemanticsofhybridlogic. Thehybdrid
+logic [5, 6] offers the possibility to denominate worlds by new symbols called nominals. They will be
+used in satisfaction modal operators @ ; the formula @ φ asserts that φ is satisfied at the unique point
+named by the nominal a identifying a particular truth values of a formula at this point. Given a set of
+propositional symbol, PROP, a set of relational symbol REL, and a set of nominal NOM disjoint to
+PROP,asetofwellformedformulainthesignatureof⟨PROP,NOM,REL⟩isdefinedasfollows:
+with p∈PROP,a∈NOM and k ∈REL. Moreover, the syntax is extended to other logical operators
+classically2: (cid:150),∨,→,[k],E.
+TheinterpretationiscarriedoutusingtheKripkemodelsatisfactiondefinition(Table2.1). M,w⊩φ
+is interpreted as the satisfaction of a formula φ by a model M at world w where ⊩ stands for the
+realizabilityrelation(i.e.,“isamodelof”). Amodelvalidatesaformula,denotedbyM⊩φ,ifandonly
+ifitissatisfiedforalltheworldsofthemodel(i.e.,∀w∈DomM∶M,w⊩φ).
+Definition1(Kripkemodel). AKripkemodelisastructureM=⟨W,(R ) ,V⟩whereW =DomMisa
+non-emptysetof worlds,τ⊆RELasubsetofrelationalsymbolsdenotingthemodalities,R ⊆W×W,k∈τ
+a relation of accessibility,V ∶(PROP∪NOM)→2W an interpretation attributing to each nominal and
+propositional variable a set of worlds such that any nominal addresses one world at most (i.e., ∀a∈
+Byconvention,Rstandsfortheunionoftheaccessibilityrelation,R=(⋃ R ).
+AmodaltheoryofamodelMregardingtoasetofformulasF,TH (M),isthesetofformulasof
+F validatedbyM,i.e.,TH (M)={φ ∈F ∣M⊩φ}. KS(φ)denotesthesetofallmodelsvalidatingφ,
+M,w⊩a iff w∈V(a),a∈NOM∪PROP M,w⊩⟨k⟩φ iff ∃w′∈W ∶M,w′⊩φ andwR w′
+Table1: Hybridlogicinterpretation.
+Semantics. A GUBS program is interpreted by a hybrid logic formula where the modal operators
+characterize here the temporal observations on an history: [] means “observed in all the closest fu-
+tures” and ⟨⟩ means “observed in a possible closest future at least” (resp. ⟨⟩−,[]− for the closest
+past). Moreover, we assume that the accessibility relations, (R ) , are indexed by the non empty
+A.Basso-BlandinandF.Delaplace 35
+parts of the set of all the contexts of a program P, denoted by K (i.e., τ =2KP∖{∅}). Then, a non-
+empty set of contexts ,∅ ⊂ K ⊆ K , is a modality, i.e., ⟨K⟩,[K] with ⟨⟩ = ⟨∅⟩ by convention. Let
+⟨W,●,Λ⟩ be the set of words W with the concatenation operation and the neutral element, the empty
+wordΛandF thesetofwell-formedformulasofH(A,@),thesemanticsisdefinedbyfourfunctions:
+⟦.⟧∶P→F ,⟦.⟧ ∶P→W→2W→F ,⟦.⟧ ∶B→W→F ,⟦.⟧ ∶R→W→F ,whereP,B,Rrespectively
+H P H B H R H
+stand for the set of GUBS programs, the set of agent state set and the set of relations on attributes. ⟦.⟧
+initiates the interpretation. Table 2.1 defines these functions. For instance, the program of the negative
+⟦a⟧R(g) =⊺
+Table2: SemanticsofGUBS. Inthedefinition,arepresentsanattribute,babehaviour,ganagent,saset
+ofagentstatesoranagentstate, r arelationonattributes,C acompartment, K asetofcontextsandba
+setofbehaviours(i.e.,contexts,compartments,dependences,attributes,observationspots).
+regulatorynetwork,{g ⊙→g ,g ◯→g ,g ⊙→g ,g ◯→g ,obs ∶∶g +g ,obs ∶∶g +g },istranslated
+1 2 1 2 2 1 2 1 1 1 2 2 1 2
+intothefollowingformula:
+2 1 1 2 1 1 2 2 1 2
+obs1 1 2 obs2 1 2
+Consistent history. Now, we formally define the consistency of the history with regards to models.
+Anhistoryisassimilatedtoapathinamodelendingbyaworldlabelledwithanobservationspotlabel.
+The set of Kripke-models validating the interpretation of a program P, KS(⟦P⟧), not only contains all
+the consistent histories, but also the possible histories corresponding to behavioural alterations due to
+external perturbations. Thus, the compilation generates a device such that all the models validating
+its interpretation integrate all the observations related to the program, including the consistent and the
+inconsistentones.
+More precisely, the consistency lies on the identification of the largest number of “relevant” events
+characterizingacompletecausalchaindescribedinaprogram. Asanhistoryisalsoamodel,aconsistent
+36 GUBS,aBehavioralLanguageforSyntheticBiology
+history should validate the interpretation of the complete causal chain. The dependence formula set F
+ofaprogramPcorrespondstoasetofformulaswhereeachformulaistheinterpretationofadependence
+taken separately with the attributes related to the involved agents. By definition of the semantics, any
+modelvalidatingtheinterpretationofaprogramalsovalidateseachformulaofthisset. Theconsistency
+of an history is then based on the validated formulas of this set by this history. An history M is
+consistent for P if and only if no other modal theory of histories based on F (i.e., TH (M) with
+M as an history), ending with the same labelled world includes the modal theory of this history (i.e.,
+3 Compilation
+At compile phase, a program is transformed to a structure (e.g., a DNA sequence) while inserted in a
+vector cell, should behave according to the programmed specification. The structure will result to an
+assemblyofseveraldevicesstoredinalibraryofcomponents(e.g.,partsregistry). Asthedesignrelates
+heretoabehavioural/functionaldescription,weneedtobridgethegapbetweenstructuralandfunctional
+description. Thisstageiscalledthefunctionalsynthesis. Theissueistoselectasetofcomponentswhose
+assemblypreservesthebehaviouroftheprogram. Toachievethisgoal,aGUBSprogramisassociatedto
+each component to describe its behaviour. Thereby, the component assembly corresponds to a program
+assemblypreservingthebehaviourofthecompiledprogram. Preservingabehaviourislaidonaproperty
+called the behavioural inclusion formalizing the fact that the characteristic observational traits of the
+specified function must be recognized in traces related to the device experiments. In other words, we
+canexhibithistoriesconsistentwiththeprogrammedbehaviourfromhistoriesconsistentwiththedevice
+behaviourdescription. Thebehaviouralinclusionisdefinedfromtheinterpretationoftheprograms,asa
+logicalconsequence(Definition2).
+Definition2(Behavioralinclusion). AprogramQbehaviourallyincludesanotherprogramP,ifandonly
+iftheinterpretationofthelatterisalogicalconsequenceoftheinterpretationoftheformer:
+Thebehaviouralinclusionisapre-order3 suchthattheemptyprogram,denotedbyε,isaminimum,
+meaning that a program with no behaviour can be observed in all traces. And a program whose inter-
+pretation equals (cid:150), is a maximum. Figure 2 illustrates the behavioural inclusion on a particular model.
+Observability. It may arise that no history will be consistent with a programmed behaviour. For ex-
+ample,theprogram{Obs∶∶g,g⊙→g}isnotobservableinatrace. Indeed,itsinterpretationyieldstothe
+following formula: A((@ g)∧(g→((⟨⟩−¬g)∧¬g))), false in all models because world Obs must
+both satisfies g and ¬g by definition of the persistent dependence. A GUBS program is said observable
+ifandonlyiftheformularesultingfromitsinterpretationisvalidatedbyonemodelatleast. Hence,the
+interpretationofanunobservableprogramisanantilogy. Anunobservableprogramcanbeassimilatedto
+aprogrammingerror. Thedetectionofsucherrorscanbecarriedoutatcompile-phasebyusingtableaux
+method[9]thatautomaticallydetermineswhetheraformulaissatisfiableinamodel. Indeed GUBS uses
+fragment of HL(@) logic which is decidable. Notice that an observable program always behaviourally
+includesanobservableprogram(Proposition1).
+3Areflexiveandtransitiverelation.
+A.Basso-BlandinandF.Delaplace 37
+g 9◯→g 11 , [k 4]{g 3◯→g 5}, g 2 k 6 k 7
+a∶∶g 4} [k 5]{g 6◯→g 7}, 3 9 10
+[k 7]{g 8◯→g 10}, k 3 k 4
+g 10◯→g 11 , a: g 4 b: g 5 c: g 11
+a∶∶g 4 ,b∶∶g 5 ,c∶g 11}
+Figure2: Behavioralinclusionexample. ConsistenthistoriesofPnecessarycontainsworldscolouredin
+gray.
+Proposition 1. A program behaviourally included in an observable program is observable: ∀P,Q∈P∶
+obsQ∧P^Q (cid:212)⇒ obsP.
+3.1 Functionalsynthesis
+The functional synthesis is the operation whereby biological components of a library are selected and
+assembled to generate a device behaviourally including the designed function. The behaviour of each
+componentisdescribedbyaGUBSprogram. Atitssimplest,thefunctionalsynthesiscouldbeconsidered
+asapropersubstitutionofvariablesbyconstants. Forexample,inthefollowingactivation{G —→g },
+g will be substituted by gene G , providing that component Q describes the activation {G —→G }.
+However,morecomplexsituationsmayariseduringcomponentselection. Forexample,iftheactivation
+G —→G occurswithanotherregulationonlyi.e.,Q={G —→G ,G —→G }thentheselectionofQ
+1 2 1 2 3 4
+addsasupplementaryregulation.
+Formally,afinitesubstitutionisasetofmappings,σ ={v/b},onvariablesandconstantssuchthat
+a variable can be substituted by a variable or a constant, and a constant can only substituted by itself4.
+For instance, we have: {Obs::G(l)+b ,b ◯→G(l)}[{b ↦B ,b ↦B ,l↦Low}]={Obs::G(Low)+
+2 1 1 1 2 2
+Functionalsynthesisrules. Thefunctionalsynthesisisdefinedbyrules(Table3)governingthecom-
+ponentassembly. Onlythedependencesandtheattributeswillbefunctionallysynthesize. Theobserva-
+tionspotsareconsideredasannotationsusedforthecompilationprocess. Toinsurethecorrectness,each
+transform must preserved the seminal behaviour. Hence, each program resulting from the application
+of a rule must behaviourally includes the previous one. Formally, the functional synthesis is modelled
+by a relation on programs denoted by (cid:130), i.e., Q(cid:130) P where P is the initial program and Q the trans-
+formed one, such that each rule insures that: Q(cid:130) P is correct with regards to a substitution σ, that
+is P[σ]^Q[σ] and Q[σ] is observable. Also notice that the behavioural inclusion is preserved by
+substitution(Proposition2).
+Proposition2. Forallsubstitutionsσ,wehave: P^Q (cid:212)⇒ P[σ]^Q[σ].
+4Pσ orP[σ]representsitsapplicationonprogramPandidentitysubstitutionsareomitted.
+38 GUBS,aBehavioralLanguageforSyntheticBiology
+Table 3 describes the functional synthesis rules5. Γ is a set of components representing the library.
+P⊆ Q denotes the fact that program Q corresponds to an assembly including P i.e., Q=(Q ,P,Q )
+whereQ orQ maybeanemptyprogram. Rule(Inst.) describesthefactthatanobservableinstanceofa
+-INSTANTIATION-
+Q(cid:130)σ P
+-COMMUTATIVITY,CONTRACTION-
+Q(cid:130)σ P,P′ Q(cid:130)σ P
+(Com.) (Cont.)
+Q(cid:130)σ P′,P Q(cid:130)σ P,P
+-ASSEMBLY-
+Table3: Functionalsynthesisrules
+partofacomponentinthelibraryisfunctionallysynthesized. Rule(Com.) expressesthecommutativity
+of the assembly. Rule (Cont.) contracts the redundant formulation of programs. Finally, Rule (Asm.)
+detailstheconditions foranassemblyoftwo components, eachrepresentingafunctional synthesisofa
+partofthedesignedfunction. AdetailedexampleoftheiruseonarealcaseisgiveninSection4.
+Theorem1. Thefunctionalsynthesisrules(Table3)arecorrect.
+-DEPENDENCES-
+Q(cid:130)σ S 1⊙→S
+Q(cid:130)σ S 1⊙→S
+Q(cid:130)σ S 1◯→S
+Q(cid:130)σ S 1⊙→S
+,∆ Q(cid:130)σ S 1◯→S
+,∆ Q(cid:130)σ S 1⊕→S
+-AGENTSTATES-
+S 1+S 2 (SCom.) S+s (SCont.) S+s (Incl.)
+Table4: Rulesforthe dependences andtheagentstates. S standsforacollection, s +...+s , ofagent
+states,includingnegation,and∆standsfortherestoftheprogram.
+Another set of rules, more specifically devoted to dependences (Table 4), defines the alternate pos-
+sibilities to express similar behaviours. The table also includes the rules for agent sets. Rule (Trans.)
+expandsthechainofthepersistentdependencesbyaddingintermediarydependencetorefineapathway.
+Rule(N2P.)transformsanormaldependencetoapersistentonesincethelatterisanormaldependence
+with an additional property. And Rule (R2N.) transforms a remanent dependence to a normal depen-
+dence, since normal dependence is also remanent dependence with a repetition of the effect restricted
+to one step. According to these rules, all the dependence chains can be implemented with persistent
+dependences.
+A possible algorithm for the assembly could be based on a combinatorial application of the rules.
+However, suchalgorithmmayrevealinefficientinpractice. Theconditionsforanefficientalgorithmof
+compilation should be based on an internal representation of a program, as a set of contextualized de-
+pendenceswithattributes,{{A,[K]S ⍟→S }},suchthatA,K,S ,S arerespectively: asetofattributes
+hypothesis
+5Rulesareoftheform: .
+conclusion
+A.Basso-BlandinandF.Delaplace 39
+specification related to the agent involved in the dependency, a set of contexts and sets of agent states.
+Any program can be encoded under this representation from a normal form of the program (not de-
+tailed here). Accordingly, the problem solved by the compilation algorithm can be defined as follows
+(Definition3):
+Definition3(FunctionalSynthesisProblem). LetΓ={Q} besetwhereeachQ isasetofcontex-
+tualized dependences with attributes and P a set of contextualized dependences with attribute, can we
+find the smallest observable subset of componentsC⊆Γ, such that there exists a substitution σ so that
+itsapplicationonthecomponentsofCformacoverofP[σ],i.e.,∃σ ∶P[σ]⊆⋃ Q [σ]∧obsC.
+As the set cover problem is reducible to this problem, the problem is NP-complete. Then, the reso-
+lutionisorientedtowardsaheuristicalgorithm.
+Tetr LuxR + + LuxR LaclM1 GFP
+Figure3: Thebanddetectorregulatorycircuit.
+The compilation process is here exemplified in a real case by the design of the Band Detector pro-
+posedin[2]. Thisexampleexplainshowfromasimpleabstractdefinitionofthefunctionalityacomplex
+designcanbesynthesized. Accordingly, GUBS maybeusedtodescribeabehaviourwithahigh-levelof
+programmingwellasalow-level,detailingthecomponentsinvolvedintheprocess. Although,thefunc-
+tionalsynthesisisnotyetperformedautomatically,itisworthtopointoutthatthedifferenttransformsof
+thehigh-levelprogramtoobtainthefinaldesigncompliestorulesofTables3,4,insuringitscorrectness
+andso,itsfunctionalsafetyinthecontextofopensystem.
+The design aims at forming patterns of different colours in a population of bacteria exploiting the
+quorum sensing phenomenon by staining with fluorescent protein (GFP). The amount of molecules of
+interest that receives a cell depends on its relative position to the cell diffusing the molecule of interest
+controlledbyanexternalevent: morethecellisfarfromthesource,thefeweristheamountofmolecules
+received. Theactivationorinhibitionofthefluorescentproteinduetotheconcentrationwilldistinguish
+thebandssurroundingthesource. Intheoriginaldesign,theproteindoesnotfluoresceinanintermediary
+band.
+From a computing standpoint, we can assimilate the design to a message transmission coupled to a
+sensor/actuator responsible for fluorescence, then leading to a concise GUBS program presented below:
+thediffusivemoleculeisAHLwhichproductioniscontrolledbyacontextandtheobservationisapplied
+onGFP.Twocategoriesofcellsaredefined: theSenderandtheReceiver. Therefore,twoGUBSprograms
+identifythetwocelltypes.
+Sender ={ AHL:{low≉mid≉high},[Light]{detect◯→AHL(low),detect◯→AHL(mid),detect◯→AHL(high)}}
+Receiver={ AHL(low)◯→GFP,AHL(mid)◯→GFP,AHL(high)◯→GFP,obs 1::GFP,obs 2::GFP}
+40 GUBS,aBehavioralLanguageforSyntheticBiology
+Figure 3 describes the original genetic circuit used in the article. The diffusible molecule is the
+constant AHL. The gene LuxR has three activation thresholds: at Level 2, it activates both LaclM1 and
+Cl,atlevel1,theamountofAHLonlyallowsactivationofCl,andfinally,atlevel0,noneareactivated.
+We show that from the sender-receiver program, we obtain the original design by applying the afore
+Q 3={AHL:{low≉mid≉high},Luxl—→AHL(low),Luxl—→AHL(mid),Luxl—→AHL(high)}
+Q 4={AHL:{low≉mid≉high},LuxR:{low≉{mid≺high}},AHL(mid)◯→LuxR(mid),AHL(high)◯→LuxR(high)}
+Q 5={LuxR:{low≉{mid≺high}},LuxR(mid)—→Cl,LuxR(high)—→Cl+LaclM1}
+Q 7={LaclM1—→GFP}
+Table5: PartofthedatabasededicatedtotheBandDetector.
+mentionedruleswithanappropriateselectionofcomponents. TheregulationsofFigure3aredescribed
+in GUBS program (Table 5) translating in term of dependences and relations on their attributes their
+regulatory action. We focus here on some illustrative steps of the sender program compilation. The
+completefunctionalsynthesisisgiveninAppendix. Thecompilationconsistsinfindingtheappropriate
+components whose assembly behaviourally includes the sender-receiver program, with the particularity
+thatthediffusivemoleculemustbethesameinbothprograms. Toeasecompilationfollow-up,welabel
+each dependency of the sender-receiver program (Table 6). Let us consider P whose compilation is
+closedtoP andP . NoticethatP cannotbedirectlyinstantiatedwithanycomponentbecause,inthe
+onehand,thecomponentQ containsacontextlikeP butappliedongeneTetrinsteadofAHL,andon
+theotherhandQ hastheAHLmoleculebutnocontextisdefined. So,tofitP withthecomponentsQ ,
+Q andQ ,first,thenormaldependenceisconvertedtopersistentone(Rule(N2P.)).
+Q 1 ,Q 2 ,Q 3 (cid:130) σ {[light]{detect⊙→AHL(low)}}
+(cid:130) σP
+Thereby, the resulting dependence can be separated to match the assembly Q ,Q ,Q by applying
+(Trans.) ruletwice. v andv arefreshvariables.
+(cid:130) σP
+Q 1 ,Q 2 ,Q 3 (cid:130) σ [light]{detect⊙→v 1 ,v 1 ⊙→AHL(low)}
+Q 1 ,Q 2 ,Q 3 (cid:130) σ [light]{detect⊙→AHL(low)}
+Finally, we obtain a new program program P′ compatible with Q ,Q ,Q , and each variable is substi-
+tutedbyaconstant(biologicalelement)withtheapplicationofRule(Inst.). ForP′ wehave:
+[σ={light/Light,v
+Q 1 ,Q 2 ,Q 3 (cid:130) σ [light]{detect⊙→v 1 ,v 1 ⊙→v 2 ,v 2 ⊙→AHL(low)}
+ByfollowingthisschemeforP andP ,werespectivelyobtainP′ andP′ . Thefinalassemblycorre-
+12 13 12 13
+spondstothefunctionalsynthesisofSenderprogram.
+Q 1 ,Q 2 ,Q 3 (cid:130) σP 1 ′ 1 Q 1 ,Q 2 ,Q 3 (cid:130) σP 1 ′ 2 Q 1 ,Q 2 ,Q 3 (cid:130) σP 1 ′ 3
+(cid:130) σP
+A.Basso-BlandinandF.Delaplace 41
+Sender Receiver
+with{AHL:{low≉mid≉high}}asattributesofAHL.
+Table6: Separationofthedependences.
+In conclusion, the functional synthesis generates the original genetic circuit (Figure 3) from the sender
+program. Asimilarapproachcanbealsoappliedtoobtainthereceiverprogram(seethecompleteproof
+inAppendix6).
+Sender = {AHL:{low≉mid≉high},[Light]{detect◯→Tetr},
+Tetr—→Luxl,Luxl—→AHL(low),Luxl—→AHL(mid),Luxl—→AHL(high)}
+5 Related works
+Several domain specific languages have been developped to model and simulate biological systems.
+Based on process-calculus, seminally used to model process concurrency, several rule-based languages
+model protein interactions [21, 13, 10]. Another approach is based on logic, such as BIOCHAM [8] that
+formalizesthetemporalpropertiesofabiologicalsystem. Astheselanguagesarededicatedtosimulation,
+the objective is to close the systems because the simulations need to integrate all the characteristics of
+the analysed systems. By comparison, the purpose of GUBS is different since the issue is to represent
+the behaviour of a synthetic device in an organism, leading to translate the notion of the openness of
+biologicalsystemsbythesemanticsofthelanguage.
+In synthetic biology, the structural description languages [12, 20, 4] allow to specify well-formed
+genome sequences by grammars modularly and hierarchically. Although the sequence description is
+necessary,theprogrammermustpreviouslyanticipatethebehaviourofthedevicetoconceive. Besides,
+thebehaviouraldesignisnotincludedintheprogramwhileitinitiallymotivatesit. In GUBS,thedesign
+is driven by a behaviour description and sequence selection is postponed at compile phase. Moreover,
+thesizeofthestructuraldescriptionisalsosubjecttoacombinatorialexplosionwhenthecomplexityof
+programmedsystemsincreases.
+Amorphousprogramminglanguagehasbeenalsoinvestigatedtospecifythebiologicaldevicesatthe
+scaleofcellcolony,hereconsideredasapossiblecomputingmediumforamorphousprogram. J.Beal[3]
+demonstrates the proof of concept of this approach in PROTO, showing the feasibility of an automatic
+compile chain. In GUBS, the compile chain is based on rewriting rules whose correctness have been
+formallyprovedwithregardstoasemanticsdescribingtheconstraintsofanopensystem.
+Developing a language for biological systems actually involves to consider several unknown due to
+their openness: lack of knowledge on all the interactions in biological circuits and imprecise definition
+of initial conditions. We only know the result of a chain of effects. Then, the major constraint for
+programmingopensystemseemstobe: howtoprovideanexpressivelanguagetodescribethedynamics
+ofsuchsystems,butsimpleenoughtocapturetheessenceofthebiologicalquestionsinasmallprogram
+inordertoallowprogrammingoflargebiologicalsystemswithaprogramhumanlyachievable.
+In the future, the design in synthetic biology will certainly require different programming layouts
+based on different paradigms addressing the integration levels of biological systems. In a tower of lan-
+guages,startingfromalanguagewithcollectiveoperationsoncellcolony,usinganamorphousprogram-
+42 GUBS,aBehavioralLanguageforSyntheticBiology
+minglanguageasProto[3]oralanguagefordynamicalsystemswithdynamicalstructuresasMGS[15],
+andendingbyastructuraldescriptionprogrammedinagrammarbasedlanguage, GUBSlanguageoccu-
+piestheintermediaryleveldedicatedtocellentitybehaviouralprogramming.
+6 Conclusion
+InGUBSlanguage,weproposetocharacterizeaprogrammingparadigmabstractingthemolecularinter-
+actionsinthecontextofopensystem, thatdifferstoanapproachdedicatedtobiologicalsystemmodel-
+ing. Accordingly, the interactions aresymbolized bycausal dependenceswhose interpretationis driven
+by effect. We have demonstrated the proof-of-concept of the compilation based on rewriting rules, and
+illustrated it on a realistic example. The perspective of this work is to find an efficient compilation al-
+gorithm. Identifyingthebiologicalparametersguidingthecomponentselectionshouldbeakeyissuein
+thisundertaking.
+Acknowledgements. ThefundingformostofthisworkisgrantedbytheANRSYNBIOTIC(ANRBLAN
+030701)andwewouldliketothankthecolleaguesofthisprojectfortheirfruitfuldiscussions.

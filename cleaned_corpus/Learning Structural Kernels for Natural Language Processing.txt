@@ -1,0 +1,683 @@
+Learning Structural Kernels for Natural Language Processing
+DanielBeck TrevorCohn
+DepartmentofComputerScience ComputingandInformationSystems
+UniversityofSheffield,UnitedKingdom UniversityofMelbourne,Australia
+debeck1@sheffield.ac.uk t.cohn@unimelb.edu.au
+ChristianHardmeier LuciaSpecia
+DepartmentofLinguisticsandPhilology DepartmentofComputerScience
+UppsalaUniversity,Sweden UniversityofSheffield,UnitedKingdom
+christian.hardmeier@lingfil.uu.se l.specia@sheffield.ac.uk
+Abstract behaves, as we can more readily define a similarity
+metricbetweeninputsinsteadoftryingtocharacter-
+Structural kernels are a flexible learning izewhichfeaturesarethebestforthetaskathand.
+paradigmthathasbeenwidelyusedinNatural
+Kernels are a very flexible framework: they can
+Language Processing. However, the problem
+be combined and parameterized in many different
+of model selection in kernel-based methods
+is usually overlooked. Previous approaches ways. Complex kernels, however, lead to the prob-
+mostly rely on setting default values for ker- lem of model selection, where the aim is to obtain
+nel hyperparameters or using grid search, the best kernel configuration in terms of hyperpa-
+which is slow and coarse-grained. In con- rametervalues. Theusualapproachformodelselec-
+trast,Bayesianmethodsallowefficientmodel
+tioninfrequentistmethodsistoemploygridsearch
+selection by maximizing the evidence on the onsomedevelopmentdatadisjointfromthetraining
+trainingdatathroughgradient-basedmethods.
+data. This approach can rapidly become impracti-
+In this paper we show how to perform this
+cal when using complex kernels which increase the
+in the context of structural kernels by using
+Gaussian Processes. Experimental results on numberofmodelhyperparameters. Gridsearchalso
+tree kernels show that this procedure results requires the user to explicitly set the grid values,
+inbetterpredictionperformancecomparedto making it difficult to fine tune the hyperparameters.
+hyperparameter optimization via grid search. Recent advances in model selection tackle some of
+Theframeworkproposedinthispapercanbe
+theseissues, buthaveseverallimitations(see§6for
+adaptedtootherstructuresbesidestrees, e.g.,
+details).
+stringsandgraphs,therebyextendingtheutil-
+ityofkernel-basedmethods. Our proposed approach for model selection re-
+lies on Gaussian Processes (GPs) (Rasmussen and
+Williams,2006),awidelyusedBayesiankernelma-
+1 Introduction
+chine. GPs allow efficient and fine-grained model
+Kernel-basedmethodsareastaplemachinelearning selectionbymaximizingtheevidenceonthetraining
+approach in Natural Language Processing (NLP). datausinggradient-basedmethods,droppingthere-
+Frequentist kernel methods like the Support Vector quirementfordevelopmentdata. AsaBayesianpro-
+Machine (SVM) pushed the state of the art in many cedure, GPs also naturally balance between model
+NLP tasks, especially classification and regression. capacity and generalization. GPs have been shown
+One interesting aspect of kernels is their ability to toachievestateoftheartperformanceinvariousre-
+bedefineddirectlyonstructuredobjectslikestrings, gressiontasks(Hensmanetal.,2013;CohnandSpe-
+treesandgraphs. Thisapproachhasthepotentialto cia,2013). Therefore,webaseourapproachonthis
+move the modelling effort from feature engineering framework.
+to kernel engineering. This is useful when we do While prediction performance is important to
+not have much prior knowledge about how the data consider (as we show in our experiments), we are
+1v13120.8051:viXra
+mainly interested in two other significant aspects solutionfortheposterior,namely
+thatareenabledbyourapproach:
+• Gradient-basedmethodsaremoreefficientthan
+grid search for high dimensional spaces. This ∗ ∗ ∗ n ∗
+allowsustoeasilyproposenewrichkernelex-
+where x and y are respectively the test input
+tensions that rely on a large number of hyper-
+and its response variable, K is the Gram matrix
+parameters, which in turn can result in better
+corresponding to the training inputs and k =
+modellingcapacity.
+[(cid:104)x ,x (cid:105),(cid:104)x ,x (cid:105),...,(cid:104)x ,x (cid:105)] is the vector of
+1 ∗ 2 ∗ n ∗
+• Since the model selection process is now fine- kernel evaluations between the test input and each
+traininginput.
+grained,wecaninterprettheresultinghyperpa-
+rametervalues,dependingonhowthekernelis A key property of GP models is their ability to
+defined. perform efficient model selection. This is achieved
+by employing gradient-based methods to maximize
+Inthisworkwefocusontreekernels,whichhave themarginallikelihood,
+been successfully used in a number of NLP tasks
+(see§6). Inmostcases,thesekernelsareusedasan
+SVMcomponentandmodelselectionisnotconsid-
+ered an important issue. Hyperparameters are usu-
+whereθrepresentsthevectorofmodelhyperparam-
+ally set to default values, which work reasonably
+eters and y is the vector of response variables from
+well in terms of prediction performance. However,
+thetrainingdata. ForaGaussianlikelihood,wecan
+this is only possible due to the small number of hy-
+take the log of the expression above to obtain in
+perparametersthesekernelscontain.
+closed-form1,
+We perform experiments comprising synthetic
+data (§4) and two real NLP regression tasks: Emo-
+tionAnalysis(§5.1)andTranslationQualityEstima-
+tion(§5.2). Ourfindingsshowthatourapproachout- − yTG−1y − log|G| − log2π
+performsSVMsusingthesamekernels.
+(cid:124) (cid:123)(cid:122) (cid:125) (cid:124) (cid:123)(cid:122) (cid:125) (cid:124) (cid:123)(cid:122) (cid:125)
+datafit complexitypenalty constant
+2 GaussianProcessRegression
+whereG = K+σ I. Thedatafittermisdependent
+Our definition of GPs closely follows that of
+on the training response variables, while the com-
+Rasmussen and Williams (2006). Consider
+plexity penalty term relies only on the kernel and
+a setting where we have a dataset X =
+training inputs. Since the first two terms have con-
+{(x ,y ),(x ,y ),...,(x ,y )}, where x is a d-
+1 1 2 2 n n i flictingobjectives,optimizingthelogmarginallike-
+dimensional input and y the corresponding out-
+i lihoodwillnaturallyachieveacompromiseandthus
+put. Our goal is to infer an underlying function
+limitoverfitting(withouttheneedforanyvalidation
+f : Rd → R to explain this data, i.e. f(x ) ≈ y .
+i i steporadditionaldata).
+Formally,f isdrawnfromaGPprior,
+Toenablegradient-basedoptimizationweneedto
+derivethegradientsw.r.t. thehyperparameters:
+where µ(x) is the mean function, which is usually logp(y|X,θ) = yTG−1 G−1y
+the0constant,andk(x,x(cid:48))isthekernelfunction. j j
+(cid:18) (cid:19)
+In a regression setting, we assume that the res- − trace G−1 .
+ponsevariablesarenoisylatentfunctionevaluations, j
+i.e., y = f(x ) + η, where η ∼ N(0,σ2) is
+i i n 1SeeRasmussenandWilliams(2006,pp. 113-114)forde-
+added white noise. We assume a Gaussian likeli-
+tailsonthederivationofthisformulaandalsoitscorrespondent
+hood, which allows us to obtain a closed formula gradientcalculation.
+ThegradientsofGdependontheunderlyingker- Tree Fragments
+nel. Therefore we can employ any kind of valid S A B S S S S
+kernel in this procedure as long as its gradients can
+be computed. This not only allows for fine-tuning
+A B a b A B A B A B A B
+ofhyperparametersbutalsoallowsforkernelexten-
+sionswhicharerichlyparameterized.
+a b a b a b
+3 TreeKernels
+Figure 1: An example tree and the respective set of tree
+fragmentsdefinedbyaSSTK.
+TheseminalworkonConvolutionKernelsbyHaus-
+sler (1999) defines a broad class of kernels on dis-
+cretestructuresbycountingandweightingthenum- hyperparameter λ. The original goal of λ is to act
+berofsubstructurestheyshare. ApplyingHaussler’s as a decay factor that penalizes contributions from
+formulation to trees we reach a general formula for larger fragments cf smaller ones (and therefore, it
+atreekernelbetweentwotreest 1 andt 2 ,namely should be in the [0,1] interval). Without this factor,
+the resulting distribution over tree pairs is skewed,
+1 2 1 2 giving extremely large values when trees are equal
+f∈F and rapidly decreasing for small differences over
+fragment counts. The decay factor helps to spread
+where F is the set of all tree fragments, c (f) and
+this distribution, effectively giving smaller weights
+c (f)returnthecountsforfragmentf intreest and
+tolargerfragments.
+t , respectively, and w(f) assigns a weight to frag-
+Thefunction∆canbedefinedrecursively,
+ment f. In other words, we can consider the ker-
+nelaweighteddotproductovervectorsoffragment 
+counts. The actual fragment set F is deliberately   0 pr(n 1 ) (cid:54)= pr(n 2 )
+left undefined: different concepts of tree fragments λ pr(n 1 ) = pr(n 2 )∧
+∆(n ,n ) =
+definedifferenttreekernels.   preterm(n 1 )
+In this paper, we will focus on Subset Tree Ker- 
+λg(n ,n ) otherwise,
+nels (henceforth SSTK), first introduced by Collins
+and Duffy (2001). This kernel considers tree frag- where pr(n) is the grammar production at node n
+ments that contains complete grammar rules (see and preterm(n) returns true if n is a pre-terminal
+Figure1foranexample). Considerthesetofnodes node. Thefunctiong isdefinedasfollows:
+in the two trees as N and N respectively. We de-
+fine I (n) as an indicator function that returns 1 if |n1|
+i (cid:89)
+fragment f i ∈ F has root n and 0 otherwise. A g(n 1 ,n 2 ) = (α+∆(ci n1 ,ci n2 )), (3)
+SSTKcanthenbedefinedas: i=1
+(cid:88) (cid:88) where |n| is the number of children of node n and
+1 2 1 2 ci is the ith child of node n. This recursive defini-
+n1∈N1n2∈N2 n
+tion is calculated efficiently by employing dynamic
+(cid:88) s(i) programmingtocacheintermediate∆results.
+where ∆(n 1 ,n 2 ) = λ 2 I i (n 1 )I i (n 2 )
+Equation 3 also adds another hyperparameter, α.
+This hyperparameter was introduced by Moschitti
+ands(i)isthenumberoffragmentsiniwithatleast (2006b)3 as a way to select between two differ-
+onechild2.
+ent tree kernels. If α = 1, we get the original
+The formulation in Equation 2 is the same as the SSTK,ifα = 0,thenweobtaintheSubtreeKernel,
+one shown in Equation 1, except that we are now whichonlyallowsfragmentswithterminalsymbols
+restricting the weights w(f) to be a function of a
+3Inhisoriginalformulation,thishyperparameterwasnamed
+2SeePighinandMoschitti(2010)fordetailsandaproofon σbuthereweuseαtonotconfuseitwiththeGPnoisehyper-
+thisderivation. parameter.
+as leaves. We can also interpret the Subtree Kernel λ S = 1 λ S = .5 λ S = 2
+as a “sparse” version of the SSTK, where the “non- λ A = 1 λ A = 1 λ A = 1
+subtree”fragmentshavetheirweightsequaltozero. λ B = 1 λ B = 1 λ B = 1
+Even though fragment weights are affected by A→a 1 1 1
+bothkernelhyperparameters,previousworkdidnot B→b 1 1 1
+discusstheireffects. Theusualprocedurefixesαto S→AB 1 0.5 2
+1 (selecting the original SSTK) and sets λ to a de- S→(Aa)B 1 0.5 2
+faultvalue(around0.4). Asexplainedin§2,theGP S→A(Bb) 1 0.5 2
+model selection procedure enables us to learn fine- S→(Aa)(Bb) 1 0.5 2
+grainedvaluesforthesehyperparameters,whichcan k(t,t) 6 3 18
+leadtobetterperformingmodelsandaidinterpreta-
+tion. Furthermore, it also allows us to extend these Table1: Resultingfragmentweightedcountsfortheker-
+nelevaluationk(t,t),fordifferentvaluesofhyperparam-
+kernels by adding new hyperparameters. We pro-
+eters,wheretisthetreeinFigure1.
+poseonesuchkernelinthenextSection.
+3.1 Symbol-awareSubsetTreeKernel
+3.2 KernelGradients
+While varying the SSTK hyperparameters can lead
+Toenablehyperparameteroptimizationviagradient
+to different weight schemes, they do that in a very
+descent we must provide gradients for the kernels.
+coarse way. For some applications, it may be nec-
+InthisSectionwederivethegradientsforSASSTK.
+essary to give more weight to specific fragments
+FromEquation2weknowthatthekernelisadou-
+or set of fragments (e.g., NPs being more impor-
+ble summation over the ∆ function. Therefore all
+tant than ADVP in an information extraction set-
+gradients are also double summations, but over the
+ting). TheSymbol-awareSubsetTreeKernel(hence-
+gradients of∆. We can obtain these in a vectorized
+forth, SASSTK),whichweintroducehere, allowsa
+way, by considering the gradients of the hyperpa-
+more fine-grained control over the weights by em-
+rametervectorsλandαover∆. Letk bethenum-
+ploying one λ and one α hyperparameter for each
+ber of symbols considered in the model and λ and
+non-terminalsymbolinthetrainingdata. Thecalcu-
+α be k-dimensional vectors containing the respec-
+lationusesasimilarrecursiveformulatotheSSTK,
+tivehyperparameters.
+namely:
+In the following, we use the notation ∆ as a
+ shorthand for ∆(ci ,ci ) and we also omit the pa-
+  0 pr(n 1 ) (cid:54)= pr(n 2 ) n1 n2
+  λ pr(n ) = pr(n )∧ rametersofg x . Westartwiththeλgradient:
+∆(n ,n ) =
+    λ x g x (n 1 ,n 2 ) o p th r e e r te w r i m se ( , n 1 ) ∂∆       0 u p p r r ( ( n n 1 1 ) ) (cid:54)= = p p r r ( ( n n 2 2 ) )∧
+wherexisthesymbolatnoden 1 and ∂λ  preterm(n 1 )
+|n1|    x x otherwise,
+x 1 2 x n1 n2
+i=1 where x is the symbol at n 1 , g x is defined in Equa-
+The SASSTK can be interpreted as a generaliza- tion 4 and u is the k-dimensional unit vector with
+tionoftheSSTK:wecanrecoverthelatterbytying the element corresponding to symbol x equal to 1
+all λ and setting all α = 1. By employing different and all others equal to 0. The gradient in the third
+hyperparametervaluesforeachspecificsymbol,we caseisdefinedrecursively,
+can effectively modify the weights of all fragments
+∂(λ g ) ∂g
+wherethesymbolappears. Table1showsanexam- = ug x +λ x
+plewhereweunrolledakernelcomputationintoits
+corresponding feature space, showing the resulting (cid:88)
+= ug +λ .
+weightedcountsforeachfeature. α x +∆ i ∂λ
+Theαgradientisderivedinasimilarway, on the SSTK (and our proposed SASSTK), our ap-
+proachcaneasilybeextendedtotheseotherkernels,
+  0 pr(n 1 ) (cid:54)= pr(n 2 )∨ aslongasallthecorrespondingrecursivedefinitions
+= preterm(n 1 ) aredifferentiable.
+   ∂(λ x g x ) otherwise,
+∂α 4 SyntheticDataExperiments
+and the gradient at the second case is also defined
+A natural question that arises in the proposed
+recursively,
+method is how much data is needed to accurately
+∂(λ g ) ∂g learn the kernel hyperparameters. To answer this
+∂α x ∂α question,werunasetofexperimentsusingsynthetic
+(cid:19) data. We generate this data by using a set of 1000
+= λ u+ . naturallanguagesyntactictrees,wherewefixaran-
+i=1 x i dom subset of 200 instances for testing and use the
+remaining800instancesastraining. Foreachtrain-
+Gradients can be efficiently obtained using dy-
+ingsetsizewedefineaGPoverthefulldataset,sam-
+namicprogramming. Infact,theycanbecalculated
+pleafunctionfromitandusethefunctionoutputas
+atthesametimeas∆toimproveperformancesince
+the response variable for each tree. We try two dif-
+they all share many terms in their derivations. Fi-
+ferent GP priors, one using the SSTK and another
+nally,wecaneasilyobtainthegradientsfortheorig-
+oneusingtheSASSTK.
+inalSSTKbylettingu = 1.
+The conditions above provide a controlled envi-
+3.3 KernelNormalization ronmenttocheckthemodellingcapacitiesofourap-
+proach since we know the exact distribution where
+Itiscommonpracticewhenusingtreekernelstonor-
+the data comes from. The reasoning behind these
+malizethekernel. Thishelpsreducetherandomef-
+experiments is that to be able to provide benefits in
+fect of tree size. Normalization can be achieved us-
+ingthefollowing,wherekˆ
+isthenormalizedkernel:
+real tasks, where the data distribution is not known,
+our models have to be learnable in this controlled
+kˆ(t ,t ) = 1 2 . settingaswellusingareasonableamountofdata.
+1 2 (cid:112)
+k(t 1 ,t 1 )k(t 2 ,t 2 ) Finally, we also provide an empirical evaluation
+comparing the speed performance between our ap-
+Toapplythisnormalizedversionintheoptimiza-
+proachandgridsearch.
+tionprocedurewemustalsoderivegradientsforthe
+normalization function. In the following equation,
+4.1 SSTKPrior
+we use k and kˆ as a shorthand for k(t ,t ) and
+kˆ(t ,t ),respectively: OurfirstexperimentsuseaSSTKasthekernelwith
+λ = 0.001,α = 1 and σ2 = 0.01. After obtaining
+∂k 12 ∂k 11 ∂k 22 theinputtreesandtheirsampledlabels,wedefinea
+∂kˆ k 22 +k 11
+12 = √ ∂θ −kˆ ∂θ ∂θ . new GP model using only the training data plus the
+∂θ k 11 k 22 2k 11 k 22 obtainedresponsevariables,thistimeusingaSSTK
+with randomized hyperparameter values. Then we
+optimize the GP and check if the learned hyperpa-
+3.4 OtherExtensions
+rametersareclosetotheoriginalones,using10ran-
+Many other structural kernels rely on recursive def- dom restarts to limit the effect of local optima. We
+initionsanddynamicprogrammingtoperformtheir also use the optimized GP to predict response vari-
+calculations. Examples include other tree kernels ablesonthetestsetandmeasureRootMeanSquared
+like the Partial Tree Kernel (Moschitti, 2006a) and Error(RMSE).Ourhypothesisisthatwithareason-
+string kernels like the ones defined on character n- able sample size we can retrieve the original hyper-
+grams(Lodhietal.,2002)orwordsequences(Can- parameter values and obtain low RMSE. For each
+cedda et al., 2003). While in this paper we focus trainingsetsize,werepeattheexperiment20times.
+Figure 2 shows the results of these experiments. 4.2 SASSTKPrior
+Forsmallsizesthevarianceintheresultinghyperpa-
+rameter values is large but as soon as we reach 200 The large number of hyperparameters of the
+instances we are able to retrieve the original values SASSTK makes it more prone to optimization and
+withhighconfidence. Inotherwords,inanidealset- overfittingissueswhencomparedtotheSSTK.This
+ting200instancesareenoughtolearnthekernel. It raises the question of how much data is needed to
+isalsointerestingtonotethattestRMSEafteropti- justifyitsuse. Toaddressthisquestion,werunsim-
+mization steadily decreases as we increase training ilarexperimentstothoseabovefortheSSTK,except
+data size. This shows that if one is more interested that now we sample from a GP using a SASSTK as
+inpredictionsthemselves,itisstillworthoptimizing thekernel.
+hyperparametersevenifthetrainingdataissmall. Instead of optimizing all hyperparameters freely
+we use a simpler version where we tie λ and α for
+each symbol to the same value, except for the sym-
+bol ’S’. Effectively this version has one extra λ and
+oneextraα(henceforthλ andα )whencompared
+to the SSTK. The GP prior hyperparameter values
+are set to λ = 0.001,λ = 0.5,α = 0.1,α = 1
+and σ2 = 0.01. For each training set size, we train
+two GPs, one using this SASSTK and one using
+the original SSTK, optimize them using 10 random
+restartsandmeasureRMSEonthetestset.
+ResultsareshowninFigure3. Foralltrainingset
+sizestheSASSTKreacheslowerRMSEthanSSTK,
+with a substantial difference after reaching 100 in-
+stances. Thisshowsthatevenforsmalldatasetsour
+proposed kernel manages to capture aspects which
+cannotbeexplainedbytheoriginalSSTK.Notethat
+thisisanidealsetting,andrealdatasetsmayneedto
+be larger to realize gains from SASSTK. Neverthe-
+less,thesearepromisingresultssincetheygiveevi-
+denceofasmalllowerboundonthedatasetsizefor
+SASSTKtobeeffective.
+Figure 2: Results of synthetic experiments optimizing
+SSTK. The x axes correspond to different training set
+Figure3: Resultsfromsyntheticexperimentscomparing
+sizes and the the y axes are the obtained hyperparame-
+SSTKandSASSTK.Thexaxisistrainingsetsizewhile
+ter values in the first three plots and RMSE in the last
+theyaxiscorrespondstoRMSE.
+plot. Dashedlinesshowtheoriginalhyperparameterval-
+ues. PointsareoffsetinRMSEchartforlegibility.
+4.3 PerformanceExperiments timetoachievethesamepredictionsobtainedbythe
+GP model. In real settings, SVMs predictions tend
+To provide an overview of how efficient is the
+to be more on par with the ones provided by a GP
+gradient-based method compared to grid search we
+(asshownin§5)butneverthelessthesefiguresshow
+also run a set of experiments measuring wall clock
+that the GP can be much more time efficient when
+training time vs. RMSE on a test set. For both GP
+optimizinghyperparametersofatreekernel.
+andSVMmodelsweemploytheSSTKasthekernel
+Animportantperformanceaspecttotakeintoac-
+and we use the same synthetic data from the previ-
+ousexperiments4. Weperform20runs,keepingthe count is parallelization. Grid search is embarass-
+ingly parallelizable since each grid point can run in
+test set as the same 200 instances for all runs and
+a different core. However, the GP optimization can
+randomly sampling 200 instances from the remain-
+alsobenefitfrommultiplecoresbyrunningeachker-
+inginstancesastrainingdata.
+nel computation inside the Gram matrix in parallel.
+Figure 4 shows the curves for both GP and SVM
+To keep the comparisons simpler, the results shown
+models. TheGPcurveisobtainedbyincreasingthe
+inthissectionuseasinglecorebutallexperimentsin
+maximumnumberofiterationsofthegradient-based
+§5 employ parallelization in the Gram matrix com-
+method (in this case, L-BFGS) and the SVM curve
+putationlevel(forbothSVMandGPmodels).
+is obtained by increasing the granularity of the grid
+size.
+5 NLPExperiments
+OurexperimentswithNLPdataaddresstworegres-
+sion tasks: Emotion Analysis and Quality Estima-
+tion. For both tasks, we use the Stanford parser
+(Manning et al., 2014) to obtain constituency trees
+forallsentences. Also,ratherthanusingdataofficial
+splits,weperform5-foldcross-validationinorderto
+obtainmorereliableresults.
+5.1 EmotionAnalysis
+ThegoalofEmotionAnalysisistoautomaticallyde-
+tect emotions in a text (Strapparava and Mihalcea,
+2008). This problem is closely related to Opinion
+Figure4: Resultsfromperformanceexperiments. Thex
+Mining (Pang and Lee, 2008), with similar appli-
+axiscorrespondstowallclocktimeinsecondsanditisin
+log scale. The y axis shows RMSE on the test set. The cations,butitisusuallydoneatamorefine-grained
+bluedashedlinecorrespondstotheRMSEvalueobtained levelandinvolvesthepredictionofasetoflabelsfor
+afterL-BFGSconverged.Errorbarsareobtainedbymea- each text (one for each emotion) instead of a single
+suring one standard deviation over the 20 runs made in
+label.
+eachexperiment.
+Beck et al. (2014a) used a multi-task GP for this
+task with a bag-of-words feature representation. In
+We can see that optimizing the GP model is con-
+theory,itispossibletocombinetheirmulti-taskker-
+sistently much faster than doing grid search on the
+nelwithourtreekernels,buttokeepthefocusofthe
+SVM model (notice the logarithmic scale), even
+experiments on testing tree kernel approaches, here
+thoughitshowssomevariancewhenlettingL-BFGS
+we use independently trained models, one per emo-
+runforalargernumberofiterations. TheGPmodel
+tion.
+also is able to better predictions in general. Even
+when taking the variances into account, grid search Dataset We use the dataset provided by the “Af-
+wouldstillneedaround10timesmorecomputation fective Text” shared task in SemEval2007 (Strap-
+parava and Mihalcea, 2007), which is composed of
+4ForspecificdetailsontheSVMmodelsusedinallexperi-
+1000newsheadlinesannotatedintermsofsixemo-
+mentsperformedinthispaperwereferthereadertoAppendix
+A. tions: Anger, Disgust, Fear, Joy, Sadness and Sur-
+prise. Foreachemotion,ascorebetween0and100 even though the optimized marginal likelihood was
+is given, 0 meaning total lack of emotion and 100, higher. This is evidence that the SASSTK model
+maximally emotional. Scores are mean-normalized is overfitting the training data, probably due to its
+beforetrainingthemodels. largenumberofhyperparameters.
+Models Weperformexperimentsusingthefollow-
+ingtreekernels:
+SVMBOW 0.5690
+SVMSSTK 0.5254
+• SSTK: the SSTK formulation introduced by
+Moschitti(2006b); GPBOW 0.5891
+• SASSTK full : our proposed Symbol-Aware GPSSTK 0.5713
+SSTK; GPSASSTK 0.5118
+GPSASSTK 0.5710
+• SASSTK : sameasbefore,butusingonlytwo
+S (fixedα = 1)
+λ and two α hyperparameters: one for sym-
+GPSSTK 0.5093
+bols corresponding to full sentences5 and an-
+GPSASSTK 0.5435
+other for all other symbols. This configuration
+GPSASSTK 0.5225
+issimilartothatinSection4.2.
+Table 2: Pearson’s correlation scores for the Emotion
+For all kernels, we also use a variation fixing the α
+Analysistask(higherisbetter).
+hyperparametersto1toemulatetheoriginalSSTK.
+Another interesting finding in Table 2 is that fix-
+Baselines and evaluation Our results are com-
+ing the α values often harms performance. Inspect-
+paredagainstthreebaselines:
+ing the free α models showed that the values found
+• SVMSSTK:aSVMusinganSSTKkernel. by the optimizer were very close to zero. This in-
+dicates that the model selection procedure prefer
+• SVMBOW:sameasbefore,butusinganRBF
+towards giving smaller weights to incomplete tree
+kernelwithabag-of-wordsrepresentation.
+fragments. We can interpret this as the model se-
+lecting a more lexicalized feature space, which also
+• GPBOW:sameasSVMBOWbutusingaGP
+explains why the GP RBF model on bag-of-words
+instead.
+performedthebestinthistask.
+The SVM models are trained using a wrapper for Finally, to understand how the optimized kernels
+LIBSVM6 (Chang and Lin, 2001) provided by the could provide more interpretability, Table 3 shows
+scikit-learntoolkit7 (Pedregosaetal.,2011)andop- the top 15 λ values obtained by the SASSTK full
+timized via grid search. Following previous work, (fixed α variant) with their corresponding symbols.
+we use Pearson’s correlation coefficient as evalua- Inthisspecificcasethekerneldoesnotgivethebest
+tion metric. Pearson’s scores are obtained by con- performance so there are limitations in doing a full
+catenatingallsixemotionsoutputstogether. linguisticanalysis. Nevertheless,webelievethisex-
+Table 2 shows the results. The best GP model ample shows the potential for developing more in-
+with tree kernels outperforms the SVMs, showing terpretablekernels. Thisisespeciallyinterestingbe-
+thatthefine-grainedmodelselectionprocedurepro- cause these models take into account a much richer
+videdbytheGPmodelsishelpfulwhendealingwith feature space than what it is allowed by parametric
+tree kernels. However, using the SASSTK models models.
+donothelpinthecaseoffreeαandtheSASSTK
+5.2 QualityEstimation
+actually performs worse than the original SSTK,
+ThegoalofQualityEstimationistoprovideaqual-
+5Inthisdataset,symbolsareS,SQ,SBARQandSINV.
+6www.csie.ntu.edu.tw/˜cjlin/libsvm ity prediction for new, unseen machine translated
+JJR 0.8333 WHADVP 0.5004 VBP 0.4653 Models Since our data consists of pairs of trees,
+PRP$ 0.6933 QP 0.5001 WHNP 0.4508
+our models in this task use a pair of tree kernels.
+WDT 0.6578 JJS 0.4996 NN 0.4274
+We combine these two kernels by either summing
+RBR 0.5445 NNS 0.4961 JJ 0.4021
+VBG 0.5163 . 0.4777 SQ 0.4000 or multiplying them. As for underlying tree ker-
+nels, we try both SSTK and SASSTK . As in the
+Table 3: Top 15 symbols sorted according to their ob-
+Emotion Analysis task, we also experiment with a
+tained λ values in the SASSTK model with fixed α.
+full setofkernelconfigurationswiththeαhyperparam-
+The numbers are the corresponding λ values, averaged
+eters fixed at 1. We also test models that combine
+overallsixemotions.
+our tree kernels with an RBF kernel on a set of 17
+featuresextractedusingtheQuEstframework(Spe-
+ples of applications include filtering machine trans-
+cia et al., 2013). These features are part of a strong
+latedsentencesthatwouldrequiremorepost-editing
+baselinemodelusedbytheWMT14sharedtask.
+effort than translation from scratch (Specia et al.,
+2009), selecting the best translation from different Baselinesandevaluation Wecompareourresults
+MTsystems(Speciaetal.,2010)orbetweenanMT withanumberofSVMmodels:
+system and a translation memory (He et al., 2010),
+• SVMSSTK:sameasintheEmotionAnalysis
+and highlighting segments that need revision (Bach
+task,usingeitherasum(+)oraproduct(×)of
+et al., 2011). While various quality metrics exist,
+SSTKs.
+herewefocusonpost-editingtimeprediction.
+Tree kernels have been used before in this task
+• SVM RBF: this is an SVM trained on the 17
+(with SVMs) by Hardmeier (2011) and Hardmeier
+featuresextractedbyQuest.
+et al. (2012). While their best models combine tree
+kernelswithasetofexplicitfeatures,theyalsoshow • SVM RBF SSTK: a combination of the two
+goodresultsusingonlythetreekernels. Thismakes modelsabove.
+Quality Estimation a good benchmark task to test
+For further comparison, we also show results ob-
+ourmodels.
+tained using a GP model and an RBF kernel on the
+Datasets We use two publicly available datasets QuEst-only features. Following previous work, we
+containingpost-editedmachinetranslatedsentences. measure prediction performance using both Mean
+Botharecomposedofasetofsourcesentences,their AbsoluteError(MAE)andRMSE.
+machine translated outputs and the corresponding The prediction results are given in Table 4. They
+post-editingtime. indicateanumberofinterestingfindings:
+• Forthefr-endataset,theGPmodelscombining
+• French-English (fr-en): This dataset, de-
+treekernelswithanRBFkerneloutperformall
+scribedin(Specia,2011),contains2524French
+other models. Results for the en-es dataset are
+sentences translated into English and post-
+less consistent, probably due to the small size
+editedbyanovicetranslator.
+of the dataset, but on average they are better
+thantheirSVMcounterparts.
+• English-Spanish (en-es): This dataset was
+usedintheWMT14QualityEstimationshared • The SVMs using a combination of kernels
+task (Bojar et al., 2014), containing 858 sen- performs worse than using the RBF kernel
+tencestranslatedfromEnglishintoSpanishand alone. Inspecting the models, we found that
+post-editedbyanexperttranslator. grid search actually harms performance. For
+instance,forthefr-endataset,MAEandRMSE
+For each dataset, post-editing times are first di- for the RBF + SSTK × model before grid
+videdbythetranslationoutputlength(obtainingthe searchare0.4681and0.6016,respectively. On
+post-editing time per word) and then mean normal- the other hand, for this dataset all GP models
+ized. achievebetterresultsafteroptimization.
+• Unlike in the Emotion Analysis task, fixing α λ src λ tgt
+results in better performance, even though the GPSSTK+ 0.1394 0.3108
+resulting models have lower marginal likeli- GPSSTK× 0.1405 0.2641
+hoodthantheoneswithfreeα. Thesameeffect
+Table5:LearnedhyperparametersfortheGPSSTKmod-
+happened when comparing the SASSTK mod-
+els in the fr-en dataset, with α fixed at 1. λ and λ
+els with the SSTK ones for the en-es dataset.
+arethehyperparameterscorrespondingtothekernelson
+Bothcasesareevidenceofmodeloverfitting. thesourceandtargetparsetrees,respectively. Thevalues
+shownareaveragedoverthecross-validationresults.
+French-English English-Spanish
+MAE RMSE MAE RMSE
+tion for the marginal likelihood does help limiting
+overfitting, it does not prevent it completely. Small
+RBF 0.4610 0.5944 0.7831 1.0238
+SSTK+ 0.4710 0.6006 0.7777 1.0820 datasets or invalid assumptions about the Gaussian
+SSTK× 0.4681 0.6016 0.7884 1.1044 distributionofthedatamaystillleadtopoorlyfitting
+RBFSSTK+ 0.5146 0.6267 0.8077 1.0295
+models. Anothermeansofreducingoverfittingisby
+RBFSSTK× 0.5186 0.6299 0.8367 1.0427
+takingafullyBayesianapproachinwhichhyperpa-
+GPRBF 0.4555 0.5830 0.7842 1.0735
+(GPfreeα) rametersareconsideredasrandomvariablesandare
+SSTK+ 0.4789 0.5912 0.7551 1.0281 marginalizedout(Osborne,2010);thisisaresearch
+SSTK× 0.4804 0.5843 0.7440 1.0008 directionweplantopursueinthefuture.8
+SASSTK + 0.4756 0.5889 0.8096 1.0754
+SASSTK × 0.4797 0.5868 0.7484 1.0102
+S 5.4 ExtensionstoOtherTasks
+SSTK+ 0.4694 0.5808 0.7614 1.0019 The GP framework introduced in Section 2 can
+SSTK× 0.4708 0.5733 0.7205 0.9870 be extended to non-regression problems by chang-
+SASSTK + 0.4758 0.5888 0.8242 1.0912
+S ing the likelihood function. For instance, models
+SASSTK × 0.4699 0.5751 0.7469 1.0280
+for classification (Rasmussen and Williams, 2006,
+RBFSSTK+ 0.4408 0.5651 0.7591 1.0469 Chap. 3), ordinal regression (Chu and Ghahramani,
+RBFSSTK× 0.4443 0.5659 0.7389 1.0302 2005) and structured prediction (Altun et al., 2004;
+RBFSASSTK + 0.4406 0.5648 0.7692 1.0682
+S Bratie`res et al., 2013) were proposed in the liter-
+RBFSASSTK × 0.4440 0.5658 0.7682 1.0628
+S ature. Since the likelihood is independent of the
+Table 4: Error scores for the Quality Estimation task kernel, a natural future step is to apply the kernels
+(lowerisbetter). Resultsareintermsofpost-editingtime andmodelsintroducedinthispapertodifferentNLP
+perword. Boldscoresarethebestonesforeachdataset. tasks.
+Inlightofthat,wedidinitialexperimentsincon-
+We also inspect the resulting hyperparameters to
+stituency parsing reranking9. The first results were
+obtaininsightsaboutthefeaturesusedbythemodel.
+inconclusive but we do believe this is because we
+Table 5 shows the optimized λ values for the GP
+employed naive approaches using classification (1-
+SSTKmodelswithfixedαforthefr-endataset. The
+bestresultvs. all)andregression(usingPARSEVAL
+λ values obtained are higher for the target sentence
+metrics as the response variable) models. A more
+kernels than for the source sentence ones. We can
+appropriatewaytotacklethistaskisbyemployinga
+interpret this as the model giving preference to fea-
+reranking-basedlikelihoodandthisisadirectionwe
+turesfromthetargettreesinsteadofthesourcetrees,
+plantopursueinthefuture.
+whichiswhatwewouldexpectforthistask.
+6 RelatedWork
+5.3 Overfitting
+Both NLP tasks show evidence that the GP models Interest in model selection procedures for kernel-
+withlargenumberofhyperparameters(SASSTK based methods has been growing in the last years.
+inthecaseofEmotionAnalysisandthefreeαmod-
+8SeealsoRasmussenandWilliams(2006,Chap. 5)foran
+els in Quality Estimation) are overfitting the cor-
+in-depthdiscussiononthisissue.
+responding datasets. While the Bayesian formula- 9Wethanktheanonymousreviewersforthissuggestion.
+One widely used approach for that is Multiple Ker- representations,previousworkfocusedonthevecto-
+nel Learning (MKL) (Go¨nen and Alpaydın, 2011). rialinputsandappliedwell-knownkernelsforthese
+MKL is based on the idea of using combinations inputs, e.g. the RBF kernel. As shown on §5.2, our
+of kernels to model the data and developing algo- approachisorthogonaltothesepreviousones,since
+rithms to tune the kernel coefficients. This is dif- kernelscanbeeasilycombinedindifferentways.
+ferentfromourmethod,wherewefocusonlearning Itisimportanttonotethatwearenotthefirstones
+thehyperparametersofasinglestructuralkernel. An to combine GPs with kernels on structured inputs.
+approachsimilartoourswasproposedbyIgeletal. Driessens et al. (2006) employed a combination of
+(2007). They combine oligo kernels (a kind of n- GPs and graph kernels for reinforcement learning.
+gram kernel) with MKL, derive their gradients and However, unlike our approach, they did not attempt
+optimize towards a kernel alignment metric. Com- modelselection,evaluatingonlyafewhyperparam-
+pared to our approach, they restrict the length of etervaluesempirically.
+the n-grams being considered, while we rely on dy-
+7 Conclusions
+namic programming to explore the whole substruc-
+ture space. Also, their method does not take into
+ThispaperdescribesaBayesianapproachforstruc-
+accounttheunderlyinglearningalgorithm. Another
+tural kernel learning, based on Gaussian Processes
+recentapproachproposedformodelselectionisran-
+foreasymodelselection. Experimentsapplyingour
+dom search (Bergstra and Bengio, 2012). Like grid
+models to synthetic data showed that it is possible
+search, it has the drawback of not employing gra-
+to learn structural kernel hyperparameters using a
+dient information, as it is designed for any kind of
+fairly small amount of data. Furthermore we ob-
+hyperparameters(includingcategoricalones).
+tained promising results in two NLP tasks, includ-
+Structural kernels have been successfully em-
+ing Quality Estimation, where we beat the state of
+ployed in a number of NLP tasks. The original
+the art. Finally, we showed how these rich parame-
+SSTK proposed by Collins and Duffy (2001) was
+terizationscanleadtomoreinterpretablekernels.
+used to rerank the output of syntactic parsers. Re-
+Beyond empirical improvements, an important
+cently, this reranking idea was also applied to dis-
+goal of this paper is to present a method that en-
+course parsing (Joty and Moschitti, 2014). Other
+ables new kernel developments through the exten-
+tree kernel applications include Semantic Role La-
+sionofthenumberofhyperparameters. Wefocused
+belling(Moschittietal.,2008)andRelationExtrac-
+on the Subset Tree Kernel, proposing an extension
+tion (Plank and Moschitti, 2013). String kernels
+and then deriving its gradients. This approach can
+were mostly used in Text Classification (Lodhi et
+beappliedtoanystructuralkernel,aslongasgradi-
+al., 2002; Cancedda et al., 2003), while graph ker-
+ents are available. It is our hope that this work will
+nels have been used for recognizing Textual Entail-
+serve as a starting point for future developments in
+ment (Zanzotto and Dell’Arciprete, 2009). How-
+theseresearchdirections.
+ever, these previous works focused on frequentist
+methods like SVM or voted perceptron while we

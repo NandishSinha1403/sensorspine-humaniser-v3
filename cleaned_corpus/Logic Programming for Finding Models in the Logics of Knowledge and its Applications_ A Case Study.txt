@@ -1,0 +1,610 @@
+1v0073.7001:viXra
+Underconsideration for publication in Theory and Practice of Logic Programming 1
+Logic Programming for Finding Models in the
+Logics of Knowledge and its Applications: A
+Case Study
+C. Baral, G. Gelfond E. Pontelli, T. Son
+Dept. Computer Science Dept. Computer Science
+Arizona State Univ. New Mexico State Univ.
+submitted 1 January 2003; revised 1 January 2003; accepted 1 January 2003
+Thelogicsofknowledgearemodallogicsthathavebeenshowntobeeffectiveinrepresent-
+ingandreasoningaboutknowledgeinmulti-agentdomains.Relativelyfewcomputational
+frameworks for dealing with computation of models and useful transformations in logics
+of knowledge (e.g., to support multi-agent planning with knowledge actions and degrees
+of visibility) havebeen proposed. This paperexplores theuse of logic programming (LP)
+to encode interesting forms of logics of knowledge and compute Kripke models. The LP
+modeling is expandedwith useful operators on Kripkestructures, to support multi-agent
+planninginthepresenceofbothworld-alteringandknowledgeactions.Thisresultsinthe
+first everimplementation of a planner for this typeof complex multi-agent domains.
+KEYWORDS:planning, multi-agents, modal logics
+1 Introduction
+Modeling real-world planning scenarios that involve multiple agents has been an
+active area of research over the years. A considerable source of complexity derives
+fromthosescenarioswhereagentsneedtoreasonaboutknowledgeandcapabilities
+of other agents in order to accomplish their tasks. For example, a gambling agent
+needs to reason about what other players may know about the game in order to
+make the next move. Reasoning about knowledge and capabilities in multi-agent
+domains differs significantly from the same problem in single-agent domains. The
+complexity arises from two sources: (1) the representation of a planning domain
+needs to model not only the state of the world, but also the knowledge/beliefs of
+theagents;(2) theactionsperformedbyanagentmayleadtochangesinknowledge
+andbeliefs of differentagents,e.g.,actionlike announcements,cheating,lying,etc.
+Variousmodallogics havebeendevelopedforreasoningaboutknowledgeinmulti-
+agentsystems(see,e.g.,(Fagin et al. 1995;Halpern 1995;van Ditmarsch et al. 2007)).
+The semantics of severalof these logics is providedin terms of Kripke structures—
+where, intuitively, each Kripke structure captures the knowledge/beliefs of all the
+2 Baral, Gelfond, Pontelli, Son
+agents. Naturally, when reasoning about knowledge of multiple agents in a dy-
+namic environment, it is necessary to devise operations for updating Kripke struc-
+tures after the occurrence of an action, as suggested in (Baltag and Moss 2004;
+van Benthem et al. 2006;van Ditmarsch et al. 2007).Twoimportantquestions,that
+have been less frequently considered, are: (1) how can one determine the initial
+model or the initial Kripke structure of a theory encoding the knowledge of the
+agents, and (2) what udpate operations on Kripke structures are necessary to lay
+the foundations of a high-level multi-agent action language.
+The dominant presence of Kripke structures in different formalizations of multi-
+agent domains indicates that any system employing modal logic for reasoning and
+planning in multi-agentdomains wouldneed to implement some operations for the
+manipulation of Kripke structures. The lessons learned in the research in single-
+agent domains suggest that a high-level action language for multi-agent domains
+could be very useful. The development of such high-level language does not only
+help in modeling but also providesa new opportunity for the developmentof plan-
+ning systems operating on top of this language. The complexity of various rea-
+soning problems in modal logics (e.g., satisfaction, validity, etc.) and the difficulty
+in updating a Kripke structure after the occurrence of an event provide a com-
+putational challenge for logic programming. It is interesting to observe that, al-
+though there have been a few implementations of temporal logics in ASP (e.g.,
+(Heljanko and Niemela¨ 2003;Son et al. 2006)), to the best of ourknowledge,there
+has been no attempt in using logic programming for computing models of modal
+logicsexcept in ourrecentwork (Baral et al. 2010b). Our initial experience reveals
+that ASP-based implementation encounter severe difficulties, mostly associated to
+the grounding requirements of ASP. This also drives us to explore alternatives.
+In this paper, we investigatethe use of Prolog in the developmentof a computa-
+tionalframeworkforreasoningandplanninginmulti-agentdomains.Theadvantage
+of Prolog lies in that it allows the step-by-step examination of parts of a Kripke
+structure without the need of constructing the complete structure. We focus on
+two initial aspects: computing the initial model of a theory of knowledge and ma-
+nipulating Kripke structures. To this end, we will make use of a high-level action
+language for the specification of various types of actions in multi-agent domains.
+2 Background: The Logics of Knowledge
+In this paper we follow the notation established in (Fagin et al. 1995). The modal
+language LK builds on a signature that contains a collection of propositions F
+(oftenreferredto asfluents),the traditionalpropositionalconnectives,anda finite
+set of modal operators K for each i in a set A. We will occasionally refer to the
+elements in the set A as agents, and the pair hA,Fi as a multi-agent domain.
+LK formulae are defined as follows. A fluent formulae is a propositional for-
+mula built using fluents and the standard Boolean operators ∨,∧,¬, etc. A modal
+formulae is (i) a fluent formula, or (ii) a formula of the form K ψ where ψ is a
+modal formula, or (iii) a formula of the form ψ∨φ, ψ∧φ, or ¬ψ, where ψ and φ
+are modal formulae. In addition, given a formula ψ and a non-empty set α⊆A:
+LP and the Logics of Knowledge 3
+• E ψ denotes the set of formulae {K ψ |i∈α}.
+• C ψ denotesthe setofformulaeofthe formEkψ,wherek ≥1andEk+1ψ =
+EkE ψ (and E1ψ =E ψ).
+An LK theory is a set of LK formulae.
+The semanticsofLK theoriesis givenbyKripke structures.A Kripke structure
+is a tuple (S,π,{K } ), where S is a set of state symbols, π is a function that
+associates an interpretation of F to each state in S, and K ⊆S×S for i∈A.
+Different logic systems for reasoning with a LK theory have been introduced;
+these differ in the additional axioms that the models are required to satisfy, e.g.,
+• P: all instances of axioms of propositional logic
+• T: K ϕ⇒ϕ
+• 4: K ϕ⇒K K ϕ
+• D: ¬K false
+Forexample,thefollowingmodallogicsystemsarefrequentlyused(Halpern 1997):
+S5 satisfies all of the above axioms with the exception of (D), KD45 includes the
+four axioms K, 4, 5, and D, S4 includes the axioms K, T, and 4, and T includes
+the two axioms K and T.
+Given a Kripke structure M = (S,π,{K } ) and a state s ∈ S, we refer to
+the pair (M,s) asa pointed Kripke structure—ands is referredto as the real state.
+The satisfaction relation between LK -formulae and a pointed Kripke structure
+(M,s) is defined as follows: (i) (M,s) |= ϕ if ϕ is a fluent formula and π(s) |= ϕ;
+(ii) (M,s) |= K ϕ if (M,s′) |= ϕ for every s′ such that (s,s′) ∈ K ; and (iii)
+We will often view a Kripke structure M as a directed labeled graph, with S
+as its set of nodes, and whose set of arcs contains (s,i,t) iff (s,t) ∈ K . (s,i,t) is
+referred to as an arc, from the state s to the state t. We identify special types of
+Kripke structures depending on the properties of K :
+• M is r if, for each i∈A, K is reflexive relation;
+• M is rt if, for each i∈A, K is reflexive and transitive;
+• M is rst if, for each i∈A, K is reflexive, symmetric, and transitive;
+• M is elt if, for each i∈A, K is transitive, Euclidean (i.e., for all s ,s ,s , if
+(s ,s ) ∈ K and (s ,s ) ∈ K then (s ,s ) ∈ K ), and serial (i.e., for each s
+1 2 i 1 3 i 2 3 i
+there exists s′ such that (s,s′)∈K ).
+We use M[S], M[π], and M[i], to denote the components S, π, and K of M.
+3 A Simple Action Language for Multi-agent Domains
+In (Baral et al. 2010a), we proposed an action language mA for multi-agent do-
+mains that considers various types of actions, such as world-altering actions, an-
+nouncement actions, and sensing actions. In this language, a multi-agent theory is
+specified by two components: a LK theory and an action description.The former
+describes the initial state of the world and knowledge of the agents. The latter
+4 Baral, Gelfond, Pontelli, Son
+describes the actions and their effects. We will next briefly describe the syntax of
+mA.
+• The initial state description is specified by axioms of the form:
+◦ Modal logic system: includes one statement of the form system(n), where n∈
+{T,S4,S5,KD45,none}.
+◦ Theory: includes statements of the form init(ϕ), where ϕ is a LK formula.
+• The action description consists of axioms of the following forms:
+aexecutable if δ (1)
+acausesϕif ψ performed by α (2)
+a announces φ performed by α observed by β (3)
+adeterminesf performed by α observed by β (4)
+whereaisanaction,α,β aresetsofagentsfromA,δisanarbitraryLK formula,
+ϕ and ψ are conjunction offluent literals (a fluent literalis either a fluent f ∈F
+or its negation ¬f), φ is a restricted formula (a fluent formula, a formula K ϕ,
+or a formula ¬(K ϕ∨K (¬ϕ)), where ϕ is a fluent formula), and f is a fluent.
+Anaxiomoftype(1)statestheexecutabilityconditionoftheactiona,(2)describes
+a world-altering action, (3) an announcement action, and (4) a sensing action. For
+the sake of simplicity, we assume that the conditions ψ in the axioms (2) for the
+same action a are mutually exclusive. An announcement will be referred to as a
+public announcement if α = A and β = ∅, otherwise it will be referred to as a
+private announcement. When it is a private announcement, we restrict φ to be a
+fluent literal. By (A,F,D,I) we denote a multi-agent theory over hA,Fi with the
+initial state I and the action description D.
+Observe that all axioms describing actions include a part indicating the agents
+participatinginthe action,i.e.,whoexecutestheaction(performed by)andwho
+is aware of the action occurrence (observed by). This is necessary, and dealing
+withthisseparationisoneofthemostdifficultissuesinreasoningaboutknowledge
+in multi-agent environments (Baltag and Moss 2004).
+Given a multi-agent theory (A,F,D,I), we are interested in queries of the form
+ϕafter [a ;...;a ] (5)
+which asks whether ϕ, a LK formula, holds after the execution of the action
+sequence [a ,...,a ] from the initial state.
+A, B, and C are in a room. On the table in the middle of the room is a box with
+a lock which contains a coin. No one knows whether the head or the tail is up and
+it is common among them that no one knows whether head or tail is up. Initially,
+A and C are looking at the box and B is not. One can peek at the coin to know
+whetheritsheadortailisup.Todoso,oneneedsakeytothelockandlooksatthe
+box.Amongthe three,only Ahasthe keyfor the lock.Anagentcanmakeanother
+agent not to look at the box by distracting him/her.
+init(looking_at_box(a)). init(looking_at_box(c)). init(~looking_at_box(b)).
+LP and the Logics of Knowledge 5
+init(~k(a,tail)). init(~k(b,tail)). init(~k(c,tail)).
+peek(X,Y) executable if looking_at_box(X), looking_at_box(Y), has_key(X).
+distract(X,Y) executable if true.
+peek(X,Y) determines tail performed_by X observed_by Y.
+distract(X,Y) causes ~looking_at_box(Y) if true performed by X.
+4 Computing the Initial State
+Computing an initial state of a multi-agent theory (A,F,D,I) means to compute
+a pointed Kripke structure (M,s) satisfying I where (M,s) satisfies I if
+• (M,s) is a pointed Kripke structure w.r.t. the multi-agent domain hA,Fi;
+• For each init(ϕ)∈I we have that (M,s)|=ϕ;
+• If system(T) ∈I (resp. system(S4), system(S5), system(KD45)), then M is
+r (resp. rt, rst, elt).
+4.1 Computing Initial State Using Answer Set Programming
+In(Baral et al. 2010b),weproposedananswersetprogramming(ASP)(Marek and Truszczyn´ski 1999;
+Niemela¨ 1999) implementation for computing the initial state of multi-agent the-
+ories. The implementation follows the basic idea of ASP by converting the initial
+statespecificationI toanASPprogramΠ (m),withmbeingthenumberofstates
+of the structure, whose answersets are pointed Kripke structures satisfying I. The
+language of Π (m) includes:
+◦ A set of facts fluent(f) (agent(a)) for each f ∈F (resp. a∈A);
+◦ A set of constants s ,...,s , representing the names of the possible states;
+◦ Atoms of the form state(S), denoting the fact that S is a state in the Kripke
+structure being built;
+◦ Atoms of the form h(ϕ,S), indicating that the formula ϕ holds in the state S in
+theKripkestructure.Theseatomsrepresenttheinterpretationπ associatedwith
+each state and the set of formulae entailed by the pointed Kripke structure;
+◦ Atoms of the form r(A,S ,S ), representing the accessibility relations of the
+Kripke structure, i.e., (S ,S )∈K in the Kripke structure;
+◦ Atomsofthe formt(S ,S ),usedto representthe existence ofa pathfromS to
+S in the Kripke structure present;
+◦ Atoms of the form real(S), to denote the real state of the world.
+We assumeformulaeto be builtfromfluents,propositionalconnectives,andmodal
+operators (in keeping with our previous definition). In particular, the fact that a
+formula of the form K ϕ holds in the current Kripke structure with respect to a
+state S is encoded by atoms of the form k(A,S,ϕ).
+6 Baral, Gelfond, Pontelli, Son
+The creation of the model requires selecting which states and which connections
+should be included in the Kripke structure and is expressed by choice rules:
+1{state(s ),...,state(s )}m ←
+0{h(F,S)}1 ← fluent(F),state(S)
+0{r(A,S ,S ):state(S ):state(S )}1 ← agent(A)
+These rules will generate a pointed Kripke structure (M,s) whose states belong
+to {s ,...,s } with s indicated by real(s). The program is completed with rules
+determiningthetruthvalueofaformulainagivenpointedstructure.Forinstance,
+rules for checking whether an agent A knows a literal L are:1
+n k(A,S,F) ← r(A,S,S ),h(¬F,S )
+n k(A,S,¬F) ← r(A,S,S ),h(F,S )
+k(A,S,L) ← not n k(A,S,L)
+In addition to the above rules, Π (m) also contain rules encoding the additional
+properties imposed by a specific modal logic system:
+r(A,S,S) ← reflexivity,state(S),agent(A)
+r(A,S ,S ) ← symmetry,r(A,S ,S )
+r(A,S ,S ) ← transitivity,r(A,S ,S ),r(A,S ,S )
+1 3 1 2 2 3
+1{r(A,S,T):state(T)} ← serial,state(S)
+r(A,S ,S ) ← euclidean,r(A,S ,S ),r(A,S ,S )
+2 3 1 2 1 3
+We can activate the necessary rules according to the modal logic system; e.g., if
+system(S4)∈I, then we add the facts reflexive and transitive to Π (m).
+Finally, in order to ensure that a pointed structure satisfying I is generated, we
+add to Π (m) the constraint: ←init(ϕ),real(S),noth(ϕ,S).
+The program Π (m) can be used not only to generate models of I but also to
+retrospectively identify properties of I given a history of action occurrences. In
+(Baral et al. 2010b), we used Π (m) to solve the muddy children problem.
+For example, one of the Kripke structures generated for the initial specification
+of Example 1 includes: (1) two states (S ={s ,s }), (2) the interpretations π(s )
+andπ(s )makelooking at boxtruefora,candfalse,has keytrueforaandfalse
+for b,c, and they differ on the truth value of tail (e.g., tail is true in π(s ) and
+false in π(s )), and (3) (s ,s )∈K for each x∈{a,b,c} and i,j ∈{1,2}.
+4.2 Computing Initial State Using Prolog
+The elegance of ASP encoding has unfortunately to deal with the complexity of
+grounding imposed by modern ASP systems—and this will motivate our contribu-
+tion of using Prologfor this task. Indeed, it is possible to find even simple theories
+of logics of knowledge that are beyond the capabilities of ASP.
+1 (Baraletal.2010b)containsrulesforcheckingwhether(M,s)entailsothertypesofformulae.
+LP and the Logics of Knowledge 7
+Example 2 (Sum and Product)
+An agent chooses two numbers 1<x<y such that x+y ≤100. The sum x+y is
+communicated to agent s while the product x∗y is communicated to agent p. The
+following conversationtakes place between the two agents:
+• p states that it does not know the numbers x, y
+• s indicates that it already knew this fact
+• p states that now it knows the two numbers x, y
+• s states that now it knows the two numbers x, y as well.
+Let us consider the problem of generating aninitial Kripke structure for the above
+story. The two agents are operating on states that can be represented by a pair
+(x,y) satisfying the given conditions. It is reasonable to assume that initially, the
+agentswillneed to considerall possible states.This is encodedin ASP by the rule:
+state(X,Y)←1<X,X <Y,X +Y <101
+It is easy to see that the number of states is 2352. To generate the initial Kripke
+structure using ASP, we would have to use the rule
+0{r(A,state(X,Y),state(X ,Y ),0):state(X,Y):state(X ,Y )}1←agent(A)
+which will produce 23522 ground rules for each agent during the grounding. Com-
+puting a model for a programconsisting of only this rule and the rule defining the
+states is already impossible.2 A reasonable (but ad-hoc) way is to use the rules
+r(s,state(X,Y),state(X ,Y ),0)←X +Y =X +Y ,state(X,Y),state(X ,Y )
+1 1 1 1 1 1
+r(p,state(X,Y),state(X ,Y ),0)←X ∗Y =X ∗Y ,state(X,Y),state(X ,Y )
+1 1 1 1 1 1
+which reduces the number of ground rules to less than 2352×110 (2352×99 for
+the sum, 2352×10 for the product) in total. Intuitively, these rules indicate that
+there is alink labeleds betweenstate(x,y) andstate(x′,y′)iff x+y =x′+y′, and
+there is a link labeled p between state(x,y) and state(x′,y′) iff x×y = x′ ×y′.
+Using these rules, Clingo/Smodels3 is able to find a model (i.e., a possible Kripke
+structure) within a few seconds.
+In order to verify that the generated Kripke structure satisfies the initial state-
+ments of the story, we will need to introduce fluents of the form sum(S) and
+product(S)todenotethesumandproductofthetwonumbersofastateS =(X,Y).
+We would also need to have fluents of the form x(S) and y(S) to represent that x
+and y are the two components of the state S.
+The rules describing the truth values of the fluents are:
+With these fluents, we can define a formula stating that an agent knows the value
+of the two numbers by s knows ≡ K (x(X) ∧ y(Y)) and p knows ≡
+state(x,y) s
+2 Wegotthe“Outofmemory”messageinClingo.Lparsedidnotfinish.
+3 potassco.sourceforge.net,www.tcs.hut.fi/Software/smodels
+8 Baral, Gelfond, Pontelli, Son
+The initial pointed Kripke structure is one that satisfies the formula ¬p knows
+and k (¬p knows). This is what p and s state in their first announcement, respec-
+tively. Thus, to construct the initial pointed Kripke structure, we will need to add
+the rules defining the predicate k(Agent,State,Formula) and other rules relating
+to this predicate. We will also need to add the constraints
+←real(X,Y),not k(p,state(X,Y),p knows)
+←real(X,Y),not k(s,state(X,Y),¬k(p,state(X,Y),p knows))
+The first constraint corresponds to p’s first statement and the second to s’s first
+statement. Adding these rules to the program, the ASP program does not find a
+model within two hours. The main culprit is the number of groundrules that need
+tobegeneratedbeforetheanswersetcanbecomputed.Forinstance,thenumberof
+rulesdefiningn k,(asdescribedintheprevioussection)isroughly23522(quadratic
+to the number of the states).
+Many of these complications can be avoided by changing the model of compu-
+tation from a bottom-up model (as used by ASP) to a top-down one (as used by
+Prolog). The Prolog encoding builds the similar clauses as described for ASP, to
+verify validity of a formula in a Kripke structure. The advantage is that, by op-
+erating top-down, the components of the structure are computed when requested
+(instead of being precomputed a priori during grounding).
+We will now present a Prolog encoding for computing the initial pointed Kripke
+structure for a multi-agent theory. Each Kripke structure can be encoded using
+termsoftheformkripke(N,E)whereNisalistofnodesandEalistofedges.Each
+node is a term node(Name, Interpretation),where Name is a name for the node
+and the interpretation is encoded as a list of terms value(Fluent,true/false).
+A pointed Kripke structure is encoded as a term sit(kripke(N,E), Node) where
+Node is an element from the list N. The clauses to express the validity of a formula
+are very similar to the one presented earlier, e.g.,4
+hold(F,sit(kripke(_Nodes,_Edges),N)) :-
+fluent(F),!, N = node(_Name,Int), member(value(F,true), Int).
+hold(neg(F), Sit) :- \+hold(F,Sit), !.
+hold(k(A,F), sit(kripke(N,E),node(X,_))) :-
+findall(M,member(edge(X,M,A),E),Nodes), iterated_hold(Nodes,F,kripke(N,E)).
+iterated_hold([A|B],F, kripke(N,E)) :-
+member(node(A,I),N), hold(F, sit(kripke(N,E),node(A,I))),
+iterated_hold(B,F,kripke(N,E)).
+In the sum-and-product example, the initial Kripke structure can be implicitly
+defined using implicit rules to construct the edges of the graph:
+edge(node(N1,Int1),node(N2,Int2),s) :-
+member(value(x(X),true),Int1), member(value(y(Y),true),Int1),
+member(value(x(X1),true),Int2), member(value(y(Y1),true), Int2), X+Y =:= X1+Y1.
+edge(node(N1,Int1),node(N2,Int2),p) :-
+4 The explicit representation of interpretations can be easily replaced with implicit encodings
+whenever specificdomainknowledgeisavailable.
+LP and the Logics of Knowledge 9
+member(value(x(X),true),Int1), member(value(y(Y),true),Int1),
+member(value(x(X1),true),Int2), member(value(y(Y1),true), Int2), X*Y =:= X1*Y1.
+The Prolog implementation of the announcements as constraints on the Kripke
+structure allows us to quickly converge on identifying x = 4 and y = 13 as the
+real state of the pointed Kripke structure in a matter of seconds (10.5 seconds on
+a MacBook Pro, 2.53GHz core duo).
+5 The Semantics of mA
+WewillnowdescribethesemanticsofmA,basedontheconstructionofatransition
+function.Forthesakeofsimplicity,inthismanuscriptwewillrestrictourdiscussion
+todomainswheretheinitialstateofthedomainisdescribedbyonepointedKripke
+structure and the actions are deterministic. Thus, the transition function is a map
+fromapointedKripkestructureandanactiontoanotherpointedKripkestructure.5
+5.1 Basic Kripke Structure Transformations
+We startby introducing some basic transformationsofKripke structuresnecessary
+to model the evolutionin models causedby the execution of actions. We also show
+how, following the representation of Kripke structures discussed in Section 2, it is
+possible to naturally encode these operators in Prolog.
+Given a Kripke structure M, a set of states U ⊆ M[S], and a set of arcs X
+in M, M ⊖U is the Kripke structure M′ defined by (i) M′[S] = M[S]\U; (ii)
+M[i]\{(t,v)|(t,v)∈M[i],{t,v}∩U 6=∅}foreveryagenti∈A.Intuitively,M⊖U
+is the Kripke structure obtained by removing from M all the states in U.
+The ⊖ operator is encoded by the following Prolog rules:
+node_minus(kripke(N,E), S, kripke(N1,E1)) :-
+delete(N,S,N1), remove_node_edges(S,E,E1).
+remove_node_edges([],E,E).
+remove_node_edges([A|B], E, NewEs) :-
+remove_one_node_edges(A,E, Es1), remove_node_edges(B, Es1, NewEs).
+remove_one_node_edges(node(Node,Int), [edge(N1,N2,_)|Rest], Result) :-
+(N1=Node ; N2 = Node), !,
+remove_one_node_edges(node(Node,Int), Rest, Result).
+remove_one_node_edges(N,[E|Rest],[E|Result]) :-
+remove_one_node_edges(N,Rest,Result).
+and (iii) M′[i] = M[i]\{(u,v) | (u,i,v) ∈ X} for i ∈ A. M ⊖X is the Kripke
+structure obtained by removing from M all the arcs in X. The encoding of ⊖ is:
+5 It is easy to generalize this to maps where the possibleconfigurations aredescribed by sets of
+pointedKripkestructures andtheactions arenon-deterministic.
+10 Baral, Gelfond, Pontelli, Son
+edge_minus(kripke(N,E), Es, kripke(N,E1)) :- delete(E,Es,E1).
+Given two Kripke structures M and M , we say that M is c-equivalent6 to M
+(M ∼M ) if there exists a bijective function c:M [S]→M [S] such that: (i) for
+every u∈S and f ∈F, M [π](u)(f)=true iff M [π](c(u))(f)=true; and (ii) for
+M and M are compatible if for every s ∈ M [S]∩M [S] and every f ∈ F,
+For two compatible Kripke structures M and M , we define M ∪M to be the
+and (iii) M′[i]=M [i]∪M [i]. The encoding in Prolog of M ∪M is
+union_kripke(kripke(N1,E1), kripke(N2,E2), kripke(N3,E3)) :-
+append(N1,N2,N4), remove_dups(N4,N3), append(E1,E2,E4), remove_dups(E4,E3).
+For a pair of Kripkestructures M andM with M [S]∩M [S]=∅, α⊆A, and
+a one-to-one function λ : M [S] → M [S], we define M ⊎λ M to be the Kripke
+Intuitively,theoperators∪and⊎λ allowustocombinedifferentKripkestructures
+representing knowledge of different groups of agents, thereby creating a structure
+representing the knowledge of all the agents. The encoding of ⊎λ in Prolog is:
+knowledge_union(kripke(N1,E1), kripke(N2,E2), Alpha, Map, kripke(N3,E3)) :-
+check_k_union_properties(N1,N2,Map), union_list(N1,N2,N3),
+generate_k_union_edges(E1, N2, Alpha,Map, NewOnes),
+union_list(E1,E2,E4), union_list(E4,NewOnes,E3).
+generate_k_union_edges([], _, _, _, []).
+generate_k_union_edges([edge(_,_,Label)|Rest],Nodes,Alpha,Map,NRest) :-
+member(Label,Alpha), !, generate_k_union_edges(Rest,Nodes,Alpha,Map,NRest).
+generate_k_union_edges([edge(Start,End,Label)|Rest], Nodes, Alpha,
+Map, [NEdge|NRest]) :-
+member([N,Start], Map), NEdge = edge(N,End,Label),
+generate_k_union_edges(Rest,Nodes,Alpha,Map,NRest).
+Several types of actions require the creation of “copies” of a Kripke structure,
+typically to encode the knowledge of the agents that are unaware of actions being
+executed. Let (M,s) be a pointed Kripke structure, and α be a set of agents:
+• A pointed Kripke structure (M′,c(s)) is a replica of (M,s) if M′ ∼ c M and
+AreplicaofapointedKripkestructure(MS,s)referstoacopyof(M,s)withrespect
+toabijectionc.ThepointedKripkestructure(M,s)| ,referredtoastherestriction
+of (M,s) on α, encodes the knowledge of the agents in the set A\α. In Prolog:
+6 Thisformofequivalenceissimilartothenotionofbisimulationin(BaltagandMoss2004).
+LP and the Logics of Knowledge 11
+replica(kripke(N,E), kripke(N1,E1), Map) :-
+replica_nodes(N,N1,Map), replica_edges(E,Map,E1).
+replica_nodes([node(Name,Int)|Rest], [node(NewName,Int)|NewRest],
+[[NewName,Name]|RestMap]) :-
+new_state_name(NewName), replica_nodes(Rest,NewRest,RestMap).
+replica_edges([edge(Start,End,Agent)|Rest], Map,
+[edge(NewStart,NewEnd, Agent)|NewRest]) :-
+member([NewStart,Start], Map), member([NewEnd,End],Map),
+replica_edges(Rest,Map,NewRest).
+remove_agent_edges(kripke(N,E), Alpha, K) :-
+collect_agent_edges(E,Alpha,Edges), edge_minus(kripke(N,E), Edges, K).
+collect_agent_edges([edge(Start,End,Agent)|Rest], Alpha,
+[edge(Start,End,Agent)|NewRest]) :-
+member(Agent,Alpha),!, collect_agent_edges(Rest,Alpha,NewRest).
+collect_agent_edges([_|Rest], Alpha, NewRest) :-
+collect_agent_edges(Rest,Alpha,NewRest).
+5.2 Action Transition Function
+The following definitions are used to determine, given a pointed Kripke structure
+(M,s), what are the pointed Kripke structures obtained from the execution of an
+action. We will denote with succ(a,(M,s)) the pointed Kripke structure resulting
+from the execution of the action a in (M,s). Observe that in the following defi-
+nitions we view a set of literals as the conjunction of its elements. We will define
+succ(a,(M,s))foreachtypeofaction.Leta beanaction.By pre(a)wedenotethe
+formulaδ,theconditioninthelawofthefrom(1)whoseactionisa.Webeginwith
+the public announcement action.
+PublicAnnouncement:ConsiderapointedKripkestructure(M,s)andanactionin-
+stanceaoccurringinanannouncementlaw(3)suchthat(M,s)|=φ.Thesuccessor
+pointed Kripke structure after the execution of a in (M,s) is defined as follows. If
+(M,s)6|=pre(a),thensucc(a,(M,s))is undefined,denotedbysucc(a,(M,s))=⊥.
+The first case deals with the assumption that the action should be executable in
+(M,s)—otherwise the resulting successor pointed Kripke structure is undefined.
+If(M,s)|=φthenwehavedifferentcasesdependingonthestructureofφ.Ifφisa
+φ}. This can be captured by the following rules:
+succ(sit(kripke(N,E),S), public(Phi), sit(kripke(N1,E1),S)) :-
+fluent_formula(Phi), !,
+get_nodes_not_satisfy_formula(Phi, kripke(N,E), Nodes),
+node_minus(kripke(N,E), Nodes, kripke(N1,E1)).
+get_nodes_not_satisfy_formula(Phi, kripke(N,E), Nodes) :-
+iterate_not_satisfy(N,Phi,kripke(N,E), Nodes).
+iterate_not_satisfy([A|B],F,K,Rest) :-
+hold(F,sit(K,A)), !, iterate_not_satisfy(B,F,K,Rest).
+12 Baral, Gelfond, Pontelli, Son
+iterate_not_satisfy([A|B], F, K, [A|Rest]) :- iterate_not_satisfy(B,F,K,Rest).
+If φ = K ψ, then succ(a,(M,s)) = (M ⊖X,s) where X = {(u,i,v) | (u,v) ∈
+M[i],(M,v)6|=ψ}. This is captured by the following rules:
+succ(sit(kripke(N,E),S), public(Phi), sit(kripke(N1,E1),S)) :-
+Phi = k(A,Psi), fluent_formula(Psi), !,
+get_edges_not_satisfy(E, A, Psi, kripke(N,E), Edges),
+edge_minus(kripke(N,E), Edges, kripke(N1,E1)).
+get_edges_not_satisfy([Edge|Rest], Agent, Psi, kripke(N,E),[Edge|Result]) :-
+Edge=edge(Start,End,Agent), member(node(End,Int), N),
+\+ hold(Psi, sit(kripke(N,E), node(End,Int))), !,
+get_edges_not_satisfy(Rest,Agent,Psi,kripke(N,E), Result).
+get_edges_not_satisfy([_|Rest],Agent,Psi,K,Result) :-
+get_edges_not_satisfy(Rest,Agent,Psi,K,Result).
+M[S],(M,s′)|=K ψ∨K ¬ψ}. We omit the Prolog code due to lack of space.
+IftheannouncementhappensinapointedKripkestructure(M,s)where(M,s)|=
+ϕ,thenweneedtoensurethatϕiscommonknowledge(strictlyspeaking,thisisthe
+beliefoftheagents)amongtheagentsofthesystem.This accountsforourremoval
+of all nodes s′ such that (M,s′) 6|= ϕ. Similarly, if a formula K ψ is announced,
+we only remove arcs labeled by i from M whose existence invalidates the formula
+C K ψ.Ontheotherhand,whenaformula¬(K ψ∨K ¬ψ)isannounced,weneed
+toremovestates inM whoseexistence invalidatesthe formulaC ¬(K ψ∨K ¬ψ).
+Continuing with Example 1, the execution
+A, B, C A, B, C
+of the action peek(a,c) in the initial Kripke
+A, B, C A, B, C H A, B, C T
+structuredescribedearliertransformstheKripke
+H A, B, C T B B
+structure as illustrated in Figure 1, where the B B
+double circle identifies the real state of the (M, H) H C T
+world, H denotes a state where tail is false A, C A, C
+and T denotes a state where tail is true.
+Fig. 1: Executionofpeek(a,c)
+Private Announcement: Consider a pointed Kripke structure (M,s) and a private
+announcementactionawithβ 6=A,wherethe effectistheliteralℓand(M,s)|=ℓ.
+Let us also assume that f is the fluent used in the literal ℓ. The pointed Kripke
+structure (M′,s′) is the successor model after the execution of a in (M,s) if:
+(Mr,c(s))isareplicaof(M,s)andX = (u,i,v) ;
+The general successful case can be captured as:
+succ(sit(kripke(N,E),S), private(Phi,Alpha,Beta), sit(kripke(N1,E1),St1)) :-
+get_literal_fluent(Phi,F), replica(kripke(N,E), kripke(N2,E2), Map),
+non_agents(Alpha,Beta,RemAgs),
+remove_agent_edges(kripke(N2,E2), RemAgs, kripke(N3,E3)),
+catch_discriminating_edges(E3,kripke(N3,E3),Alpha,F, X),
+LP and the Logics of Knowledge 13
+edge_minus(kripke(N3,E3), X, kripke(N4,E4)),
+append(Alpha,Beta,AlphaBeta),
+knowledge_union(kripke(N,E), kripke(N4,E4), AlphaBeta, Map,kripke(N1,E1)),
+S = node(NameS,_), member([S1, NameS],Map), member(node(S1,Int1),N1),
+St1 = node(S1,Int1).
+The predicate non agents collects all agents not in Alpha and Beta. The pred-
+icate catch discriminating edges identifies edges for which the agents in Alpha
+see distinct truth values for the considered literal:
+catch_discriminating_edges([],_,_,_,[]).
+catch_discriminating_edges([Ed|Rest], kripke(N,E), Alpha, F, [Ed|NewRest]) :-
+Ed = edge(Start,End,Agent), member(Agent,Alpha),
+member(node(Start,Int1), N), member(node(End,Int2), N),
+member(value(F,V1), Int1), member(value(F,V2), Int2), V1 \= V2, !,
+catch_discriminating_edges(Rest, kripke(N,E), Alpha, F, NewRest).
+catch_discriminating_edges([_|Rest], K, Alpha, F, NewRest) :-
+catch_discriminating_edges(Rest,K,Alpha,F,NewRest).
+Sensing:Let(M,s)beapointedKripkestructureandabeasenseaction.Amodel
+(M′,s′) is a successor model after the execution of a in (M,s) if:
+replica(Mr,c(s))of(M,s).ThePrologcodeissimilartotheprivateannouncement:
+succ(sit(kripke(N,E),S), sense(F,Alpha,Beta), sit(kripke(N1,E1),St1)) :-
+replica(kripke(N,E), kripke(N2,E2), Map), non_agents(Alpha,Beta,RemAgs),
+remove_agent_edges(kripke(N2,E2), RemAgs, kripke(N3,E3)),
+catch_discriminating_edges(E3,kripke(N3,E3),Alpha,F, X),
+edge_minus(kripke(N3,E3), X, kripke(N4,E4)), append(Alpha,Beta,AlphaBeta),
+knowledge_union(kripke(N,E), kripke(N4,E4), AlphaBeta, Map,kripke(N1,E1)),
+S = node(NameS,_), member([S1, NameS],Map),
+member(node(S1,Int1),N1), St1 = node(S1,Int1).
+World-altering Action: the computation of the successor pointed Kripke structure
+forworld-alteringactionsrequiresthemodificationoftheinterpretationsassociated
+tocertainstates.Givenaninterpretationπandasetofliteralsϕ,letusdenotewith
+[ϕ]πtheinterpretationobtainedbyperformingtheminimalamountofmodifications
+to π to ensure that [ϕ]π makes all the literals in ϕ true. Let u ∈ M[S] and let us
+consideranaxiomoftype(2);theaxiomisapplicableinuif(M,u)|=ψ.Wedefine
+[ϕ]M[π](u) if a causes ϕ if ψ performed by α applicable in u
+(cid:26) M[π](u) otherwise
+Let a be a world-altering action. By Res(a,M,α) we denote the Kripke structure
+M′ which is obtained from M as follows:
+denotes a new and distinguished state symbol;
+14 Baral, Gelfond, Pontelli, Son
+Let (M,s) be a pointed Kripke structure and let a be a world-altering action. The
+successor pointed Kripke structure of a in (M,s) is defined as follows.
+1. If (M,s)6|=pre(a) then succ(a,(M,s))=⊥.
+2. If(M,s)6|=pre(a)thensucc(a,(M,s))isthepointedKripkestructure(M′,s′):
+where Q=Res(a,M,α), and acausesϕifψ performed by α is the axiom
+of a applicable in s.
+This can be mapped to the following Prolog encoding:
+succ(sit(kripke(N,E),S), altering(If,Then,Alpha), sit(kripke(N1,E1),St1)) :-
+replica(kripke(N,E), kripke(N2,E2), Map), non_agents(Alpha,[],Gamma),
+remove_agent_edges(kripke(N2,E2), Gamma, kripke(N3,E3)),
+update_interpretations(N3,kripke(N3,E3),If, Then, N4),
+knowledge_union(kripke(N,E), kripke(N4,E3), Alpha, Map, kripke(N1,E1)),
+S = node(NameS,_), member([S1, NameS],Map),
+member(node(S1,Int1),N1), St1 = node(S1,Int1).
+update_interpretations([],_,_,_,[]).
+update_interpretations([node(Name,Inter)|Rest], K, If, Then,
+[node(Name,NewInter)|NewRest]) :-
+(hold(If,sit(K,node(Name,Inter))) ->
+change_interpretation(Then,Inter,NewInter); NewInter = Inter),
+update_interpretations(Rest,K,If,Then,NewRest).
+change_interpretation(F,I1,I2):- literal(F),!, single_update(F,I1,I2).
+change_interpretation(and(F1,F2), I1, I2) :-
+change_interpretation(F1,I1,I3), change_interpretation(F2,I3,I2).
+single_update(L, I1, I2):- get_literal_fluent(L,F), delete(I1, value(F,_), I3),
+(fluent(L) -> I2 = [value(F,true)|I3]; I2 = [value(F,false)|I3]).
+5.3 Query Answering and Planning in Prolog
+Thepreviousencodingcanbeusedtosupporthypotheticalreasoningandplanning
+in multi-agent theories. To answer queries of the form (5) we can use the standard
+rules for computing the successor states of a sequence of action and verify the
+desirable properties in the final successor state. This is encoded as
+hold(Query,Seq):- initial(sit(kripke(Nodes,Edges),Node)),
+succ(sit(kripke(Nodes,Edges),Node), Seq, S), hold(Query, S).
+succ(sit(kripke(Nodes,Edges),Node), [], sit(kripke(Nodes,Edges),Node)).
+succ(sit(kripke(Nodes,Edges),Node), [A|Seq], succ(S, Seq)):-
+succ(sit(kripke(Nodes,Edges),Node), A, S).
+whereinit(S)denotes that S is the initial pointed Kripkestructure andhold(F,S)
+is the predicate that determines whether F holds w.r.t. S.
+For planning, we need to determine a sequence of actions that will accomplish a
+LP and the Logics of Knowledge 15
+certainstate of the world.The planning perspective supportedby the implementa-
+tion below is that of an external observer, who has complete knowledge about the
+capabilitiesofthedifferentagents.Astandarddepth-firstplannercanbeexpressed
+using the following definition of the predicate depthplan(S,Plan,N)—whereS is
+the initial pointed Kripke structure, N is a bound on the maximal length of the
+plan, and Plan is the actual sequence of actions.
+depthplan(S, Plan,N):- depthplan(S,[],Plan,N).
+depthplan(S, PlanIn, PlanIn,_):- terminated(S).
+depthplan(S0, PlanIn, PlanOut,N):- length(PlanIn,M), M < N, choose_action(A,S0),
+build_action(A,Fmt), succ(S0,Fmt,S1), depthplan(S1,[A|PlanIn],PlanOut,N).
+choose_action(A,S) :- action(A,_), valid(A,S).
+The predicate build action perform a simple syntactic rearrangement of the
+action representation (not reported). The predicate valid is used to ensure that
+the action is executable in the given pointed Kripke structure:
+valid(A,S):- action(A,_Type), executability(A,Condition), hold(Condition,S).
+Thetest for termination ensures that the goal has been achieved:
+terminated(S) :- goal(Phi), hold(Phi,S).
+As another example, it is easy to rewrite the planner to perform a breadth-first
+exploration of the search space.
+breadthplan(S,Plan,N):- breadthplan(S,Plan,0,N).
+breadthplan(S,Plan,M,N):- M<N, plan(S,Plan,S1), length(Plan,M), terminated(S1).
+breadthplan(S,Plan, M, N):- M < N, M1 is M+1, breadthplan(S,Plan,M1,N).
+plan(S1,[],S1).
+plan(S0,[A|B],S):- plan(S0,B,S1), build_action(A,Format),
+valid(A,S1), succ(S1,Format,S).
+Other forms of reasoning, e.g., switching from the perspective of an external
+observer to the perspective of an individual agent, can be similarly encoded.
+6 Conclusion and Discussion
+Inthispaper,weinvestigatedanapplicationoflogicprogrammingtechnologytothe
+problemofmanipulatingKripkestructuresrepresentingmodelsoftheoriesfromthe
+logic of knowledge. We illustrated how these foundations can be used to provide a
+computationalbackgroundfor a novelactionlanguage,mA,to encode multi-agent
+planning domains where agents can perform both world-altering actions as well as
+actions affecting agents’ knowledge.
+To the best of our knowledge, the encoding presented in this paper is the first
+implementationusing Prologofanactionlanguagewithsuchasetoffeatures.The
+use of logic programming allows a very natural encoding of the semantics of mA,
+anditfacilitatesthedevelopmentofmeta-interpretersimplementingdifferentforms
+of reasoning (e.g., observer-based planning). Let us underline that generic frame-
+works for reasoning with modal logics have been proposed (e.g., (Horrocks 1998;
+16 Baral, Gelfond, Pontelli, Son
+Farinas del Cerro et al. 2001)), and these could be used as external solvers to ad-
+dress the specific tasks of recomputing models—we will explore this option in our
+futurework.Nevertheless,webelievethe updatesofKripkestructuresdirectlyper-
+formed in LP and the ability of embedding such process in a LP language, which
+offers other features (e.g., constraintsolving) makes LP a more suitable avenue for
+implementing languages like mA. Although the prototype has not been subjected
+toformaltesting (we areworkingonidentifying interestingdomainsfromthe liter-
+ature), simple planning tasks (e.g., develop a plan that enables agents a,c to learn
+about the status of the coin while b maintains its ignorance) can be solved within
+afew secondsofcomputation.Aformalexperimentalevaluationwillbe partofthe
+future work.

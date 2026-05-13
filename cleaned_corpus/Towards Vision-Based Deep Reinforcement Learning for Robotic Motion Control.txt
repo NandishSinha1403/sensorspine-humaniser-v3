@@ -1,0 +1,496 @@
+Towards Vision-Based Deep Reinforcement Learning
+for Robotic Motion Control
+Fangyi Zhang, Jürgen Leitner, Michael Milford, Ben Upcroft, Peter Corke
+ARC Centre of Excellence for Robotic Vision (ACRV)
+Queensland University of Technology (QUT)
+fangyi.zhang@hdr.qut.edu.au
+Thispaperintroducesamachinelearningbased
+system for controlling a robotic manipulator
+with visual perception only. The capability
+to autonomously learn robot controllers solely
+from raw-pixel images and without any prior
+knowledgeofconfigurationisshownforthefirst
+time. Webuilduponthesuccessofrecentdeep
+reinforcement learning and develop a system
+for learning target reaching with a three-joint
+robot manipulator using external visual obser-
+vation. ADeepQNetwork(DQN)wasdemon-
+strated to perform target reaching after train- Figure 1: Baxter’s arm being controlled by a trained
+ing in simulation. Transferring the network to deepQNetwork(DQN).Syntheticimages(ontheright)
+real hardware and real observation in a naive arefedintotheDQNtoovercomesomeofthereal-world
+approachfailed,butexperimentsshowthatthe issues encountered, i.e., the differences between training
+network works when replacing camera images and testing settings.
+with synthetic images.
+and deep learning. One topical example of DRL is the
+1 Introduction Deep Q Network (DQN), which, after learning to play
+Atari2600gamesover38days,wasabletomatchhuman
+Robots are widely used to complete various manipula-
+performance when playing the game [Mnih et al., 2013;
+tion tasks in industrial manufacturing factories where
+Mnih et al., 2015]. Despite their promise, applying
+environments are relatively static and simple. However,
+DQNsto"perfect"andrelativelysimplecomputergame
+theseoperationsarestillchallengingforrobotsinhighly
+worlds is a far cry from deploying them in complex
+dynamic and complex environments commonly encoun-
+roboticmanipulationtasks,especiallywhenfactorssuch
+tered in everyday life. Nevertheless, humans are able to
+as sensor noise and image offsets are considered.
+manipulate in such highly dynamic and complex envi-
+This paper takes the first steps towards enabling
+ronments. We seem to be able to learn manipulation
+DQNs to be used for learning robotic manipulation. We
+skills by observing how others perform them (learning
+focus on learning these skills from visual observation of
+from observation), as well as, master new skills through
+the manipulator, without any prior knowledge of config-
+trial and error (learning from exploration). Inspired by
+urationorjointstate. Towardsthisend,asfirststeps,we
+this, we want robots to learn and master manipulation
+assess the feasibility of using DQNs to perform a simple
+skills in the same way.
+targetreachingtask,animportantcomponentofgeneral
+To give robots the ability to learn from explo-
+manipulationtaskssuchasobjectpicking. Inparticular,
+ration, methods are required that are able to learn au-
+we make the following contributions:
+tonomously and which are flexible to a range of differ-
+ing manipulation tasks. A promising candidate for au- • We present a DQN-based learning system for a tar-
+tonomous learning in this regard is Deep Reinforcement get reaching task. The system consists of three
+Learning(DRL),whichcombinesreinforcementlearning components: a 2D robotic arm simulator for target
+2v19730.1151:viXra
+reaching, a DQN learner, and ROS-based interfaces the issues with greedy policy search and gradient based
+to enable operation on a Baxter robot. methods. How to generate the right reward is an ac-
+tive topic of research. Intrinsic motivation and curiosity
+• We train agents in simulation and evaluate them in
+havebeenshowntoprovidemeanstoexplorelargestate
+both simulation and real-world target reaching ex-
+spaces, such as the ones found on complex humanoids,
+periments. The experiments in simulation are con-
+faster and more efficient [Frank et al., 2014].
+ducted with varying levels of noise, image offsets,
+initial arm poses and link lengths, which are com-
+2.3 Deep Visuomotor Policies
+monconcernsinroboticmotioncontrolandmanip-
+ulation. To enable robots to learn manipulation skills with little
+prior knowledge, a convolutional neural network (CNN)
+• We identify and discuss a number of issues and op-
+based policy representation architecture (deep visuo-
+portunitiesforfutureworktowardsenablingvision-
+motor policies) and its guided policy search method
+based deep reinforcement learning in real-world
+were introduced by Sergey et al. [Levine et al., 2015a;
+robotic manipulation.
+Levine et al., 2015b]. The deep visuomotor policies map
+joint angles and camera images directly to the joint
+2 Related Work
+torques. Robot configurations are the only necessary
+2.1 Vision-based Robotic Manipulation prior knowledge. The policy search method consists of
+Vision-based robotic manipulation is the process by two phases, i.e., optimal control phase and supervised
+which robots use their manipulators (such as robotic learning phase. The training consists of three proce-
+arms) to rearrange environments [Mason, 2001], based dures, i.e., pose CNN training, trajectories pre-training,
+on camera images. The early vision-based robotic ma- and end-to-end training.
+nipulation was implemented using pose-based (position The deep visuomotor policies did enable robots to
+and orientation) closed-loop control, where vision was learn manipulation skills with little prior knowledge
+typically used to extract the pose of an object as an in- through supervised learning, but pre-collected datasets
+put for a manipulation controller at the beginning of a werenecessary. Humaninvolvementsinthedatasetscol-
+task [Kragic and Christensen, 2002]. lection made this method less autonomous. Besides, the
+Mostcurrentvision-basedroboticmanipulationmeth- training method specifically designed to speed up the
+odsareclosed-loopbasedonvisualperception. Avision- contact-rich manipulation learning made it less flexible
+basedmanipulationsystemwasimplementedonaJohns for other manipulation tasks.
+Hopkins “Steady Hand Robot” for cooperative manipu-
+2.4 Deep Q Network
+lation at millimeter to micrometer scales, using virtual
+fixtures [Bettini et al., 2004]. With both monocular and The DQN, a topical example of DRL, satisfies both the
+binocular vision cues, various closed-loop visual strate- autonomy and flexibility requirements for learning from
+gies were applied to enable robots to manipulate both exploration. It successfully learnt to play 49 different
+known and unknown objects [Kragic et al., 2005]. Atari 2600 games, achieving a human-level of control
+Also, various learning methods have been applied to [Mnihet al., 2015]. TheDQNusedadeepconvolutional
+implementcomplexmanipulationtasksintherealworld. neural network (CNN) [Krizhevsky et al., 2012] to ap-
+With continuous hidden Markov models (HMMs), a hu- proximate a Q-value function. It maps raw pixel im-
+manoid robot was able to learn dual-arm manipulation ages directly to actions. No pre-input feature extraction
+tasksfromhumandemonstrationsthroughvision[Asfour is needed. The only one thing is to let the algorithm
+et al., 2008]. However, most of these algorithms are for improve policies through playing games over and over
+specific tasks and need much prior knowledge. They are again. It learnt playing 49 different games, using the
+notflexibleforlearningarangeofdifferentmanipulation same network architecture with no modification.
+tasks. TheDQNisdefinedbyitsinputs–rawpixelsofgame
+video frames and received rewards – and outputs, i.e.,
+2.2 Reinforcement Learning in Robotics
+the number of available actions in a game [Mnih et al.,
+Reinforcement Learning (RL) [Sutton and Barto, 1998; 2015]. This number of actions is the only prior knowl-
+Kormushev et al., 2013] has been applied in robotics, as edge, which means no robot configuration information
+it promises a way to learn complex actions on complex is needed to the agent, when using the DQN for motion
+robotic systems by just providing informing the robot control. However,intheDQNtrainingprocess,theAtari
+whether its actions were successful (positive reward) or 2600 game engine worked as a reward function, but for
+not (negative reward). [Peters et al., 2003] reviewed robotic motion control, no such engine exists. To apply
+someoftheRLconceptsintermsofapplicabilitytocon- itinroboticmotioncontrol, arewardfunctionisneeded
+trol complex humanoid robots and highlighting some of to assess trials. Besides, sensing noise and higher com-
+Outputs of 3 Convolutional Layers Rf Rs Rf
+Outputs of 2 Fully
+Rs Rf Rf Connected Layers
+Figure 2: Schematic of the DQN layers for end-to-end learning and their respective outputs. Four input images are
+reshaped (Rs) and then fed into the DQN network as grey-scale images (converted from RGB). The DQN, consists
+of three convolutional layers with rectifier layers (Rf) after each, followed by a reshaping layer (Rs) and two fully
+connectedlayers(againwitharectifierlayerinbetween). Thenormalizedoutputsofeachlayerarevisualized. (Note:
+The outputs of the last four layers are shown as matrices instead of vectors.)
+plexity and dynamics are inevitable issues for real-world
+applications.
+3 Problem Definition and System
+Description
+A common problem in robotic manipulation is to reach
+fortheobjecttobeinteractedwith. Thistargetreaching
+task is defined as controlling a robot arm, such that its
+end-effector is reaching a specific target configuration.
+We are interested in the case in which a robot performs
+thetargetreachingwithvisualperceptiononly. Tolearn
+such a task, we developed a system consisting of three
+parts:
+• a 2D simulator for robotic target reaching, creating
+Figure 3: System overview
+the visual inputs to the learner
+• a deep reinforcement learning framework based on
+When training or testing in simulation, the target
+the DQN implementation by Google Deepmind
+reaching simulator provides the reward value (R) and
+[Mnih et al., 2015], and
+image(I). Risusedfortrainingthenetwork. Theaction
+• a component of ROS-based interfaces to control a output (A) of the DQN is directly sent to the simulated
+Baxter robot according to the DQN outputs. robotic arm.
+WhentestingonaBaxterrobotusingcameraimages,
+3.1 DQN-based Learning System an external camera provides the input images (I). The
+The DQN adopted here has the same architecture with action output (A) of the DQN is implemented on the
+that for playing Atari games, which contains three con- robotcontrolledbyROS-basedinterfaces. Theinterfaces
+volutional layers and two fully connected layers [Mnih control the robot by sending updated robot’s poses (q(cid:48)).
+et al., 2015]. Its implementation is based on the Google
+3.2 Target Reaching Simulator
+Deepmind DQN code1 with minor modifications. Fig. 2
+We simulate the reaching task to control a three-joint
+shows the architecture and examplary output of each
+robotic arm in 2D (Fig. 4). The simulator was imple-
+layer. The inputs of the DQN include rewards and im-
+mented from scratch. In the implementation, no simu-
+ages. Its output is the index of the action to take. The
+lation platform was used. As shown in Fig. 4(a), the
+DQNlearnstargetreachingskillsintheinteractionswith
+roboticarmconsistsoffourlinksandthreejoints,whose
+the target reaching simulator. An overview of the sys-
+configurations are consistent to the specifications of a
+tem framework for both the learning in simulation and
+Baxter arm, including joints constraints. The blue spot
+testing on a real robot is shown in Fig. 3.
+is the target to be reached. For a better visualization,
+Algorithm 1: Reward Function
+Completion Area input : P : the target 2D coordinates;
+P : the end-effector 2D coordinates.
+output: R: the reward for current state;
+T: whether the game is terminal.
+1 Dis = ComputeDistance(P t , P e );
+S1 E1 W1 2 DisChange=Dis−PreviousDis;
+3 if DisChange>0 then
+5 else if DisChange<0 then
+End Effector 7 else
+(a) Schematic diagram (b) The robot simulator
+during a successful reach 9 end
+10 R acc =R t +R t−1 +R t−2 ;
+Figure 4: The 2D target reaching simulator, providing 11 if R acc <−1 then
+visual inputs to the DQN learner. It was implemented 12 T =True;
+from scratch, no simulation platform was used. 13 else
+14 T =False;
+Thesimulatorcanbecontrolledbysendingspecificcom- 15 end
+mandstotheindividualjoints“S1”,“E1” and“W1”. The
+simulator screen resolution is 160×320.
+is terminal. Its algorithm is shown in Algorithm 1. The
+The corresponding real scenario that the simulator
+rewardofeachactionisdeterminedaccordingtothedis-
+simulates is: with appropriate constant joint angles of
+tancechangebetweentheend-effectorandthetarget. If
+other joints on a Baxter arm, the arm moves in a verti-
+thedistancegetscloser,therewardfunctionreturns1;if
+cal plane controlled by joints “S1”, “E1” and “W1”, and
+gets further, returns -1; otherwise returns 0. If the sum
+a controller (game player) observes the arm through an
+of the latest three rewards is smaller than -1, the game
+external camera placed directly aside it with a horizon-
+terminates. This reward function was designed as a first
+talpointofview. Thethreejointsareinpositioncontrol
+step, more study is necessary to get an optimal reward
+mode. The background is white.
+function.
+In the system, the 2D simulator is used as a target
+reaching video game in connection with the DQN setup.
+4 Experiments and Results
+Itprovidesrawpixelinputstothenetworkandhasnine
+optionsforaction,i.e.,threebuttonsforeachjoint: joint To evaluate the feasibility of the DQN-based system in
+angle increasing, decreasing and hold. The joint angle learning performing target reaching, we did some exper-
+increasing/decreasing step is constant at 0.02 rad. At iments in both simulation and real-world scenarios. The
+the beginning of each round, joints “S1”, “E1” and “W1” experiments consist of three phases: training in simula-
+will be set to a certain initial pose, such as [0.0, 0.0, 0.0] tion, testinginsimulation, andtestingintherealworld.
+rad; and the target will be randomly selected.
+In the game playing, a reward value will be returned 4.1 Training in Simulation Scenarios
+for each button press. The reward value is determined To evaluate the capability of the DQN to adapt to some
+by a reward function introduced in Section 3.3. When noise commonly concerned in robotic manipulation, we
+satisfyingsomeconditions,thegamewillterminate. The trained several agents with different simulator settings.
+game terminal is determined by the reward function as The different settings include sensing noise, image off-
+well. Foraplayer,thegoalistogetanashighaspossible sets, variations in initial arm pose and link length. The
+accumulated reward before the game terminates. For setting details for training the five agents are shown in
+clarity, we name an entire trial from the start of the Table 1. Their screenshots are shown in Fig. 5, respec-
+game to its terminal as one round. tively.
+AgentAwastrainedinSettingAwherethe2Drobotic
+3.3 Reward Function
+arm was initialized to the same pose ([0.0, 0.0, 0.0] rad)
+To keep consistent to the DQN setup, the reward func- at the beginning of each round. There was no image
+tion has two return values: one for the reward of each noise in Setting A. To simulate camera sensing noise,
+action;theothershowswhetherthetargetreachinggame random noise was added in Setting B, on the basis of
+(a) Settings A: simula- (b) Setting B: simula- (c) SettingC:SettingB (d) SettingD:SettingC (e) SettingE:SettingD
+tion images tion images + noise + random initial pose + random image offset + random link length
+Figure 5: Screenshots highlighting the different training scenarios for the agents.
+Table 1: Agents and training settings
+Agent Simulator Settings 90
+A constant initial pose 70
+B Setting A + random image noise
+C Setting B + random initial pose
+D Setting C + random image offset 30
+E Setting D + random link length 20
+0 10 20 30 40 50 60 70 80
+Setting A. The random noise was with a uniform distri-
+bution with a scale between -0.1 and 0.1 (for float pixel
+values).
+In Setting C, in addition to random image noise, the
+initialarmposewasrandomlyselected. Inthetrainingof
+Agent D, random image offsets were added on the basis
+of Setting C. The offset ranges in u and v directions
+were respectively [-23, 7] and [-40, 20] in pixel. Agent
+E was trained with dynamic arm link lengths. The link
+length variation ratio was [-4.2, 12.5]% with respect to
+thelinklengthsettingsinthepreviousfoursettings. The
+image offsets and link lengths were randomly selected
+at the beginning of each round, and stayed unchanged
+in the entire round (not vary at each frame). All the
+parametersfornoisyfactorswereempiricallyselectedas
+a first step.
+All the agents were trained using more than 4 million
+steps within 160 hours. Due to the difference in setting
+complexity, the time-cost for the simulator to update
+each game video frame varies in five different settings.
+Therefore, within 160 hours, the exact numbers of used
+training steps for the five agents are different. They are
+6.475, 6.275, 5.225, 4.75 and 6.35 million, respectively.
+The action Q-value converging curves are shown in
+Fig. 6. The Q-value curves are respect to training
+epochs. Each epoch contains 50,000 training steps. Fig.
+Training Epoch
+Figure6: ActionQ-valueconvergingcurves. Eachepoch
+contains 50,000 training steps. The average maximum
+action Q-values are the average of the estimated max-
+imum Q-values for all states in a validation set. The
+validation set has 500 frames.
+6showstheconvergingcasebefore80epochs,i.e.,4mil-
+lion training steps. The average maximum action Q-
+values are the average of the estimated maximum Q-
+values for all states in a validation set. The validation
+setwasrandomlyselectedatthebeginningofeachtrain-
+ing.
+From Fig. 6, we can observe that all the five agents
+converge towards to a certain Q-value state, although
+their values are different. One thing we have to empha-
+sizeisthisconvergingisjustforaveragemaximumaction
+Q-values. A high value might but not necessarily indi-
+cateahighperformanceofanagentinperformingtarget
+reaching,sincethisvaluecannotcompletelyindicatethe
+target reaching performance.
+4.2 Testing in Simulation Scenarios
+We tested the five agents in simulation scenarios with
+the 2D simulator. Each agent was tested in all those
+five settings in Table 1. Each test took 200 rounds, i.e.,
+Table 2: Success rates (%) in different settings
+terminated200times. Moretestingroundscanmakethe
+testing results closer to the ground truth, but need too Setting
+much time. A B C D E
+In the testing, task success rates were evaluated. In
+A 51.0 53.0 14.0 8.5 8.5
+thecomputationofsuccessrates, itisregardedasasuc-
+B 50.5 49.5 11.0 8.0 10.0
+cess when the end-effector gets into a completion area
+C 32.0 34.5 36.0 22.5 14.0
+with a radius of 16 cm around a target, as shown in the
+D 13.5 16.5 22.0 19.5 15.0
+grey circle in Fig. 4(a), which is twice size of the target
+E 13.0 16.5 20.0 16.5 19.0
+circle. The radius of 16 cm is equivalent to 15 pixels in
+the simulator screen. However, for the DQN, this com-
+pletion area is a ellipse (a=8 pixels, b=4 pixels), since
+Table 3: Success rates (%) after different training steps
+the simulator screen will be resized from 160×320 to
+84×84 before being input to the learning core. Training Steps / million
+Agent/Setting
+Table 2 shows the success rates of different agents 1 2 3 4 f
+in different settings after 3 million training steps (60
+A 36.0 43.0 51.0 36.0 36.5
+epochs). The data in the diagonal (with a cell color
+B 58.0 55.5 49.5 51.5 13.5
+ofgray)showsthesuccessrateofeachagenttestedwith
+C 30.5 33.0 36.0 48.0 13.5
+the same setting in which it trained, i.e., Agent A was
+D 16.5 17.5 19.5 26.5 14.0
+tested in Setting A.
+E 13.0 18.5 19.0 23.0 27.0
+We also did some experiments for agents from differ-
+ent training steps. Table 3 shows the success rates of
+different agents after some certain training steps. The
+tings. However, some goes down after a certain training
+success rates of each agent were tested with the same
+step, e.g., the success rate of Agent A goes down after 4
+simulator setting in which it was trained, i.e., the case
+million training steps. Theoretically, with a appropriate
+in the diagonal of Table 2. In Table 3, “f” indicates the
+reward function, the DQN should perform better and
+finalnumberofstepsusedfortrainingeachagentin160
+better, and the success rates should go up iteratively.
+hours, as mentioned in Section 4.1.
+Thegoingdowncasewasquitepossiblycausedbythe
+What we will discuss regarding the data in Table 2
+reward function, which has the possibility to guide the
+and 3 is based on the assumption that some outliers
+agent to a wrong direction. For the case in this pa-
+of some conclusions appeared accidentally due to the
+per, the evaluation is based on success rates, but the
+limited number of testing rounds. Although 200 test-
+reward function is based on distance changes. The rela-
+ing rounds are already able to extract data changing
+tion between success rates and distance changes is indi-
+trends in success rates, they are insufficient to extract
+rect. This indirect relation provides the incorrect guid-
+the ground truth. Some minor success rate distortions
+ance possibility. This should be considered carefully in
+happenoccasionally. Tomaketheconclusionsmorecon-
+future work.
+vincing, more study is necessary.
+Table 3 also shows that the success rate of the agent
+From Table 2, we can find that Agent A and B can trainedinamorecomplicatedsettingisnormallysmaller
+bothadapttoSettingAandB,butcannotadapttothe than that in a simpler setting, and needs more training
+other three settings. This shows that these two agents time to get to a same level of success rate. For example,
+arerobusttorandomimagenoise, butnotrobusttody- thesuccessrateofAgentEissmallerthanthatofAgent
+namicarminitialposeandlinklength,andimageoffsets. D in each training episode, but is close to that of Agent
+Therandomimagenoiseisnotakeyfeatureinthesetwo D in a latter training episode.
+agents. In general, no matter whether the discussion assump-
+In addition, other than the settings in which they are tionholdsornot,thedatainTable2and3atleastshows
+trained, Agent C, D and E can also achieve relatively thattheDQNhasthecapabilitytoadapttothesenoisy
+highsuccessratesinthesettingswithfewernoisyfactors factors, and is feasible to learn performing target reach-
+than their training settings. This indicates that agents ingfromexplorationinsimulation. However,morestudy
+trained with more noisy factors can adapt to settings is necessary to increase the success rates.
+with fewer noisy factors.
+4.3 Real World Experiment Using Camera
+In Table 3, we can find that the success rate of each
+agent normally goes up after more training steps. This
+showsthat,inthetrainingprocess,allthefiveagentscan To check the feasibility of trained agents in the real
+learntoadapttothenoisyfactorspresentedintheirset- world, we did a target reaching experiment in real sce-
+ing target reaching. There were some kind of mapping
+distortions between real and simulation scenarios. The
+distortions might be caused by the differences between
+real-scenario and simulation-scenario images.
+4.4 Real World Experiment Using
+Synthetic Images
+To verify the analysis regarding the reason why Agent
+B failed to perform target reaching, we did another real
+worldexperimentusingsyntheticimagesinsteadofcam-
+eraimages. Intheexperiment,thesyntheticimageswere
+generated by the 2D simulator according to real-time
+joint angles (“S1”, “E1” and “W1”) on a Baxter robot.
+The real-time joint angles were provided by the ROS-
+basedinterfaces. Inthiscase,therewasnodifferencebe-
+(a) Real world experiment using (b) Asampleinputim-
+tween real-scenario and simulation-scenario images. All
+camera images age
+other settings were the same with those in Section 4.3,
+Figure 7: Testing scene and a sample input of the real as shown in Fig. 1.
+world experiment using camera images. In the testing In this experiment, we used the same agent that was
+scene, a Baxter arm moved on a vertical plane with a used in Section 4.3, i.e., Agent B trained with 3 million
+white background. To guarantee that images input to steps. It achieved a consistent success rate with that in
+the DQN have an as consistent as possible appearance the simulation-scenario testing.
+to those in simulation scenarios, camera images were Accordingtotheresults,wecanconcludethattherea-
+cropped and masked with a boundary. The boundary son why Agent B failed in completing the target reach-
+is from the background of a simulator screenshot. ing task with camera images is the existence of input
+image differences. These differences might come from
+camera pose variations, color and shape distortions, or
+narios using camera images, i.e., the second phase men-
+some other factors. More study is necessary to exactly
+tionedinSection3.1. Inthisexperiment,weusedAgent
+figure out where the differences came from.
+B trained with 3 million steps, which has relatively high
+success rates for both Setting A and B in the testing in
+5 Conclusion and Discussion
+simulation.
+The experiment settings were arranged to the case The DQN-based system is feasible to learn performing
+that the 2D simulator simulated, i.e., a Baxter arm target reaching from exploration in simulation, using
+moved on a vertical plane with a white background. A only visual observation with no prior knowledge. How-
+grey-scalecamerawasplacedinfrontofthearm,observ- ever,theagent(AgentB)trainedinsimulationscenarios
+ingthearmwithahorizontalviewofpoint(fortheDQN, failedtoperformtargetreachingintherealworldexperi-
+the grey-scale camera is the same with a color camera, mentusingcameraimagesasinputs. Instead,inthereal
+since even the images from Atari games and the 2D tar- world experiment using synthetic images as inputs, the
+get reaching simulator are RGB-color images, they are agent got a consistent success rate with that in simula-
+converted to grey-scale images prior to being input to tion. These two different results show that the failure
+the network). The background was a white sheet. The in the real world experiment with camera images was
+testing scene and a sample input to the DQN are shown caused by the input image differences between real and
+in Fig. 7(a) and 7(b), respectively. simulation scenarios. To determine the causes of these
+In the experiment, to make the agent work in the real more work is required.
+world, we tried to match the arm position (in images) In the future, we are looking at either decreasing the
+in real scenarios to that in simulation scenarios. The imagedifferencesormakingagentsrobusttothesediffer-
+positionadjustmentwasmadethroughchangingcamera ences. Decreasing the differences is a trade-off between
+pose and image cropping parameters. However, no mat- making the simulator more consistent to real scenarios
+ter how we adjusted, it did not reach the target. The andpreprocessinginputimagestomakethemmorecon-
+success rate is 0. sistent to those in simulation scenarios. If choose to in-
+Other than the success rate, we also got a qualitative crease the fidelity of the simulator, it will most likely
+result: Agent B mapped specific input images to certain resultinaslow-downofthesimulation,increasingtrain-
+actions, but the mapping was ineffective for perform- ing time.
+Regarding making agents robust to the differences, learning in robotics: Applications and real-world
+there are four possible methods: adding variations of challenges. Robotics, 2(3):122–148, 2013.
+the factors causing the image differences into simulation
+[Kragic and Christensen, 2002] DanicaKragicandHen-
+scenarios when training, adding a fine-tuning process in
+rik I Christensen. Survey on visual servoing for ma-
+real scenarios after the training in simulation scenarios,
+nipulation. Technical report, Computational Vision
+training in real scenarios directly, and designing a new
+and Active Perception Laboratory, Royal Institute of
+DRL architecture (still can be a DQN) which is robust
+Technology, Stockholm, Sweden, 2002.
+to the image differences.
+[Kragic et al., 2005] Danica Kragic, Mårten Björkman,
+Inadditiontosolvingtheproblemofimagedifferences,
+Henrik I Christensen, and Jan-Olof Eklundh. Vi-
+morestudyisnecessaryinthedesignofrewardfunction.
+sion for robotic object manipulation in domestic set-
+Agoodrewardfunctionisthekeytogeteffectivemotion
+tings. Robotics and Autonomous Systems, 52(1):85–
+controlorevenmanipulationskillsandalsospeedupthe
+100, 2005.
+learning process. The reward function used in this work
+is just a first step. It is far less than enough to be a [Krizhevsky et al., 2012] Alex Krizhevsky, Ilya
+good reward function. Other than the effectiveness and Sutskever, and Geoffrey E Hinton. Imagenet
+efficiencyconcerns,agoodrewardfunctionneedsalsoto classification with deep convolutional neural net-
+be flexible to a range of general purpose motion control works. In Advances in Neural Information Processing
+or even manipulation tasks. Systems (NIPS), pages 1097–1105, 2012.
+Besides, the visual perception in this work is from an
+[Levine et al., 2015a] Sergey Levine, Chelsea Finn,
+external monocular camera. An on-robot stereo camera
+Trevor Darrell, and Pieter Abbeel. End-to-end train-
+or RGBD sensor can be a more effective and practical
+ingofdeepvisuomotorpolicies. Technicalreport,Uni-
+solution for applications in the 3D real world. The joint
+versity of California, Berkeley, CA, USA, 2015.
+controlmodeinthisworkispositioncontrol,someother
+[Levine et al., 2015b] Sergey Levine, Nolan Wagener,
+control modes like speed control and torque control are
+and Pieter Abbeel. Learning contact-rich manipula-
+morecommonandappropriate for dynamicmotioncon-
+tion skills with guided policy search. Proceedings of
+trol and manipulation in real-world applications.
+the IEEE International Conference on Robotics and
+Acknowledgements Automation (ICRA), pages 156–163, 2015.
+ThisresearchwasconductedbytheAustralianResearch [Mason, 2001] Matthew T Mason. Mechanics of robotic
+CouncilCentreofExcellenceforRoboticVision(project manipulation. MIT Press, 2001.
+number CE140100016). Computational resources and [Mnih et al., 2013] Volodymyr Mnih, Koray
+servicesusedinthisworkwerepartiallyprovidedbythe Kavukcuoglu, David Silver, Alex Graves, Ioannis
+HPC and Research Support Group, Queensland Univer- Antonoglou, Daan Wierstra, and Martin Riedmiller.
+sity of Technology (QUT). Playing atari with deep reinforcement learning.
+Technical report, Google DeepMind, London, UK,

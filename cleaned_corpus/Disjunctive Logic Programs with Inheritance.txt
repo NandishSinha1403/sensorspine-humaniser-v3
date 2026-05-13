@@ -1,0 +1,1002 @@
+2v6305010/sc:viXra
+UnderconsiderationforpublicationinTheoryandPracticeofLogicProgramming 1
+Disjunctive Logic Programs with Inheritance
+FRANCESCOBUCCAFURRI
+DIMET–Universita`diReggioCalabria89100,ReggioCalabria,Italia
+(e-mail:bucca@ns.ing.unirc.it)
+WOLFGANGFABER
+Institutfu¨rInformationssysteme,TechnischeUniversita¨tWien,1040Vienna,Austria
+(e-mail:faber@kr.tuwien.ac.at)
+NICOLALEONE
+DipartimentodiMatematica,Universita` degliStudidellaCalabria,87030Rende(CS),Italia
+(e-mail:leone@unical.it)
+Thepaperproposesanewknowledgerepresentationlanguage,calledDLP<,whichextendsdisjunc-
+tivelogicprogramming(withstrongnegation)byinheritance.Theadditionofinheritanceenhances
+theknowledgemodelingfeaturesofthelanguageprovidinganaturalrepresentationofdefaultrea-
+soningwithexceptions.
+Adeclarativemodel-theoreticsemanticsofDLP<isprovided,whichisshowntogeneralizetheAn-
+swerSetSemanticsofdisjunctivelogicprograms.
+Theknowledge modeling features of the language are illustratedby encoding classical nonmono-
+tonicproblemsinDLP<.
+Thecomplexityof DLP< isanalyzed, proving that inheritance doesnot causeany computational
+overhead,asreasoninginDLP< hasexactlythesamecomplexityasreasoningindisjunctivelogic
+programming.ThisisconfirmedbytheexistenceofanefficienttranslationfromDLP<toplaindis-
+junctivelogicprogramming.Usingthistranslation,anadvancedKRsystemsupportingtheDLP<
+languagehasbeenimplementedontopoftheDLVsystemandhassubsequentlybeenintegratedinto
+DLV.
+1 Introduction
+Disjunctivelogicprogramsarelogicprogramswheredisjunctionisallowedintheheadsof
+therulesandnegationasfailure(NAF)mayoccurinthebodiesoftherules.Suchprograms
+arenowwidelyrecognizedasavaluabletoolforknowledgerepresentationandcommon-
+sensereasoning(BaralandGelfond1994,Lobo,MinkerandRajasekar1992,Gelfondand
+Lifschitz1991).Oneoftheattractionsofdisjunctivelogicprogrammingisitsabilitytonat-
+urallymodelincompleteknowledge(BaralandGelfond1994,Loboetal.1992).Theneed
+to differentiate between atoms which are false because of the failure to prove them true
+(NAF,orCWAnegation)andatomsthefalsityofwhichisexplicitlyprovableledtoextend
+disjunctivelogicprogramsbystrongnegation(GelfondandLifschitz1991).Strongnega-
+tion, permitted also in the headsof rules, furtherenhancesthe knowledgemodelingfea-
+turesofthelanguage,anditsusefulnessiswidelyacknowledgedintheliterature(Alferes
+2 F.Buccafurri,W.FaberandN.Leone
+andPereira1992,BaralandGelfond1994,KowalskiandSadri1990,Alferes,Pereiraand
+Przymusinski1996,Sakama and Inoue 1996,Alferes, Pereira and Przymusinski1998b).
+However,itdoesnotallow torepresentdefaultreasoningwithexceptionsin a directand
+naturalway.Indeed,torenderadefaultrulerdefeasible,rmustatleastbeequippedwith
+an extra negativeliteral, which “blocks” inferencesfrom r for abnormalinstances (Gel-
+fondandSon1997).Forinstance,toencodethefamousnonmonotonicreasoning(NMR)
+example stating that birds normally fly while penguinsdo not fly, one should write1 the
+fly(X)←bird(X), not¬fly(X).
+alongwiththefact
+¬fly(penguin).
+This paper proposes an extension of disjunctive logic programming by inheritance,
+called DLP<. The addition of inheritanceenhancesthe knowledgemodelingfeaturesof
+thelanguage.Possibleconflictsaresolvedinfavoroftheruleswhichare“morespecific”
+according to the inheritance hierarchy. This way, a direct and natural representation of
+default reasoning with exceptions is achieved (e.g., defeasible rules do not need to be
+equippedwithextraliteralsasabove–seesection4).
+Themaincontributionsofthepaperarethefollowing:
+• We formally define the DLP< language, providing a declarative model theoretic
+semantics of DLP<, which is shown to generalize the Answer Set Semantics of
+(GelfondandLifschitz1991).
+• Weillustratetheknowledgemodelingfeaturesofthelanguagebyencodingclassical
+nonmonotonicproblemsinDLP<.Interestingly,DLP<alsosuppliesaverynatural
+representationofframeaxioms.
+• We analyzethecomputationalcomplexityofreasoningoverDLP< programs.Im-
+portantly,whileinheritanceenhancestheknowledgemodelingabilityofdisjunctive
+logic programming,it doesnotcause anycomputationaloverhead,asreasoningin
+DLP< hasexactlythesamecomplexityasreasoningindisjunctivelogicprogram-
+ming.
+• WecompareDLP<torelatedworkproposedintheliterature.Inparticular,westress
+thedifferencesbetweenDLP< andDisjunctiveOrderedLogic(DOL)(Buccafurri,
+Leone and Rullo 1998, Buccafurri, Leone and Rullo 1999); we point out the re-
+lation to the Answer Set Semantics of (Gelfond and Lifschitz 1991); we compare
+DLP< with prioritized disjunctive logic programs (Sakama and Inoue 1996); we
+analyze its relationshipsto inheritance networks (Touretzky 1986) and we discuss
+thepossibleapplicationofDLP<togiveaformalsemanticstoupdatesoflogicpro-
+grams.(Alferes,Leite,Pereira,PrzymusinskaandPrzymusinski1998a,Marekand
+Truszczyn´ski1994,Leone,PalopoliandRomeo1995).
+• We implementaDLP< system.Tothisend,wefirstdesignanefficienttranslation
+from DLP< to plain disjunctive logic programming. Then, using this translation,
+we implementa DLP< evaluatoron top of the DLV system (Eiter,Leone, Mateis,
+1notand¬denotetheweaknegationsymbolandthestrongnegationsymbol,respectively.
+DisjunctiveLogicProgramswithInheritance 3
+PfeiferandScarcello1998).ItispartofDLVandcanbefreelyretrievedfrom(Faber
+1999).
+The sequel of the paper is organized as follows. The next two sections provide a for-
+mal definition of DLP<; in particular, its syntax is given in Section 2 and its semantics
+is defined in Section 3. Section 4 shows the use of DLP< for knowledgerepresentation
+and reasoning, providing a number of sample DLP< encodings. Section 5 analyzes the
+computationalcomplexityofthemainreasoningtasksarisingintheframeworkofDLP<.
+Section 6 discusses related work. The main issues underlyingthe implementationof our
+DLP<systemaretackledinSection7,andourconclusionsaredrawninSection8.
+2 SyntaxofDLP<
+Thissectionprovidesaformaldescriptionofsyntacticconstructsofthelanguage.
+Letthefollowingdisjointsetsbegiven:asetV ofvariables,asetΠofpredicates,aset
+Λ of constants, and a finite partially orderedset of symbols(O,<), where O is a set of
+strings, called objectidentifiers, and < is a strict partialorder (i.e., the relation < is: (1)
+irreflexive–c6<c ∀c∈O,and(2)transitive–a<b∧b<c⇒a<c ∀a,b,c∈O).
+AtermiseitheraconstantinΛoravariableinV.2
+Anatomisaconstructoftheforma(t
+),whereaisapredicateofarityninΠ
+andt ,...,t areterms.
+Aliteraliseitherapositiveliteralporanegativeliteral¬p,wherepisanatom(¬
+isthestrongnegationsymbol).Twoliteralsarecomplementaryiftheyareoftheform
+pand¬p,forsomeatomp.
+GivenaliteralL,¬.Ldenotesitscomplementaryliteral.Accordingly,givenasetAof
+literals,¬.Adenotestheset{¬.L|L∈A}.
+Arulerisanexpressionoftheform
+a 1∨···∨a n ←b 1 ,···,b k ,notb k+1 ,···,notb m N n≥1, m≥0
+areliterals,notisthenegationasfailuresymbolandNis
+either(1)thesymbol’.’or(2)thesymbol’!’.Incase(1)risadefeasiblerule,incase(2)
+itisastrictrule.
+Thedisjunctiona 1∨···∨a
+istheheadofr,whiletheconjunctionb
+..., not b m is the body of r. b 1 ,...,b k is called the positive part of the body of r and
+not b k+1 ,...,not b m is called the NAF (negation as failure) part of the body of r. We
+oftendenotethesetsofliteralsappearinginthehead,inthepositive,andintheNAFpart
+ofthebodyofarulerbyHead(r),Body+(r),andBody−(r),respectively.
+Ifthebodyofarulerisempty,thenriscalledfact.Thesymbol’←’isusuallyomitted
+fromfacts.
+Anobjectoisapairhoid(o),Σ(o)i, whereoid(o)isanobjectidentifierinOandΣ(o)
+isa(possiblyempty)setofrules.
+AknowledgebaseonOisasetofobjects,oneforeachelementofO.
+GivenaknowledgebaseKandanobjectidentifiero∈O,theDLP<programforo(on
+2Notethatfunctionsymbolsarenotconsideredinthispaper.
+4 F.Buccafurri,W.FaberandN.Leone
+The relation < induces a partial order on P in the obvious way, that is, given o =
+(oid(o ),Σ(o )) and o = (oid(o ),Σ(o )), o < o iff oid(o ) < oid(o ) (read ”o is
+i i j j j i j i j i
+morespecificthano ”).
+Aterm,anatom,aliteral,arule,orprogramisgroundifnovariableappearsinit.
+Informally,aknowledgebasecanbeviewedasasetofobjectsembeddingthedefinition
+oftheirpropertiesspecifiedthroughdisjunctivelogicrules,organizedinanIS-A(inheri-
+tance)hierarchy(inducedbytherelation<).AprogramP foranobjectoonaknowledge
+baseKconsistsoftheportionofK”seen”fromolookingupintheIS-Ahierarchy.Thanks
+totheinheritancemechanism,P incorporatestheknowledgeexplicitlydefinedforoplus
+theknowledgeinheritedfromthehigherobjects.
+If a knowledge base admits a bottom element (i.e., an object less than all the other
+objects, by the relation <), we usually refer to the knowledge base as “program”, since
+itisequaltotheprogramforthebottomelement.
+Moreover,we represent the transitive reduction of the relation < on the objects.3 An
+objectoisdenotedasoid(o):o
+Σ(o)4 ,where(oid(o),o 1),...,(oid(o),o
+exactly those pairs of the transitive reduction of <, in which the first object identifier is
+oid(o).oisreferredtoassub-objectofo
+.
+ConsiderthefollowingprogramP:
+o {a∨¬b←c,notd. e←b! }
+o :o {b. ¬a∨c. c←b.}
+P consistsoftwoobjectso ando .o isasub-objectofo .Accordingtotheconvention
+illustrated above, the knowledge base on which P is defined coincides with P, and the
+objectforwhichP isdefinediso (thebottomobject).
+3 SemanticsofDLP<
+In this section we assume that a knowledge base K is given and an object o has been
+fixed. Let P be the DLP< program for o on K. The Universe UP of P is the set of all
+constantsappearingintherules.TheBaseBP ofP isthesetofallpossiblegroundliterals
+constructiblefromthepredicatesappearingintherulesofP andtheconstantsoccurring
+in UP. Note that, unlike in traditionallogic programmingthe Base of a DLP< program
+containsbothpositiveandnegativeliterals.GivenaruleroccurringinP,agroundinstance
+of r is a rule obtained from r by replacing every variable X in r by σ(r), where σ is a
+mappingfromthevariablesoccurringinrtotheconstantsinUP.Wedenotebyground(P)
+the(finite)multisetofallinstancesoftherulesoccurringinP.Thereasonwhyground(P)
+is a multiset is that a rule may appear in several different objects of P, and we require
+therespectivegroundinstancesbedistinct.Hence,wecandefineafunctionobj of from
+groundinstancesofrulesinground(P)ontothesetOoftheobjectidentifiers,associating
+withagroundinstancerofrthe(unique)objectofr.
+3(a,b)isinthetransitivereductionof<iffa<bandthereisnocsuchthata<candc<b.
+4ThesetΣ(o)isdenotedwithoutcommasasseparators.
+DisjunctiveLogicProgramswithInheritance 5
+AsubsetofgroundliteralsinBP issaidtobeconsistentifitdoesnotcontainapairof
+complementaryliterals. AninterpretationI isa consistentsubsetofBP. Givenaninter-
+pretationI ⊆ BP,agroundliteral(eitherpositiveornegative)Listruew.r.t.I ifL ∈ I
+holds.Lisfalsew.r.t.I otherwise.
+Givenaruler ∈ ground(P),theheadofristrueinI ifatleastoneliteralofthehead
+istruew.r.tI. Thebodyofr istrue in I if:(1)everyliteralin Body+(r) istruew.r.t.I,
+and(2)everyliteralinBody−(r)isfalsew.r.t.I.ArulerissatisfiedinI ifeitherthehead
+ofristrueinI orthebodyofrisnottrueinI.
+Nextwe introducethe conceptofa modelfora DLP<-program.Differentfromtradi-
+tionallogicprogramming,thenotionofsatisfiabilityofrulesisnotsufficientforthisgoal,
+as it does not take into account the presence of explicit contradictions. Hence, we first
+presentsomepreliminarydefinitions.
+Giventwogroundrulesr
+wesaythatr
+threatensr
+onaliteralLif(1)¬.L∈
+Head(r 1)andL∈Head(r 2),(2)obj of(r 1)<obj of(r 2)and(3)r
+isdefeasible,
+Definition1
+GivenaninterpretationI andtwo groundrulesr andr suchthatr threatensr onL
+wesaythatr
+overridesr
+onLinI if:(1)¬.L∈I,and(2)thebodyofr
+istrueinI.
+A (defeasible)rule r ∈ ground(P) is overriddenin I if for eachL ∈ Head(r) there
+∈ground(P)suchthatr
+overridesronLinI.
+Intuitively, the notion of overriding allows us to solve conflicts arising between rules
+with complementary heads. For instance, suppose that both a and ¬a are derivable in I
+fromrulesr andr′,respectively.Ifr ismorespecificthanr′ intheinheritancehierarchy
+andr′isnotstrict,thenr′isoverridden,meaningthatashouldbepreferredto¬abecause
+itisderivablefromamoretrustablerule.
+Observe that, by definition of overriding,strict rules cannot be overridden,since they
+areneverthreatened.
+Consider the program P of Example 1. Let I={¬a,b,c,e} be an interpretation. Rule
+¬a∨c←.intheobjecto overridesrulea∨¬b←c,notd.ino ontheliteralainI.
+Moreover,ruleb←.ino overridesrulea∨¬b←c,notd.ino ontheliteral¬binI.
+Thus,therulea∨¬b←c,notd.ino isoverriddeninI.
+ConsiderthefollowingprogramP:
+o :o {a←notb. b←nota.}
+Consider now the interpretations M ={a,¬b} and M ={b,¬a}. While the rule ¬b. is
+overriddenin M , the rule ¬a! cannot be overriddensince it is a strict rule. Due to over-
+riding,strictrulesanddefeasiblerulesarequitedifferentfromthesemanticpointofview.
+Inourexample,theoverridingmechanismallowsustoinvalidatethedefeasiblerule¬b.
+in favorof themoretrustable oneb←nota. (w.r.t.the interpretationM ). In words,the
+defeasibleruleisinvalidatedinM becauseofamorespecificcontradictoryruleandnoin-
+consistencyisgenerated.Inotherwords,itispossibletofindaninterpretationcontaining
+6 F.Buccafurri,W.FaberandN.Leone
+theliteralb(i.e.,statinganexceptionfortherule¬b.)suchthatalltherulesofP areeither
+satisfiedoroverridden(i.e.,invalidated)init.SuchaninterpretationisjustM .Thiscannot
+happenforthestrictrule¬a!.Indeed,nointerpretationcontainingtheliterala(i.e.,stating
+anexceptionforthestrictrule)canbefoundwhichsatisfiesallnon-overriddenrulesofP.
+In the exampleabove we have implicitly used the notion of model for a programP that
+wenextformallyprovide.Amodelforaprogramisaninterpretationsatisfyingallitsnon
+overriddenrules.
+Definition2
+LetI beaninterpretationforP.I isamodelforP ifeveryruleinground(P)issatisfied
+oroverriddeninI.I isaminimalmodelforP ifno(proper)subsetofI isamodelforP.
+Notethatstrictrulesmustbesatisfiedineverymodel,sincetheycannotbeoverridden.
+ItiseasytoseethatM ={a,¬b}isnotamodelfortheprogramP ofExample3sincethe
+rule¬a!is neitheroverriddennorsatisfied.On thecontrary,M ={b,¬a}isa modelfor
+P,since¬b.isoverriddenbytheruleb←nota.Thelatterruleissatisfiedsinceb∈M .
+Therule¬a! issatisfied as¬a∈M andthe rulea←notb. is satisfied since bothbody
+andheadarefalsew.r.t.M .
+Next we define the transformation G based on which our semantics is defined. This
+transformationappliedtoaprogramP w.r.t.aninterpretationIoutputasetofrulesG (P)
+with no negationby failure in the body. Intuitively,such rules are those remaining from
+ground(P)by(1)eliminatingtherulesoverriddenintheinterpretationI,(2)deletingrules
+whoseNAFpartisnot”true”inI (i.e.,someliteralnegatedbynegationasfailureoccurs
+in I) and (3) deleting the NAF part of all the remainder rules. Since the transformation
+encodestheoverridingmechanism,thedistinctionbetweenstrictrulesanddefeasiblerules
+inG (P)ismeaningless(indeed,thereisnodifferencebetweenstrictanddefeasiblerules
+exceptfortheoverridingmechanismwheretheupperruleisrequiredtobedefeasible).For
+thisreasonthesyntaxofrulesinG (P)canbesimplifiedbydroppingthesymbol.from
+defeasiblerulesandthesymbol!fromstrictrules.
+Definition3
+GivenaninterpretationI forP,thereductionofP w.r.t.I,denotedbyG (P),isthesetof
+rulesobtainedfromground(P)by(1)removingeveryruleoverriddeninI,(2)removing
+everyruler suchthatBody−(r)∩I 6= ∅,(3)removingtheNAFpartfromthebodiesof
+theremainingrules.
+ConsidertheprogramP ofExample1.LetIbetheinterpretation{¬a,b,c,e}.Asshown
+inExample2,rulea∨¬b←c,notd.isoverriddeninI.Thus,G (P)isthesetofrules
+{¬a∨c. e←b. b. c←b.}.ConsidernowtheinterpretationM={a,b,c,e}. It
+iseasytoseethatG (P)={a∨¬b←c. ¬a∨c. e←b. b. c←b.}.
+DisjunctiveLogicProgramswithInheritance 7
+Weobservethatthereductionofaprogramissimplyasetofgroundrules.GivenasetS
+ofgroundrules,wedenotebypos(S)thepositivedisjunctiveprogram(calledthepositive
+version of S), obtained from S by considering each negativeliteral ¬p(X¯) as a positive
+onewithpredicatesymbol¬p.
+Definition4
+LetM beamodelforP.WesaythatM isa(DLP<-)answersetforP ifM isaminimal
+modelofthepositiveversionpos(G (P))ofG (P).
+Notethatinterpretationsmustbeconsistentbydefinition,soconsideringpos(G (P))
+insteadofG (P)doesnotloseinformationinthisrespect.
+NotethatthenotionofminimalmodelofDefinition2cannotbeusedinDefinition4,as
+G isasetofrulesandnotaDLP< program.
+ConsidertheprogramP ofExample1:
+ItiseasytoseethattheinterpretationIofExample5isnotananswersetforP.Indeed,
+althoughIisamodelforpos(G (P))itisnotminimal,sincetheinterpretation{b,c,e}is
+amodelforpos(G (P)),too.NotethattheinterpretationI′ ={b,c,e}isnotananswer
+setforP.Indeed,G I′(P)= {a∨¬b←c. ¬a∨c. e←b. b. c←b.}andI′
+isnotamodelforpos(G I′(P)),sincetherulea∨¬b←c.isnotsatisfiedinI′.
+Ontheotherhand,theinterpretationMofExample5isananswersetforP,sinceMis
+a minimalmodelforpos(G (P)). Moreover,it can be easily realizedthatM is the only
+answersetforP.
+Finally, the programP of Example 3 admits one consistent answer set M ={b,¬a}.
+Notethatif we replacethe strictrule¬a! bya defeasiblerule¬a., P admitstwoanswer
+sets, namely M ={a,¬b} and M ={b,¬a}. Asserting ¬a by a strict rule, prunes the
+answersetM statingtheexception(truthoftheliterala)tothisrule.
+ItisworthwhilenotingthatifarulerisnotsatisfiedinamodelM,thenallliteralsinthe
+headofrmustbeoverriddeninM.
+LetP1 betheprogram
+o :o {¬a.}
+o {a. ←b.}
+o :o {¬a.}
+Then, {¬a} is not a model for program P1 , because the head literal b in the head of
+a∨b. is notoverriddenin M. Ifwe dropb fromrulea∨b., then{¬a} isa modelof the
+resultingprogramP2 .
+Observealso thattwo programshavingthe same answer sets, as o and o (bothhave
+thesingleanswerset{¬a}),maygetdifferentanswersetsevenifweaddthesameobject
+tobothofthem.Indeed,programP1 hasnoanswerset,whileprogramP2 hastheanswer
+set{¬a}.
+Thisisnotsurprising,asasimilarphenomenonalsoarisesinnormallogicprogramming
+8 F.Buccafurri,W.FaberandN.Leone
+whereP ={a.}andP ={a←notb.}havethe same answer set{a}, while P ∪{b.}
+andP ∪{b.}havedifferentanswersets({a,b}and{b},respectively).
+FinallyweshowthateachanswersetofaprogramP isalsoaminimalmodelofP:
+Proposition1
+IfM isananswersetforP,thenM isaminimalmodelofP.
+BycontradictionsupposeM′isamodelforP suchthatM′ ⊂M.
+FirstweshowthatM′isamodelforpos(G (P))too,i.e.,everyruleinpos(G (P))
+issatisfiedinM′.Recallthatpos(G (P))isthepositiveversionoftheprogramobtained
+byapplyingthetransformationG totheprogramground(P).Consideragenericruler
+ofground(P).SinceM′isamodelforP either(i)risoverriddeninM′or(ii)issatisfied
+inM′.
+Incase(i),sinceM′ ⊂ M,fromDefinition1immediatelyfollowsthatr isoverridden
+inM too.Thus,rdoesnotoccurinG (P)sincethetransformationG removesallrules
+overriddeninM.
+Incase (ii)(i.e.,r issatisfied in M′),if r is suchthatB(r)∩M 6= ∅, thentheruleis
+removed by G . Otherwise, r is transformed by G into a rule r′ obtained from r by
+droppingtheNAFpartfromthebody.SincerissatisfiedinM′,alsor′ issatisfiedinM′.
+Asaconsequence,alltherulesofpos(G (P))aresatisfiedinM′,thatisM′ ⊂ M isa
+modelforpos(G (P)).Thus,byDefinition4,M isnotananswersetforP sinceitisnot
+aminimalmodelofpos(G (P)).Theproofishenceconcluded.
+4 KnowledgeRepresentationwithDLP<
+Inthissection,wepresenta numberofexampleswhichillustratehowknowledgecanbe
+representedusingDLP<.Tostart,weshowtheDLP< encodingofaclassicalexampleof
+nonmonotonicreasoning.
+ConsiderthefollowingprogramP withO(P)consistingofthreeobjectsbird,penguin
+and tweety, such that penguin is a sub-object of bird and tweety is a sub-object of
+penguin:
+bird {flies. }
+penguin:bird {¬flies! }
+tweety:penguin{ }
+Unlikeintraditionallogicprogramming,ourlanguagesupportstwotypesofnegation,that
+is strong negation and negation as failure. Strong negation is useful to express negative
+piecesofinformationunderthecompleteinformationassumption.Hence,anegativefact
+(bystrong negation)is true only if it is explicitly derivedfrom the rulesof the program.
+Asaconsequence,theheadofrulesmaycontainalsosuchnegativeliteralsandrulescan
+beconflictingonsomeliterals.Accordingtotheinheritanceprinciples,theorderingrela-
+tionship between objects can help us to assign differentlevels of reliability to the rules,
+DisjunctiveLogicProgramswithInheritance 9
+allowingustosolvepossibleconflicts.Forinstance,inourexample,thecontradictingcon-
+clusiontweetybothfliesanddoesnotflyseemstobeentailedfromtheprogram(astweety
+isapenguinandpenguinsarebirds,bothfliesand¬fliescanbederivedfromthe
+rules of the program). However, this is not the case. Indeed, the ”lower” rule ¬flies.
+specified in the object penguin is considered as a sort of refinement to the first general
+rule,andthusthemeaningoftheprogramisratherclear:tweetydoesnotfly,astweetyisa
+penguin.Thatis,¬flies.ispreferredtothedefaultruleflies.asthehierarchyexplicitly
+statesthespecificityoftheformer.Intuitively,thereisnodoubtthatM={¬flies}isthe
+onlyreasonableconclusion.
+Thenextexample,fromthefieldofdatabaseauthorizations,combinestheuseofbothweak
+andstrongnegation.
+Considerthefollowingknowledgebaserepresentingasetofsecurityspecificationabouta
+simplepart-ofhierarchyofobjects.
+authorize(bob)←notauthorize(ann). (1)
+authorize(ann)∨authorize(tom)←not¬authorize(alice). (2)
+authorize(amy)! (3)
+¬authorize(alice)! (4)
+¬authorize(bob)! (5)
+Object o is part-of the object o as well as o is part-of o . Access authorizationsto
+objectsarespecifiedbyruleswithheadpredicateauthorizeandsubjectstowhichautho-
+rizationsare grantedappearas arguments.Strongnegationis utilized to encodenegative
+authorizationsthatrepresentexplicitdenials.Negationasfailureisusedtospecifytheab-
+senceofauthorization(eitherpositiveornegative).Inheritanceimplementstheautomatic
+propagationof authorizationsfromanobjectto allits sub-objects.Theoverridingmech-
+anism allows us to represent exceptions: for instance, if an object o inherits a positive
+authorizationbut a denialfor the same subject is specified in o, then the negativeautho-
+rizationprevailsonthepositiveone.Possiblelossofcontrolduetooverridingmechanism
+canbeavoidedbyusingstrictrules:strictauthorizationscannotbeoverridden.
+ConsidertheprogramP ={(o ,{(1),(2),(3)}),(o ,{(4)})}fortheobjecto onthe
+aboveknowledgebase.Thisprogramdefinestheaccesscontrolfortheobjecto .Thanks
+10 F.Buccafurri,W.FaberandN.Leone
+to the inheritancemechanism,authorizationsspecified for the objecto , to which o be-
+longs, are propagated also to o . It consists of rules (1), (2) and (3) (inherited from o )
+and(4).Rule(1)statesthatbobisauthorizedtoaccessobjecto providedthatnoautho-
+rization for ann to access o exists. Rule (2) authorizes either ann or tom to access o
+providedthatnodenialforalicetoaccesso isderived.Thestrictrule(3)grantstoamy
+theauthorizationtoaccessobjecto .Suchauthorizationcanbeconsidered”strong”,since
+no exceptionscan be stated to it withoutproducinginconsistency.As a consequence,all
+theanswersetsoftheprogramcontaintheauthorizationforamy.Finally,rule(4)defines
+a denial for alice to access object o . Due to the absence of the authorizationfor ann,
+the authorization to bob of accessing the object o is derived (by rule (1)). Further, the
+explicitdenialtoaccesstheobjecto foralice(rule(4))allowstoderiveneitherautho-
+rization for ann nor for tom (by rule (2)). Hence, the only answer set of this programis
+{authorize(bob),¬authorize(alice),authorize(amy)}.
+Consider now the program P = {(o ,{(1),(2)}),(o ,{(5)})} for the object o .
+Rule (5) defines a denial for bob to access object o . The authorization for bob (de-
+fined by rule (1)) is no longer derived. Indeed, even if rule (1) allows to derive such an
+authorization due to the absence of authorizations for ann, it is overridden by the ex-
+plicit denial (rule (5)) defined in the object o (i.e., at a more specific level). The body
+of rule (2)inheritedfrom o is true forthis programsince no denialforalice can be de-
+rived, and it entails a mutual exclusive access to object o for ann and tom (note that
+nootherheadcontainsauthorize(ann)orauthorize(bob)). TheprogramP admits
+two answersets, namely{authorize(ann), ¬authorize(bob), authorize(amy)} and
+{authorize(tom), ¬authorize(bob), authorize(amy)} representing two alternative
+authorizationsetstogranttheaccesstotheobjecto .
+SolvingtheFrameProblem
+TheframeproblemhasfirstbeenaddressedbyMcCarthyandHayes(McCarthyandHayes
+1969),andinthemeantimea lotofresearchhasbeenconductedtoovercomeit(see e.g.
+(Shanahan1997)forasurvey).
+In short,the frameproblemarises in planning,when actionsand fluentsare specified:
+Anactionaffectssomeofthe fluents,butallunrelatedfluentsshouldremainas theyare.
+Inmostformulationsusingclassicallogic,onemustspecifyforeverypairofactionsand
+unrelatedfluentsthatthefluentremainsunchanged.Clearlythisisanundesirableoverhead,
+sincewithnactionsandmfluents,n×mclauseswouldbeneeded.
+Instead,itwouldbenicetobeabletospecifyforeachfluentthatit“normallyremains
+valid”andthatonlyactionswhichexplicitlyentailthecontrarycanchangethem.
+Indeed,thisgoalcanbeachievedinaveryelegantwayusingDLP<:Oneobjectcontains
+the rules which specify inertia (the fact that fluents normally do not change). Another
+object inherits from it and specifies the actions and the effects of actions — in this way
+a verynatural,straightforwardandeffectiverepresentationis achieved,which avoidsthe
+frameproblem.
+Asanexamplewe showhowthefamousYale ShootingProblem,whichis duetoHanks
+andMcDermott(HanksandMcDermott1987),canberepresentedandsolvedwithDLP<:
+DisjunctiveLogicProgramswithInheritance 11
+Thescenarioinvolvesan individual(or in a less violentversiona turkey),whocan be
+shotwithagun.Therearetwofluents,aliveandloaded,whichintuitivelymeanthatthe
+individualisaliveandthatthe gunisloaded,respectively.Therearethreeactions,load,
+waitandshoot.Loadinghastheeffectthatthe gunisloadedafterwards,shootingwith
+theloadedgunhastheeffectthattheindividualisnolongeraliveafterwards(andalsothat
+thegunisunloaded,butthisnotreallyimportant),andwaitinghasnoeffects.
+The problem involves temporal projection: It is known that initially the individual is
+alive,andthatfirstthegunisloaded,andafterwaiting,thegunisshotwith.Thequestion
+is:Whichfluentsholdaftertheseactionsandbetweenthem?
+Inourencoding,theinertiaobjectcontainsthedefaultsforthefluents,thedomainob-
+jectadditionallyspecifiestheeffectsofactions,whiletheyaleobjectencodestheproblem
+instance.
+ForthetimeframeworkweusetheDLVboundedintegerbuilt-ins:Theupperboundn
+of positive integers is specified by either adding the fact #maxint=n. to the program
+orbypassingtheoption−N=nonthecommandline(thisoverridesany#maxint=n.
+statement).Itisthenpossibletousethebuilt-inconstant#maxint,whichevaluatestothe
+specifiedupperbound,and severalbuilt-inpredicates,of whichin thispaperwe just use
+#succ(N,N1),whichholdsifN1isthesuccessorofNandN1≤#maxint.Foradditional
+DLVbuilt-inpredicates,consulttheDLVhomepage(FaberandPfeifersince1996).
+alive(T1)←alive(T),#succ(T,T1). (6)
+loaded(T1)←loaded(T),#succ(T,T1). (8)
+domain:inertia
+loaded(T1)←load(T),#succ(T,T1)! (11)
+¬loaded(T1)←shoot(T),loaded(T),#succ(T,T1)! (12)
+¬alive(T1)←shoot(T),loaded(T),#succ(T,T1)! (13)
+yale:domain
+load(0)! wait(1)! shoot(2)! alive(0)! (15)
+Theonlyanswersetforthisprogram(and#maxint=3)contains,besidesthefactsof
+theyaleobject,loaded(1),loaded(2),alive(0),alive(1),alive(2)and¬loaded(3),
+12 F.Buccafurri,W.FaberandN.Leone
+¬alive(3). That is, the individualis alive until the shootaction is taken, and no longer
+aliveafterwards,andthegunisloadedbetweenloadingandshooting.
+We wantto pointoutthatthis formalismis equallysuitedfor solvingproblemswhich
+involve finding a plan (i.e. a sequence of actions) rather than doing temporal projection
+(determiningtheeffectsofagivenplan)asintheYaleShootingProblem:Youhavetoadd
+aruleaction(T)∨¬action(T)←#succ(T,T1).foreveryaction,andyouhavetospec-
+ifythegoalstatebyaquery,e.g.¬alive(3),¬loaded(3)?AqueryisaDLVlanguagefea-
+turewhich(forthisexample)isequivalenttotherulesh←¬alive(3),¬loaded(3).and
+i←noth,noti.,meaningthatonlyanswersetscontaining¬alive(3)and¬loaded(3)
+shouldbeconsidered.
+Belowyoufindaclassicalplan-findingexample:TheblocksworlddomainandtheSuss-
+mananomalyasaconcreteproblem.
+In(Erdem1999),severalplanningproblems,includingtheblocksworldproblems,areen-
+codedusingdisjunctivedatalog.
+Ingeneral,planningproblemscanbeeffectivelyspecifiedusingactionlanguages(e.g.
+(GelfondandLifschitz1993,Dung1993,GiunchigliaandLifschitz1998,Lifschitz1999)).
+Then,a translation fromthese languagesto anotherlanguage (in our case DLP<) is ap-
+plied.
+We omit the step of describing an action language and the associated translation, and
+directly show the encoding of an example planning domain in disjunctive datalog. This
+encodingisratherdifferentfromtheonepresentedin(Erdem1999).
+Theobjectsintheblocksworldareonetableandanarbitrarynumberoflabeledcubic
+blocks.Together,theyarereferredtoaslocations.
+The state of the blocksworld at a particular time can be fully specified by the fluent
+on(B,L,T),whichspecifiesthatblockBresidesonlocationLattimeT.
+So,firstwestateintheobjectbw inertiathatthefluentonisinertial.
+bw inertia
+on(B,L,T1)←on(B,L,T),#succ(T,T1). (16)
+Wecontinuetodefinetheblocksworlddomainintheobjectbw domain,whichinherits
+fromtheinertiaobject:
+bw domain:bw inertia
+move(B,L,T)∨¬move(B,L,T)←block(B),loc(L),#succ(T,T1)! (17)
+on(B,L,T1)←move(B,L,T),#succ(T,T1)! (18)
+¬on(B,L,T1)←move(B,L1,T),on(B,L,T),#succ(T,T1)! (19)
+←move(B,L,T),on(B1,B,T). (20)
+←move(B,B1,T),on(B2,B1,T),block(B1). (21)
+DisjunctiveLogicProgramswithInheritance 13
+initial: goal:
+Figure1. TheSussmanAnomaly
+←move(B,B,T). (22)
+←move(B,L,T),move(B1,L1,T),B<>B1. (23)
+←move(B,L,T),move(B1,L1,T),L<>L1. (24)
+loc(table)! (25)
+Thereisoneaction,whichismovingablockfromonelocationtoanotherlocation.A
+move is started at one pointin time, and it is completed before the next time. Rule (17)
+expressesthatatanytimeT,theactionofmovingablockBtolocationLmaybeinitiated
+(move(B,L,T))ornot(¬move(B,L,T)).
+Rules (18) and (19) specify the effects of the moveaction: The movedblock is at the
+targetlocationatthenexttime,andnolongeronthesourcelocation.
+(20)–(24)areconstraints,andtheirsemanticsisthatinanyanswersettheconjunction
+oftheirliteralsmustnotbetrue.5Theirrespectivemeaningsare:(20):Amovedblockmust
+be clear. (21):The targetof a move must be clear if it is a block (the table may hold an
+arbitrarynumberofblocks).(22)Ablockmaynotbeonitself.(23)and(24):Notwomove
+actionsmaybeperformedatthesametime.
+ThetimestepsareagainrepresentedbyDLV’sintegerbuilt-inpredicatesandconstants.
+Whatisleftistheconcreteprobleminstance,inourcasetheso-calledSussmanAnomaly
+(seeFigure1):
+sussman:bw domain
+block(a)! block(b)! block(c)! (27)
+on(b,table,0)! on(c,a,0)! on(a,table,0)! (28)
+on(c,b,#maxint),on(b,a,#maxint),on(a,table,#maxint)? (29)
+Sincedifferentprobleminstancesmayinvolvedifferentnumbersofblocks,the blocks
+aredefinedasfacts(27)togetherwiththeprobleminstance.6
+Wegivetheinitialsituationbyfacts(28),whilethegoalsituationisspecifiedbyquery
+5Weuseconstraintsforclarity,buttheycanbeeliminatedbyrewriting←B.top←B,notp.,wherepisa
+newsymbolwhichdoesnotappearanywhereelseintheprogram.
+6Notethatusuallytheinstancewillbeseparatedfromthedomaindefinition.
+14 F.Buccafurri,W.FaberandN.Leone
+(29).Thisqueryenforcesthatonlythoseanswersetsarecomputed,inwhichtheconjunc-
+tionofthequeryliteralsistrue.
+5 ComputationalComplexity
+Asfortheclassicalnonmonotonicformalisms(MarekandTruszczyn´ski1991,Marekand
+Truszczyn´ski1990,Reiter1980),twoimportantdecisionproblems,correspondingtotwo
+differentreasoningtasks,ariseinDLP<:
+(BraveReasoning)GivenaDLP<programP andagroundliteralL,decidewhetherthere
+existsananswersetM forP suchthatListruew.r.t.M.
+(CautiousReasoning)GivenaDLP<programP andagroundliteralL,decidewhetherL
+istrueinallanswersetsforP.
+WenextprovethatthecomplexityofreasoninginDLP< isexactlythesameasintra-
+ditionaldisjunctivelogicprogramming.Thatis,inheritancecomesforfree,astheaddition
+ofinheritancedoesnotcauseanycomputationaloverhead.We considerthepropositional
+case,i.e.,weconsidergroundDLP< programs.
+GivenagroundDLP< programP andaninterpretationM forP,decidingwhetherM is
+ananswersetforP isincoNP.
+WecheckinNPthatM isnotananswersetofP asfollows.GuessasubsetI ofM,and
+verifythat:(1)M isnota modelforpos(G (P)), or(2)I isa modelforpos(G (P))
+andI ⊂M.Theconstructionofpos(G (P))(seeDefinition3)isfeasibleinpolynomial
+time, and the tasks (1) and (2) are clearly tractable. Thus, decidingwhetherM is notan
+answersetforP isinNP,and,consequently,decidingwhetherM isananswersetforP
+isincoNP.
+BraveReasoningonDLP<programsisΣP-complete.
+Given a ground DLP< program P and a ground literal L, we verify that L is a brave
+consequenceofP asfollows.GuessasetM ⊆BP ofgroundliterals,checkthat(1)M is
+ananswersetforP,and(2)Listruew.r.t.M.Task(2)isclearlypolynomial;while(1)is
+incoNP,byvirtueofLemma1.TheproblemthereforeliesinΣP.
+ΣP-hardnessfollowsfromTheorem3andtheresultsin(EiterandGottlob1995,Eiter,
+GottlobandMannila1997b).
+CautiousReasoningonDLP<programsisΠP-complete.
+GivenagroundDLP<programP andagroundliteralL,weverifythatLisnotacautious
+consequenceofP asfollows.GuessasetM ⊆BP ofgroundliterals,checkthat(1)M is
+ananswersetforP,and(2)L isnottruew.r.t.M.Task (2)isclearlypolynomial;while
+DisjunctiveLogicProgramswithInheritance 15
+(1)isincoNP,byvirtueofLemma1.Therefore,thecomplementofcautiousreasoningis
+inΣP,andcautiousreasoningisinΠP.
+ΠP-hardnessfollowsfromTheorem3andtheresultsin(EiterandGottlob1995,Eiter
+etal.1997b).
+6 RelatedWork
+6.1 AnswerSetSemantics
+AnswerSetSemantics,proposedbyGelfondandLifschitzin(GelfondandLifschitz1991),
+is the most widely acknowledged semantics for disjunctive logic programs with strong
+negation.For this reason, while defining the semantics of our language,we took care of
+ensuringfullagreementwithAnswerSetSemantics(oninheritance-freeprograms).
+LetP beaDLP< programconsistingofasingleobjecto = hoid(o),Σ(o)i.7 Then,M is
+ananswersetofPifandonlyifitisaconsistentanswersetofΣ(o)(asdefinedin(Gelfond
+andLifschitz1991)).
+FirstweshowthatG (P)isequaltoΣ(o)M (asdefinedin(GelfondandLifschitz1991)):
+Deletion rule (1) of Definition 3 never applies, since for every literal L and any two
+,r 2∈ground(P),obj of(r 1)6<obj of(r 2)holds,thusviolatingcondition(1)in
+Definition1andthereforenorulecanbeoverridden.Itisevidentthatthedeletionrules(2)
+and(3)ofDefinition3areequaltodeletionrules(i)and(ii)ofthedefinitionofΠS in§7
+in(GelfondandLifschitz1991),respectively.Thefirstonesdeleterules,wheresomeNAF
+literal is contained in M, while the second onesdelete all NAF literals of the remaining
+rules.
+Next,weshowthatthecriteriaforaconsistentsetM ofliteralsbeingananswersetofa
+positive(i.e.NAFfree)program(asin(GelfondandLifschitz1991))isequaltothenotion
+ofsatisfaction:
+Sincethesetisconsistent,condition(ii)in§7of(GelfondandLifschitz1991)doesnot
+apply.Condition(i) says:L k+1 ,...,L m ∈ M (thebodyistrue) impliesthatthe headis
+true.Thisislogicallyequivalentto“Thebodyisnottrueortheheadistrue”,whichisthe
+definitionofrulesatisfaction.
+In total we have that the minimal models of pos(G (P)) are equal to the consistent
+answersetsofΣ(o)M,sinceanswersetsareminimalbydefinition.
+Additionally, we require in Definition 4 that M is also a model of P, while in (Gel-
+fond and Lifschitz 1991) there is no such requirement. However, all minimal models of
+pos(G (P))arealso modelsofP:AllrulesinG (P) aresatisfied, andonlythedele-
+tionrules(2)and(3)ofDefinition3havebeenapplied(asshownabove).So,foranyrule
+r, which has been deleted by (2), some literal in Body−(r) is in M, so r’s body is not
+true,andthusrissatisfiedinM.Ifaruler,whichhasbeentransformedby(3),issatisfied
+7Oninheritance-free programs,thereisnodifference betweenstrictanddefeasible rules.Therefore,without
+lossofgeneralityweassumethatrulesareofonlyonetypehere.Thisallowsustodropthesymbol(’.’or’!’)
+attheendoftherulesofsingleobjectprograms.
+16 F.Buccafurri,W.FaberandN.Leone
+without Body−(r), then either Head(r) is true or Body+(r) is not true, so adding any
+NAFparttoitdoesnotchangeitssatisfactionstatus.
+Theorem3showsthatthesetofrulescontainedinasingleobjectofaDLP< program
+haspreciselythe same answersets (accordingto the definitionin (GelfondandLifschitz
+1991))asthesingleobjectprogram(accordingtoDefinition4).
+For a DLP< program P consisting of more than one object, the answer sets (as de-
+finedin(GelfondandLifschitz1991))ofthecollectionofallrulesinP ingeneraldonot
+coincidewiththeanswersetsofP.
+Forinstancetheprogram
+o1:o{¬p. }
+has the answer set {¬p}, while the disjunctive logic program {p.¬p.} does not have a
+consistentanswerset.
+Nevertheless,inSection7.1wewillshowthateachDLP<programP canbetranslated
+intoadisjunctivelogicprogramP′,thesemanticsofwhichisequivalenttothesemantics
+ofP.However,thistranslationrequirestheadditionofanumberofextrapredicates.
+6.2 DisjunctiveOrderedLogic
+DisjunctiveOrderedLogic(DOL)isanextensionofDisjunctiveLogicProgrammingwith
+strong negationand inheritance (withoutdefaultnegation)proposedin (Buccafurriet al.
+1998, Buccafurri et al. 1999). The DLP< language incorporatessome ideas taken from
+DOL.However,thetwolanguagesareverydifferentinseveralrespects.Mostimportantly,
+unlikewithDLP<,evenifaprogrambelongstothecommonfragmentofDOLandofthe
+languageof(GelfondandLifschitz1991)(i.e.,itcontainsneitherinheritancenordefault
+negation),DOLsemanticsiscompletelydifferentfromAnswerSetSemantics,becauseof
+adifferentwayofhandlingcontradictions.8Inshort,weobservethefollowingdifferences
+betweenDOLandDLP<:
+• DOLdoesnotincludedefaultnegationnot,whileDLP<does.
+• DOLandDLP<havedifferentsemanticsonthecommonfragment.Considerapro-
+gramP consistingofasingleobjecto=hoid(o),Σ(o)i,whereΣ(o)={p. ¬p.}.
+Then,accordingtoDOL,thesemanticsofP isgivenbytwomodels,namely,{p}
+and{¬p}.Onthecontrary,P hasnoanswersetaccordingtoDLP< semantics.
+• DLP<generalizes(consistent)AnswerSetSemanticstodisjunctivelogicprograms
+withinheritance,whileDOLdoesnot.
+6.3 PrioritizedLogicPrograms
+DLP<canbealsoseenasanattempttohandleprioritiesindisjunctivelogicprograms(the
+lowertheobjectintheinheritancehierarchy,thehigherthepriorityofitsrules).
+Thereareseveralworksonpreferencehandlinginlogicprogramming(Delgrande,Schaub
+8Actually,thiswasamainmotivationfortheauthorstolookforadifferentlanguage.
+DisjunctiveLogicProgramswithInheritance 17
+andTompits2000,BrewkaandEiter1998,GelfondandSon1997,Nute1994,Kowalski
+and Sadri 1990, Pradhan and Minker 1996, Sakama and Inoue 1996). However, we are
+awareofonlyonepreviousworkonprioritiesindisjunctiveprograms,namely,thepaper
+bySakamaandInoue(SakamaandInoue1996).Thisinterestingworkcanbeseenasan
+extensionofAnswerSetSemanticstodealwithpriorities.Comparingthetwoapproaches
+undertheperspectiveofpriorityhandling,weobservethefollowing:
+• Onpriority-freeprograms,thetwo languagesyieldessentiallythesamesemantics,
+as they generalize Answer Set Semantics and Consistent Answer Set Semantics,
+respectively.
+• In (SakamaandInoue1996),prioritiesare definedamongliterals,while priorities
+concernprogramrulesinDLP<.
+• Thedifferentkindofpriorities(onrulesvs.literals)andthewayhowtheyaredealt
+with in the two approachesimply differentcomplexity in the respective reasoning
+tasks.Indeed,fromthesimulationofabductivereasoninginthelanguageof(Sakama
+andInoue1996),andthecomplexityresultsonabductionreportedin(Eiter,Gottlob
+andLeone1997a),itfollowsthatbravereasoningisΣP-completeforthelanguageof
+(SakamaandInoue1996).Onthecontrary,bravereasoningis“only”ΣP-complete
+inDLP<9.
+(Delgrande et al. 2000) deals with nondisjunctive programs, but the authors note that
+theirsemantics-definingtransformation“isalsoapplicabletodisjunctivelogicprograms”.
+In this formalism,the preferencerelation is defined by regularatoms (with a set of con-
+stants representing the rules), allowing the definition of dynamic preferences. However,
+thesemanticsofthepreferencesisbasedontheorderofruleapplication(ordefeating)and
+thusseemstobequitedifferentfromourapproach.
+Acomparativeanalysisofthevariousapproachestothetreatmentofpreferencesin(∨-
+free)logicprogramminghasbeencarriedoutin(BrewkaandEiter1998).
+6.4 InheritanceNetworks
+Fromadifferentperspective,theobjectsofaDLP<programcanalsobeseenasthenodes
+ofaninheritancenetwork.
+WenextshowthatDLP< satisfiesthebasicsemanticprincipleswhicharerequiredfor
+inheritancenetworksin(Touretzky1986).
+(Touretzky 1986) constitutes a fundamental attempt to present a formal mathematical
+theoryofmultipleinheritancewithexceptions.Thestartingpointofthisworkisthecon-
+sideration that an intuitively acceptable semantics for inheritance must satisfy two basic
+requirements:
+1. Beingabletoreasonwithredundantstatements,and
+2. notmakingunjustifiedchoicesinambiguoussituations.
+Touretzkyillustratesthisintuitionbymeansoftwobasicexamples.
+TheformerrequirementispresentedbymeansoftheRoyalElephantexample,inwhich
+9Werefertothecomplexityinthepropositionalcasehere.
+18 F.Buccafurri,W.FaberandN.Leone
+wehavethefollowingknowledge:“Elephantsaregray.”,“Royalelephantsareelephants.”,
+“Royalelephantsarenotgray.”,“Clydeisaroyalelephant.”,“Clydeisanelephant.”
+The last statement is clearly redundant;however,since it is consistent with the others
+thereisnoreasontoruleitout.Touretzkyshowsthatanintuitivesemanticsshouldbeable
+torecognizethatClydeisnotgray,whilemanysystemsfailinthistask.
+Touretzky’s second principle is shown by the Nixon diamond example, in which the
+following is known: “Republicans are not pacifists.”, “Quakers are pacifists.”, “Nixon is
+bothaRepublicanandaquaker.”
+Accordingtoourapproach,heclaimsthatagoodsemanticsshoulddrawnoconclusion
+aboutthequestionwhetherNixonisapacifist.
+Theproposedsolutionfortheproblemsaboveisbasedonatopologicalrelation,called
+inferentialdistanceordering,statingthatanindividualAis”nearer”toB thantoC iffA
+hasaninferencepaththroughB toC.IfAis”nearer”toB thantoC,thenasfarasAis
+concerned,informationcomingfromB mustbepreferredw.r.t.informationcomingfrom
+C.Therefore,sinceClydeis”nearer”tobeingaroyalelephantthantobeinganelephant,
+hestatesthatClydeisnotgray.OnthecontrarynoconclusionistakenonNixon,asthere
+isnotanyrelationshipbetweenquakerandrepublican.
+The semantics of DLP< fully agrees with the intuition underlyingthe inferential dis-
+tanceordering.
+LetusrepresenttheRoyalElephantexampleinourframework:
+elephant {gray.}
+royal elephant:elephant {¬gray.}
+clyde:elephant, royal elephant {}
+TheonlyanswersetoftheaboveDLP< programis{¬gray}.
+TheNixonDiamondexamplecanbeexpressedinourlanguageasfollows:
+republican {¬pacifist.}
+quaker {pacifist.}
+nixon:republican,quaker {}
+ThisDLP< programhasnoanswerset,andthereforenoconclusionisdrawn.
+6.5 UpdatesinLogicPrograms
+ThedefinitionofthesemanticsofupdatesinlogicprogramsisanothertopicwhereDLP<
+couldpotentiallybeapplied.Roughly,asimpleformulationoftheproblemisthefollow-
+ing:Given a (∨-free)logicprogramP anda sequenceU
+of successive updates
+(insertion/deletionofgroundatoms),determinewhatisorisnottrueintheend.Expressing
+theinsertion(deletion)ofanatomAbytheruleA←(¬A←),wecanrepresentthisprob-
+lembyaDLP< knowledgebase{ht
+intuitivelyrep-
+resentstheinstantoftimewhentheupdateU
+hasbeenexecuted),wheret
+The answer sets of the programfor t can be taken as the semantics of the executionof
+10Inthiscontext,<shouldbeinterpretedas“morerecent”.
+DisjunctiveLogicProgramswithInheritance 19
+onP.Forinstance,giventhelogicprogramP={a←b,notc}andtheup-
+datesU ={b.},U ={c.},U ={¬b.},webuildtheDLP< program
+t {a←b,c,notd.}
+t :t {¬b.}.
+Theanswerset{a,b,c}ofthe programfort givesthesemanticsoftheexecutionof
+U andU onP;whiletheanswerset{c}oftheprogramfort expressesthesemanticsof
+theexecutionofU ,U andU onPinthegivenorder.
+Thesemanticsofupdatesobtainedin thisway isverysimilar tothe approachadopted
+fortheULLlanguagein(Leoneetal.1995).Furtherinvestigationsareneededonthistopic
+to see whetherDLP< can representupdate problemsin more generalsettings like those
+treated in (Marek and Truszczyn´ski 1994) and in (Alferes et al. 1998a). A comparative
+analysis of variousapproachesto updating logic programsis being carried out in (Eiter,
+Fink, Sabbatini and Tompits 2000). Preliminaries results of this work show that, under
+suitablesyntacticconditions,DLP<supportsanice“iterative”propertyforupdates,which
+ismissedinotherformalisms.
+7 ImplementationIssues
+7.1 FromDLP< toPlainDLP
+Inthissectionwe showhowa DLP< programcan betranslatedintoan equivalentplain
+disjunctivelogicprogram(withstrongnegation,butwithoutinheritance).Thetranslation
+allowsustoexploitexistingdisjunctivelogicprogramming(DLP)systemsfortheimple-
+mentationofDLP<.
+Notation.
+1. LetP betheinputDLP<program.
+2. We denote a literal by φ(X¯), where X¯ is the tuple of the literal’s arguments, and
+φrepresentsanadornedpredicate,thatiseitherapredicatesymbolporastrongly
+negated predicated symbol ¬p. Two adorned predicates are complementary if one
+is the negation of the other (e.g., q and ¬q are complementary). ¬.φ denotes the
+complementaryadornedpredicateoftheadornedpredicateφ.
+3. Anadornedpredicateφisconflictingif bothφ(X¯)and¬.φ(Y¯)occurintheheads
+ofrulesinP.
+4. Given an object o in P, and a head literal φ(X¯) of a defeasible rule in Σ(o), we
+saythatφisthreatenedinoifaliteral¬.φ(Y¯)occursintheheadofaruleinΣ(o′)
+whereo′ <o.AdefeasiblerulerinΣ(o)isthreatenedinoifallitsheadliteralsare
+threatenedino.
+The rewriting algorithm translating DLP< programsin plain disjunctive logic programs
+withconstraints11isshowninFigure2.
+Aninformaldescriptionofhowthealgorithmproceedsisthefollowing:
+11Againweuseconstraintsforclarity,seefootnote5onpage13
+20 F.Buccafurri,W.FaberandN.Leone
+INPUT:aDLP<-programP
+OUTPUT:aplaindisjunctivelogicprogramwithconstraintsDLP(P)
+2: foreachobjecto∈O(P)do
+3: foreachthreatenedadornedpredicateφinodo
+4: AddthefollowingruletoDLP(P):
+6: wherenisthearityofφandX,X1,···,Xnaredistinctvariables.
+9: ifristhreatenedthen
+10: AddthefollowingtworulestoDLP(P):
+12: ovr′ (r,o,X¯ 1,...,X¯ n)←ovr′ (φ1,o,X¯ 1),...,ovr′ (φn,o,X¯ n)
+14: AddthefollowingruletoDLP(P):
+17: endfor
+18: endfor
+19: foreachadornedpredicateφappearinginPdo
+20: AddthefollowingruletoDLP(P):
+22: wherenisthearityofφandX0,···,Xnaredistinctvariables.
+23: endfor
+24: foreachconflictingadornedpredicateφappearinginP do
+25: AddthefollowingconstrainttoDLP(P):
+27: wherenisthearityofφandX1,···,Xnaredistinctvariables.
+28: endfor
+Figure2. ARewritingAlgorithm
+• DLP(P) is initialized to a set of facts with head predicate prec′ representing the
+partialorderingamongobjects(statement1).
+• Then,foreachobjectoinO(P):
+— Foreachthreatenedliteralφ(X¯) appearingin o, rulesdefiningwhenthe literal
+isoverriddenareadded(statements3–7).
+— Foreachrulerbelongingtoo:
+1. Ifristhreatened,thentheruleisrewritten,suchthattheheadliteralsinclude
+informationabouttheobjectinwhichtheyhavebeenderived,andthebody
+includesaliteralwhichsatisfiestheruleifitisoverridden.Inaddition,arule
+isaddedwhichencodeswhentheruleisoverridden(statements9–12).
+2. Otherwise (i.e., if r is not threatened) just the rule head is rewritten as de-
+scribedabove,sincetheserulescannotbeoverridden(statements13–15).
+• Foralladornedpredicatesinthe program,we adda rulewhichstates thatanatom
+withthispredicateholds,nomatterinwhichobjectithasbeenderived(statements
+DisjunctiveLogicProgramswithInheritance 21
+19–23).The informationin which objectan atom has been derivedis onlyneeded
+fordeterminationofoverriding.
+• Finally, statements 24–28 add a constraint for each adorned predicate, which pre-
+ventsthegenerationofinconsistentsetsofliterals.
+DLP(P)isreferredtoastheDLPversionoftheprogramP.12
+Wenowgiveanexampletoshowhowthetranslationworks:
+ThedatalogversionDLP(P)oftheprogramP ofExample1is:
+(1) rulesexplicitingpartialorderamongobjects:
+prec′(o ,o ).
+(2) rulesforthreatenedadornedpredicatesino 1 :
+(3) rewritingof rulesino 1 :
+e′(o )←b.
+(4) rewritingof rulesino 2 :
+b′(o ).
+c′(o )←b.
+(5) projectionrules:
+e←e′(X).
+(6) constraints:
+←a,¬a.
+←b,¬b.
+GivenamodelM forDLP(P),π(M)isthesetofliteralsobtainedfromM byelimi-
+natingalltheliteralswitha“primed”predicatesymbol,i.e.apredicatesymbolintheset
+{prec′,ovr′}∪{φ′ |∃an adorned literal φ(X¯)appearing inP}.π(M)isthesetof
+literalswithoutallatomswhichwereintroducedbythetranslationalgorithm.
+TheDLPversionofaDLP<-programP canbeusedinplaceofP inordertoevaluate
+answersetsofP.Theresultsupportingtheabovestatementisthefollowing:
+LetP bea DLP<-program.Then,foreachanswersetM forP thereexistsa consistent
+answersetM′forDLP(P)suchthatπ(M′)=M.Moreover,foreachconsistentanswer
+setM′forDLP(P)thereexistsananswersetM forP suchthatπ(M′)=M.
+12DLP(P)isafunction-freedisjunctivelogicprogram.Allowingfunctionscouldmakethealgorithmnotation
+morecompact,butwouldnotgiveanycomputationalbenefit.
+22 F.Buccafurri,W.FaberandN.Leone
+First we show thatgivenan answer set M for P there existsa consistentanswer set M′
+for DLP(P) such that π(M′) = M. We proceed by constructing the model M′. Let
+K 1 = {prec′(o,o 1) | o < o 1}. Let K 2 be the set of ground literals ovr′(r,o,X¯) such
+that there exists a (defeasible) rule r ∈ ground(P) with obj of(r) = o such that r is
+overriddenin M and X¯ is the tuple of argumentsappearingin the head of r. Let K be
+thesetofgroundliteralsovr′(L,o)suchthatthereexisttworulesr,r′ ∈ground(P)such
+thatL ∈ Head(r),risdefeasibleandr′ overridesrinL.LetdenotebyKthecollection
+ofsetsofgroundliteralssuchthateachelementK ∈Ksatisfiesthefollowingproperties:
+1. foreachliteralφ(X¯)∈M thereisaliteralφ′(o,X¯)inK,forsomeobjectidentifier
+2. for each r ∈ G (P) such that the body of r is true in M, for at least one literal
+φ(X¯)oftheheadofracorrespondingliteralφ′(obj of(r),X¯)occursinK,
+3. K ⊆{φ′(o,X¯)|φ(X¯)isanadornedpredicateappearinginP ∧o∈O},
+4. K isaconsistentsetofliterals.
+FirstobservethatthefamilyKisnotempty(i.e.,thereisatleastasetofconsistentsetsof
+literalssatisfyingitems(1),(2)and(3)above).Thisimmediatelyfollowsfromthefactthat
+M isananswersetoftheprogramP.
+Let M K = K 1 ∪K 2 ∪K 3 ∪K ∪M, for a generic K ∈ K. It is easy to show that
+G (DLP(P))is independenton whichK ∈ K is chosen.Indeed,noliterals fromK
+appearintheNAFpartoftherulesinground(DLP(P)).
+Nowweexaminewhichrulestheprogrampos(G (DLP(P)))contains(foranyset
+K ∈K).
+Both the rules with head predicate prec′ and ovr′ and the rules of the form φ(X¯) ←
+φ′(X,X¯)(addedbystatement21ofFigure2)appearunchangedinpos(G (DLP(P))).
+Indeed,theserulesdonotcontainaNAFpart(recallthattheGLtransformationcanmodify
+onlyrulesinwhichaNAFpartoccurs).EachconstraintofDLP(P)(addedbystatement
+26 of the algorithm), that is a rule of the form b ← φ(X¯),¬.φ(X¯),not b (where b is a
+literalnotoccurringinM )istranslatedintotheruleb←φ(X¯),¬.φ(X¯).
+The other rules in pos(G (DLP(P))) originate from rules of ground(DLP(P))
+obtainedbyrewritingrulesofground(P)(seestatements11and15ofthealgorithm).
+Thus,considerarulerofground(P).
+IfrisdefeasibleandoverriddeninM thenthecorrespondingruleinground(DLP(P))
+(generatedbystatement11ofthealgorithm)containsaNAFpartnotsatisfiedinM ,by
+construction of K 2 and K 3 . Hence, such a rule appears neither in pos(G M (P)) nor in
+Theothercasewehavetoconsideristhattheruleriseitherastrictruleoradefeasible
+rulenotoverriddeninM.
+FirstsupposethatrisastrictruleorisadefeasiblerulenotthreatenedinM (recallthata
+rulenotthreatenedinM iscertainlynotoverriddeninM).Inthiscase,thecorresponding
+rule, say r′ in ground(DLP(P)) (generated by statement 15 of the algorithm) has the
+samebodyofrandtheheadmodifiedbyrenamingpredicates(fromφtoφ′)andbyadding
+the object o (from which the rule r comes) as first argument in each head literal. Since
+the bodyof r′ does notcontain literals from K 1 ,K 2 ,K 3 and K, and further M ⊆ M K
+DisjunctiveLogicProgramswithInheritance 23
+(foreachK ∈ K),r′ iseliminatedbytheGLtransformationw.r.t.M ifandonlyifr is
+eliminatedbytheGLtransformationw.r.t.M.Moreover,incaser′isnoteliminatedbythe
+GLtransformationw.r.tM ,sincethebodyofr′doesnotcontainliteralsfromK ,K ,K
+andK,theGLtransformationw.r.t.M modifiesthebodyofr′ inthesamewaytheGL
+transformationw.r.t. M modifiesthe bodyof r. Thus,each rule r in pos(G (P)) has a
+correspondingruleinpos(G (DLP(P)))withthesamebodyandarewrittenhead.
+Nowsupposethatr isa threateneddefeasiblerule thatis notoverriddeninM. Inthis
+case, the correspondingrule,say r′ in ground(DLP(P)) (generatedby statement11of
+thealgorithm)hastheheadmodifiedbyrenamingpredicates(fromφtoφ′)andbyadding
+theobjectoasfirstargumentineachheadliteralandabodyobtainedbyaddingtothebody
+ofraliteraloftheformnotovr′(r,o,X¯),whereoistheobjectfromwhichrcomes,and
+X¯ representsthetupleoftermsappearingintheheadliteralsofr. Sincetheruler isnot
+overriddenin M, the literal ovr′(r,o,X¯) cannotbelongto K
+and hence cannotbelong
+toM .Thus,theGLtransformationw.r.tM eliminatestheNAFpartoftheruler′.As
+a consequence, also in this case, each rule in pos(G (P)) has a corresponding rule in
+Now we prove that, for any K ∈ K, M is a model for pos(G (DLP(P))). In-
+deed,ruleswithheadpredicateprec′ areclearlysatisfied.Further,ruleswithheadpredi-
+cateovr′ aresatisfied byconstructionofsetK ,K andK.Moreover,rulesoftheform
+φ(X¯) ← φ′(X,X¯) are satisfied since M ⊆ M and by construction of K. Rules of
+pos(G (DLP(P)))oftheformb ←φ(X¯),notφ(X¯),originatedbythetranslationof
+theconstraints,aresatisfiedsinceM isaconsistentsetofliterals.
+Considernowtheremainingrules(thosecorrespondingtorulesofpos(G (P))).Letr
+bearuleofpos(G (DLP(P)))andr′ theruleofpos(G (P))correspondingtor.As
+shownearlier,thetworuleshavethesamebody.Thus,ifthebodyofr istruew.r.t.M ,
+thebodyofr′ istruew.r.t.M,sincenoliteralofM \M canappearinthebodyofthe
+ruler′ (andhenceoftheruler).Asaconsequence,byproperty(2)ofthecollectionKto
+whichthesetK belongs,theheadoftheruleristrueinM .
+Thus,M isamodelforpos(G (DLP(P))).
+Nowweprovethefollowingclaim:
+Claim 1. Let M¯ be a model for pos(G (DLP(P))). Then, π(M¯) is a model for
+Bycontradictionsupposethatπ(M¯)isnotamodelforpos(G (P)).Thus,thereexistsa
+ruler ∈ pos(G (P))withbodytrueinπ(M¯)andheadfalseinπ(M¯).Since,asshown
+earlier, the rule r has a corresponding rule r′ in pos(G (DLP(P))) with the same
+body of r and the head obtained by replacing each literal φ(X¯) of the head of r by the
+correspondingliteralφ′(o,X¯),whereoistheobjectfromwhichr comes.Sinceπ(M¯)is
+a modelforpos(G (DLP(P))), atleast oneof the”φ′ literal” ofthe headof r′ must
+betrueinπ(M¯).Then,duetothepresenceoftherulesoftheformφ(X¯)← φ′(X,X¯)in
+pos(G (DLP(P))), π(M¯) must contain also the ”φ correspondingliteral” belonging
+totheheadofr(contradiction)
+Moreoverweprovethateachmodelforpos(G (DLP(P)))
+(1)containsM,and
+24 F.Buccafurri,W.FaberandN.Leone
+(2)belongstoK.
+Toproveitem(1),supposebycontradictionM¯ isamodelforpos(G (DLP(P)))such
+thatM ∩M¯ 6= M.Thus,π(M¯) ⊂ M.Ontheotherhand,byClaim1,π(M¯)isamodel
+for pos(G (P)). But since M is an answer set for P and then a minimal model for
+pos(G (P)),acontradictionarises.
+Now we have to prove the item (2) above. First observe that the properties 3. and 4.
+of the family K are trivially verified by the models of pos(G (DLP(P))). Thus, by
+contradictionsupposethereexistsamodelM¯ ofpos(G (DLP(P)))suchthatitdoes
+notsatisfyoneoftheproperties1.or2.characterizingthefamilyK.
+Firstsupposethatproperty1.isnotsatisfiedbyM¯,thatis,thereisaliteralφ(X¯)inM
+suchthatnocorrespondingliteralφ′(o,X¯)occursinM¯,forsomeobjectidentifiero.Let
+M¯′bethesetobtainedbyM¯ byeliminatingallsuchliteralsφ(X¯).ItiseasytoseethatM¯′
+is still a modelfor pos(G (DLP(P))). Indeed,rulesof the formφ(X¯) ← φ′(X,X¯)
+aresatisfied sinceliteralsφ(X¯)droppedfromM¯ donothavecorresponding”φ′ literals”
+byhypothesis.Further,nootherrule in pos(G (DLP(P))) containsa literalfromM
+inthehead.Ontheotherhand,byClaim1,π(M′)isamodelforpos(G (P)).Butthis
+isacontradiction,sinceπ(M′)⊂M andM isananswersetforP.
+Supposenowthatproperty2.isnotsatisfiedbyM¯,thatis,thereisaruler ∈pos(G (P))
+such that the body of r is true in M and no ”φ′ literals” corresponding to literals of
+the head occur in M¯. Since, M ⊆ M¯ (see item (1) above), the corresponding rule of
+pos(G (DLP(P))) is not satisfied. But this implies that M¯ can not be a model for
+pos(G (DLP(P)))(contradiction).
+Aconsequenceofthefactthateverymodelofpos(G (DLP(P)))containsM isthat
+everymodelofpos(G
+(DLP(P))) mustcontainthe setsK
+. becauseof
+therulesaddedbystatements1,5and12ofthealgorithm.
+Thus, the model M′ = M K′ for K′ ∈ K such that no set K¯ ∈ K exists such that
+K¯ ⊂ K′isaminimalmodelforpos(G (DLP(P)),thatis,aconsistentanswersetfor
+DLP(P).Hence,thefirstpartoftheproofisconcluded,sinceπ(M′)=M.
+Now,weprovethatgivenaconsistentanswersetM′ forDLP(P),M = π(M′)isan
+answersetforP.
+Firstweprovethataliteralφ(X¯)belongstoM ifandonlyifthereexitsaliteralφ′(o,X¯)
+inM′,forsomeobjectidentifiero.
+Indeed, φ(X¯) ∈ M implies that φ(X¯) ∈ M′. But since M′ is a minimal model for
+pos(G M′(DLP(P)), there must exits a rule in pos(G M′(DLP(P)) with head contain-
+ingtheliteralφ(X¯)andbodytruew.r.t.M′ (otherwisetheliteralφ(X¯)couldbedropped
+from M′ without invalidate any rule of pos(G M′(DLP(P)) and thus M′ would not be
+minimal).Conversely,ifφ′(o,X¯) ∈ M′,forsomeobjectidentifiero,theliteralφ(X¯)be-
+longstoM′,sinceM′isamodelforpos(G M′(DLP(P))andtheruleφ(X¯)←φ′(o,X¯)
+belongstopos(G M′(DLP(P)).Thus,φ(X¯)∈M.
+Moreover,weprovethateveryruleofpos(G M′(DLP(P))hasacorrespondingrulein
+pos(G (P)) with same body and a head obtained by replacing the φ′ literals with the
+φcorrespondingonesandbyeliminatingtheobjectargumentfromtheseliterals.Indeed,
+fromthe aboveresult,theGL transformationdeletesa ruler fromground(DLP(P)) if
+either the corresponding rule belonging to ground(P) is overridden in M (due the the
+DisjunctiveLogicProgramswithInheritance 25
+enhanced dlv
+Input Rewriter Filtering Output
+dlv parser core
+Figure3. Flowdiagramofthesystem.
+literal not ovr′(r,o,X¯) occurring in the body of r) or some negated (by negation not)
+literalisfalse in M′. Butthis literalisfalse in M′ if and onlyif itis false in M. On the
+otherhand,incasetheruleisnotdeletedbytheGLtransformation,itsbodyisrewrittenin
+thesamewayofthecorrespondingruleappearinginpos(G (P)).
+As a consequence,M is a modelfor pos(G (P)). Indeed, if the body of a rule r of
+(P)) is true w.r.t. M, the correspondingrule r′ of pos(G M′(DLP(P)) has the
+bodytruew.r.t.M′.Hence,atleastoneofthe headliteralsofr′ mustbetrueinM′. Let
+φ′(o,X¯)suchaliteral.Asshownearlier,thisimpliesthatφ(X¯)belongstoM.Butφ(X¯)
+appearsintheheadofrandhencerissatisfiedinM.
+NowweprovethatM isminimal.Bycontradiction,supposethatM¯ ⊂ M isa model
+forpos(G (P)). Consider the literals belongingto the set M \M¯. Because of the cor-
+respondencebetweentherulesofpos(G
+(P))andtherulesofpos(G M′(DLP(P)),the
+set of literals obtainedfromM′ by eliminatingall the literals φ(X¯) belongingto the set
+M \M¯ aswellasthe correspondingφ′ literalsis still amodelforpos(G M′(DLP(P)).
+Butthisisacontradiction,sinceM′isaconsistentanswersetforDLP(P).
+SinceM isamodelforpos(G (P))andisminimal,M =π(M′)isananswersetfor
+theprogramP.Hencetheproofisconcluded.
+Consider the program P of Example 1. It is easy to see that DLP(P) (see Example
+12) admits one consistent answer set M = {prec′(o 2 ,o 1),a′(o 1),e′(o 1), b′(o 2), c′(o 2),
+ovr′(¬b,o 1),a,e,b,c}.Thus,π(M) = {a,b,c,e}.Ontheotherhand,π(M)istheonly
+answersetforP,asshowninExample6.
+7.2 SystemArchitecture
+We haveusedthe DLV system (Eiter etal. 1998)to implementa system forDLP<. The
+conceptisthatofafront-endtoplainDLP,whichhasbeenusedbeforeforimplementing
+various ways of reasoning modes and languages on top of the DLV system. The front-
+end implements the translation described in Section 7. A schematic visualization of its
+architectureisshowninFigure3.
+Firstofall, we haveextendedthe DLV parsertoincorporatetheDLP< syntax.Inthis
+way,alltheadvancedfeaturesofDLV(e.g.boundedintegerarithmetics,comparisonbuilt-
+ins,etc.)arealsoavailablewithDLP<.TheRewritermoduleimplementsthetranslation
+depictedin Figure 2. Once the rewritten versionπ(P) of P is generated,its answer sets
+arethencomputedusingtheDLVcore.Beforetheoutputisshowntotheuser,πisapplied
+toeachanswersetinordertostriptheinternalpredicatesfromtheoutput.
+Onthewebpage(Faber1999)thesystemisdescribedindetail.Ithasbeenfullyincor-
+poratedintotheDLVsystem.Touseit,justsupplyaninputfileusingthesyntaxdescribed
+inSection2—DLVautomaticallyinvokestheDLP<frontendinthiscase.
+26 F.Buccafurri,W.FaberandN.Leone
+Note that it is currently required to specify the objects in the order of the inheritance
+hierarchy: Specifying that some object inherits from another object which has not been
+defined before will result in an error. Since cyclic dependencies are not allowed in our
+language,thisrequirementisnotarestriction.
+8 Conclusion
+Wehavepresentedanewlanguage,namedDLP<,resultingfromtheextensionof(function-
+free) disjunctive logic programming with inheritance. DLP< comes with a declarative
+model-theoretic semantics, where possible conflicts are solved in favor of more specific
+rules(accordingtotheinheritancehierarchy).DLP< isaconsistentgeneralizationofthe
+AnswerSetSemanticsofdisjunctivelogicprograms,itrespectssomefundamentalinher-
+itance principles, and it seems to be suitable also to give a semantics to updatesin logic
+programs.
+Whileinheritanceenhancestheknowledgerepresentationmodelingfeaturesofdisjunc-
+tive logic programming, the addition of inheritance does not increase its computational
+complexity.Thus,inheritance“comesforfree”:the user cantake profitofits knowledge
+modeling ability, without paying any extra cost in terms of computational load. It was
+thereforepossibletoimplementaDLP< systemontopofthedisjunctivelogicprogram-
+mingsystemDLV.Thesystemisfreelyavailableontheweb(Faber1999)andready-to-use
+forexperimentingwiththeuseofinheritanceinKRapplications.
+Acknowledgements
+The idea of representing inertia in planning problems in a higher object is due to Axel
+Polleres.TheintroductionofthenotionofstrictruleswassuggestedbyMichaelGelfond.
+This work was partially supported by FWF (Austrian Science Funds) under the projects
+P11580-MATandZ29-INF.

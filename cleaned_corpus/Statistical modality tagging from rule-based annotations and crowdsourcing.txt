@@ -1,0 +1,380 @@
+Statistical Modality Tagging
+from Rule-based Annotations and Crowdsourcing
+VinodkumarPrabhakaran MichaelBloodgood MonaDiab
+CS CASL CCLS
+ColumbiaUniversity UniversityofMaryland ColumbiaUniversity
+vinod@cs.columbia.edu meb@umd.edu mdiab@ccls.columbia.edu
+BonnieDorr LoriLevin ChristineD.Piatko
+CSandUMIACS LTI APL
+UniversityofMaryland CarnegieMellonUniversity JohnsHopkinsUniversity
+bonnie@umiacs.umd.edu lsl@cs.cmu.edu christine.piatko@jhuapl.edu
+OwenRambow BenjaminVanDurme
+CCLS HLTCOE
+ColumbiaUniversity JohnsHopkinsUniversity
+rambow@ccls.columbia.edu vandurme@cs.jhu.edu
+Abstract (2005) define core cases of modality: John must
+go to NY (epistemic necessity), John might go to
+We explore training an automatic modality NY (epistemic possibility), John has to leave now
+tagger. Modalityistheattitudethataspeaker (deontic necessity) and John may leave now (de-
+might have toward an event or state. One of
+ontic possibility). Many semanticists (e.g. Kratzer
+the main hurdles for training a linguistic tag-
+(1981),Kratzer(1991),Kaufmannetal.(2006))de-
+ger is gathering training data. This is par-
+finemodalityasquantificationoverpossibleworlds.
+ticularly problematic for training a tagger for
+modalitybecausemodalitytriggersaresparse John might go means that there exist some possi-
+for the overwhelming majority of sentences. ble worlds in which John goes. Another view of
+We investigate an approach to automatically modalityrelatesmoretoaspeaker’sattitudetoward
+trainingamodalitytaggerwherewefirstgath- aproposition(e.g. McShaneetal.(2004)).
+ered sentences based on a high-recall simple
+Modality might be construed broadly to include
+rule-basedmodalitytaggerandthenprovided
+severaltypesofattitudesthataspeakerwantstoex-
+thesesentencestoMechanicalTurkannotators
+presstowardsanevent,stateorproposition. Modal-
+for further annotation. We used the resulting
+setoftrainingdatatotrainaprecisemodality ity might indicate factivity, evidentiality, or senti-
+tagger using a multi-class SVM that delivers ment (McShane et al., 2004). Factivity is related to
+goodperformance. whetherthespeakerwishestoconveyhisorherbe-
+liefthatthepropositionalcontentistrueornot, i.e.,
+whether it actually obtains in this world or not. It
+1 Introduction
+distinguishes things that (the speaker believes) hap-
+Modality is an extra-propositional component of pened from things that he or she desires, plans, or
+meaning. In John may go to NY, the basic propo- considers merely probable. Evidentiality deals with
+sition is John go to NY and the word may indi- the source of information and may provide clues to
+cates modality. Van Der Auwera and Ammann the reliability of the information. Did the speaker
+ThispaperwaspublishedwithintheProceedingsoftheACL-2012WorkshoponExtra-Propositional
+AspectsofMeaninginComputationalLinguistics(ExProM-2012),pages57-64,Jeju,RepublicofKorea,
+13July2012. (cid:13)c 2012AssociationforComputationalLinguistics
+1v09110.3051:viXra
+have firsthand knowledge of what he or she is re- 2 RelatedWork
+porting, or was it hearsay or inferred from indirect
+Previous related work includes TimeML (Sauri et
+evidence? Sentimentdealswithaspeaker’spositive
+al., 2006), which involves modality annotation on
+ornegativefeelingstowardanevent,state,orpropo-
+events,andFactbank(SauriandPustejovsky,2009),
+sition.
+whereeventmentionsaremarkedwithdegreeoffac-
+In this paper, we focus on the following five
+tuality. Modalityisalsoimportantinthedetectionof
+modalities; we have investigated the belief/factivity
+uncertaintyandhedging. TheCoNLLsharedtaskin
+modality previously (Diab et al., 2009b; Prab-
+2010 (Farkas et al., 2010) deals with automatic de-
+hakaranetal., 2010), andweleaveothermodalities
+tectionofuncertaintyandhedginginWikipediaand
+tofuturework.
+biomedicalsentences.
+• Ability: canHdoP? Baker et al. (2010) and Baker et al. (2012) ana-
+lyze a set of eight modalities which include belief,
+• Effort: doesHtrytodoP?
+requireandpermit,inadditiontothefivemodalities
+we focus on in this paper. They built a rule-based
+• Intention: doesHintendP?
+modalitytaggerusingasemi-automaticapproachto
+• Success: doesHsucceedinP? createrules. Thisearlierworkdiffersfromthework
+describedinthispaperinthattheouremphasisison
+• Want: doesHwantP? the creation of an automatic modality tagger using
+machine learning techniques. Note that the anno-
+We investigate automatically training a modality
+tation and automatic tagging of the belief modality
+tagger by using multi-class Support Vector Ma-
+(i.e.,factivity)isdescribedinmoredetailin(Diabet
+chines(SVMs). Oneofthemainhurdlesfortraining
+al.,2009b;Prabhakaranetal.,2010).
+alinguistictaggerisgatheringtrainingdata. Thisis
+There has been a considerable amount of inter-
+particularlyproblematicfortrainingamodalitytag-
+estinmodalityinthebiomedicaldomain. Negation,
+gerbecausemodalitytriggersaresparsefortheover-
+uncertainty, and hedging are annotated in the Bio-
+whelming majority of the sentences. Baker et al.
+scopecorpus(Vinczeetal.,2008),alongwithinfor-
+(2010) created a modality tagger by using a semi-
+mationaboutwhichwordsareinthescopeofnega-
+automatic approach for creating rules for a rule-
+tion/uncertainty. Thei2b2NLPSharedTaskin2010
+basedtagger. Apilotstudyrevealedthatitcanboost
+included a track for detecting assertion status (e.g.
+recall well above the naturally occurring proportion
+present, absent, possible, conditional, hypothetical
+of modality without annotated data but with only
+etc.) ofmedicalproblemsinclinicalrecords.1 Apos-
+60% precision. We investigated an approach where
+tolovaetal.(2011)presentsarule-basedsystemfor
+wefirstgatheredsentencesbasedonasimplemodal-
+thedetectionofnegationandspeculationscopesus-
+ity tagger and then provided these sentences to an-
+ing the Bioscope corpus. Other studies emphasize
+notators for further annotation, The resulting anno-
+the importance of detecting uncertainty in medical
+tateddataalsopreservedthelevelofinter-annotator
+textsummarization(MoranteandDaelemans,2009;
+agreement for each example so that learning algo-
+Aramakietal.,2009).
+rithms could take that into account during training.
+Modality has also received some attention in the
+Finally,theresultingsetofannotationswasusedfor
+context of certain applications. Earlier work de-
+trainingamodalitytaggerusingSVMs, whichgave
+scribingthedifficultyofcorrectlytranslatingmodal-
+a high precision indicating the success of this ap-
+ity using machine translation includes (Sigurd and
+proach.
+Gawro´nska, 1994) and (Murata et al., 2005). Sig-
+Section 2 discusses related work. Section 3 dis-
+urd et al. (1994) write about rule based frameworks
+cusses our procedure for gathering training data.
+and how using alternate grammatical constructions
+Section 4 discusses the machine learning setup
+suchasthepassivecanimprovetherenderingofthe
+and features used to train our modality tagger and
+modal in the target language. Murata et al. (2005)
+presents experiments and results. Section 5 con-
+analyze the translation of Japanese into English versionowingtoFioreandHeer,4 furtherprocessed
+by several systems, showing they often render the asdescribedby(Roark,2009).5
+present incorrectly as the progressive. The authors Toconstructthesimpletagger(thefirstpass),we
+trainedasupportvectormachinetospecificallyhan- used a lexicon of modality trigger words (e.g., try,
+dlemodalconstructions,whileourmodalannotation plan, aim, wish, want) constructed by Baker et al.
+approachisapartofafulltranslationsystem. (2010). The tagger essentially tags each sentence
+The textual entailment literature includes modal- thathasawordinthelexiconwiththecorresponding
+ity annotation schemes. Identifying modalities is modality. Wewroteafewsimpleobviousfiltersfora
+important to determine whether a text entails a hy- handfulofexceptionalcasesthatariseduetothefact
+pothesis. Bar-Haim et al. (2007) include polarity thatoursentencesarefrome-mail. Forexample,we
+based rules and negation and modality annotation filteredoutbestwishesexpressions,whichotherwise
+rules. The polarity rules are based on an indepen- wouldhavebeentaggedasWantbecauseoftheword
+dent polarity lexicon (Nairn et al., 2006). The an- wishes.
+notation rules for negation and modality of predi- The words that trigger modality occur with very
+cates are based on identifying modal verbs, as well different frequencies. If one is not careful, the
+as conditional sentences and modal adverbials. The training data may be dominated by only the com-
+authorsreadthemodalityoffparsetreesdirectlyus- monly occurring trigger words and the learned tag-
+ingsimplestructuralrulesformodifiers. ger would then be biased towards these words. In
+order to ensure that our training data had a diverse
+3 ConstructingModalityTrainingData setofexamplescontainingmanylexicaltriggersand
+notjustalotofexampleswiththesamelexicaltrig-
+In this section, we will discuss the procedure we
+ger,foreachmodalitywecappedthenumberofsen-
+followed to construct the training data for build-
+tences from a single trigger to be at most 50. After
+ing the automatic modality tagger. In a pilot study,
+we had the set of sentences selected by the simple
+we obtained and ran the modality tagger described
+tagger,wepostedthemonMTurkforannotation.
+in (Baker et al., 2010) on the English side of the
+The Turkers were asked to check a box indicat-
+Urdu-English LDC language pack.2 We randomly
+ingthatthemodalitywasnotpresentinthesentence
+selected 1997 sentences that the tagger had labeled
+ifthegivenmodalitywasnotexpressed. Iftheydid
+asnothavingtheWantmodalityandpostedthemon
+notcheckthatbox,thentheywereaskedtohighlight
+Amazon Mechanical Turk (MTurk). Three differ-
+thetargetofthemodality. Table1showsthenumber
+entTurkers(MTurkannotators)marked,foreachof
+of sentences we posted on MTurk for each modal-
+thesentences,whetheritcontainedtheWantmodal-
+ity.6 Three Turkers annotated each sentence. We
+ity. Using majority rules as the Turker judgment,
+restricted the task to Turkers who were adults, had
+95 (i.e., 4.76%) of these sentences were marked as
+greater than a 95% approval rating, and had com-
+having a Want modality. We also posted 1993 sen-
+pleted at least 50 HITs (Human Intelligence Tasks)
+tences that the tagger had labeled as having a Want
+onMTurk. WepaidUS$0.10foreachsetoftensen-
+modalityandonly1238ofthemweremarkedbythe
+tences.
+Turkers as having a Want modality. Therefore, the
+Since our data was annotated by three Turkers,
+estimated precision of this type of approach is only
+for training data we used only those examples for
+around60%.
+which at least two Turkers agreed on the modality
+Hence, we will not be able to use the (Baker et
+andthetargetofthemodality. Thisresultedin1,008
+al., 2010) tagger to gather training data. Instead,
+examples. 674 examples had two Turkers agreeing
+our approach was to apply a simple tagger as a first
+and 334 had unanimous agreement. We kept track
+pass, with positive examples subsequently hand-
+of the level of agreement for each example so that
+annotated using MTurk. We made use of sentence
+5Datareceivedthroughpersonalcommunication
+2LDCCatalogNo.:LDC2006E110. 6MoredetailedstatisticsonMTurkannotationsareavailable
+Modality Count Modality MTurk Gold
+Ability 190 Ability 6% 48%
+Effort 1350 Effort 25% 10%
+Intention 1320 Intention 30% 11%
+Success 1160 Success 24% 9%
+Want 1390 Want 15% 23%
+Table 1: For each modality, the number of sentences Table2: FrequencyofModalities
+returnedbythesimpletaggerthatwepostedonMTurk.
+modalitiesincontext. Fortagging,weusedtheYam-
+cha(KudoandMatsumoto,2003)sequencelabeling
+our learner could weight the examples differently
+system which uses the SVMlight (Joachims, 1999)
+dependingonthelevelofinter-annotatoragreement.
+package for classification. We used One versus All
+4 MulticlassSVMforModality method for multi-class classification on a quadratic
+kernelwithaCvalueof1. Wereportrecallandpre-
+In this section, we describe the automatic modal- cisiononwordtokensinourcorpusforeachmodal-
+itytaggerwebuiltusingtheMTurkannotationsde- ity. We also report F (F)-measure as the har-
+scribedinSection3asthetrainingdata. Section4.1 monicmeanbetween(P)recisionand(R)ecall.
+describes the training and evaluation data. In Sec-
+4.3 Features
+tion 4.2, we present the machinery and Section 4.3
+describes the features we used to train the tagger. Weusedlexicalfeaturesatthetokenlevelwhichcan
+In Section 4.4, we present various experiments and beextractedwithoutanyparsingwithrelativelyhigh
+discuss results. Section 4.5, presents additional ex- accuracy. We use the term context width to denote
+perimentsusingannotatorconfidence. thewindowoftokenswhosefeaturesareconsidered
+forpredictingthetagforagiventoken. Forexample,
+a context width of 2 means that the feature vector
+Fortraining,weusedthedatapresentedinSection3. of any given token includes, in addition to its own
+WerefertoitasMTurkdataintherestofthispaper. features,thoseof2tokensbeforeandafteritaswell
+Forevaluation,weselectedapartoftheLUCorpus as the tag prediction for 2 tokens before it. We did
+(Diabetal.,2009a)(1228sentences)andourexpert experiments varying the context width from 1 to 5
+annotated it with modality tags. We first used the andfoundthatacontextwidthof2givestheoptimal
+high-recallsimplemodalitytaggerdescribedinSec- performance. All results reported in this paper are
+tion 3 to select the sentences with modalities. Out obtained with a context width of 2. For each token,
+of the 235 sentences returned by the simple modal- we performed experiments using following lexical
+ity tagger, our expert removed the ones which did features:
+not in fact have a modality. In the remaining sen-
+• wordStem-Wordstem.
+tences (94 sentences), our expert annotated the tar-
+get predicate. We refer to this as the Gold dataset
+• wordLemma-Wordlemma.
+inthispaper. TheMTurkandGolddatasetsdifferin
+termsofgenresaswellasannotators(Turkervs. Ex- • POS-Word’sPOStag.
+pert). The distribution of modalities in both MTurk
+• isNumeric-WordisNumeric?
+andGoldannotationsaregiveninTable2.
+• verbType-Modal/Auxiliary/Regular/Nil
+4.2 Approach
+We applied a supervised learning framework us- • whichModal - If the word is a modal verb,
+ing multi-class SVMs to automatically learn to tag whichmodal?
+WeusedthePorterstemmer(Porter,1997)toob- its difference from MTurk data. MTurk data is en-
+tain the stem of a word token. To determine the tirely from email threads, whereas Gold data con-
+wordlemma,weusedanin-houselemmatizerusing tained sentences from newswire, letters and blogs
+dictionary and morphological analysis to obtain the in addition to emails. Furthermore, the annotation
+dictionary form of a word. We obtained POS tags is different (Turkers vs expert). Finally, the distri-
+from Stanford POS tagger and used those tags to bution of modalities in both datasets is very differ-
+determine verbType and whichModal features. The ent. For example, Ability modality was merely 6%
+verbTypefeatureisassignedavalue‘Nil’iftheword of MTurk data compared to 48% in Gold data (see
+is not a verb and whichModal feature is assigned a Table2).
+value‘Nil’ifthewordisnotamodalverb. Thefea-
+ture isNumeric is a binary feature denoting whether Modality Precision Recall FMeasure
+thetokencontainsonlydigitsornot.
+Ability 78.6 22.0 34.4
+4.4 ExperimentsandResults Effort 85.7 60.0 70.6
+In this section, we present experiments performed Intention 66.7 16.7 26.7
+considering all the MTurk annotations where two Success NA 0.0 NA
+annotators agreed and all the MTurk annotations
+Want 92.3 50.0 64.9
+where all three annotators agreed to be equally cor-
+Overall 72.1 29.5 41.9
+rect annotations. We present experiments applying
+differential weights for these annotations in Section Table4: Permodalityresultsforbestfeaturesetφevalu-
+4.5. We performed 4-fold cross validation (4FCV) atedonGolddataset
+on MTurk data in order to select the best feature
+set configuration φ. The best feature set obtained We obtained reasonable performances for Effort
+waswordStem,POS,whichModalwithacontext andWantmodalitieswhiletheperformanceforother
+width of 2. For finding the best performing fea- modalities was rather low. Also, the Gold dataset
+tureset-contextwidthconfiguration,wedidanex- containedonly8instancesofSuccess,noneofwhich
+haustive search on the feature space, pruning away was recognized by the tagger resulting in a recall
+features which were proven not useful by results at of 0%. Precision (and, accordingly, F Measure) for
+stages. Table 3 presents results obtained for each Successwasconsidered“notapplicable”(NA),asno
+modalityon4-foldcrossvalidation. suchtagwasassigned.
+4.5 AnnotationConfidenceExperiments
+Modality Precision Recall FMeasure
+OurMTurkdatacontainssentenceforwhichatleast
+Ability 82.4 55.5 65.5
+twoofthethreeTurkersagreedonthemodalityand
+Effort 95.1 82.8 88.5 thetargetofthemodality. Inthissection,weinvesti-
+Intention 84.3 61.3 70.7 gatetheroleofannotationconfidenceintrainingan
+automatic tagger. The annotation confidence is de-
+Success 93.2 76.6 83.8
+notedbywhetheran annotation wasagreedbyonly
+Want 88.4 64.3 74.3
+twoannotatorsorwasunanimous. Wedenotetheset
+Overall 90.1 70.6 79.1
+ofsentencesforwhichonlytwoannotatorsagreedas
+Agr and that for which all three annotators agreed
+Table 3: Per modality results for best feature set φ on 2
+asAgr .
+4-foldcrossvalidationonMTurkdata 3
+We present four training setups. The first setup
+WealsotrainedamodelontheentireMTurkdata is Tr23 where we train a model using both Agr
+using the best feature set φ and evaluated it against and Agr with equal weights. This is the setup we
+theGolddata. Theresultsobtainedforeachmodal- used for results presented in the Section 4.4. Then,
+ity on gold evaluation are given in Table 4. We at- we have Tr2 and Tr3, where we train using only
+tributethelowerperformanceontheGolddatasetto Agr and Agr respectively. Then, for Tr23 , we
+TestedonAgr andAgr TestedonAgr only
+TrainingSetup
+Precision Recall FMeasure Precision Recall FMeasure
+Tr23 90.1 70.6 79.1 95.9 86.8 91.1
+Tr2 91.0 66.1 76.5 95.6 81.8 88.2
+Tr3 88.1 52.3 65.6 96.8 71.7 82.3
+Tr23 89.9 70.5 79.0 95.8 86.5 90.9
+Table5: AnnotatorConfidenceExperimentResults;thebestresultspercolumnareboldfaced
+(4-foldcrossvalidationonMTurkData)
+train a model giving different cost values for Agr measureinallevaluations. Also,evenwhenevaluat-
+and Agr examples. The SVMLight package al- ingagainstonlythehighconfidentAgr cases,Tr2
+lows users to input cost values c for each training gave a high gain in recall (10 .1 percentage points)
+instance separately.7 We tuned this cost value for over Tr3, with only a 1.2 percentage point loss on
+Agr and Agr examples and found the best value precision. We conjecture that this is because there
+at20and30respectively. are far more training instances in Tr2 than in Tr3
+Forallfoursetups,weusedfeaturesetφ. Weper- (674vs334),andthatquantitybeatsquality.
+formed4-foldcrossvalidationonMTurkdataintwo Another important observation is the increase in
+ways — we tested against a combination of Agr 2 performance by using varied costs for Agr 2 and
+andAgr 3 ,andwetestedagainstonlyAgr 3 . Results Agr 3 examples (the Tr23 W condition). Although
+of these experiments are presented in Table 5. We it dropped the performance by 0.1 to 0.2 points
+alsopresenttheresultsofevaluatingataggertrained in cross-validation F measure on the Enron cor-
+on the whole MTurk data for each setup against the pora,itgained2.1pointsinGoldevaluationFmea-
+GoldannotationinTable6. TheTr23testedonboth sure. These results seem to indicate that differen-
+Agr 2 andAgr 3 presentedinTable5andTr23tested tial weighting based on annotator agreement might
+onGolddatapresentedinTable6correspondtothe have more beneficial impact when training a model
+resultspresentedinTable3andTable4respectively. that will be applied to a wide range of genres than
+when training a model with genre-specific data for
+TrainingSetup Precision Recall FMeasure application to data from the same genre. Put differ-
+ently, using varied costs prevents genre over-fitting.
+Tr23 72.1 29.5 41.9
+We don’t have a full explanation for this difference
+Tr2 67.4 27.6 39.2
+in behavior yet. We plan to explore this in future
+Tr3 74.1 19.1 30.3 work.
+Tr23 73.3 31.4 44.0
+5 Conclusion
+Table 6: Annotator Confidence Experiment Results; the
+bestresultspercolumnareboldfaced We have presented an innovative way of combining
+(EvaluationagainstGold) a high-recall simple tagger with Mechanical Turk
+annotations to produce training data for a modality
+One main observation is that including annota- tagger. We show that we obtain good performance
+tionsofloweragreement,butstillaboveathreshold onthesamegenreasthistrainingcorpus(annotated
+(inourcase,66.7%),isdefinitelyhelpful. Tr23out- in the same manner), and reasonable performance
+performed both Tr2 and Tr3 in both recall and F- acrossgenres(annotatedbyanindependentexpert).
+Wealsopresentexperimentsutilizingthenumberof
+7This can be done by specifying ‘cost:<value>’ after the
+agreeing Turkers to choose cost values for training
+label in each training instance. This feature has not yet been
+documentedontheSVMlightwebsite. examples for the SVM. As future work, we plan to
+extend this approach to other modalities which are ProceedingsoftheThirdLinguisticAnnotationWork-
+notcoveredinthisstudy. shop,pages68–73,Suntec,Singapore,August.Asso-
+ciationforComputationalLinguistics.
+6 Acknowledgments Richa´rd Farkas, Veronika Vincze, Gyo¨rgy Szarvas,
+Gyo¨rgy Mo´ra, and Ja´nos Csirik, editors. 2010. Pro-
+This work is supported, in part, by the Johns Hop- ceedings of the Fourteenth Conference on Computa-
+kins Human Language Technology Center of Ex- tional Natural Language Learning. Association for
+cellence. Any opinions, findings, and conclusions ComputationalLinguistics,Uppsala,Sweden,July.
+or recommendations expressed in this material are Thorsten Joachims, 1999. Making large-scale support
+vector machine learning practical, pages 169–184.
+those of the authors and do not necessarily reflect
+MITPress,Cambridge,MA,USA.
+the views of the sponsor. We thank several anony-
+Stefan Kaufmann, Cleo Condoravdi, and Valentina
+mousreviewersfortheirconstructivefeedback.
+Harizanov, 2006. Formal Approaches to Modality,
+pages72–106. MoutondeGruyter.
+Angelika Kratzer. 1981. The Notional Category of

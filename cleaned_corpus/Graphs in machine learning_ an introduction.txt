@@ -1,0 +1,321 @@
+1v26960.6051:viXra
+Graphs in machine learning: an introduction
+Pierre Latouche and Fabrice Rossi
+Universit´eParis 1 Panth´eon-Sorbonne- Laboratoire SAMM EA 4543
+90 ruede Tolbiac, F-75634 Paris Cedex 13 - France
+Abstract. Graphs are commonly used to characterise interactions be-
+tween objects of interest. Because they are based on a straightforward
+formalism, they are used in many scientific fields from computer science
+to historical sciences. In this paper, we give an introduction to some
+methods relying on graphs for learning. This includes both unsupervised
+and supervised methods. Unsupervised learning algorithms usually aim
+at visualising graphs in latent spaces and/or clustering the nodes. Both
+focus on extracting knowledge from graph topologies. While most exist-
+ing techniques are only applicable to static graphs, where edges do not
+evolve through time, recent developments have shown that they could be
+extended to deal with evolving networks. In a supervised context, one
+generally aims at inferring labels or numerical values attached to nodes
+using both the graph and, when they are available, node characteristics.
+Balancing thetwosourcesofinformation canbechallenging, especially as
+theycandisagreelocallyorglobally. Inbothcontexts,supervisedandun-
+supervised, data can be relational (augmented with one or several global
+graphs) as described above, or graph valued. In this latter case, each
+object of interest is given as a full graph (possibly completed by other
+characteristics). Inthiscontext,naturaltasksincludegraphclustering(as
+in producing clusters of graphs rather than clusters of nodes in a single
+graph), graph classification, etc.
+1 Real networks
+One of the first practical studies on graphs can be dated back to the original
+work of Moreno [51] in the 30s. Since then, there has been a growing interest
+in graph analysis associated with strong developments in the modelling and
+the processing of these data. Graphs are now used in many scientific fields.
+In Biology [54, 2, 7], for instance, metabolic networks can describe pathways of
+biochemicalreactions[41],whileinsocialsciencesnetworksareusedtorepresent
+relation ties between actors [66, 56, 36, 34]. Other examples include powergrids
+[71] and the web [75]. Recently, networks have also been considered in other
+areassuchas geography[22]andhistory[59,39]. Inmachine learning,networks
+are seen as powerful tools to model problems in order to extract information
+from data and for prediction purposes. This is the object of this paper. For
+more complete surveys, we refer to [28, 62, 49, 45].
+In this section, we introduce notations and highlight properties shared by
+mostrealnetworks. InSection2,wethenconsidermethodsaimingatextracting
+information from a unique network. We will particularly focus on clustering
+methods where the goal is to find clusters of vertices. Finally, in Section 3,
+techniques that take a series of networks into account, where each network is
+seenasanobject,areinvestigated. Inparticular,distancesandkernelsforgraphs
+are discussed.
+1.1 Notations
+A graph is first characterised by a set V of N vertices and a set E of edges
+between pairs of vertices. The graph is said to be directed if the pairs (i,j)
+in E are ordered, undirected otherwise. A graph with self loops is made of
+vertices which can be connected to themselves. The degree of a vertex i is the
+total number of edges connected to i, with self loops counted twice. In most
+applications, only the presence or absence of an edge is characterised. However,
+edgescanalsobeweightedbyafunctionh:E →FforanysetF. Moregenerally
+arbitrary labelling functions can be defined on both the vertices and the edges,
+leading to labelled graphs.
+AgraphisusuallydescribedbyanN×N adjacencymatrix(X) whereX
+is the value associated to the edge between the (i,j) pair. It is equal to zero in
+the absence ofrelationshipbetweenthe nodes. Inthe case ofbinary graphs,the
+matrix X is binary and X = 1 indicates that the two vertices are connected.
+If the graph is directed then X is symmetric that is X =X for all (i,j).
+We use interchangeably the vocabularyfrom graph theory introduced above
+and a less formal vocabulary in with a graph is called a network and a vertex
+a node. In general, the network is the real world object while the graph is its
+mathematical representation, but we have a more relaxed use of the terms.
+1.2 Properties
+A remarkable characteristic of most real networks is that they share common
+properties[20,3,67,54]. First,mostofthemaresparsei.e. thenumberofedges
+present in not quadratic in the number of vertices, but linear. Thus, the mean
+degree remains bounded when N increases and the network density, defined as
+the ratio between the number of existing edges over the number of potential
+edges,tends to zero. Second,while someverticesof arealnetworkcanhavefew
+connections orno connectionatallwith the othervertices,mostverticesbelong
+to a single component, so called giant component, where it is always possible to
+findapath, i.e. asetofadjacentconnectededges,connectinganypairofnodes.
+Nodes can be disconnected from this component, forming significantly smaller
+components. Finally, we would like to highlight the degree heterogeneity and
+small world properties. The first property states that few vertices have a lot
+of links, while most of the vertices have few connections. Therefore, scale free
+distributions are often considered to model the degrees [6, 15]. The second one
+indicates that the shortest path from one vertex to another is generally rather
+small, typically of size O(log(N)).
+2 Graph clustering
+In order to extract information from a unique graph, unsupervised methods
+usuallylookforclusterofverticessharingsimilarconnectionprofiles,aparticular
+case of general vertices clustering [63]. They differ in the way they define the
+topology on top of which clusters are built.
+2.1 Community structure
+Most graph clustering algorithms aim at uncovering specific types of clusters,
+so calledcommunities, where there are more edges between vertices of the same
+community than between vertices of different communities. Thus, communities
+appear in the form of densely connected clusters of vertices, with sparser con-
+nections between groups. They are characterised by the friend of my friend
+is my friend effect, i.e. a transitivity property, also called assortative mixing
+effect. Two families of methods for community discovering can be singled out
+among a vast set of methods [24], depending on wether they maximize a score
+derived from the modularity score of Girvan and Newman [27] or rely on the
+latent position cluster model (LPCM) of Handcock, Raftery and Tantrum [34].
+2.1.1 Modularity score
+Aseriesofcommunitydetectionalgorithmshavebeenproposed(seeforinstance
+[27, 52, 53] and the survey [24]). They involve iterative removal of edges from
+thenetworktodetectcommunitieswherecandidateedgesforremovalarechosen
+accordingtobetweennessmeasures. Allmeasuresrelyonthesameideathattwo
+communities, by definition, are joined by a few edges and therefore, all paths
+from vertices in one community to vertices in the other are likely to path along
+thesefewedges. Therefore,thenumberofpathsthatgoalonganedgeisexpected
+tobelargerforintercommunityedges. Forinstance,theedgebetweennessofan
+edge does account for the number of shortestpaths between all pairs of vertices
+that run along that edge. Moreover, the random walk betweenness evaluates
+the expected number of times a random walk wouldpath along the edge, for all
+pairs of vertices.
+The iterative removal of edges produces a dendrogram, describing a hierar-
+chicalstructure,fromasituationwhereeachvertexbelongstoadifferentcluster
+to the inverse scenario where all vertices are clustered within the same commu-
+nity. The modularity score [27] is then consideredto select a particular division
+ofthenetworkintoK clusters. Denotinge thefractionofedgesinthenetwork
+connecting vertices of communities k and l, as well as a = K a , the frac-
+tion of edges that connect with vertices of community k, the modularity score
+is given by:
+).
+Such a criterion is computed for the different levels in the hierarchy and K is
+chosen such that K is maximised.
+Rather that building the complete dendrogram, other algorithms have fo-
+cused on optimising the modularity score directly, as it is beneficial both in
+computational terms and in the perceived quality of the obtained partitions. A
+very popular algorithm, the so-called Louvain method [10], proceeds by a se-
+ries of greedy exchanges and merging that turns a fully refined partition into
+a coarser one that provides a (local) maximum of the modularity. Better solu-
+tions can be obtained using more sophisticated heuristics [55] but maximising
+the modularity is a NP-hard problem [12].
+Note that modularity approaches have been shown to be asymptotically bi-
+ased[9]. Totacklethisissue,degreecorrectedmethodswereintroducedinorder
+to take the degrees of nodes into account.
+2.1.2 Latent position cluster model
+Alternative approaches, looking for clusters of vertices with assortative mixing,
+usually rely on the LPCM model [34] which is a generalisation of the latent
+position model (LPM) [36]. In the original LPM model, each vertex i is first
+assumed to be associated with a position Z in a Euclidean latent space Rd.
+Eachedgebetweenapair(i,j)ofverticesisthendrawndependingonZ andZ .
+Both maximum likelihood and Markov chain Monte Carlo (MCMC) techniques
+wereconsideredtoestimatethemodelparametersandthelatentpositions. The
+corresponding mapping of the vertices into the Euclidean latent space produces
+arepresentationofthenetworksuchthatnodeswhicharelikelytobeconnected
+havesimilarpositions. Notethatifthelatentspaceislowdimensional,typically
+of dimension d = 1,2,3, then the representation can be visualised which is
+feature appreciated by practitioners.
+The LPM model was extended in order to look for both a representation of
+the network and a clustering of the vertices. Thus, the corresponding LPCM
+model assumes that the positions are drawn from a Gaussian mixture model in
+thelatentspacesuchthateachGaussiandistributioncorrespondstoacluster. A
+two stage maximum likelihood approach along with a Bayesian MCMC scheme
+were proposed for inference purposes. Moreover,conditional Bayes factors were
+consideredto estimate the number ofclustersfromthe data. Finally variational
+bayesian inference is also possible [61].
+2.2 Heterogeneous structures
+So far, we have discussed methods looking exclusively for communities in net-
+works. Other approachesusually derive fromthe stochastic block model (SBM)
+of Nowicki and Snijders [56]. They can also look for communities, but not only.
+The SBM models assumes that nodes are spread in unknown clusters and
+that the probability of a connection between two nodes i and j depends on
+their corresponding clusters. In practice, a latent vector Z is drawn from a
+multinomial distribution with parameters (1,α = {α ,...,α }), where α is
+the proportion of cluster k. Therefore, Z is a binary vector of size K with a
+single1,suchthatZ =1indicatesthatibelongstoclusterk,0otherwise. Ifiis
+in cluster k and j in l, then the SBM model assumes that there is a probability
+π of a connection between the two nodes. All connection probabilities are
+characterised by a K ×K matrix Π. Note that a community structure can be
+definedbysettingvaluesforthediagonaltermsofΠtohighervaluesthanextra
+diagonalterms[37]. Inpractice,becausenoassumptionsaremaderegardingΠ,
+the SBM model can take heterogeneous structures into account [18, 42, 44].
+While generatinga networkwith such a sampling scheme is straightforward,
+estimating the model parameters α and Π as well as the set (Z) of all latent
+vectors is challenging. One of the key issue is that the posterior distribution
+of Z given the adjacency matrix X and the model parameters (α,Π) cannot
+be factorised due to conditional dependency. Therefore, standard optimisation
+algorithms, such as the expectation maximisation (EM) algorithm, cannot be
+derived. To tackle this issue variational and stochastic approximations have
+been proposed. Thus,[18]reliedonavariationalEM(VEM) algorithmwhereas
+[44] used a variational Bayes EM (VBEM) approach. Alternatively, [56] esti-
+mated the posterior distribution of the model parameters and Z, given X, by
+considering Gibbs sampling.
+Aevenmorefondamentalquestionconcernsthe estimationofthe numberof
+clusters present in the data. Unfortunately, since the likelihood is not tractable
+either, standard model selection criteria, like the Akaike information criterion
+(AIC) or the Bayesian IC (BIC) cannot be computed. Again, variational along
+with asymptotic Laplace approximations were derived to obtain approximate
+model selection criteria [18, 44].
+In some cases, the clustering of the nodes and the estimation of the number
+of clusters are performed at the same time using allocationsampler [50], greedy
+search [16], or non parametric schemes [40].
+2.3 Extensions
+Since the original development of the SBM model, many extensions have been
+proposed to deal for instance with valued edges [48] or to take into account
+covariate information [76, 49]. The random subgraph model (RSM) [39] for
+instance assumes that a partition of the nodes into subgraphs is observed and
+thatthesubgraphsaremadeof(unknown)latentclusters,asintheSBMmodel,
+with various mixing proportions. The edges are typed. In parallel, strategies
+lookingforoverlappingclusters,whereeachnodecanbelongtomultipleclusters,
+havebeenderived. In[1],avertexibelongsaclusterinits relationwithagiven
+vertex j. Because i is involved in multiple relations in the network, it can
+belong to more than one cluster. In [43], the multinomial distribution of the
+SBM model is replaced with a product of Bernoulli distribution, allowing each
+vertex to belong to no, one, or severalclusters.
+In the last few years, a lot of attention has been paid on extending the ap-
+proaches mentioned previously in order to deal with dynamic networks where
+nodes and/or edges can evolve through time. The main idea consists in in-
+troducing temporal processes, such as hidden Markov model (HMM) or linear
+dynamic systems [72, 74, 73]. While models usually focus on modelling the dy-
+namic of networks through the evolution of their latent structures, Heaukulani
+and Gharamani [35] chose to define how observed social interactions can affect
+future unobserved latent structures. We would also like to highlight the work
+of Dubois, Butts, and P. Smyth [21]. Contrary to most dynamic clustering ap-
+proaches, they considered a non homogeneous Poisson process allowing to deal
+with a continuous time periods where events, i.e. the creation or removal of
+an edge, can occur one at a time. Another approach for graph clustering in the
+continuoustimecontextisprovidedby[29]whichbuildsacoclusteringstructure
+on the vertices of the graph and on the time stamps of the edges.
+3 Multiple graphs
+Whilealargepartofthegraphrelatedliteratureinmachinelearningtargetsthe
+case of a single graph, numerous applications lead naturally to data sets made
+of graphs, that is situations in which each data point is a graph (or consists in
+several components including at least one graph). This is the case for instance
+in chemistry where molecules can be represented by undirected labelled graphs
+(seee.g. [57])andinbiologywherethestructureofaproteincanbe represented
+by a graphthat encodes neighborhoods between it fragments as in [11]. In fact,
+the use of graphs as structured representations of complex data follows a long
+tradition with early examples appearing in the late seventies [60] and with a
+tendency to become pervasive in the last decade.
+It shouldbe notedthat eveninthe caseofa single globalgraphdescribedin
+the first part of this paper, it is quite natural to study multiple graphs derived
+from the global one, in particular via the ego-centered approach which is very
+common in social sciences (see e.g. [26]). The main idea is to extract from
+a large social network a set of small networks centered on each of the vertices
+under study. For real world social networks, it is in general the only possible
+courseofaction,thewholenetworkbeingimpossibletoobserve(seee.g. [19]for
+an example).
+When dealing with multiple graphs, one tackles the traditional tasks of ma-
+chine learning, from unsupervised problems (clustering, frequent patterns anal-
+ysis, etc.) to supervised ones (classification, regression, etc.). There are two
+maintendenciesinthe literature: thedesignofspecializedmethods obtainedby
+adapting classical ones to graphs and the use of distances and kernels coupled
+with generic methods.
+3.1 Specialized methods
+As graphs are not vector data, classical machine learning techniques do not
+apply directly. Numerous methods have been adapted in rather specific ways
+to handle graphs and other non vector data, especially in the neural network
+community [32, 17], for instance via recursive neural networks as in [33, 30]. In
+those approaches, each graph is processed vertex by vertex, by leveraging the
+structure to build a form of abstract time. The recursive model maintains an
+implicit knowledge of the vertices already processed by means of its space state
+neurons.
+3.2 Distances and kernels
+A somewhat more generic solution consists in building distances (or dissimi-
+larities) between graphs and then in using distances based methods (such as
+methods based on the so-called relational approach [31]). One difficulty is that
+graphisomorphismshouldbeaccountedforwhentwographsarecompared: two
+graphs are isomorphic if they are equal up to a relabeling of their vertices. Any
+sound dissimilarity/distance between graphs should detect isomorphic graphs.
+This is however far more complex than expected [23] up to a point that the
+actual complexity class of the graphisomorphismproblemremains unknown (it
+belongs to the NP class but not to the NP-complete class, for instance). While
+exactalgorithmsappear fastonrealworldgraphs,their worstcase complexities
+are exponential, with a best bound in O(2√nlogn) [47]. In addition, subgraph
+isomorphism, i.e. determining whether a given graph contains a subgraph that
+is isomorphic to another graph is NP-complete.
+Nevertheless,numerousexactorapproximatealgorithmshavebeendefinedto
+try andsolvethe (sub)graphisomorphismproblem(see e.g. [14]). Inparticular,
+it has been shown that those problems (and related ones) are special cases of
+the computation of the graph edit distance [13], a generalization of the string
+editdistance[46]. Thegrapheditdistanceisdefinedbyfirstintroducingedition
+operations on graph, such as insertion, deletion and substitution of edges and
+vertices (labels and weights included). Each operation is assigned a numeric
+cost. The total cost of a series of operations is simply the sum of the individual
+costs. Then the graph edit distance between two graphs is the cost of the least
+costly sequence of operations that transforms one of the graph into the other
+one (see [25] for a survey).
+A rather different line of research has provided a set of tools to compare
+graphs by means of kernels (as in reproducing kernels [4]). Those symmetric
+positive definite similarity functions allow one to generalize any classical vector
+space method to non vector data in a straightforward way [64]. Numerous of
+such kernels have been defined to compare two graphs [69]. Most of them are
+based on random walks that take place on the product of the two graphs under
+comparison.
+Oncea kerneloradistance hasbeen chosen,one canapply anyofthe kernel
+methods [65] or of the relational methods [31], which gives access to support
+vector machine, kernel ridge regression and kernel k-means to cite only a few.
+4 Conclusion
+This paper has only scraped the surface of the vast literature about graphs in
+machinelearning. Completeareaofgraphapplicationsinmachinelearningwere
+ignored.
+For instance, it is well know that extracting a neighborhood graph from a
+classical vector data set is an efficient way to get insights on the topology of
+the data set. This has led to numerous interesting applications ranging from
+visualization (as in isomap [68] and its successors) to semi-supervised learning
+[8], going through spectral clustering [70] and exploratory analysis of labelled
+data sets [5].
+Another interesting area concerns the so-called relational data framework
+when a classical data set is augmented with a graph structure: the vertices of
+the graphare elements of a standardvector space and are thus traditional data
+points, but they are interconnected via a graph structure (or several ones in
+complex settings). The challenge consists here in taking into account the graph
+structure while processingthe classicaldata orvice-versain takinginto account
+the data point descriptions when processing the graph. Among other issues,
+those two different sources of information can be contradictoryfor a given task.
+Atypicalapplicationofsuchaframeworkconsistsinannotatingnodesonsocial
+media [38].
+While wehavepresentedsometemporalextensionsofclassicalgraphrelated
+problems, we have ignored most of them. For instance, the issue of informa-
+tion propagation on graphs has received a lot of attention [58]. Among other
+tasks, machine learning can be used e.g. to predict the probability of passing
+information from one actor to another as in [19].
+More generally, the massive spread in the last decade of online social net-
+workinghastheobviousconsequenceofgeneratingverylargerelationaldatasets.
+While non vector data have been studied for quite a long time, those new data
+sets push the complexity one step further by mixing severaltypes of non vector
+data. Objects under study are now described by complex mixed data (texts,
+images, etc.) and are related by several networks (friendship, online discussion,
+etc.). In addition, the temporal dynamic of those data cannot be easily ignored
+or summarized. It seems therefore that the next set of problems faced by the
+machine learning community will include graphs in numerous forms, including
+dynamic ones.

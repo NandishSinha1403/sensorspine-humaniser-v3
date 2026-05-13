@@ -1,0 +1,509 @@
+Identifying cancer subtypes in glioblastoma by combining genomic,
+transcriptomic and epigenomic data
+Richard S. Savage r.s.savage@warwick.ac.uk
+Systems Biology Centre, University of Warwick, Coventry, CV4 7AL, UK
+Zoubin Ghahramani
+Department of Engineering,University of Cambridge, Cambridge, CB2 1PZ, UK
+Jim E. Griffin
+School of Mathematics, Statistics and Actuarial Science, University of Kent, CT2 7NF, UK
+Systems Biology Centre, University of Warwick, Coventry, CV4 7AL, UK
+David L. Wild
+Systems Biology Centre, University of Warwick, Coventry, CV4 7AL, UK
+Abstract characterised by very low levels of methy-
+lation. This subtype has very low rates of
+We present a nonparametric Bayesian
+tumour recurrence and no new events in 10
+method for disease subtype discovery in
+years of follow up. We also identify a small
+multi-dimensional cancer data. Our method
+gene expression subtype of 6 patients that
+can simultaneously analyse a wide range
+shows particularly poor survival outcomes.
+of data types, allowing for both agreement
+Additionally, we note a consensus subtype
+and disagreement between their underlying
+that showly a highly distinctive data signa-
+clustering structure. It includes feature
+ture and suggest that it is therefore a biolog-
+selection and infers the most likely number
+ically distinct subtype of glioblastoma.
+of disease subtypes, given the data.
+We note that while the consensus subtypes
+We apply the method to 277 glioblastoma
+are highly informative, there is only par-
+samples from The Cancer Genome Atlas, for
+tial overlap between the different data types.
+whichtherearegeneexpression,copynumber
+This suggests that when considering multi-
+variation, methylation and microRNA data.
+dimensionalcancerdata,theunderlyingbiol-
+We identify 8 distinct consensus subtypes
+ogy is more complex than a straightforward
+and study their prognostic value for death,
+setofwell-definedsubtypes. Wesuggestthat
+new tumour events, progression and recur-
+this may be a key consideration when mod-
+rence. The consensus subtypes are prognos-
+eling such data.
+tic of tumour recurrence (log-rank p-value of
+3.6×10−4 after correction for multiple hy- The code is available from
+pothesis tests). This is driven principally
+by the methylation data (log-rank p-value of
+2.0×10−3) but the effect is strengthened by
+1. Introduction
+the other 3 data types, demonstrating the
+value of integrating multiple data types. Cancer is a complex disease, driven by a range of ge-
+Ofparticularnoteisasubtypeof47patients netic and environmental effects. It is responsible for 1
+Presented at The 29th International Conference on Ma- in8deathsworldwide(ACS,2011),withanestimated
+chineLearning,Edinburgh,Scotland,UK,2012: Workshop 7.6 million cancer deaths worldwide in 2008 (Jemal
+onMachineLearninginGeneticsandGenomics. Copyright etal.,2011). Understandingthecancergenome(Strat-
+2012 by the author(s)/owner(s).
+ton et al., 2009) and the associated molecular mech-
+]NG.oib-q[
+2v7753.4031:viXra
+Finding cancer subtypes in glioblastoma
+anisms is therefore a vitally important global medical ment, depending on the biological context.
+issue.
+MDIproducesclusteringpartitionsforeachdatatype,
+Modern large-scale cancer studies present great new as well as an overall consensus clustering partition. It
+opportunities to understand different types of can- also identifies the degree to which different data types
+cer and their underlying mechanisms. Projects sharecommonstructure,andcanidentifywhichofthe
+such as The Cancer Genome Atlas (TCGA) items are fused across the different data types.
+To extend the MDI method to the analysis of cancer
+(Curtis et al., 2012) and the International Cancer
+data, we have added additional functionality beyond
+Genome Consortium (ICGC, 2010), are producing
+that of Kirk et al. (2012) Two data models (Gaussian
+large, multi-dimensional data sets that have the
+and Multinomial) are used. For each of these data
+potential to revolutionise the study of cancer.
+models, feature selection has been added, so that the
+One of the first TCGA projects is a study of glioblas- most informative features can be identified for each
+toma,(TCGA,2008)themostcommonprimarybrain data type. Additionally, it is known that the MCMC
+tumour in human adults. Glioblastoma is an aggres- chains in mixture-based clustering methods can be
+sive cancer; patients with newly diagnosed glioblas- slow to mix when using a Gibbs sampler. To improve
+toma have a median survival of ≈1 year. The TCGA performance in this regard, an additional split-merge
+glioblastoma data set is a hugely relevant resource for MCMCsamplerhasbeenadded,whichisusedincon-
+improving this situation. junction with the existing Gibbs steps.
+Key to the utilisation of these multi-dimensional data MDI therefore has the following advantage in
+setsistodevelopeffectivedatafusionmethods(seee.g. analysing post-genomic molecular cancer data.
+Shenetal.,2009;Savageetal.,2010;Yuanetal.,2011;
+Kirk et al., 2012). It is not enough to simply concate- • Infers (Rather than assumes) the degree to which
+natethedifferentdatatypes;onemustaccountforthe clustering structure is shared between data types
+different statistical characteristics of each data type
+and that they may contain differing or even contra- • Infersthelikelynumberofclustersgiventhedata
+dictory information about the samples studied. There
+is potentially huge benefit to proper analysis of such • Identifiesthegenes/probesineachdatatypethat
+multi-dimensional data sets (e.g. consider the number define the disease subtypes
+ofpairwisedatatypecomparisonsasthetotalnumber
+• Integrate simultaneously a wide range of data
+of types increases). But to fully realise this, we must
+types(4inthispaper;morecaneasilybeincluded
+develop new methods.
+if available)
+TheMultipleDataIntegration(MDI)algorithm(Kirk
+et al., 2012) is a principled framework for the iden-
+The rest of the paper is summarised as follows. In
+tification of cancer subtypes. It can analyse multi-
+Section 2 we describe the data set. In Section 3 we
+dimensional datasets,combiningarangeofindividual
+describe MDI and present several improvements to
+datatypessuchasgeneexpression,copynumbervaria-
+the method. In Section 4 we present the results of
+tion,methylationandmicroRNAdata. MDIcanbere-
+analysing the TCGA glioblastoma data. Finally, in
+gardedastheextensiontomultiple(possiblydisagree-
+Section 5 we draw conclusions about this work.
+ing) data types of nonparametric Bayesian clustering
+methods such as the Dirichlet Process (DP) mixture
+model (see e.g. Ferguson, 1973; Antoniak, 1974; Esco-
+bar&West,1995;Dahl,2006;Rasmussenetal.,2007).
+We downloaded glioblastoma data (TCGA,
+ThekeyadvantageofMDIisthatitallowsforthepos- 2008) from the TCGA data portal
+theclusteringstructuresofdifferentdatatypeswithin expression, copy number variation, methylation
+a given analysis. This is extremely important in bi- and microRNA data, as well as clinical follow-up
+ological data sets. For example, gene expression can information. After matching samples across all 4 data
+be regulated by a number of biological mechanisms, types, we are left with 277 samples for which we have
+so is not determined solely by the underlying genome. complete data. We note that in a few cases (and for
+Hence integrating gene expression and copy number a given data type) there are duplicate samples for the
+variationdatamightormightnotresultingoodagree- same patient. In this case we make a blind selection
+of the first sample, based on bar code ordering.
+Finding cancer subtypes in glioblastoma
+AlldataweredownloadedfromtheTCGAdataportal The data include 10 normal samples. For each mi-
+on 13th April 2012. croRNAinturn,aWilcoxonrank-sumtestwasusedto
+determinewhetherornottherewasdifferentialexpres-
+2.1. Gene Expression sion between tumour and normal samples. Applying
+a Bonferroni correction and then keeping only genes
+We use the publicly-available level 3 gene expression with a p-value of p<1×10−3 gave us 104 features.
+PaudlaKtiark.eFtoarl consistency, data were chosen from a single
+platform. The UNC AgilentG4502A 07 samples were
+2.5. Clinical Follow-up
+selected as they were most numerous, giving a total
+Tohfe5o7u1tlitnuemofotuhrisspaampeprleiss.asTfohleloswesw. IenreSercetaiodni2n,twoeabsriienflgyle poTsshibelecmorordeelslpinognapdpirnogacchlwinoiucldalbedtaotfiatwKeirnedeaplesnodednotwDMnlAoamdixetdur.e
+pro d vi a d t e a s m om a e tr m ix od a e n l d lin N g a b N ack ( g m ro is u s n i d ng a ) nd va p l r u e e se s n s t e o t u t r o a z p e p r ro o a . ch. mTodheels,rfiepleressenftoedllgorwaphuicpallvy1in.0Fipguurbel1iacfoGrtBheMca.stexKt =an3d.Hocwlienvie-r,
+Inference in our model is performed via a Gibbs sampler, which thisneglectstoconsider(andfailstoexploit)structurewithinthedatathat
+cal patient public GBM.txt were used, matching the
+is pTrohveiddeadtaininthceluSduepp1l0emneonrtamryalMsaatmeripalle.s.InFSoercteioanch3,gewnee, maybecommonacrosssomeorallofthedifferentsources.Forexample,
+des a crib W et i h lc re o e x c o a n se r st a u n d k y - e s x u a m mpl t e e s s , t in w all a o s fw u h se ic d hw to eus d e e p t u er b m lic i l n y e a p se a t t o ie f n co ts -reg o u n lat t e h d e gen b e a s s m is igh o t f b t e h e e xpe T ct C ed G to A ha b ve ar sim c i o la d r e e s x . pres W sio e n
+available S. cerevisiae (baker’s yeast) datasets. We then present prnoofiltees,tahsawtel5l1asohfavtihngea2c7o7msmaomnpcollelesctdioindonfoptrohteainvsethcaotmbinpdlethteeir
+whether or not there was differential expression be-
+results(Section4),andprovideadiscussioninSection5. prcolminoitecras.lWfoellthoewre-fuorpepinrofpoorsmeaamtioodnel.inwhichweallowdependencies
+tween tumour and normal samples. A Bonferroni betweendatasetsatthelevelofthecomponentallocationvariables,ci.
+correction and p-value threshold was applied (p <
+2×10−3), leaving 1011 gene expression features. M 1 M 2 M 3
+In this section, we provide some background regarding Dirichlet-
+m th u es l 2 t e in .m2 om .ay i C al beo al p l e o xy c t a e t nN i d o e n ud m mto ix b t a u le r lo e rw m Vu o sa de rt l o s iap ( t S ei e rfo c o t n i r o m n i 2 n . t 1 e ) g , ra a t n iv d e c m on o s d i e d l e li r ng ho o w f G( 1 0) G( 2 0) G( 3 0) π 1 π 2 π 3
+multiple datasets (Section 2.2). Inference in the resulting model (which
+we W sha e llh u e s n e cef t o h rth e re p fe u r b t l o ic a l s y M -a D v I a ) i i l s a p b e l r e form le e v d e u l si 2 ng c a o G p i y bbs n s u am m p b le e r r θ θ θ c i1 c i2 c i3
+(seedSautpap.lemWenetarcyhMoasteerilael)v.eWle2brsieoflythdeastcriwbeeinhSaedctiaoncc2e.4sshotwothaell
+resupltrinogbpeosste(rtiohresamlepvleeslm3aydbaeteaffecatriveelysesugmmmeanritseedd. into regions
+which, in general, are different from sample to sam- i1 i2 i3
+2.1 Dirichlet-multinomialallocationmixturemodels
+ple). This gave 466 tumour and 376 normal samples i=1,...,n
+WemodeleachdatasetusingafiniteapproximationtoaDirichletprocess
+generated by MSK C using the HG-CGH-244A plat-
+mixture model (Ishwaran and Zarepour, 2002), known as a Dirichlet- (a)
+mulftoinrommi.alTallhoecasteionwmeirxeturreeamdodienlt(GoreaensainndgRleichdaardtsaonm,2a0t0r1i)x.Suacnhd
+modNelasNhav(emthiesfsoilnlogw)invgagleuneesralsfeotrmt:o zero. M 1 M 2 M 3
+For each probe, a Wilcoxon rank-sum test was used
+to determine w p h ( e x t ) h = ercX=o1r πc n f o (x t| θ t c h ). ere was different (1 ia ) l G( 1 0) G( 2 0) G( 3 0) π 1 π 2 π 3
+Herce,oNpyistnhuemmabxiemrumvanruimabteioronfmbixettuwreeceonmptohneentsn,oπrcmaraeltheamndixtutrue- c
+propmorotiuonrs,safmispalepsa.ramAetBricodnefnesritryon(siucchoarsreacGtiaounssiwana),satnhdeθnc aarpe- θ c1 θ c2 θ c3 c i2 φ 23
+theparametersassociatedwiththec-thcomponent. Importantly, different
+plied to the p-values. A large number of probes had c=1,...,N
+choices for the density f allow us to model different types of data (for φ
+exam hi p g le h , l a y n s o i r g m n al ifi d c is a tr n ib t uti p o - n v m al i u gh e t s b , e m ap a p n ro y pri o at f e w fo h r i c c o h ntin c u o o n u t s a d i a n ta e , d x i1 x i2 x i3 12
+whisleimamilualrtinionmfoiarlmmiagthitobne.apIptrowpraiastetfhorecraetfeogorreicdaledcaitda)e.d on prac-
+Gtiivceanlobgsreorvuendddastatxo1,k..e.e,pxno,nwleywtishheto1p0er0fo0rmmBoaysetsisainginnfiefirecnacnet
+forpthreoubneknsoawsnfpeaaratmuerteerssfinorthitshmisodaenl.aWlyesiinstr.oducelatentcomponent (b)
+.
+,.
+.
+.
+s:
+ponent FFigi.g1u:reGr1a.pGhircaaplhreipcraelsernetpartieosnenotfaKtion=o3fDKMA=m3ixDtuMreAmomdiexls-.
+2.3. Methylation (at)uIrnedempoenddeelsn.tc(aas)e.In(bd)eMpeonddelelnintgcdaespee.nd(ben)cMeboedtwelelienngthdeelpaetenn-t
+codmenpcoenebnettawlleoecnatitohnevalraitaebnletsc(othmepMoDneInmtoadelllo).cation variables
+W Th e is us g e a t v h e ep 28 u 5 bcl i i | s cπ a ly m ∼ -a p Mv le au s litlian g ob e ml n eia e ll r (eπ a v 1 t e, e l. d .3.,m b π y N et)h J ,y H l U at - i U on SC dat o a n . (t W h e e c M on D sid I er m K od m e i l x ) t . ur F e i m gu od r e e ls fr ( o on m ef K or ir e k ach et da a t l a . s ( e 2 t) 0 , 1 e 2 ac ) hdefinedas
+the Hum π a 1 n , M ... e , t π h N yl∼at D io ir n ic 2 h 7 let( p α la /N tf , o . r . m ., . α/N T ) h , e data w ( e 2 r ) e inEquations(1)and(2). Weaddrightsubscriptstoourpreviousnotation
+inordertodistinguishbetweentheparametersoftheK differentmodels
+in the form of beθtca ∼ vaGl ( u 0 e ),s, which measure the ratio of (s3o.thaMtαk oidsethlemassparameterassociatedwithmodelk,etc.)andtake
+whemreeFthisytlhaetdioisntribsuigtionnaclotrores(pmonedtinhgytloadteionsnity+f,bπac=kg(πro1,u.n..d,)πsNig)- Nk =N inallmixturemodels.Notethateachmodelispermittedtohave
+is tnhealc.olFleoctriocnoonfvNenimeinxctuer,etphroepodrtaiotnas,wαeries baimnaasrsi/sceondceunstriantigona aWdiffeerefnutrmtahsesrpardameveteelro,αp k.tMhDeIlMinkusltthiepselemoDdealsttaogeItnhetreagtrthaetileovnel
+.
+.
+of(tMheDcoIm)pomneentthaolldocaotiofnKvairriakbleestviaalth.e(f2ol0lo1w2i)n.gcoMndDitioInaclapnriorb:e
+the component parameters. Bayesian inference for such models may be
+p t c h l e u e r s f 1 2 o t c e 0 o r .r m 4 l i l n h e e .g c d i t t Mo io s v f n i t a i w hc o e G e f rd r i o c a b e o t b a m s R t ( p h i s . o Ne a e n . m n e iAf p n c r l t i i e n a m g = llo ( o c c N a v j t e , e i a o t d h l n , e , n 2 v l 0 a x e r 0 a i i 0 a v a ) b n . i le d n N s g x , o j ( t 7 e c a 6 1 r t e , 9 h . c a . l t f u . e s a , a t c e t r n r e u e ) a d , r li e t s d o s a e g t . fi i e o n th n e e s r o ) a f . p( r c d c e l a iu g 1 t s , a a t c r ei d t 2r y , e i . n p d . g e . a s , m c , s iK i e a n t| n f h φ e o ) r e d r ∝ x i s n t kY e g t K = n o 1 t s a π h io nc e i n ak d lky o e K k s Y f g = e − r n 1 e 1 s o e i ‘ m = n Yo K k p u f + a l 1 s t r i a ( a m 1 n m + e i e l o a φ t u r r k i s i ‘ t c lI y y (c B mi b k a e u y = t l e w t s c i e i ip a ‘ e( l ) n n3 e ) ) ,
+S of in N c W e p e el a a c cu h ess c ea j nt is uhp a ep m epr e ub m ob b ul e ni r cd o loy f n- th ath e ve s an e i t ulma { 1 bb , el . er . o . lf , ec N vlue } sl , te i 3r t s f mi o n ll it o hc w er s od t aR h ta a N. tt A he d va a lu t e a. w st t pr h e he rn re og e td I h c u il o su cf ts e h a te ss e s i o nr cc di l n i i ua cg t a si t ot os ne rt r f b r i u e u n n tw cc g tt e iou ep n n r a ,e d φ rat ki ti n a ‘ tsie ∈ t ots h n R k e s ≥ a d0 fno ai d s r t ‘ aa ,e p a ta an ry cd ap h m φ ees d t i e s . a r t t th Mh ae atD ct c oy oI ll n pe ht c r et eo i,o lns na cth o e s e f
+TThehDisirigcahlveetp4ro9c0esstummixtouurermsoadmelpmlaeysbgeednereivreadtebydcbonysidUerNinCgthoen al w lK el ( l K a−s a 1) n /2 o o v f e t r h a e l φ lkc‘o ’s n .F s o e r n c s la u ri s ty, c n lu ot s e t t e h r at in cigkp∈a{r 1 t , i . t . io ., n N .} isthe
+limitN inEquation(1)(Neal,1992;Rasmussen,2000).Inthepresent componentallocationvariableassociatedwithgeneiinmodelk,andthat
+the→H-∞miRNA 8x15K platform.
+paper,itisconvenienttopersistwithfiniteN(seeSection2.2).SinceNjust πWcikekinsothteemtixhtuarteparonpootrhtioenraspsaocritaitceduwlaitrhcsotmrepnongetnhtcoikfinMmDodIeliks.
+placesanupperboundonthenumberofclusterspresentinthedata,thisis Informally,thelargerφk‘,themorelikelyitisthatcikandci‘willbethe
+notoverlyrestrictive.ProvidedN istakensufficientlylarge,thenumberof same,andhencethegreaterthedegreeofsimilaritybetweentheclustering
+clusterspresentinthedatawillbe(much)lessthanN,andwewillretainthe structureofdatasetk anddataset‘. InFigure1b, weprovideagraphical
+abilitytoidentifyautomaticallythenumberofclusterssupportedbythedata. representationofourmodelinthecaseK = 3. Ifallφk‘ = 0, thenwe
+AchoiceofN =nstatesthatthemaximumpossiblenumberofclustersis recoverthecaseofKindependentDMAmixturemodels(Figure1a).Note
+equaltothenumberofgenes.Asatradeoffwithcomputationalcost,wetake that(1+φk‘I(cik=ci‘))
+1,henceifφk‘>0thenweareup-weighting
+throughoutthispaper. thepriorprobabilitythatcik=ci‘(relativetotheindependentcase).
+Linking the mixture models at the level of the component allocation
+2.2 Dependentcomponentallocations
+variables provides us with a means to capture dependencies between the
+Weareinterestedinthesituationwherewehaveacollectionofngenes,for datasetsinamannerthatavoidsdifficultiesassociatedwiththedatasetsbeing
+eachofwhichwehavemeasurementsfromK differentdatasources.One of different types and/or having different noise properties. An important
+Finding cancer subtypes in glioblastoma
+that it infers the posterior distribution over the num- model as follows:
+ber of clusters in each data type. Hence, we can infer
+the likely number of clusters, given the data. Many x i |c i ,θ ∼F(θ ci ),
+clustering algorithms do not provide a method for do- c |π ∼Multinomial(π ,...,π ),
+ing this, which is a major shortcoming.
+π ,...,π ∼Dirichlet(α/N,...,α/N), (2)
+3.1. The MDI model c
+We consider a multi-dimensional data set, consisting where F is the distribution corresponding to density
+ofK distinctdatatypes(forexample,geneexpression, f,π =(π 1 ,...,π N )isthecollectionofN mixturepro-
+copy number, methylation or microRNA expression). portions, α is a mass/concentration parameter (which
+Eachdatatypewillcontainmeasurementsforthesame may also be inferred), and G(0) is the prior for the
+set of items, so that for each items we have K vectors component parameters.
+ofmeasurements. Wenotethatingeneralthenumbers
+Now considering the full MDI model with K distinct
+offeaturesforeachdatatypewillbedifferentfromone
+data types, to couple the K mixture models, the fol-
+another, and can be arbitrarily so for the MDI model.
+lowing conditional prior is introduced for the compo-
+We model each data type using a finite approxima- nent allocation variables.
+tion to a Dirichlet process mixture model (Ishwaran
+(cid:89) (cid:89) (cid:89)
+& Zarepour, 2002), known as a Dirichlet-Multinomial p(c
+Allocation (DMA) mixture model (Green & Richard-
+k=1 k=1 (cid:96)=k+1
+son, 2001). The K DMA models are coupled by a set (3)
+ofφparametersthatallowforinformation-sharingbe- where I is the indicator function, φ k(cid:96) ∈ R≥0 is a pa-
+tween the data types and provide a measurement of rameter that controls the strength of association be-
+the level of similarity between pairs of types. Figure 1 tween datasets k and (cid:96), and φ is the collection of all
+shows a graphical representation of the MDI model. K(K−1)/2 of the φ ’s. c ∈{1,...,N} is the com-
+k(cid:96) ik
+ponent allocation variable associated with item i in
+TheDMAmixturemodelforasingledatatypeisgiven
+model k, and π is the mixture proportion associ-
+by the following equation. cikk
+ated with component c in model k. Informally, the
+larger φ , the more likely it is that c and c will
+N k(cid:96) ik i(cid:96)
+(cid:88) take the same value, and hence the greater the de-
+gree of similarity between the clustering structure of
+datasetkanddataset(cid:96). Ifallφ =0,thenwerecover
+Whereπ arethemixtureproportions,f isaparamet- thecaseofK independentDMAmixturemodels(Fig-
+ric density (such as a Gaussian) that models the c-th ure 1b). We constrain the φ k(cid:96) to be non-negative.
+data type, and θ are the parameters associated with
+c We note that the x are assumed to be independent,
+the c-th component. N is the maximum number of
+given the clustering in MDI. The model then concen-
+mixturecomponents, whichissettypicallytobelarge
+trates on modeling the joint distribution of the allo-
+enough so as to not impact on the inference. When N
+cation variables c ,...,c which induces correlation
+is large in this way, the behaviour of the DMA model
+over the x’s.
+approaches that of a Dirichlet process. To ensure this
+and as a tradeoff with computational cost, N =(cid:100)n/2(cid:101)
+3.2. Data Models
+throughout this paper.
+For the analyses in this paper, we use two different
+We note that different choices for the density f allow
+densities, f and f . These are re-
+us to model different types of data (for example, a Gaussian multinomial
+spectively used for real-valued and discrete data and
+normal distribution might be appropriate for contin-
+makereasonableassumptions(forthedatausedinthis
+uous data, while a multinomial might be appropriate
+paper) about the expected noise characteristics.
+for categorical data). This imparts great flexibility to
+the MDI model. For both data models, we assume that the features
+represent repeated, independent measurements of the
+Given observed data x ,...,x , we wish to perform
+1 n underlyingclusteringpartition. Wethereforehavethe
+Bayesianinferencefortheunknownparametersinthis
+following equation.
+model. Weintroducelatentcomponentallocationvari-
+ables c ∈ {1,...,N}, such that c is the component (cid:89)
+j i f = f (4)
+responsible for observation x . We then specify the
+Finding cancer subtypes in glioblastoma
+FortheGaussiandensity,weassumethateachfeature The f represent the alternative model that the
+ismodeledbyaGaussianlikelihoodofunknownmean feature is uninformative and hence all items are mod-
+and precision, subject to a Normal-Gamma prior. eled as belonging to a single mixture component. We
+There density is therefore closed form and we hence also make an approximation that the likelihood pa-
+marginalise the mean and precision. rameters are known, rather than marginalised over.
+This makes only a modest correction to the typical
+We therefore have the following (marginal) likelihood
+marginal likelihood values, but significantly speeds up
+function for the Gaussian case.
+the computation of the conditional distributions for
+f a,Gaussian = Γ Γ ( ( α α n 0 ) ) β β n 0 α α n 0 ( κ κ n 0)1 2(2π)−n 2 (5) G Fo ib r b d s a r t e a sa m m o p d l e in ls g. taking the form in Equation 4, we
+Where notethatthedistributionsforGibbsresamplingofthe
+I are conditionally independent, given the c . As
+0 MDI is written in Matlab, this allows us to vectorise
+0 0 the computation of the conditional distributions for
+κ = κ +n (8) the Gibbs resampling of all the I . This vectorisation
+n makes the feature selection in MDI highly computa-
+n 0 2 tionally efficient and fast to execute.
+1(cid:88) n
+n 0 2 2κ 3.4. Split-Merge MCMC sampling
+One characteristic of Gibbs samplers for mixture
+We set the Normal-Gamma hyperparameters to α =
+model clustering algorithms is that the MCMC chains
+2, β =0.5 and κ =0.001.
+can be relatively slow to mix. We have noticed this in
+For the multinomial density, we assume that each fea- particular for the number of occupied components.
+tureismodeledbyamultinomiallikelihood,subjectto
+Toimprovethis,wehaveimplementedaversionofthe
+a Dirichlet prior. The parameters of the multinomial
+sequentialsplit-mergeMCMCsamplerofDahl(2005).
+likelihood are unknown, but because of the conjugate
+The split-merge steps are applied separately to each
+prior the density has a closed form and those param-
+of the K DMA models. These MCMC steps are pro-
+eters can hence be marginalised, leaving only the hy-
+posedinadditiontoalltheusualGibbsstepsdescribed
+perparameters β to be defined.
+in Kirk et al. (2012). The increase in computation re-
+We therefore have the following (marginal) likelihood quired for the split-merge steps is minor, and we find
+function for the multinomial case. thatwhiletheacceptancerateforthestepsislow, the
+Q R overall effect is to substantially improve the mixing
+f = (cid:89) Γ(B q ) (cid:89) Γ(x rq +β rq ) rate for the number of clusters for each data type.
+a,multinomial Γ(S +B ) Γ(β )
+(11) 3.5. Extraction of Clustering Partitions
+We set the Dirichlet prior hyperparameters to β =
+We adopt a different approach to that of Kirk
+0.5.
+et al. (2012) to the extraction of clustering parti-
+tions from the posterior similarity matrix. Because
+3.3. Feature Selection
+thepreviously-usedmethod(Fritsch&Ickstadt,2009)
+Because of the potentially large number of features is only available as an R package, for convenience we
+in the various omic data types, we extend the Gaus- implement as part of the MDI code a simpler method
+sian and multinomial data models to include feature based on a hierarchical clustering using the posterior
+selection. To do this, we include binary indicator pa- similarity matrix. We note that the results in Fritsch
+rametersI foreachfeatureinagivendatatype. This & Ickstadt (2009) show that this approach produces
+modifies Equation 4 to the following: similar performance to the previously-used method.
+Using as distances (1 - posterior similarity), we per-
+f = (I f )+(1−I )f (12) form standard hierarchical clustering with complete
+a a a a,null
+a linkage. WesetthenumberofclusterstobetheMAP
+estimate of the number of clusters, taken from the
+The factor for each feature will therefore either be f
+a MCMC analysis.
+or f . The f are as before, so if all I = 1 then
+a,null a a
+we have the model with no feature selection. The resulting clustering partition should be regarded
+Finding cancer subtypes in glioblastoma
+asaconvenientsummaryofthefullresults. Wewould 4.3. Gene expression subtypes are prognostic
+stronglyencourageusersofthismethodtonotneglect for survival outcome
+other outputs such as the posterior similarity and fu-
+Figure 5 shows the Kaplan-Meier survival curves for
+sion matrices.
+the 8 gene expression (GE) subtypes identified by
+MDI. These subtypes are prognostic for survival out-
+4. Results come (log-rank p-value of 1.5×10−3 after correction
+for multiple hypothesis tests).
+We analyse gene expression, copy number variation,
+micro-RNAandmethylationdatafor277glioblastoma This result is largely driven by GE cluster 7, which
+patients using MDI. We identify a range of distinct consists of 6 patients with particularly poor survival
+disease subtypes and results, the most interesting of outcome (see Figure 5). Of these 6 patients, 3 die
+which we now describe. within6monthsofdiagnosis,andtheother3areomit-
+tedfromthesurvivalanalysisaswedonothaveinfor-
+Complete results can be found at
+mationontheirsurvivalorotherwise(theyaremissing
+data). As such, this result relies on a small number of
+We consider 5 distinct cases of summarising cluster- patientsandshouldthereforebetreatedwithcaution.
+ing partition (for each individual type, and also the However, further study is certainly warranted in case
+consensus of all 4). For these we consider 4 binary, this subtype remains distinct with a larger number of
+right-censored clinical outcomes: death, new tumour members.
+event, tumour progression, tumour recurrence. This
+gives us 20 cases in all. 4.4. Partial overlap of clustering structure for
+different data types
+For each case, we plot the Kaplan-Meier survival
+curves for the set of disease subtypes. Table 1 shows The fusion matrix (Figure 2 ) and consensus cluster-
+the log-rank p-values for these plots, after application ing results show that there is a level of consistency
+ofaBonferronicorrectionformultiplehypothesistest- in the clustering structure across the gene expression,
+ing (nTests=20). Examples of these plots can be seen copy number variation, methylation and microRNA
+in Figure 4. We note that in all cases we only con- data. However, inspection of the clustering partitions
+sider subtypes containing at least 5 items and we only for each data type show that there are also differences
+consider items for which there is clinical outcome in- in structure between each type. This indicates that a
+formation. single clustering partition is not sufficient to capture
+all of the structure contained in the 4 data types.
+4.1. Consensus subtypes are prognostic for
+tumour recurrence 4.5. Evidence for a biologically distinct
+glioblastoma subtype
+We note that the consensus subtypes in general are
+strongly prognostic for tumour recurrence (log-rank Consensus cluster 5 consists of 8 patients and is
+p-value of 3.6×10−4 after correction for multiple hy- noteworthy for highly distinctive data signatures in
+pothesis tests) (see Figure 7). Because the methyla- gene expression (over-expression), copy number (ex-
+tion status is measured at the point of diagnosis, this cesscopies)andmicro-RNA(over-expressioninasub-
+prognostic capability is predictive. set of selected features).
+This subtype is poor for tumour recurrence, and we
+4.2. Interesting low-methylation subtype
+suggestthatthestrikingdatasignaturesaresuggestive
+Consensussubtype7hasparticularlyinterestingchar- of a distinctive set of biological mechanisms driving
+acteristics. Comprising 47 items, it shows only very this tumour subtype.
+low levels of tumour recurrence (see Figure 4) and no
+new tumour events. All items in this subtype show 4.6. Fusion matrix makes biological sense
+very low relative levels of methylation (see Figure 6).
+The φ parameters provide information on the level
+This subtype contains 23 women and 24 men, with a k(cid:96)
+of agreement about clustering structure between pairs
+median age of 53 and an age range of 14 to 81.
+of data types. Figure 2 shows the posterior mean val-
+ues for the φ . The principal sharing of structure is
+shown to be between gene expression and the other
+three data types, while other pairs of data types are
+Finding cancer subtypes in glioblastoma
+Table 1. Bonferroni-correctedp-valuesforsubtypeKaplan-Meiersurvivalcurves(nTests=20)Foragivenclinicaloutcome
+anddatatype/s,theKaplan-Meiercurvesforeachdiseasesubtypeareproduced. P-valuesarecomputedusingthelog-rank
+test and considering the null hypothesis that all curves in a given set are drawn from the same underlying distribution.
+data type/s died new event progression recurrence
+all 1 0.66 0.11 3.6×10−4
+copy number 1 1 1 1
+gene expression 1.5×10−3 1 1 1
+methylation 1 0.28 1 2.0×10−3
+microRNA 1 1 1 1
+Fusion Matrix
+0.5 1 1.5 2 2.5 3 3.5 4 4.5
+Figure 2. Matrixshowingtheposteriormeanvaluesforthe
+φ . Shown are the copy number data (row 1), gene ex-
+pression(row2),methylation(row3),microRNA(row4).
+We note that the diagonal elements are undefined for the
+MDImodelandsoaresettoarbitraryvaluessoastomake
+the colour table convenient.
+lessstronglyrelated. Thisconfirmswhatwouldbeex-
+pected from prior knowledge of the underlying biolog-
+ical mechanisms. This is an important sanity check of
+the analysis, and shows that there is useful biological
+information in the data set. Figure 3. Posterior similarity matrix for the 277 data
+items. Thismatrixgivestheposteriorprobabilityofgiven
+4.7. MCMC details pairsofitemsbelongingtothesamecluster,averagedover
+the 4 data types. This is used to produce the consen-
+Theresultspresentedinthispaperaretheresultof25 sus clustering partition. The matrix shown here has been
+MCMC chains, each of ≈70,000 samples. We sparse- sortedbytheresultingpartition,tobettershowthestruc-
+samplethechainsbyafactorof10andremovethefirst ture. Thex-axisislabelledbyalternatingsetsofbars/dots,
+25% of each chain as burn-in. We check for adequate denoting the different clusters. The LHS y-axis bars show
+convergence by visual inspection of the MCMC time- the relative probability that a given item has the same
+cluster label across data types.
+series and histograms for each chain, overlaid on one
+another.
+5. Conclusions
+We have presented extensions to the MDI method
+that make it suitable for analysing multi-dimensional
+molecular cancer data sets. Using MDI to analyse the
+TCGAglioblastomadata,wehaveidentifiedanumber
+of important points.
+Finding cancer subtypes in glioblastoma
+• Boththe8methylationand8data-consensusdis- Dahl, DB. Model-based clustering for expression data
+ease subtypes we have identified are significantly via a Dirichlet process mixture model. In Do, Kim-
+prognostic of tumour recurrence Anh, Mu¨ller, Peter, and Vannucci, Marina (eds.),
+Bayesian Inference for Gene Expression and Pro-
+• The 8 gene expression disease subtypes we have teomics. Cambridge University Press, Cambridge,
+identified are significantly prognostic of survlval 2006.
+Escobar,MichaelD.andWest,Mike. Bayesiandensity
+• We have identified a strongly prognostic glioblas- estimation and inference using mixtures. Journal of
+toma subtype, noteworthy for its low levels of tu- the American Statistical Association, 90(430):577–
+mour recurrence methylation 588, 1995.
+• We have identified a small subtype of 6 patients Ferguson, TS. A Bayesian analysis of some nonpara-
+based on gene expression for which there is very metric problems. The Annals of Statistics, 1:209–
+poor survival outcome, and postulate that this 230., 1973.
+mayidentifyarareandagressiveformofglioblas-
+Fritsch, Arno and Ickstadt, Katja. Improved criteria
+for clustering based on the posterior similarity ma-
+• We have also identified a subtype of 8 patients trix. Bayesian Anal, 4(2):367–391, 2009.
+with a highly distinctive data signature. This
+Green,PJandRichardson,S. Modellingheterogeneity
+subtype has poor tumour recurrence, and it may
+with and without the Dirichlet process. Scand J
+represent a subtype whose underlying biology is
+Stat, 28(2):355–375, Jan 2001.
+highly distinctive, which may allow for more tar-
+getted therapy
+las.
+• We note that the clustering structures for the 4
+different data types overlap partially, but there is
+ICGC. International network of cancer genome
+significantlymorestructurethancanbeexplained
+projects. Nature, 464:993–998, 2010.
+by a single partition
+Ishwaran,HandZarepour,M. Exactandapproximate
+representations for the sum Dirichlet process. Can
+Modern, large-scale cancer data sets contain a wealth
+J Stat, 30(2):269–283, 2002.
+of data types measuring the effects of genomic and
+environmental processes. We have demonstrated the
+Jemal, A., Bray, F., Center, M.M., Ferlay, J., Ward,
+effectiveness of combining these data types into a sin-
+E., and Forman, D. Global cancer statistics. CA: a
+gle analysis, and shown that the richness of structure
+cancer journal for clinicians, 61(2):69–90, 2011.
+contained by such multi-dimensional data sets neces-
+sitates statistical methods capable of capturing that Kirk, P., Griffin, J., Savage, R.S., Ghahramani, G.,
+richness. and Wild, D.L. Bayesian integration of multiple
+datasets. submitted, 2012.

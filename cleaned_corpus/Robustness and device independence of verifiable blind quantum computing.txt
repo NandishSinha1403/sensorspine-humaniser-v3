@@ -1,0 +1,1061 @@
+Robustness and device independence of
+verifiable blind quantum computing
+Alexandru Gheorghiu∗1, Elham Kashefi1,2, and Petros Wallden1
+1School of Informatics, University of Edinburgh,
+10 Crichton Street, Edinburgh EH8 9AB, UK
+2CNRS LTCI, Departement Informatique et Reseaux,
+Telecom ParisTech, Paris CEDEX 13, France
+Recent advances in theoretical and experimental quantum computing bring us closer to
+scalable quantum computing devices. This makes the need for protocols that verify the correct
+functionality of quantum operations timely and has led to the field of quantum verification.
+In this paper we address key challenges to make quantum verification protocols applicable to
+experimental implementations. We prove the robustness of the single server verifiable universal
+blind quantum computing protocol of Fitzsimons and Kashefi [1] in the most general scenario.
+This includes the case where the purification of the deviated input state is in the hands of an
+adversarial server. The proved robustness property allows the composition of this protocol with
+a device-independent state tomography protocol that we give, which is based on the rigidity
+of CHSH games as proposed by Reichardt, Unger and Vazirani [2]. The resulting composite
+protocol has lower round complexity for the verification of entangled quantum servers with a
+classical verifier and, as we show, can be made fault tolerant.
+Keywords: Delegated Quantum Computation, Quantum Verification, Device Independence, Com-
+position, Fault Tolerance
+1 Introduction
+While the prospect of commercially available universal quantum computing is still distant, a num-
+ber of experiments involving multi-qubit systems have recently been developed. Irrespective of
+their applications, these technologies require methods and tools for verifying the correctness of
+their operations. Assuming that quantum computing is more powerful than classical computing,
+a simulation-based approach for quantum verification of devices with sufficiently large number of
+qubits, becomes practically impossible. Aaronson and Arkhipov showed in [3] that even a rudimen-
+tary quantum computer constructed with linear-optical elements cannot be efficiently simulated.
+Similarly, verifying the correct preparation of a general n qubit state via state tomography also
+involves exponential overhead since it requires collecting statistics from 4n separate observables [4].
+∗a.gheorghiu@sms.ed.ac.uk
+]hp-tnauq[
+2v17520.2051:viXra
+The verification of quantum devices becomes more complicated when the functionality involves
+cryptographic primitives. In these cases, incorrect operations could be the result of actions of
+an adversary. Thus it becomes necessary to guarantee the security of the application under certain
+assumptionsaboutthedevices.Ideallyaprotocolshouldremainsecureevenifthedevicesarefaulty
+andpartiallycontrolledbyadversaries.Thiswouldleadtoasolutionthatisdevice-independent and
+robust. However, generating such protocols has proven difficult. Even in quantum key distribution,
+a complete proof of security for a device-independent protocol, in the presence of noise, has been
+achieved only recently [5].
+The issue of verification needs to be resolved to be able to exploit successfully any future
+quantum computers. Moreover, one expects that the first large scale quantum devices are unlikely
+to be personal computers. Instead, they will probably function as servers to which clients can
+connect and request the computation of some difficult problem. The client may also require his
+computation to be private, i.e. require that the server does not learn anything about it. We should
+therefore construct protocols that verify an arbitrary delegated quantum computation and prove
+the security and correctness of this verification technique.
+The approaches that have been so far successful are those based on interactive proof systems
+[6, 7], where a trusted, computationally limited verifier (also known as client, in a cryptographic
+setting) exchanges messages with an untrusted, powerful quantum prover, or multiple provers (also
+known as servers). The verifier attempts to certify that, with high probability, the provers are
+performingthecorrectquantumoperations.Becausewearedealingwithanewformofcomputation,
+the verification protocols, while based on established techniques are fundamentally different from
+their classical counterparts. A number of quantum verification protocols have been developed, for
+different functionalities of devices and using a variety of different strategies to achieve verification
+[1, 2, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]. The assumptions made depend on the specific target
+and desired properties of the protocol. For example, if the emphasis is on creating an immediate
+practical implementation, then this should be reflected in the technological requirements leading
+to a testable application with current technology [17]. Alternatively, if the motivation is to prove a
+theoretical result, we may relax some requirements such as efficient scaling [2]. An important open
+problem in the field of quantum verification, is whether a scheme with a fully classical verifier is
+possible [18, 19]. We know, however, that verification is possible in the following two scenarios:
+1. A verifier with minimal quantum capacity (ability to prepare random single qubits) and a
+single quantum prover [1]. This is the Fitzsimons and Kashefi (FK) protocol.
+2. Afullyclassicalverifierandtwonon-communicatingquantumproversthatshareentanglement
+[20]. This is the Reichardt, Unger and Vazirani (RUV) protocol.
+One of our objectives is to obtain a device independent (allowing untrusted quantum devices)
+version of the FK protocol, by composing it with the RUV protocol. The additional properties
+we aim to achieve from this composition are fault tolerance (allowing noisy devices) and reduced
+round complexity. Composing protocols can indeed be fruitful since it could lead to new protocols
+that inherit the advantages of both constituents. The universal composabillity framework, allow-
+ing for secure compositions, has been successfully extended to the quantum realm [21, 22, 23].
+Recently, the security of single server verifiable universal blind quantum computing protocols has
+been demonstrated in an abstract cryptographic framework [24] that is also known to be equivalent
+to the simulation-based composability framework. However this setting does not fulfil the neces-
+sary requirements for our composition. This is because, when combining a single server verification
+scheme (FK) with an entangled server scheme (RUV), there exists the possibility of correlated
+attacks, which are not explicitly treated in the composability framework. Such attacks can occur
+when an untrusted server’s strategy is correlated with deviations in the protocol’s input state. Our
+robustness result resolves this issue in the stand alone composition setting and the same technique
+could potentially be extended to the composable framework of [24], thus resolving the problem of
+correlated attacks.
+The type of composition that we require is sequential. We take the output of the first protocol
+and use it as input for the second. However, in general, the output of the first protocol is not
+necessarilyanacceptableinputforthesecondprotocol.Inparticular,sincetheverificationprotocols
+are probabilistic, their outputs typically deviate by a small amount from the ideal one. Thus, it
+is necessary that the second protocol remain secure even if the input is slightly deviated from the
+ideal one. Moreover, we make sure that adversaries cannot exploit any correlations between the
+deviated input and their strategy to compromise the security of the protocol. Therefore to securely
+composetheprotocols,weneedtoaddressthesenewtypeofattacks.Themainresultsofthispaper
+can be summarised as follows:
+1. We prove that the FK protocol is strongly robust, see Theorem 1. First, we show that FK
+can tolerate inputs which deviate from their ideal values by a small amount, see Lemma 7.
+However, for composition with other protocols a stronger property is needed. We therefore
+proceed to show that the FK protocol is robust even when the deviated input is correlated
+with an external system possessed by an adversary (for example the provers’ private systems
+in the RUV protocol), see Lemma 8.
+2. An immediate consequence of the robustness theorem is that we can construct a composite
+protocolcombiningRUVwithFK.TherequiredinputstatesfortheFKprotocolareprepared
+via the state tomography sub-protocol of RUV. Our composite protocol inherits the device
+independence property of RUV, see Theorem 3. Additionally, since we do not require the full
+RUV protocol, the composite protocol also has an improved round complexity.
+3. Lastly, we address the distinction between robustness and fault tolerance and show how the
+FK protocol can be made fault tolerant, thereby making our proposed composite approach
+fault tolerant as well.
+In Section 1.1 we give some preliminaries. In Section 2 we present the main results, that we sum-
+marised above, and outline their proofs. In particular we give robustness in Subsection 2.1, com-
+position in Subsection 2.2 and fault tolerance in Subsection 2.3. Further details of the proofs are
+given in Section 3 for robustness, in Section 4 for composition and in Section 5 for fault tolerance.
+We conclude in Section 6.
+1.1 Preliminaries
+We first introduce the relevant concepts used in describing verification protocols and then briefly
+present the two protocols we will built on (FK and RUV).
+1.1.1 Interactive Proof Systems
+As explained in [6, 10], a language L is said to admit an interactive proof system if there exists a
+computationally unbounded prover P and a BPP verifier V, such that for any x ∈ L, P convinces
+V that x ∈ L with probability ≥ 2. Additionally, when x (cid:54)∈ L, P convinces V that x ∈ L with
+probability ≤ 1. Mathematically, we have the following two conditions1:
+1 Note that completeness can be viewed as the probability of the verifier accepting when the prover is honest.
+Similarly, soundness is the probability of accepting, when the prover is dishonest.
+• Completeness: Pr(V ↔ P accepts x | x ∈ L) ≥ 2
+• Soundness: Pr(V ↔ P accepts x | x (cid:54)∈ L) ≤ 1
+The set of languages which admit such an interactive proof system define the complexity class IP.
+We are interested in the case when the prover is a polynomial-time quantum computer (i.e. a BQP
+machine). In [10], the first definition of such a quantum interactive proof system was given, which
+we use here:
+Definition 1. [10] Quantum Prover Interactive Proof (QPIP) is an interactive proof system with
+the following properties:
+(i) The prover is computationally restricted to BQP.
+(ii) The verifier is a hybrid quantum-classical machine. Its classical part is a BPP machine. The
+quantum part is a register of c qubits (for some constant c), on which the prover can perform
+arbitrary quantum operations. At any given time, the verifier is not allowed to possess more
+than c qubits. The interaction between the quantum and classical parts is the usual one:
+the classical part controls which operations are to be performed on the quantum register,
+and outcomes of measurements of the quantum register can be used as input to the classical
+machine.
+(iii) There are two communication channels: one quantum and one classical.
+The completeness and soundness conditions are identical to the IP conditions.
+Wearealsointerestedininteractiveprotocolsthatusemorethanoneprover.Thereareonlytwo
+differences, first that the verifier can interact with multiple provers instead of just one, and second
+that the provers are not allowed to communicate. The conditions for completeness and soundness
+remain unchanged. The analogous complexity class that involves multiple provers is called Multi-
+Prover Interactive Proof System anddenotedMIP[25].Itisdefinedasthesetofalllanguageswhich
+admit an interactive proof system with one or more non-communicating provers. If the number of
+provers is fixed to be k, the corresponding complexity class is MIP[k]. A closely related class is
+MIP* where the multiple non-communicating provers share entangled states.
+In all of these cases, the verifier is essentially delegating a difficult computation to the prover(s).
+This computation can be universal with respect to the computation model of the prover(s). In our
+case, this means universal for polynomial-time quantum computations. The number of classical
+messages exchanged between the verifier and the prover, throughout the run of the protocol, as a
+function of the input size is known as the round complexity of the protocol.
+1.1.2 Quantum Protocols
+Throughoutthissubsection,weassumethereaderisfamiliarwiththeteleportation-basedandmore
+generally measurement-based quantum computing (MBQC) models, described in detail in [26, 27].
+We first summarise the FK protocol [1] which is a QPIP protocol. It is also known as uncon-
+ditionally secure, verifiable, universal blind quantum computing. The protocol is “blind” which
+means that no information about the computation is leaked to the prover, apart from its size. This
+property can be exploited by allowing the verifier to insert hidden “traps” within the computation.
+The traps are deterministic tests which the verifier can perform in order to verify that the prover
+is not deviating from the protocol. Blindness ensures that the traps are indistinguishable from the
+computation.
+The basic idea of this protocol is that the verifier prepares and sends qubits to the prover. The
+prover entangles these qubits and then performs adaptive measurements (sending the measurement
+outcomes to the verifier) that will overall implement a certain unitary operation, as in the MBQC
+model of computation. The traps are single isolated qubits, disentangled from the rest of the
+computation, and when measured in suitable bases give deterministic outcomes that are known to
+the verifier (but not to the prover). Since the prover is completely blind and does not know which
+qubits are traps and which are part of the actual computation, any attempt to cheat has some
+probability to affect the trap and thus be detected.
+The FK protocol is based on a universal resource state for the MBQC model, known as the
+dotted-complete graph state. The details of this resource state are not crucial for understanding
+this paper, apart from the fact that, as part of the FK protocol, the appropriate operators are
+performed by the untrusted server to prepare this generic state. In particular, a series of controlled-
+Z operators are performed by the server, according to the dotted-complete graph structure, for
+entangling the individual qubits prepared in advance by the verifier. These initial qubits, that are
+sometimes referred to as the input of the FK protocol, are sent to the server at the first stage
+of the protocol. This fact is used to prove some basic properties needed for our main robustness
+result, see Theorem 2. Therefore, for the purpose of completeness, we state here the definition of
+the dotted-complete graph state, taken from [1], see also Figure 1.
+Definition 2. [1] Let K denote the complete graph of N vertices. Define the dotted-complete
+graph, denoted as K˜ , to be a graph where every edge in K is replaced with a new vertex connected
+to the two vertices originally joined by that edge. We call the quantum state corresponding to K˜
+the dotted-complete graph state. This multi-partite entangled state is prepared by replacing every
+vertex with a qubit in the state |+(cid:105) and applying a controlled-Z operator for every edge in the graph.
+Figure 1: An example of a complete graph, K , and its corresponding dotted-complete graph K˜ .
+The family of dotted-complete graph states is universal for quantum computation. Moreover,
+any other graph state could be obtained from a large enough dotted-complete graph state by
+applying the appropriate Pauli measurements over some of the vertices (the ones shown in white,
+in Figure 1). Concretely, in order to construct any desired graph of N vertices from a dotted-
+complete graph K˜ , Pauli Y measurements are performed in order to keep a specific edge, and
+Pauli Z measurements in order to remove it (alternatively, one could use the states |0(cid:105), |1(cid:105) for the
+edges which should be removed, instead of performing a Pauli Z measurement). This can be done
+Protocol 1 Fitzsimons, Kashefi QPIP Protocol from [1]
+Assumptions
+The verifier wants to delegate a quantum computation described by the graph G and specific
+measurement angles φ ∈ {0,π/4...7π/4} chosen to define a desired computation. He chooses
+a security parameter d and encodes this graph into the topological error correcting scheme of
+Raussendorf, Harrington and Goyal [28], that can correct or detect errors with weight less than d.
+The encoded graph, G, will have N qubits. He then considers a random hidden partitioning of the
+vertices of the dotted-complete graph K(cid:101)3N into 3 subgraphs: the computation graph G, and two
+different types of isolated traps which the verifier will use in order to test the prover’s honesty in
+performing measurements. All measurements are performed in the XY-plane.
+1. Verifier prepares and sends the 3N(3N+1)/2 qubits to the prover (the number of vertices in
+K(cid:101)3N ). These consist of dummy qubits which are either |0(cid:105) or |1(cid:105) (isolating their neighbouring
+vertices from the rest of the computation) and computation or trap qubits which are of the
+2. The prover entangles the qubits according to the structure of the K(cid:101)3N graph by applying
+controlled-Z operations between any pair of vertices that are connected with an edge.
+3. For each qubit i, the verifier computes the measurement angle δ = θ +φ(cid:48) +r π, where φ(cid:48)
+is the adapted version of the computation angle φ , and r is a randomly chosen bit {0,1}.
+Adaptedcomputationanglesareusedtoaccountforcorrectionsfrompreviousmeasurements.
+Themeasurementanglesφ ,forthetrapqubits,arerandomlyfixedtobe0orπ.However,due
+toblindnessprovidedbytheinitialθ rotationsinthepreparationofindividualqubits(Step1
+above), the value of δ is uniformly distributed over the set {0,π/4...7π/4}. The verifier sends
+these measurement angles one by one to the prover. The prover measures each corresponding
+qubit in the |+ (cid:105), |− (cid:105) basis, and sends his reply b to the verifier.
+4. The verifier accepts if for all trap qubits, the reported measurement outcome b is the same
+as the expected outcome r .
+blindly in order to hide the target graph. The detailed construction is not important for the rest of
+this paper and hence omitted (see Section 5 in [1]). We give a brief description of FK, shown here
+as Protocol 1.
+According to Definition 1 the quantum channel between verifier and prover is one-way (from the
+verifier to the prover). Moreover, the constant c, representing the number of qubits that the verifier
+can possess at any given time, is exactly one. We refer the reader to [1] for a more in depth
+description of the protocol and its associated concepts. However, we recall the key properties of the
+protocol in the following lemma.
+Lemma 1. Assuming the verifier wants to delegate the computation of a circuit of size N, the
+FK protocol has O(N2) round complexity and uses O(N2) qubits with completeness being exactly 1
+while the soundness is upper bounded by
+d(cid:101),
+where d is the security parameter.
+Proof. It is clear from Protocol 1 that the total number of qubits used in the protocol is 3N(3N +
+1)/2, where N is the number of qubits for the encoded graph G. Additionally, we have the same
+number of rounds of classical communication, corresponding to the measurements of qubits in the
+dotted-completegraph(eachmeasurementrequires3classicalbitstospecifythemeasurementangle
+and 1 bit to specify the outcome). Both the overall round complexity and the required quantum
+resources are thus O(N2).
+AsdescribedinProtocol1,theverifieracceptsifandonlyifalltrapmeasurementssucceed.This
+is always the case if the prover is honest and follows the instructions, since the trap measurements
+are deterministic. Therefore, the probability that the verifier accepts when the prover is honest is
+exactly 1 (completeness). On the other hand, it is shown in [1] that in the case of classical output,
+the protocol is
+d(cid:101)-verifiable,
+meaning the soundness is upper bounded by
+d(cid:101).
+Next we summarise the RUV protocol [2] which is a MIP* protocol. It relies on the rigidity of
+CHSH games [29, 20] to test the honesty of the provers (c.f. traps at the FK protocol), and on gate
+teleportation to perform the computation. In particular, the verifier directs the provers to perform
+a series of local measurements of their parts of the shared entangled states. The purpose of this
+is to check for statistical violations of Bell’s inequality. At the same time, the verifier makes the
+provers teleport quantum states into gates in order to perform his desired quantum computation
+[20]. Importantly, the verifier alternates between these strategies in such a way that the provers are
+not aware (they are blind) in which strategy their measurement belongs. Moreover, the two provers
+cannot use previous results in order to deviate from the protocol (i.e. there is no adaptive cheating
+strategy). This is summarised as Protocol 2. Due to the rigidity of the CHSH games, as proved
+in [2], the verifier can determine if the two provers are being honest or not from the statistical
+outcomes. To ensure the verification of universal computations, the resource preparation stage of
+the protocol will prepare multiple copies of the states:
+2 2 2,4 2 4
+Here, |ψ∗(cid:105) denotes the Bell state |00(cid:105) √ +|11(cid:105) which is shared among the two provers. In fact the
+provers share multiple copies of |ψ∗(cid:105), each prover having one qubit from each Bell pair. Without
+loss of generality, we can assume that prover 1 has the first qubit and prover 2 has the second
+qubit. The Hadamard, Phase and controlled-Not gates (denoted as {H,G,CNOT}) constitute a
+universal gate set for quantum computation. The subscript indices indicate on which qubits the
+gate acts. An arbitrary quantum circuit is thus simulated by repeatedly doing gate teleportations,
+while keeping the computation blind from the two provers the entire time.
+Lemma 2. Assuming the verifier wants to delegate the computation of a circuit of size n, the round
+complexity of the RUV protocol is O(nc), where there exists some constant c, such that c ≥ 8192.
+Proof. To determine an upper bound for the round complexity we only need to inspect the number
+of rounds of CHSH games, since the protocol randomly alternates between this and the other three
+subprotocols.AsshowninProtocol2,theverifierplaysN setsofCHSHgameswiththetwoprovers.
+Each set consists of qn games and n ≥ n64. Additionally, it is required that N ≥ (qn )α−1, where
+nα/2 ≥ n64, so α ≥ 128. These conditions are necessary for the correctness of the state tomography
+and process tomography subprotocols [20]. We then have that N ≥ dn8128, where d is a constant of
+the form d = qα−1. This is the number of sets of CHSH games and hence the number of required
+games is lower bounded by n8192. It follows that the number of rounds is O(nc), where c ≥ 8192.
+Note that by “lower bounded” we refer to the case when all of the CHSH statistics are consistent
+and the verifier does not reject. In the case of inconsistent statistics, the verifier can reject before
+playing n8192 games.
+The subprotocols of the RUV protocol are themselves verification protocols as proved in [20].
+The subprotocol that we will use is the state tomography protocol. As part of the RUV protocol, it
+isusedtoprepareresourcestateswhichareXZ-determined,i.e.statesthatareuniquelydetermined
+by their traces against X and Z operators. To compose the RUV with the FK protocol we will use
+a modified version of the state tomography subprotocol, so that we can prepare all states that are
+allowed inputs for the FK protocol. We will give the modified protocol in the next section.
+Protocol 2 Reichardt, Unger, Vazirani MIP* Protocol from [20] (for two provers)
+Assumptions
+The verifier delegates a quantum circuit of size n to two quantum provers. Let n = nα/2 ≥ n64,
+q = 11, n = qn , N ≥ nα−1 and δ = 1/(6nα/8). The two provers share Nn Bell states.
+The verifier alternates randomly between four subprotocols. He chooses the first three with proba-
+bility (1−δ)/3) and the last one with probability δ.
+1. CHSH games. The verifier referees N sets of sequential CHSH games, each consisting of n
+games between the provers. He rejects if they win less than:
+1 (cid:113)
+cos2(π/8)Nn − √ Nn log(Nn )
+of the games.
+2. State tomography. The verifier chooses K ∈ [N] uniformly at random and referees K −1
+sets of CHSH games. He sends the questions from the Kth set to prover 1, while running a
+state tomography protocol with prover 2. In this protocol prover 2 is asked to prepare q-qubit
+resource states by measuring his halves of the shared Bell states. This will collapse prover 1’s
+states to the same q-qubit resource states up to corrections. The verifier checks this using the
+CHSH measurement outcomes from prover 1. These outcomes tomographically determine the
+states that are being prepared. He rejects if the tomography statistics are inconsistent.
+3. Process tomography.TheverifierchoosesK ∈ [N]uniformlyatrandomandrefereesK−1
+sets of CHSH games. He sends the questions from the Kth set to prover 2, while running a
+process tomography protocol with prover 1. In this protocol prover 1 is asked to perform Bell
+measurements on his halves of the shared Bell states. The verifier checks this using the CHSH
+measurementoutcomesfromprover2.Herejectsifthetomographystatisticsareinconsistent.
+4. Computation. The verifier chooses K ∈ [N] uniformly at random and refereed K − 1
+sets of CHSH games. In the Kth game he runs a state tomography protocol with prover 2
+and a process tomography protocol with prover 1. The combination of these two achieves
+computation via gate teleportation.
+2 Main Results
+2.1 Robustness
+The first result we prove is that the FK protocol is robust with respect to small variations in the
+input. Throughout this paper, by “input” we are referring to the quantum states that the verifier
+sends to the prover and not the computation input. Without loss of generality we can assume that
+the desired computation that will be delegated to the server has the fixed classical input 0,...0.
+Dealing with arbitrary classical or quantum input is straightforward, as explained in [1], and makes
+no difference for our result. Hence, for the rest of this paper we define the input state of the FK
+protocol to be the tensor product of the individual qubits prepared by the verifier, comprising the
+dotted-complete graph before the prover applies controlled-Z to entangle them (these include the
+computation, trap and dummy qubits).
+The fact that FK is robust means that the protocol’s input state can be deviated from its ideal
+value by some small amount and the protocol will continue to function. In particular, this input
+state could be the output of some other protocol, provided that this state was close to its ideal
+value. As we will see in the next subsection, the RUV protocol is capable of such a preparation.
+We start by formally defining robustness in this context.
+Definition 3 (Robustness). A verification protocol with quantum input is robust if, given that the
+protocolinputis(cid:15)-closeintracedistancetotheidealinput,inthelimitwhere(cid:15) → 0thecompleteness
+and soundness bounds remain unchanged.
+Mathematically, if we denote the multi-qubit input state as ρ, and the pure states comprising
+the ideal input as π , where i goes from 1 to the number of qubits, we have that:
+Note that ρ is of the same dimension as π as it does not contain any ancilla qubits from the
+environment. Given the definition of robustness, we prove that:
+Theorem 1. The FK protocol is robust and given an input which is (cid:15)-close to its ideal value, the
+completeness is lower bounded by 1−2(cid:15) and the soundness bound changes by at most O( (cid:15)).
+Becausewearetracingouttheenvironment,whichcouldbecontrolledbyanadversary,thesecurity
+of the protocol, with a deviated input state, needs to be re-established. We highlight this in the
+following proof sketch of Theorem 1:
+Proof sketch. Wefirstexaminesoundnesswhichconsidersthecaseofadishonestprover.Intuitively,
+when the prover is malevolent, he will try to convince the verifier to accept an incorrect outcome
+and thus deviate from the correct protocol. However, as shown in [1], no matter how much the
+prover deviates, the probability for the verifier to accept a wrong outcome is bounded. If the input
+to the protocol is already deviated from the ideal, one could expect that the soundness bound
+remains unchanged. The effect of a deviated input could be incorporated in the deviated actions of
+the prover. This is indeed the case when the input is uncorrelated with any external system and
+we can express the deviation as a CPTP map (see Lemma 7 for detailed proof).
+In the general case, however, the deviated input could be correlated with subsystems controlled
+by adversaries. This deviation could be used by the prover to improve his cheating probability.
+Mathematically this is manifested by the fact that the prover’s action in the presence of initial
+correlations is not in general a trace preserving map. It can be expressed as a linear combination
+of a CPTP deviation and an inhomogeneous term which could be either positive or negative as
+shown in the [30]. In this case, we use the (cid:15)-closeness of the input state to derive a bound of order
+O( (cid:15)) for the norm of the inhomogeneous term. From linearity, and using the previous argument
+it follows that in the general case the soundness bound changes by at most O( (cid:15)) (see Lemma 8
+for detailed proof).
+In the case of completeness, we are assuming the prover is honest. If we start with an (cid:15)-close
+input state, because of the linearity of the operators involved, we will end up with an output state
+that is O((cid:15))-close to the ideal output (see Lemma 9 for detailed proof).
+AsimilarapproachtoLemma7wasusedin[31]fordefiningapproximateblindness,andin[24]to
+prove universal composability for blind quantum computing protocols. However, to our knowledge,
+these results are not strong enough to cover the requirements for the composition with the RUV
+protocol.In[31] only theblindnesspropertywasexamined while verifyingthecomputationwas not
+considered. In [24] they considered local-verifiability which does not take into account for example,
+the possibility of correlated attacks such as those that are possible when the two provers have a
+prearranged correlated strategy.
+2.2 Composition
+One of our main objectives is to construct a device independent version of the FK protocol. The
+first step, was to show that FK is robust. This property guarantees that if we have an input state
+that is only approximately the ideal one, the protocol continues to work. We can now break the
+task of achieving device independent FK into two parts, which we need to compose sequentially.
+1. State Preparation - use a device independent protocol to prepare on the prover’s side a
+state which is (cid:15)-close to the FK input.
+2. Verified Delegated Computation - run the FK protocol with the prover that has the
+(cid:15)-close input state (since robustness allows this).
+The advantage of this technique is that we are free to use any protocol for state preparation as long
+as we have the guarantee of (cid:15)-closeness. This is due to our strong robustness result, which shows
+thatFKwillworkevenifthedeviationinthepreparedstateiscorrelatedwiththeprover’scheating
+strategy in the delegated computation stage. In this paper, we achieve state preparation using the
+device-independent state tomography sub-protocol of RUV. This sub-protocol has the (cid:15)-closeness
+property that we require, as explained in [20]. The resulting composite protocol will have a better
+round complexity than the full RUV protocol for the verification of quantum computations. The
+complexity can be improved further if a more efficient state preparation protocol is used. Recently,
+in an independent work that simultaneously appeared with our arxiv version, a more efficient
+scheme for state preparation is proposed that is based on a self-testing approach [32] rather than
+the rigidity of CHSH games [20].
+We first clarify some details of the RUV protocol, which are essential in understanding how our
+compositeprotocolwillwork.RUVusestherigiditypropertyofCHSHgamestodeterminethatthe
+provers share multiple copies of the Bell state |Φ+(cid:105) = (|00(cid:105)+|11(cid:105))/ 2, which is XZ-determined.
+They can then use XZ state tomography to verify the preparation of any other XZ-determined
+state. In particular, they use it to tomographically verify the preparation of a set of states which
+can be used to perform universal computation. They also describe how it is possible to extend
+the protocol in order to have full tomography with the Y operator as well [20]. However, because
+they are using the |Φ+(cid:105) Bell state, it is only possible to fix the Y operator up to a sign change.
+That is, the provers can always choose to measure in either the Y or −Y bases without being
+detected (this corresponds to complex conjugating the states with respect to their representations
+in the computational basis). In fact this problem has been noticed by others as well [12, 33]. As
+explained in [20], it is possible to force the provers to consistently choose either Y or −Y for their
+measurements. This makes the resulting state prepared by state tomography close to either the
+ideal state or the complex conjugate of the ideal state.
+AtfirstglanceitwouldseemthatthiscouldbeproblematicfortheFKprotocol.Wewouldhave
+to show that running the FK protocol with an input state that is close to the complex conjugated
+version of the ideal input would be detected by the verifier. Intuitively this is the case, since trap
+qubits are in the XY-plane and complex conjugating them would lead to different measurement
+outcomes. We will not prove this and instead provide a simpler solution.
+The problem stems from the fact that we are using the XZ-determined |Φ+(cid:105) state. Let us
+instead consider the state |Ψ+(cid:105) = (|01(cid:105)+|10(cid:105))/ 2. Using Theorem 2 from [20], and the fact that
+|Ψ+(cid:105) has stabilizer generator set {X ⊗X,Y ⊗Y} which belongs to {I,X,Y}⊗2 we have that this
+state is XY-determined.
+Theorem 2. [20] A stabilizer state is determined by any of its sets of stabilizer generators.
+In principle it is possible to run a form of the RUV protocol in which we choose the CHSH games
+such that we rigidly determine that the provers share multiple copies of the Bell state |Ψ+(cid:105) instead
+of |Φ+(cid:105). Analogous to the previous case, the extended form of the protocol would then fix the Z
+operator up to a sign change (instead of the Y operator). This means that the provers can always
+perform a reflection about the XY plane with no noticeable changes. However, the XY plane states
+are invariant under such a reflection. We can therefore use this to prepare the input which will be
+used by the FK protocol. The only problem we encounter is that we also require the preparation of
+|0(cid:105)and|1(cid:105)stateswhichactasdummyqubitsintheFKprotocol[1].AsdescribedinProtocol1these
+dummy qubits are measured in order to “break” the dotted-complete graph into the computation
+graph and the two trap graphs. The problem is that the XY plane reflection has the effect of
+flipping the computational basis states (state |0(cid:105) becomes |1(cid:105) and state |1(cid:105) becomes |0(cid:105)). However
+this deviation (flip) has to be applied globally otherwise it affects the statistics of the CHSH game
+and thus the verifier rejects [20]. Such a global flip is detected by the FK protocol. A formal proof
+is given in Lemma 10, Section 4, while below we give a sketch of the proof.
+In the honest scenario for the FK protocol, the measurement of a dummy qubit in state |1(cid:105)
+introduces an additional Z correction to its neighbouring qubits (this is because we are using the
+controlled-Z operation for entangling qubits). Hence in a malicious setting the effect that a flip
+has on a trap qubit with an odd number of neighbouring dummy qubits, leads to an extra Z
+operation. Such a Z flip changes a |+ (cid:105) state to |− (cid:105). Thus, the measurement of this trap qubit will
+deterministically fail and the verifier will detect this. On the other hand, since the verifier chooses
+the input, he can always pad the computation such that the overall graph has trap qubits with an
+odd number of neighbour dummy qubits. This is due to the fact that in a dotted-complete graphs
+(Definition 2), some of the traps will have N − 1 neighbouring dummy qubits. Therefore, if the
+size of the input computation N is odd, the verifier need only pad the computation size to become
+N +1.
+Now we are in a position to construct the composite protocol which composes RUV with FK.
+We give a modified version of the state tomography protocol of RUV (see Protocol 3). Proof that
+Protocol 3 is valid verification protocol is given in Section 4. The purpose of this modification is
+to verifiably prepare the minimal resource states which are subsequently used as inputs for the FK
+protocol.
+The composite protocol, given as Protocol 4, is the sequential composition of the modified state
+tomography of Protocol 3 with both provers followed by the FK protocol with prover 1. Note that
+Protocol 3 Modified State Tomography Protocol
+Assumptions
+Let S = {(1,0,0),(0,1,0),(0,0,1), √1 (1,1,0), √1 (1,−1,0), √1 (1,0,1), √1 (1,0,−1), √1 (0,1,1),
+√1 (0,1,−1)}. Let M
+be a 2 outcome projective measurement defined by the projectors:
+1(I +(cid:126)v·(X,Y,Z)) and 1(I −(cid:126)v·(X,Y,Z)).
+Let the tuple ((cid:126)a,(cid:126)b) ∈ S ×S denote the measurements M for prover 1 and M for prover 2 that
+they need to perform on their halves on an entangled state when instructed by the verifier. Sets of
+such tuples define CHSH games. For example the set {(1,0,0),(0,0,1)}×{√1 (1,0,1), √1 (1,0,−1)}
+defines the XZ CHSH game. Given S, there are six such sets of CHSH games (two XZ, two XY
+and two YZ) [20]. For a suitable numbering of these games, let CHSH be the ith CHSH game,
+i ∈ {1,...6}.
+The verifier alternates uniformly at random between the following subprotocols:
+1. CHSH games. Verifier referees 6N sets of sequential CHSH games, such that each group of
+N sets is one of the six possible CHSH types of games. Each set consists of n games between
+prover 1 and prover 2. For each group of N CHSH games the verifier rejects if the two provers
+win less than:
+1 (cid:113)
+cos2(π/8)Nn − √ Nn log(Nn )
+of the games.
+2. State tomography. Verifier chooses K ∈ [N] uniformly at random and also randomly
+chooses CHSH as one of the six possible CHSH games. Then he referees K − 1 sets of
+CHSH games, sending the questions from the Kth set to prover 1, while running a state
+tomography protocol with prover 2. In this protocol prover 2 is asked to prepare resource
+states by measuring his halves of the shared Bell states. This will collapse prover 1’s states
+to the same resource states up to corrections. In the context of composition, these resource
+states will constitute the FK input. The verifier uses the measurement outcomes of prover
+1 to tomographically check this preparation. He rejects if the tomography statistics are in-
+consistent. In the end, if the verifier accepts, he concludes that with high probability prover
+1 has a state which is close in trace distance to the tensor product of resource states. The
+formal statement of this fact is given in Theorem 5, taken from [20], and more precisely in
+Equation 42 from Lemma 12.
+since prover 1 is involved in both state tomography as well as the FK protocol, the strong version
+of the robustness property is required. This is to address the effect of any potential correlated
+attacks where provers 1 and 2 have agreed in advance on a strategy. The deviations of prover 2, in
+the preparation stage, could be correlated with the deviations of prover 1 during the computation
+stage (FK). This is the first rigorous proof of a protocol that involves lifting the FK protocol to the
+entangled provers setting. We give here the correctness and soundness of this protocol and show
+that it is more efficient than the RUV protocol (Theorem 3) while in Section 4 we give the proof
+of this theorem.
+Protocol 4 Composite Verification Protocol
+1. Run the modified state tomography protocol (Protocol 3).
+2. From the states prepared by this protocol on prover 1’s side, select the input for FK and run
+the FK protocol with prover 1. (Protocol 1)
+Theorem 3. Assuming the verifier wants to delegate the computation of a quantum circuit of size
+n, Protocol 4 is a MIP* verification protocol having completeness lower bounded by 1−O(n−1/128),
+soundness upper bounded by
+(cid:0)2(cid:1)(cid:100)2
+d(cid:101)
++ O(n−1/12), where d is the security parameter of the FK
+protocol, and round complexity O(nc), where there exists some constant c such that c > 2048.
+While the obtained round complexity is an improvement over RUV (Lemma 2) it is still far
+from practical. However, we believe our approach serves as a proof of principle, that this type of
+composition can be beneficial. It also highlights where improvements could be made. It is the state
+tomographysubprotocolthatincreasestheroundcomplexity,whiletheFKprotocolhasarelatively
+low complexity2. The detailed proofs are given in Section 4.
+2.3 Fault Tolerance
+Inconstructingourcompositeverificationprotocol,weusedtherobustnessoftheFKprotocol.Our
+last result is to characterise the difference between robustness and fault tolerance and to show that
+the FK protocol can be made fault tolerant using a topological error correcting code. Consequently,
+our composite protocol can also be made fault tolerant provided that the state tomography part is
+run on top of an error correcting code.
+As mentioned before robustness is a protocol’s ability to continue to function given a deviated
+input. Fault tolerance is when a protocol functions correctly in the presence of error prone devices.
+The essential assumption for robustness is that the actual (multi-qubit) input is (cid:15)-close to its ideal
+value. Fault tolerant protocols, on the other hand, assume that errors can occur at each individual
+qubit. The faulty devices are usually represented by the action of a partially depolarizing channel:
+E = (1 − p)[I] + p([X] + [Y] + [Z]). Here p is the probability of error, and the square brackets
+indicate the action of an operator. This leads to the following observation:
+Lemma 3. Let σ = ⊗n ρ be a system of n qubits. Assume each qubit goes through a partially
+depolarizing channel E having probability of error p > 0. Let the state of the system, after all qubits
+have passed through the channel, be σ(cid:48) = ⊗n E(ρ ). We have that (cid:107)σ −σ(cid:48)(cid:107) ≤ min(1,np) and
+there exist states σ for which (cid:107)σ−σ(cid:48)(cid:107) = 1.
+Thismeansthatthedeviationofann-qubitsystemfromtheidealinputisnotboundedbysome
+constant amount. This is intuitively clear, since by adding more qubits, we introduce more errors
+and the state of the composite system is further from its intended value. In contrast to this, when
+consideringrobustness,thedistancebetweentheactualandidealstateisboundedbyanarbitrarily
+small quantity. We will now address how can we do verification in an error prone setting.
+Lemma4. AssumeweruntheFKprotocolwithN trapsandeachqubitissubjecttotheactionofa
+partially depolarizing channel E having probability of error p > 0. Given the simplifying assumption
+2NotethattheroundcomplexityofFKcouldbefurtherreducedtolinear,ifoneiswillingtoadmitahigherupper
+bound for soundness.
+Protocol 5 Fault Tolerant FK Protocol
+Assumptions
+The verifier wants to compute the execution of a measurement graph G having n qubits. Both the
+verifier and prover’s devices are subject to noise modelled as a partially depolarizing channel acting
+on the preparation of the qubits and the application of the quantum gates. For single qubits the
+channel is described by:
+And for two qubit states by:
+Additionally assume p ≤ p , where p is a threshold such that depolarizing noise bellow
+correct correct
+this threshold is corrected by the topologically protected code from [28].
+Let Gν denote a brickwork state encoding the graph G and containing one trap qubit, as explained
+in [1]. Let Lν denote a fault tolerant encoding of the graph Gν using the topologically protected
+code from [28]. The encoding is done as explained in [34], hence Lν will be decorated lattices (see
+Figures 1, 2 in [34]). The index ν denotes the randomness in the θ angles for the encoding as chosen
+(cid:16) (cid:17) (cid:16) (cid:17)
+by the verifier. Let Sν (cid:101) = Lν1⊗Lν2⊗···⊗LνN, where R/log cn < N < R/log cn +O(1),
+forsomeconstantsR > 1,c > 2andν (cid:101) = {ν 1 ···ν N }.WewillrefertoSν (cid:101) asasequence ofencodings.
+1. The verifier chooses R > 1 and constructs the random set ν.
+2. The verifier prepares the qubits for the sequence Sν (cid:101) and sends them to the prover along with
+instructions on how to construct Sν (cid:101).
+3. The verifier sends measurement instructions to the prover in order to compute the executions
+of the encoded graphs.
+4. The prover sends the measurement outcomes to the verifier.
+5. Steps 3 and 4 repeat until the verifier either accepts or rejects.
+The verifier rejects if any of the traps fail. He takes the outcome of the computation to be the
+majority outcome over all computations (graphs Lνi).
+that if a qubit is changed (through the action of an X, Y or Z operator) it will produce an incorrect
+measurement outcome, the completeness of this protocol is upper bounded by (1−p)NT.
+It is evident that assuming faulty devices where each qubit behaves as if it crossed a partially
+depolarizing channel, the completeness of the protocol becomes exponentially small (as function
+of the number of traps). This is clearly unsatisfactory. The arguably simplest solution would be
+to alter the acceptance condition of the protocol. Since it is unlikely that all trap measurements
+succeed, even for honest prover, the verifier should accept a result if the traps that succeed are
+above some fixed fraction.
+Lemma 5. Assume we run a modified FK protocol with N traps and each qubit is subject to the
+action of a partially depolarizing channel E having probability of error p > 0. The modification is
+that the verifier accepts if there are fewer than N (p+(cid:15)) mistakes at trap measurements, where
+(cid:15) > 0 is a suitably chosen small number. The completeness of this protocol is lower bounded by
+1−exp(−2(cid:15)2N ).
+The above modification resolves the issue raised regarding the completeness bound. However, if
+we were to make such modification, we have the following consequence for the soundness of the
+protocol:
+Lemma 6. Assume we run a modified FK protocol with N traps, N qubits in total and each
+qubit is subject to the action of a partially depolarizing channel E having probability of error p > 0.
+The modification is that the verifier accepts if there are fewer than N (p + (cid:15)) mistakes at trap
+measurements, where (cid:15) > 0 is a suitably chosen small number. The soundness of this protocol is
+upper bounded by
+(cid:0)NT (cid:1)(cid:0)2(cid:1)(cid:100)2
+d(cid:101)
+.
+We can see that introducing a threshold of acceptance leads to an increased bound on soundness.
+Again, expected, since we allow the prover to tamper with some of the traps (and, by extension,
+with the computation as well) without rejecting the output. To solve these problems we need to use
+afaulttolerantcode.TheFKprotocolalreadyusesafaulttolerantcodetoencodethecomputation
+graph.Howeverthisisdoneinordertoboostthevalueofthesoundnessparameter.Thetrapqubits
+are not encoded with the code (only the computation is). Thus we propose a modified FK protocol.
+This is described in Protocol 5. In this protocol we encode both computations and traps in a fault
+tolerant code and use sequential repetitions (also used in [17]). This leads to our final main result:
+Theorem 4. Under the assumption of a faulty setting where qubit preparation and quantum gates
+are subject to partially depolarizing noise having bounded probability p, Protocol 5 is a valid verifi-
+cation protocol having completeness 1, soundness upper bounded by (1/2)R, where R is a constant
+such that R > 1. The protocol has round complexity O(n2).
+The proof of this theorem (and previous lemmas) are given in Section 5. An important point to
+make is that the composite protocol we constructed can also be made fault tolerant. To achieve
+this the state tomography protocol should be run on top of a fault tolerant code. As mentioned in
+[20], in principle, this is straightforward for blind, verified computation, since the provers can work
+on top of a quantum error-correcting code and entanglement can be distilled with the help of the
+verifier [35, 36].
+3 Proof of Robustness
+In this section we prove the robustness of the FK protocol. We start by first proving a simpler
+result, namely the robustness of the protocol under the assumption that the input is uncorrelated
+with any external system. We then remove this assumption and use our results to prove the main
+theorem, necessary for the composition with the RUV protocol.
+Lemma 7. If the initial input state of the FK protocol is (cid:15)-close to the ideal input state and
+uncorrelated with any external system, the soundness bound does not change.
+Proof. We will follow the same proof technique as in [1] and show that the soundness bound does
+not change. This is done by incorporating the assumption of a deviated input into that proof. The
+outcome density operator of the protocol is denoted B (ν), where ν denotes the verifier’s choices of
+inputvariablesandj rangesovertheprover’schoicesofpossibleactions(j = 0isthecorrect/honest
+action). If the outcome is incorrect it means that all of the traps have passed, but the computation
+is not correct. This is associated with the following projection operator [1]:
+incorrect ideal ideal t t
+Here, |Ψ (cid:105)(cid:104)Ψ | is the ideal output state, and (cid:78) |ηνT(cid:105)(cid:104)ηνT| is the state associated with the
+ideal ideal t∈T t t
+trap qubits. Notice that we are projecting to a state in which the output is orthogonal to its ideal
+value, and the traps are correct. This expresses the fact that the verifier will accept an incorrect
+computation. The associated probability for that event is p and can be expressed as:
+incorrect incorrect j
+Whichisaweightedaverageoftheincorrectoutcomeprobabilities(expressedbythetraceoperator)
+over all possible input states. The outcome density operator can be written as:
+ Jointsystemstateσν,b 
+B j (ν) = Tr P    (cid:88) |b+c r (cid:105)(cid:104)b|C νC,b ΩP ( (cid:122) (cid:124) (⊗P | (cid:123) 0 (cid:122) (cid:105)(cid:104)0| (cid:125) ) ⊗ (cid:125)(cid:124)(cid:12) (cid:12) (cid:12) Ψν,b (cid:69)(cid:68) Ψν,b (cid:12) (cid:12) (cid:12) (cid:123) )P†Ω†C ν † C,b |b(cid:105)(cid:104)b+c r |    (6)
+b (cid:124) (cid:123)(cid:122) (cid:125)
+Prover’squbits
+Inputstate
+Notice the following, as explained in [1]:
+• We are tracing over the prover’s qubits;
+• We have denoted the joint state, comprised of the input and the prover’s qubits, as σν,b;
+• j ranges over the prover’s possible strategies (j = 0 is the honest strategy);
+• b indicates the possible branches of computation parametrised by the measurement results
+sent by the prover to the verifier;
+• c indicates corrections that need to be performed on the final, classical output due to the
+MBQC computation together with the random phase introduced by the verifier;
+• P is the computation that we want the prover to do;
+• Ω is the prover’s deviation from the desired computation;
+• C are the corrections the prover applies to its quantum output depending on the mea-
+surement outcomes (as in the measurement-based model);
+We now need to incorporate the approximate input state into this operator. We will not use the
+(cid:15)-closeness of the deviated state to the ideal one, and prove a stronger result, that the soundness
+bound does not change regardless of the input state. Concretely, assume the deviated input is:
+(cid:16)(cid:12) (cid:69)(cid:68) (cid:12)(cid:17)
+(cid:12) (cid:12)
+Where E is a CPTP map which represents any deviation from the ideal input state either from
+incorrect preparation, a malicious prover or faulty devices. This is equivalent to applying some
+unitary U to the input state tensored with some environment qubits that are traced out. We can
+express this mathematically as:
+(cid:16) (cid:12) (cid:69)(cid:68) (cid:12)(cid:17)
+E (cid:12) (cid:12)
+The joint system state σν,b becomes3:
+(cid:16) (cid:12) (cid:69)(cid:68) (cid:12)(cid:17)
+E (cid:12) (cid:12)
+Let us consider a new unitary V = (I⊗U). This allows us to rewrite the joint system state as:
+(cid:16) (cid:12) (cid:69)(cid:68) (cid:12)(cid:17)
+E (cid:12) (cid:12)
+Since P, the computation, is a unitary operator, there must exists some unitary V(cid:48) such that
+V = P†V(cid:48)P. Substituting this into the previous expression gives us:
+(cid:16) (cid:12) (cid:69)(cid:68) (cid:12)(cid:17)
+E (cid:12) (cid:12)
+Incorporating Equation 11 into the expression for B (ν) in Equation 6 we obtain:
+(cid:16)(cid:88)
+B (ν) = Tr |b+c (cid:105)(cid:104)b|C ΩP
+j P r νC,b
+(cid:16) (cid:12) (cid:69)(cid:68) (cid:12)(cid:17)
+E (cid:12) (cid:12)
+The assumption of the lemma is that the input state is not correlated with any external system.
+Hence, the spaces E and P are independent. This means that the prover’s deviation, Ω, is not
+acting on E and therefore we can “push” the inner trace operator to the beginning of the equation.
+Also using the fact that PP† = P†P = I, we obtain:
+(cid:16)(cid:88)
+(cid:12) (cid:69)(cid:68) (cid:12)
+νC,b (cid:12) (cid:12) νC,b
+|b(cid:105)(cid:104)b+c |
+We can now include the input deviation given by V(cid:48) into the prover deviation Ω, by considering
+Ω(cid:48) = ΩV(cid:48). This is possible because we are bounding the probability over all possible deviations, Ω,
+of the prover in the computation and all possible deviations, V(cid:48), from the preparation part. Thus,
+we can consider this to be a single, global, deviation given by Ω(cid:48).
+(cid:16)(cid:88)
+(cid:12) (cid:69)(cid:68) (cid:12)
+νC,b (cid:12) (cid:12) νC,b
+|b(cid:105)(cid:104)b+c |
+3Here and in the following expressions we’ve used the fact that the partial trace is linear and can therefore be
+moved outside.
+Asaresult,theaboveequationhasthesameformastheundeviatedinputscenarioofEquation6.
+Thismakessensesinceallwehavedoneistoincorporatethedeviationoftheinputintotheprover’s
+cheating strategy. The original proof continues as it is in [1], and the bound remains unchanged
+(cid:19)(cid:100)2
+d(cid:101)
+The type of robustness guaranteed by this lemma is not sufficient to prove the security of any
+protocol that composes RUV with FK. For example if we use prover 2 of RUV to prepare the
+input of the FK protocol for prover 1, this input is in general correlated with prover 2’s system. To
+address this issue, we use from [20] the following corollary of the gentle measurement lemma and
+the special Kraus representation in the presence of initial correlations given in [30].
+Corollary 1. [20] Let ρ be a state on H ⊗H , and let π be a pure state on H . If for some δ ≥ 0,
+Lemma 8. If the initial input state of the FK protocol is (cid:15)-close to the ideal input state the
+soundness bound changes by at most O( (cid:15)).
+Proof. Consider a composite correlated state ρ where systems A and B are not communicating
+and let ρ = Tr (ρ ) and ρ = Tr (ρ ). If ρ is used as input for the FK protocol, the
+A B AB B A AB A
+existence of correlations (not present in the previous lemma) can be exploited by an adversarial
+prover. Hence the deviation can no longer be expressed as a CPTP map over this subsystem. As it
+is shown in [30], in presence of initial correlations defined as:
+corr AB A B
+the evolution of the subsystem ρ is the following:
+Here E is a CPTP map and δρ is an inhomogeneous term which is added to the CPTP evolution
+due to the presence of initial correlations. In addition we have the following property:
+A B AB corr AB
+We can see that substituting ρ in the outcome density operator of the FK protocol gives different
+soundness bound than the one in Lemma 7. The difference stems from the extra δρ term. However
+we can use the fact that ρ is (cid:15)-close to the ideal state (lemma assumption) to show that the norm
+of δρ is at most of order O( (cid:15)). To prove this we first find a bound for the norm of ρ , and
+since δρ is just a CPTP map applied to ρ it follows that the norm of δρ has the same bound.
+Moreover, the action of the FK protocol can be modelled as a CPTP map, therefore acting on δρ
+will not increase the norm. It follows that the overall soundness bound changes by at most O( (cid:15)).
+If we denote the ideal state as |ψ(cid:105), we know that:
+It is also known, from the relationship between fidelity and trace distance, that:
+Combining these two yields:
+Recall that Tr(|ψ(cid:105)(cid:104)ψ|ρ ) = (cid:104)ψ|ρ |ψ(cid:105), using Equation 22 and Corollary 1 (where ρ is substituted
+with ρ and π with |ψ(cid:105)(cid:104)ψ|) we have:
+The trace norm of ρ is simply the trace distance between ρ and ρ ⊗ρ as can be seen from
+corr AB A B
+the definition. Using the triangle inequality, we have:
+AB A B Tr AB B Tr B A B Tr
+For the last term, using the additivity of trace distance with respect to tensor product, we get:
+B A B Tr A Tr B B Tr
+Combining these last three inequalities we obtain:
+Since 0 ≤ (cid:15) ≤ 1, the bound is of order O( (cid:15)). We have therefore bounded the norm of ρ and
+thus the norm of δρ .
+We can now take our expression for the deviated input from Equation 18 and substitute it into
+Equation 8, from Lemma 7. Since trace is a linear operation, it will result in the addition of an
+inhomogeneous term to each equation that involves the outcome density operator. But since the
+inhomogeneous term has bounded trace norm, and the action of the outcome density operator is
+trace preserving, it follows that we obtain the same bound as in Lemma 7 with the addition of an
+extra term of order O( (cid:15)). This concludes the proof.
+Lemma 9. If the initial input state of the FK protocol is (cid:15)-close to the ideal input state, the
+completeness is lower bounded by 1−2(cid:15).
+Proof. In the simplest sense, the FK protocol can be abstractly thought of as a CPTP map P, that
+takes some input state to an output state. Since we are assuming the prover is honest, the output
+state will be B (ν). However, this is in the case where the input is assumed to be ideal. We are
+dealing with a deviated input, hence our output state will be B(cid:48)(ν). Writing these out explicitly
+we have:
+Where, ρν is the deviated input, and by assumption
+Note that in the following we do not need to consider non CPTP map evolution since the provers
+areassumedtobehavehonestly.Henceeveninthepresenceofinitialcorrelation,thesubsystemwill
+evolve according to the desired CPTP map of the protocol. However CPTP maps cannot increase
+the trace distance, which leads to:
+This also applies for projection operators and if in particular we consider P , the projection
+onto the correct output state, we also have that:
+correct 0 correct 0 Tr 0 0 Tr
+Next we use the reverse triangle inequality, which gives us:
+(cid:12) (cid:12) (cid:107)P correct B 0 (ν)(cid:107) Tr −(cid:107)P correct B 0 (cid:48)(ν)(cid:107) Tr (cid:12) (cid:12) ≤ (cid:107)P correct B 0 (ν)−P correct B 0 (cid:48)(ν)(cid:107) Tr ≤ (cid:15) (32)
+And since we are dealing with positive definite operators, we know that:
+correct 0 Tr correct 0
+correct 0 Tr 2 correct 0
+But Tr(P B (ν)) = 1 (the completeness when we have ideal input), so:
+(cid:12) (cid:12)1−Tr(P correct B 0 (cid:48)(ν)) (cid:12) (cid:12) ≤ 2(cid:15) (35)
+Lastly, because Tr(P B(cid:48)(ν)) ≤ 1, we get:
+Thus, the probability of accepting a correct outcome, under the assumption that the input state is
+(cid:15)-close to the ideal input, is greater than 1−2(cid:15).
+ItisnoweasytoseethattheProofofTheorem1followsdirectlyfromDefinition3andLemmas8
+and 9. Having the robustness property, the FK protocol can receive an input, which is (cid:15)-close to
+its ideal value, from another protocol. As we have shown, even if this input is correlated with an
+external system, we can still perform the verification as long as we have (cid:15)-closeness.
+4 Proof of Compositionality
+To prove the security of the composite protocol (Theorem 3), we first need to prove that the FK
+protocol rejects with high probability a state close to a reflection about the XY-plane (Lemma 10).
+Then we prove that the modified state tomography protocol (Protocol 3), satisfies the (cid:15)-closeness
+property required by the (robust) FK. This is achieved by showing Lemmas 11 and 12. Finally we
+give the proof of Theorem 3.
+Lemma 10. If the initial input state of the FK protocol is (cid:15)-close to a reflection about the XY-plane
+of the ideal input state, the protocol will reject it with high probability.
+Proof. First we note that the input to the FK protocol consists of XY-plane states and dummy
+qubits which are either |0(cid:105) or |1(cid:105). The XY-plane states are invariant under the reflection, while the
+dummy states will be flipped. Assume that there is a trap that has an odd number of (dummy)
+neighbours. The verifier knows that he sent the state |+ (cid:105) and expects to make a Z correction if
+the number of |1(cid:105) neighbours is odd. However, if instead of what the verifier expects, there is an
+overall reflection with respect to the XY-plane, then for each of the neighbours of the trap there
+will be a new Z correction (the |0(cid:105) will become |1(cid:105) inducing a Z, while the |1(cid:105) will become |0(cid:105)
+undoing the previous Z correction, which is equivalent with another Z correction since Z2 = 1).
+Therefore, if the neighbours of a trap are odd in number, he will expect the exact opposite result
+and will deterministically detect the deviation. For this to happen it suffices that the verifier makes
+sure that at least one trap has odd number of neighbours, something that can be easily achieved.
+Therefore, the FK protocol will always reject the reflected ideal input state. Given that the input
+is (cid:15)-close to this, we have shown in Lemma 8 that the outcome density operator changes by at most
+O( (cid:15)) from its ideal value. Thus, the output state is O( (cid:15)) close to the reflected ideal input state.
+It follows that the protocol will reject this state with at most probability 1−O( (cid:15)).
+In proving the correctness of our protocol we first need to show the correctness of the modified
+statetomographyprotocol.Herewefocusonthemainresultsthatweuseforshowingthecorrectness
+and security of this protocol. We start with a theorem from [20]:
+Theorem 5. [20] Fix Q = {π1,...,π2q} a complete, orthonormal set of q-qubit XZ-determined
+pure states. For a sufficiently large constant α and for sufficiently large n, let m = m(n) ≥ qn and
+N ≥ mα−1. Let σ ∈ [m]qn be a list of distinct indices. Consider a combination of the following two
+protocols between the verifier, Eve, and the provers, Alice and Bob:
+1. CHSH games: In the first protocol, Eve referees Nm sequential CHSH games. She accepts if
+(cid:12) (cid:12){j ∈ [Nm] : A j B j = X j ⊕Y j } (cid:12) (cid:12) ≥ cos2(π/8)Nm− √1 (cid:112) Nmlog(Nm) . (37)
+2. State tomography: In the second protocol, Eve chooses K ∈ [N] uniformly at random. She
+referees (K −1)m CHSH games. For the Kth set, she referees a state tomography protocol
+with parameters q, n, m, Q and σ. She accepts if the following criteria are satisfied:
+max (cid:12) (cid:12)#{j : O j = o}−n/2q(cid:12) (cid:12) ≤ 4q (cid:112) nlogn (38a)
+The combined protocol satisfies the following completeness and soundness conditions:
+Completeness: If Alice and Bob use Nm shared EPR states to play the CHSH games according
+to an ideal strategy, and if Bob uses an ideal strategy with respect to the projections Q on
+the Kth set of m EPR states in the state tomography protocol, then in both protocols,
+Pr[Eve accepts] ≥ 1−O(n−1/2) . (39)
+Soundness: Assume that for both protocols, Pr[Eve accepts] ≥ 1−n−1/3. Let ρ be Alice’s state in
+the second protocol after (K −1)m games and conditioned on Bob’s messages
+O ,...,O . Then there exists an isometry XA : H (cid:44)→ (C2)⊗m⊗H(cid:48) such that letting ρ be
+1 n A A σ,j
+XAρXA† reduced to Alice’s qubits {σ(j,i) : i ∈ [q]},
+Pr (cid:104)(cid:12) (cid:12) (cid:8) j ∈ [n] : Tr(ρ σ,j πOj) ≥ 1−O(n−1/16) (cid:9)(cid:12) (cid:12) ≥ (cid:0) 1−O(n−1/16) (cid:1) n (cid:105) ≥ 1−4n−1/12 . (40)
+Here, the probability is over K, the first (K −1)m games and O ,...,O .
+We give the following corollary to this theorem:
+Corollary 2. By changing the measurement operators accordingly, a state tomography protocol
+for q-qubit XY-determined (YZ-determined) states exists, and achieves the same completeness and
+soundness bound as the one from Theorem 5.
+Proof. As mentioned, if we consider the extended CHSH game (comprising of 6 CHSH games) and
+try to rigidly determine the existence of a tensor product of |Ψ+(cid:105) states, we can fix the strategies
+of the provers up to an XY plane reflection. In particular, the results of an XZ state tomography
+in the original setting hold here for XY (YZ) tomography. Therefore, it is possible to certify the
+preparation of q-qubit XY-determined (YZ-determined) states.
+We can now present the main lemma proving that Protocol 3 is a verification protocol.
+Lemma 11. Protocol 3 has completeness lower bounded by 1 − O(n−1/2) and soundness upper
+bounded by O(n−1/12).
+Proof. According to corollary 2, the six state tomography protocols that constitute Protocol 3 are
+valid verification protocols achieving the same bounds for completeness and soundness as the orig-
+inal protocol from Theorem 5. We will ignore the case of XY plane reflections since, as we have
+shown in Lemma 10, these are detected with overwhelming probability by the FK protocol. These
+protocols can be “stitched” together in the same way the subprotocols of the RUV protocol are
+stitched together. In fact, our case requires a much simpler analysis since the six state tomogra-
+phy protocols are independent of each other. This means that in each subprotocol, the verifier is
+not basing his questions on the results of any previous subprotocol. This nonadaptive technique
+contrasts the RUV protocol in which the questions were adaptive. In the case of honest provers,
+the verifier accepts if all subprotocols succeed. For each one, we know from Theorem 5 that the
+probability of acceptance is ≥ 1−O(n−1/2), hence for the whole protocol the probability of accep-
+tance is ≥ (1−O(n−1/2))6 = 1−O(n−1/2). Thus, we see that the completeness bound remains
+unchanged. For soundness, assuming the provers are dishonest we know, again from Theorem 5,
+thattheprobabilityofacceptinganincorrectoutcomeis≤ 4n−1/12.Inourprotocol,theproverscan
+bedishonestinanyofthesixsubprotocols,therefore,byaunionboundtheprobabilityofaccepting
+an incorrect outcome is ≤ 6·4n−1/12 = 24n−1/12. Therefore, we can say that the soundness of our
+protocol is upper bounded by O(n−1/12).
+We are now able to give the proof of our main result (Theorem 3) which concerns the properties
+of the composite protocol (Protocol 4). To do this, we require an additional property.
+Lemma 12. Assume the verifier wants to prepare a state ρ consisting of tensor products of qubits
+which are all determined in either the XZ, XY or YZ bases. A successful run of Protocol 3 certifies
+that, prover 1 has a state ρ(cid:48) such that ρ and ρ(cid:48) are close in trace distance.
+Proof. The proof is partially given in [20]. In the state tomography protocol, a prover prepares
+multiple copies of a resource state. In [20] it is stated that if the verifier accepts, then, with high
+probability, a subset of states of the prover are close in trace distance to copies of the resource
+state.
+The soundness condition of Theorem 5 states that:
+Pr (cid:104)(cid:12) (cid:12) (cid:8) j ∈ [n] : Tr(ρ σ,j πOj) ≥ 1−O(n−1/16) (cid:9)(cid:12) (cid:12) ≥ (cid:0) 1−O(n−1/16) (cid:1) n (cid:105) ≥ 1−4n−1/12 . (41)
+It is shown in [20] that this condition translates to the fact that with probability at least 1 −
+O(n−1/48) we have:
+S 1,n j∈S Tr
+Where S is uniformly random subset of size O(n1/64). If we denote O(n−1/64) as (cid:15), O(n−1/48) as p,
+then the state ρ(cid:48), that prover 1 has, is:
+(cid:15) (cid:15)
+Wecanseethat,forsufficientlylargen,thevaluesofpand(cid:15)tendto0.Consequently,ρ(cid:48) approaches
+ρ and ρ approaches the ideal state, ρ . Computing the trace distance between ρ(cid:48) and ρ , we
+(cid:15) (cid:15) id id
+obtain:
+id Tr (cid:15) (cid:15) id Tr (cid:15) id Tr (cid:15) Tr
+And using inequality 42, we have:
+Therefore, the state that prover 1 has, conditioned on his messages O , is close to the state
+comprised of copies of the resource states. Depending on which type of state tomography is done,
+the resource states are determined in either the XZ, XY or YZ bases.
+Proof of Theorem 3. According to Lemmas 11 and 12, Protocol 3 is capable of preparing with
+high probability, a multi-qubit state ρ on prover 1’s side, such that ρ is (cid:15)-close to a tensor product
+of states determined in either the XZ, XY or YZ bases. In fact, each subprotocol is capable of
+such a preparation. For the two XY state tomography protocols we choose the resource state to
+be:
+(cid:12) (cid:11) (cid:12) (cid:11) (cid:12) (cid:11) (cid:12) (cid:11) (cid:12) (cid:11) (cid:12) (cid:11) (cid:12) (cid:11)
+⊗(cid:12)+
+⊗(cid:12)+
+⊗(cid:12)+
+⊗(cid:12)+
+⊗(cid:12)+
+⊗(cid:12)+
+For the two XZ state tomography protocols we choose the resource state to be:
+This allows us to prepare multi-qubit states on prover 1’s side which are close in trace distance
+to the FK input consisting of XY-plane states and dummy qubits (the |0(cid:105), |1(cid:105) qubits). If we de-
+note as ρ the multi-qubit state consisting of multiple copies of the XY resource state and ρ as
+the multi-qubit state consisting of multiple copies of the XZ resource state, then the FK input is
+effectively ρ ⊗ρ . Lemma 12 shows that with high probability prover 1 will have a state ρ(cid:48) that
+is (cid:15) -close to ρ and a state ρ(cid:48) that is (cid:15) -close to ρ , where (cid:15) = O(n−1/64). Therefore,
+prep 1 2 prep 2 prep
+ρ(cid:48) ⊗ρ(cid:48) is 2(cid:15) -close to ρ ⊗ρ . Moreover, in [20] it is proven in the state tomography protocol
+1 2 prep 1 2
+prover 1 is completely blind regarding his state. Given this, and using Theorem 1, we can compose
+the modified state tomography protocol (Protocol 3) with the FK protocol to achieve a new blind
+verification protocol. The state ρ(cid:48) ⊗ρ(cid:48) is used as input for the FK protocol, since it is (cid:15)-close to
+the ideal input, where (cid:15) = 2(cid:15) .
+The bound on completeness for the new protocol can be computed from the completeness bounds
+of the constituent protocols. In the honest provers setting, the verifier’s acceptance probability for
+modified state tomography is 1 − O(n−1/2), and for FK with deviated input it is 1 − O( (cid:15)) =
+1−O(n−1/128). Multiplying these together and taking the leading order terms we find that com-
+pleteness of the protocol is upper bounded by 1−O(n−1/128).
+For soundness, in the dishonest setting if the verifier would reject in either modified state tomogra-
+phy or FK then he would reject in the new protocol as well. The bound on soundness for modified
+state tomography is O(n−1/12) and for FK is
+(cid:0)2(cid:1)(cid:100)2
+d(cid:101)
+, where d is the security parameter of the FK
+protocol that specifies the size of the encoding for the computation graph. From a union bound we
+get that the soundness for our composite approach is
+(cid:0)2(cid:1)(cid:100)2
+d(cid:101)
+The last part of the proof deals with the round complexity of our composite approach. In the
+previous proof of Lemma 12 we mentioned that prover 1’s state restricted to subset of O(n1/64)
+qubits is close in trace distance to the ideal state. However we need n to be sufficiently large so that
+this subset of qubits can encompass the entire FK input. We know that the FK input comprises of
+O(|C|2) qubits, where C is the computation the verifier wants to perform. This means, that we need
+O(|C|128) qubits in total so that we can claim that a state of O(|C|2) qubits is close to its intended
+value. Recall that from Thereom 5, the number of rounds for state tomography is O(nα), where we
+know from [20] that α > 16. This means that the total number of rounds must be O(|C|c), where
+c > 128·16 = 2048. If we relabel n to be |C| then the round complexity is O(nc).
+5 Proof of Fault Tolerance
+The main result of this section is the proof of Theorem 4 that gives a fault tolerant FK protocol.
+We first prove Lemmas 3, 4, 5 and 6 that as stressed in Section 2.3, highlights why we cannot use
+results similar to the robustness and why the simplest approaches fail. Then we proceed in the
+proof of Theorem 4.
+Proof of Lemma 3. We can compute a bound on the trace distance between an arbitrary qubit
+i i Tr i i i Tr
+i i Tr i i Tr
+But we know that the trace distance is upper bounded by 1, so:
+Now we compute the trace distance between σ = ⊗n ρ and σ(cid:48) = ⊗n E(ρ ):
+i=1 i i=1 i
+Tr i=1 i i=1 i Tr i i Tr
+Since the trace distance is upper bounded by 1 and since np can exceed 1 for sufficiently large n,
+we have:
+Consider σ = ⊗n |0(cid:105)(cid:104)0|. Under the action of the depolarizing channel the trace distance between
+σ and σ(cid:48) is n(cid:107)|0(cid:105)(cid:104)0|−E(|0(cid:105)(cid:104)0|)(cid:107) . However (cid:107)|0(cid:105)(cid:104)0|−E(|0(cid:105)(cid:104)0|)(cid:107) = 2p, therefore the distance
+between σ and σ(cid:48) is n 2p. For sufficiently large n this can clearly reach the maximum value of
+1.
+Proof of Lemma 4. Because of the action of the partially depolarizing channel, each trap qubit
+has a probability p of being changed. We make the simplifying assumption that an affected qubit
+will produce a wrong measurement result. This assumption is only valid for completeness, where
+we assume that the devices are honest but faulty4. We then have that the probability of a trap
+measurementproducingacorrectoutcomeisupperboundedby1−p.Giventhattrapmeasurements
+are independent of each other, and assuming we have N traps, the probability that all trap
+measurements produce correct outcomes is upper bounded by (1−p)NT. Since the verifier accepts
+if and only if all trap measurements succeed it follows that the completeness is upper bounded by
+(1−p)NT.
+Proof of Lemma 5. Define the following Bernoulli random variable:
+1, if measurement of trap t fails.
+0, otherwise.
+Under the simplifying assumption of the previous lemma, we have Pr(X = 1) = p ≥ 0. Next, we
+define:
+F = X (54)
+It is clear that E(F) = N p. Additionally, using a Hoeffding inequality, we have that:
+This gives the probability that the number of failed traps is greater than our threshold of pN .
+The complement of this is the completeness, which is therefore bounded by 1−exp(−2(cid:15)2N )
+Proof of Lemma 6. Recallthatsoundnessistheprobabilityofacceptinganincorrectoutcome.In
+the original FK protocol this meant that all the traps succeeded but the computation output was
+orthogonal to the correct output. This is expressed with the projector P ⊗P . Here P projects
+the computation output onto the orthogonal state and P projects the trap outputs onto the
+correct outputs. If the accepting condition is given by a threshold of correct traps, the projector
+must change accordingly. This means that there should not be only one trap projector but one
+for each accepting situation. Taking the threshold to be pN means that the verifier accepts if
+T = N −pN traps succeeded. Since these traps can be any combination of T out of the possible
+N , there are
+(cid:0)NT (cid:1)
+possible accepting situations. Therefore, the trap projector P becomes a sum
+(cid:0)NT (cid:1)
+projectors (one for each accepting choice of traps). It therefore follows from linearity that
+the soundness bound becomes
+(cid:0)NT (cid:1)(cid:0)2(cid:1)(cid:100)2
+d(cid:101)
+.
+4Ifthedevicesweredishonest,wewouldneedtotakeintoaccountthedeviationonthetrapqubitsresultingfrom
+malevolent behaviour.
+Proof of Theorem 4. In [34], Morimae and Fujii show how a blind quantum computation can
+be made fault tolerant by encoding it in a topologically protected error-correcting code [28]. The
+encoding then uses a decoration trick so that the prover only needs to perform XY-plane measure-
+ments and this can be done blindly using the UBQC protocol in [1]. Here, we use the same idea to
+encode a computation which also contains an isolated trap. This follows from the first verification
+protocol introduced in [1] which uses a brickwork state to perform the computation. Encoding this
+in the fault tolerant code give us the lattice Lν, which according to [34] can be executed blindly by
+the prover.
+Throughout the run of the protocol, if the prover is always honest then the fault tolerant code
+will correct for any errors (since we have assumed the error rate is smaller than the threshold of
+correctable errors). This proves that the completeness of the protocol is 1.
+To compute the soundness, note that the computed bound for the brickwork state protocol in [1]
+is:
+(cid:18) (cid:19)
+Where n is the number of qubits in the brickwork state. Similar to the robustness proof, the proof
+of this bound assumes that the outcome density operator of the protocol is projected onto a state
+where the trap succeeded but the computation outcome is incorrect. It is can been shown that the
+same bound as the non-fault tolerant case holds. This means that we have:
+(cid:18) (cid:19)
+incorrect 2n(cid:48)
+Where n(cid:48) is the number of qubits in a lattice Lνi, out of the N lattices used in the protocol. We
+note that n(cid:48) is of the same order as n [28], and we can choose a constant c > 2 such that 2n(cid:48) = cn.
+InProtocol5theverifiercreatesindependent encodingsLν,eachdependingonclassicalrandomness.
+Heacceptsthesequenceofencodingsifalltrapmeasurementssucceedineachencoding.Thismeans
+that the prover can deceive the verifier if he can deviate the computation in each encoding Lν while
+atthesametimepassingallthetraps.However,foranygivenencodingweknowthattheprobability
+of this happening is given by p , and because of independence, the prover will succeed for
+the sequence with probability:
+incorrect cn
+(cid:16) (cid:17)
+We know that N/R > 1/log cn . However, this is equivalent to:
+(cid:18) (cid:19)
+(cid:18) (cid:19)
+Note that we used the fact that log (cid:0) 1− 1 (cid:1) < 0. Through exponentiation we get:
+(cid:19)N/R
+And we finally obtain:
+incorrect 2R
+Hence, the probability that the prover deceives the verifier is less than (1/2)R and so the soundness
+of the protocol is upper bounded by this value.
+Lastly we compute the round complexity of this protocol. For the given sequence we have N
+encodings and for each encoding we have O(n) qubits5 and a corresponding round complexity of
+O(n) to compute the execution of that encoding. It follows that the overall complexity is O(Nn).
+(cid:16) (cid:17)
+But we know that N < R/log 1+ 1 +O(1), and given that R is a constant, we can show
+(cid:16) (cid:17)
+that N is O(n). This follows from the observation that dividing the function 1/log 1+ 1 with
+(cn−1) gives a constant in the n → ∞ limit:
+(cid:18) (cid:19)
+n→∞ cn−1 ln2
+Incorporating this result yields overall complexity O(n2). Note that this proof technique works for
+the case of classical output since we are interested in the classical output of each encoding. The
+encodings are independent from each other, which allows us to bound the probability for the whole
+sequence.
+6 Conclusion
+We have shown that the single server universal verifiable blind quantum computing protocol of
+[1] is robust even against general adversaries. This protocol is currently the optimal protocol in
+terms of the verifier’s requirements. The robustness result further strengthens the scheme for re-
+alistic applications where the effect of noisy devices should also be considered, as highlighted in a
+recent experimental demonstration of the protocol [17]. Moreover, it enables us to compose the FK
+protocol with other quantum verification protocols, extend it to the entangled servers setting and
+make it device independent. The key property that we proved, is that the protocol remains secure
+even against correlated attacks. To achieve this, we considered the deviation of the evolution of a
+correlated subsystem from the evolution of uncorrelated subsystems. The former could be written
+mathematically as a non-CPTP map which differs from a CPTP map by an inhomogeneous term.
+However, for inputs which are (cid:15)-close to the ideal FK input, we showed that this deviation (the
+inhomogeneous term) is bounded by a term of order O( (cid:15)). Our proof technique is generic and
+can be potentially applied to other multi-party protocols where sequential composition is required.
+This result complements the local-verifiability proof of [24] which is based on the universal compos-
+ability framework. The latter, in its current form, is insufficient for composing entanglement-based
+protocols, such as RUV, with the FK protocol because of the possibility of correlated attacks.
+Our robustness result, however, leads to a stand alone secure composite verification protocol. Ad-
+ditionaly, the proposed composition scheme could potentially be used to extend the composable
+framework of [24] to incorporate multiple provers.
+5Note that here, unlike in the composite protocol, we have a linear number of qubits for the protocol. This is
+because we are not using the dotted-complete version of the FK protocol, but the one using a brickwork state. It is
+explained in [1] that this version of the protocol requires O(n) qubits.
+Our proposed composite protocol achieves verification with a classical client (device indepen-
+dence) and gives improved round complexity in comparison to the RUV protocol. It uses only
+the (modified) state tomography part of RUV as input for the FK protocol. The improved round
+complexity of the composite protocol is still too high to allow for any practical implementation in
+the near future. However, the reason for this high round complexity is the state tomography sub-
+protocol and therefore, any improvement on how to prepare the FK inputs (e.g. by exploiting the
+shared entanglement of the provers or using self-testing techniques as in [32]) will directly improve
+the efficiency of our composite protocol as well.
+Finallyweoutlinedhowtomakeourverificationprotocolfaulttolerant.Todosoweconstructed
+a fault tolerant version of the FK protocol which is interesting in its own right. This complements
+the work presented in [34] which addresses the fault tolerance of a (non-verifiable) blind quantum
+computing protocol. We used the same topological error correcting code as [34] and a sequential
+repetition scheme in order to correct for faulty devices.
+Acknowledgements
+Shortly before uploading a prepint on the arxiv, the authors became aware of parallel and indepen-
+dentresearchbyHajdusek,Perez-DelgadoandFitzsimons,whichalsoaddressesdevice-independent
+verifiable blind quantum computing and appeared the same day in the arxiv [32]. We would like to
+thank Vedran Dunjko and Theodoros Kapourniotis for useful discussions. PW gratefully acknowl-
+edges partial support from COST Action MP1006.

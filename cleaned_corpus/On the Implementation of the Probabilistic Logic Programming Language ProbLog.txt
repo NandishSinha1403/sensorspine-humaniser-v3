@@ -1,0 +1,965 @@
+Under consideration for publication in Theory and Practice of Logic Programming 1
+On the Implementation of the Probabilistic Logic
+Programming Language ProbLog
+Angelika Kimmig, Bart Demoen and Luc De Raedt
+Departement Computerwetenschappen, K.U. Leuven
+Celestijnenlaan 200A - bus 2402, B-3001 Heverlee, Belgium
+(e-mail: {Angelika.Kimmig,Bart.Demoen,Luc.DeRaedt}@cs.kuleuven.be)
+V´ıtor Santos Costa and Ricardo Rocha
+CRACS & INESC-Porto LA, Faculty of Sciences, University of Porto
+R. do Campo Alegre 1021/1055, 4169-007 Porto, Portugal
+(e-mail: {vsc,ricroc}@dcc.fc.up.pt)
+submitted 19 June 2009; revised 14 October 2009; accepted 9 December 2009
+The past few years have seen a surge of interest in the field of probabilistic logic learning
+and statistical relational learning. In this endeavor, many probabilistic logics have been
+developed.ProbLogisarecentprobabilisticextensionofPrologmotivatedbythemining
+of large biological networks. In ProbLog, facts can be labeled with probabilities. These
+facts are treated as mutually independent random variables that indicate whether these
+facts belong to a randomly sampled program. Different kinds of queries can be posed
+toProbLogprograms.Weintroducealgorithmsthatallowtheefficientexecutionofthese
+queries,discusstheirimplementationontopoftheYAP-Prologsystem,andevaluatetheir
+performance in the context of large networks of biological entities.
+To appear in Theory and Practice of Logic Programming (TPLP)
+1 Introduction
+In the past few years, a multitude of different formalisms combining probabilistic
+reasoningwithlogics,databases,orlogicprogramminghasbeendeveloped.Promi-
+nent examples include PHA and ICL (Poole 1993b; Poole 2000), PRISM (Sato
+and Kameya 2001), SLPs (Muggleton 1995), ProbView (Lakshmanan et al. 1997),
+CLP(BN)(SantosCostaetal.2003),CP-logic(Vennekensetal.2004),Trio(Widom
+2005), probabilistic Datalog (pD) (Fuhr 2000), and probabilistic databases (Dalvi
+andSuciu2004).Althoughtheselogicshavebeentraditionallystudiedintheknow-
+ledgerepresentationanddatabasecommunities,thefocusisnowoftenonamachine
+learning perspective, which imposes new requirements. First, these logics must be
+simpleenoughtobelearnableandatthesametimesufficientlyexpressivetosupport
+interestingprobabilisticinferences.Second,becauselearningiscomputationallyex-
+pensiveandrequiresansweringlongsequencesofpossiblycomplexqueries,inference
+1v2444.6001:viXra
+2 A. KIMMIG et al
+in such logics must be fast, although inference in even the simplest probabilistic
+logics is computationally hard.
+In this paper, we study these problems in the context of a simple probabilistic
+logic,ProbLog(DeRaedtetal.2007),whichhasbeenusedforlearninginthecon-
+text of large biological networks where edges are labeled with probabilities. Large
+andcomplexnetworksofbiologicalconcepts(genes,proteins,phenotypes,etc.)can
+be extracted from public databases, and probabilistic links between concepts can
+be obtained by various techniques (Sevon et al. 2006). ProbLog is essentially an
+extension of Prolog where a program defines a distribution over all its possible
+non-probabilistic subprograms. Facts are labeled with probabilities and treated as
+mutually independent random variables indicating whether or not the correspond-
+ing fact belongs to a randomly sampled program. The success probability of a
+query is defined as the probability that it succeeds in such a random subprogram.
+The semantics of ProbLog is not new: it is an instance of the distribution seman-
+tics (Sato 1995). This is a well-known semantics for probabilistic logics that has
+been (re)defined multiple times in the literature, often in a more limited database
+setting; cf. (Dantsin 1991; Poole 1993b; Fuhr 2000; Poole 2000; Dalvi and Suciu
+2004). Sato has, however, shown that the semantics is also well-defined in the case
+of a countably infinite set of random variables and formalized it in his well-known
+distribution semantics (Sato 1995). However, even though relying on the same se-
+mantics, in order to allow efficient inference, systems such as PRISM (Sato and
+Kameya 2001) and PHA (Poole 1993b) additionally require all proofs of a query to
+bemutuallyexclusive.Thus,theycannoteasilyrepresentthetypeofnetworkanaly-
+sistasksthatmotivatedProbLog.ICL(Poole2000)extendsPHAtothecasewhere
+proofs need not be mutually exclusive. In contrast to the ProbLog implementation
+presented here, Poole’s AILog2, an implementation of ICL, uses a meta-interpreter
+and is not tightly integrated with Prolog.
+We contribute exact and approximate inference algorithms for ProbLog. We
+present algorithms for computing the success and explanation probabilities of a
+query, and show how they can be efficiently implemented combining Prolog infer-
+encewithBinaryDecisionDiagrams(BDDs)(Bryant1986).Inadditiontoanitera-
+tivedeepeningalgorithmthatcomputesanapproximationalongthelinesof(Poole
+1993a), we further adapt the Monte Carlo approach used by (Sevon et al. 2006)
+inthecontextofbiologicalnetworkinference.Thesetwoapproximationalgorithms
+computeanupperandalowerboundonthesuccessprobability.Wealsocontribute
+anadditionalapproximationalgorithmthatcomputesalowerboundusingonlythe
+k most likely proofs.
+The key contribution of this paper is the tight integration of these algorithms in
+the state-of-the-art YAP-Prolog system. This integration includes several improve-
+ments over the initial implementation used in (De Raedt et al. 2007), which are
+needed to use ProbLog to effectively query Sevon’s Biomine network (Sevon et al.
+2006) containing about 1,000,000 nodes and 6,000,000 edges, as will be shown in
+the experiments.
+This paper is organised as follows. After introducing ProbLog and its semantics
+in Section 2, we present several algorithms for exact and approximate inference in
+On the Implementation of ProbLog 3
+Section 3. Section 4 then discusses how these algorithms are implemented in YAP-
+Prolog, and Section 5 reports on experiments that validate the approach. Finally,
+Section 6 concludes and touches upon related work.
+A ProbLog program consists of a set of labeled facts p :: c together with a set
+of definite clauses. Each ground instance (that is, each instance not containing
+variables)ofsuchafactc istruewithprobabilityp ,thatis,thesefactscorrespond
+to random variables. We assume that these variables are mutually independent.1
+The definite clauses allow one to add arbitrary background knowledge (BK).
+Figure 1 shows a small probabilistic graph that we shall use as running example
+in the text. It can be encoded in ProbLog as follows:
+0.8::edge(a,c). 0.7::edge(a,b). 0.8::edge(c,e).
+0.6::edge(b,c). 0.9::edge(c,d). 0.5::edge(e,d).
+Such a probabilistic graph can be used to sample subgraphs by tossing a coin for
+each edge. Given a ProbLog program T ={p ::c ,···,p ::c }∪BK and a finite
+set of possible substitutions {θ ,...θ } for each probabilistic fact p ::c , let L
+j1 jij j j T
+denote the maximal set of logical facts that can be added to BK, that is, L =
+{c θ ,...,c θ ,···,c θ ,...,c θ }.Astherandomvariablescorrespondingto
+1 11 1 1i1 n n1 n nin
+facts in L are mutually independent, the ProbLog program defines a probability
+distribution over ground logic programs L⊆L :
+(cid:89) (cid:89)
+Since the background knowledge BK is fixed and there is a one-to-one mapping
+between ground definite clause programs and Herbrand interpretations, a ProbLog
+program thus also defines a distribution over its Herbrand interpretations. Sato
+has shown how this semantics can be generalized to the countably infinite case;
+we refer to (Sato 1995) for details. For ease of readability, in the remainder of this
+paper we will restrict ourselves to the finite case and assume all probabilistic facts
+in a ProbLog program to be ground. We extend our example with the following
+background knowledge:
+path(X,Y) :− edge(X,Y).
+path(X,Y) :− edge(X,Z),path(Z,Y).
+We can then ask for the probability that there exists a path between two nodes,
+say c and d, in our probabilistic graph, that is, we query for the probability that a
+randomly sampled subgraph contains the edge from c to d, or the path from c to
+d via e (or both of these). Formally, the success probability P (q|T) of a query q
+in a ProbLog program T is the marginal of P(L|T) with respect to q, i.e.
+1 Iftheprogramcontainsmultipleinstancesofthesamefact,theycorrespondtodifferentrandom
+variables,i.e.{p::c}and{p::c,p::c}aredifferentProbLogprograms.
+4 A. KIMMIG et al
+a 0.8 0.9 d
+Figure 1. Example of a probabilistic graph: edge labels indicate the probability
+that the edge is part of the graph.
+where P(q|L) = 1 if there exists a θ such that L∪BK |= qθ, and P(q|L) = 0
+otherwise.Inotherwords,thesuccessprobabilityofqueryq istheprobabilitythat
+the query q is provable in a randomly sampled logic program.
+In our example, 40 of the 64 possible subprograms allow one to prove path(c,d),
+namely all those that contain at least the edge from c to d or both the edge from
+c to e and from e to d, so the success probability of that query is the sum of the
+probabilities of these programs: P (path(c,d)|T) = P({ab,ac,bc,cd,ce,ed}|T)+
+...+P({cd}|T) = 0.94, where xy is used as a shortcut for edge(x,y) when list-
+ing elements of a subprogram. We will use this convention throughout the paper.
+Clearly, listing all subprograms is infeasible in practice; an alternative approach
+will be discussed in Section 3.1.
+A ProbLog program also defines the probability of a specific proof E, also called
+explanation,ofsomequeryq,whichisagainamarginalofP(L|T).Here,anexpla-
+nation is a minimal subset of the probabilistic facts that together with the back-
+ground knowledge entails qθ for some substitution θ. Thus, the probability of such
+an explanation E is that of sampling a logic program L∪E that contains at least
+all the probabilistic facts in E, that is, the marginal with respect to these facts:
+(cid:88) (cid:89)
+Theexplanationprobability P (q|T)isthendefinedastheprobabilityofthemost
+likely explanation or proof of the query q
+where E(q) is the set of all explanations for query q, i.e., all minimal sets E ⊆L
+of probabilistic facts such that E ∪BK |=q (Kimmig et al. 2007).
+In our example, the set of all explanations for path(c,d) contains the edge from
+c to d (with probability 0.9) as well as the path consisting of the edges from c to e
+and from e to d (with probability 0.8·0.5=0.4). Thus, P (path(c,d)|T)=0.9.
+The ProbLog semantics is essentially a distribution semantics (Sato 1995). Sato
+has rigorously shown that this class of programs defines a joint probability dis-
+tribution over the set of possible least Herbrand models of the program (allowing
+functors), that is, of the background knowledge BK together with a subprogram
+L⊆L ; for further details we refer to (Sato 1995). The distribution semantics has
+been used widely in the literature, though often under other names or in a more
+On the Implementation of ProbLog 5
+restrictedsetting;seee.g.(Dantsin1991;Poole1993b;Fuhr2000;Poole2000;Dalvi
+and Suciu 2004).
+3 Inference in ProbLog
+This section discusses algorithms for computing exactly or approximately the suc-
+cess and explanation probabilities of ProbLog queries. It additionally contributes a
+new algorithm for Monte Carlo approximation of success probabilities.
+3.1 Exact Inference
+Calculating the success probability of a query using Equation (4) directly is infea-
+sible for all but the tiniest programs, as the number of subprograms to be checked
+is exponential in the number of probabilistic facts. However, as we have seen in
+our example in Section 2, we can describe all subprograms allowing for a specific
+proof by means of the facts that such a program has to contain, i.e., all the ground
+probabilistic facts used in that proof. As probabilistic facts correspond to random
+variables indicating the presence of facts in a sampled program, we alternatively
+denote proofs by conjunctions of such random variables. In our example, query
+path(c,d)hastwoproofsinthefullprogram:{edge(c,d)}and{edge(c,e),edge(e,d)},
+or, using logical notation, cd and ce ∧ed. The set of all subprograms containing
+some proof thus can be described by a disjunction over all possible proofs, in our
+case, cd ∨(ce ∧ed). This idea forms the basis for the inference method presented
+in (De Raedt et al. 2007), which uses two steps:
+1. Compute the proofs of the query q in the logical part of the theory T, that
+is, in BK ∪L . The result will be a DNF formula.
+2. Compute the probability of this formula.
+SimilarapproachesareusedforPRISM(SatoandKameya2001),ICL(Poole2000)
+and pD (Fuhr 2000).
+The probability of a single given proof, cf. Equation (5), is the marginal over
+all programs allowing for that proof, and thus equals the product of the prob-
+abilities of the facts used by that proof. However, we cannot directly sum the
+results for the different proofs to obtain the success probability, as a specific sub-
+program can allow several proofs and therefore contributes to the probability of
+each of these proofs. Indeed, in our example, all programs that are supersets
+of {edge(c,e),edge(e,d),edge(c,d)} contribute to the marginals of both proofs and
+would therefore be counted twice if summing the probabilities of the proofs. How-
+ever, for mutually exclusive conjunctions, that is, conjunctions describing disjoint
+setsofsubprograms,theprobabilityisthesumoftheindividualprobabilities.This
+situation can be achieved by adding negated random variables to a conjunction,
+thereby explicitly excluding subprograms covered by another part of the formula
+from the corresponding part of the sum. In the example, extending ce ∧ ed to
+6 A. KIMMIG et al
+?- path(c,d).
+:- edge(c,d). :- edge(c,A),path(A,d).
+:- path(d,d). :- path(e,d).
+:- edge(d,d). :- edge(d,B),path(B,d). :- edge(e,d). :- edge(e,C),path(C,d).
+:- path(d,d).
+:- edge(d,d). :- edge(d,D),path(D,d).
+Figure 2. SLD-tree for query path(c,d).
+ce∧ed∧¬cd reduces the second part of the sum to those programs not covered by
+the first:
+However, as the number of proofs grows, disjoining them gets more involved. Con-
+sider for example the query path(a,d) which has four different but highly intercon-
+nectedproofs.Ingeneral,thisproblemisknownasthedisjoint-sum-problemorthe
+two-terminal network reliability problem, which is #P-complete (Valiant 1979).
+Beforereturningtopossibleapproachestotacklethedisjoint-sum-problematthe
+end of this section, we will now discuss the two steps of ProbLog’s exact inference
+in more detail.
+Following Prolog, the first step employs SLD-resolution to obtain all different
+proofs. As an example, the SLD-tree for the query ?- path(c,d). is depicted in
+Figure 2. Each successful proof in the SLD-tree uses a set of ground probabilistic
+facts {p :: c ,···,p :: c } ⊆ T. These facts are necessary for the proof, and the
+proof is independent of other probabilistic facts in T.
+LetusnowintroduceaBooleanrandomvariableb foreachgroundprobabilistic
+fact p :: c ∈ T, indicating whether c is in a sampled logic program, that is, b
+has probability p of being true.2 A particular proof of query q involving ground
+facts {p :: c ,···,p :: c } ⊆ T is thus represented by the conjunctive formula
+b ∧···∧b ,whichatthesametimerepresentsthesetofallsubprogramscontaining
+these facts. Furthermore, using E(q) to denote the set of proofs or explanations of
+the goal q, the set of all subprograms containing some proof of q can be denoted
+2 Forbetterreadability,wedonotwritesubstitutionsexplicitlyhere.
+On the Implementation of ProbLog 7
+(cid:87) (cid:86)
+by b , as the following derivation shows:
+(cid:95) (cid:94) (cid:95) (cid:94) (cid:94)
+b i =  b i ∧ (b i ∨¬b i )
+(cid:95) (cid:95) (cid:94) (cid:94) (cid:94)
+(cid:95) (cid:94) (cid:94)
+(cid:95) (cid:94) (cid:94)
+We first add all possible ways of extending a proof e to a full sampled program by
+considering each fact not in e in turn. We then note that the disjunction of these
+fact-wise extensions can be written on the basis of sets. Finally, we rewrite the
+condition of the disjunction in the terms of Equation (4). This is possible as each
+subprogramthatisanextensionofanexplanationofq entailssomegroundinstance
+ofq,andviceversa,eachsubprogramentailingq isanextensionofsomeexplanation
+of q. As the DNF now contains conjunctions representing fully specified programs,
+its probability is a sum of products, which directly corresponds to Equation (4):
+(cid:95) (cid:94) (cid:94)
+(cid:88) (cid:89) (cid:89)
+Wethusobtainthefollowingalternativecharacterisationofthesuccessprobability:
+(cid:95) (cid:94)
+where E(q) denotes the set of proofs or explanations of the goal q and b denotes
+the Boolean variable corresponding to ground probabilistic fact p :: c . Thus, the
+problem of computing the success probability of a ProbLog query can be reduced
+to that of computing the probability of a DNF formula.
+However, as argued above, due to overlap between different conjunctions, the
+proof-based DNF of Equation (7) cannot directly be transformed into a sum of
+products. Computing the probability of DNF formulae thus involves solving the
+disjoint-sum-problem,andthereforeisitselfa#P-hardproblem.Variousalgorithms
+have been developed to tackle this problem. The pD-engine HySpirit (Fuhr 2000)
+8 A. KIMMIG et al
+usestheinclusion-exclusionprinciple,whichisreportedtoscaletoabouttenproofs.
+For ICL, which extends PHA by allowing non-disjoint proofs, (Poole 2000) pro-
+poses a symbolic disjoining algorithm, but does not report scalability results. Our
+implementation of ProbLog employs Binary Decision Diagrams (BDDs) (Bryant
+1986), an efficient graphical representation of a Boolean function over a set of vari-
+ables, which scales to tens of thousands of proofs; see Section 4.4 for more details.
+PRISM (Sato and Kameya 2001) and PHA (Poole 1993b) differ from the systems
+mentionedaboveinthattheyavoidthedisjoint-sum-problembyrequiringtheuser
+to write programs such that proofs are guaranteed to be disjoint.
+Ontheotherhand,astheexplanationprobability P exclusivelydependsonthe
+probabilistic facts used in one proof, it can be calculated using a simple branch-
+and-bound approach based on the SLD-tree, where partial proofs are discarded if
+their probability drops below that of the best proof found so far.
+3.2 Approximative Inference
+AsthesizeoftheDNFformulagrowswiththenumberofproofs,itsevaluationcan
+becomequiteexpensive,andultimatelyinfeasible.Forinstance,whensearchingfor
+paths in graphs or networks, even in small networks with a few dozen edges there
+are easily O(106) possible paths between two nodes. ProbLog therefore includes
+several approximation methods.
+3.2.1 Bounded Approximation
+Thefirstapproximationalgorithm,aslightvariantoftheoneproposedin(DeRaedt
+et al. 2007), uses DNF formulae to obtain both an upper and a lower bound on the
+probability of a query. It is closely related to work by (Poole 1993a) in the context
+of PHA, but adapted towards ProbLog. The method relies on two observations.
+First, we remark that the DNF formula describing sets of proofs is monotone,
+meaningthataddingmoreproofswillneverdecreasetheprobabilityoftheformula
+being true. Thus, formulae describing subsets of the full set of proofs of a query
+will always give a lower bound on the query’s success probability. In our example,
+the lower bound obtained from the shorter proof would be P(cd|T) = 0.9, while
+that from the longer one would be P(ce∧ed|T)=0.4.
+Our second observation is that the probability of a proof b ∧...∧b will always
+beatmosttheprobabilityofanarbitraryprefixb ∧...∧b ,i ≤n.Inourexample,
+the probability of the second proof will be at most the probability of its first edge
+from c to e, i.e., P(ce|T) = 0.8 ≥ 0.4. As disjoining sets of proofs, i.e., including
+informationonfactsthatarenotelementsofthesubprogramsdescribedbyacertain
+proof, can only decrease the contribution of single proofs, this upper bound carries
+overtoasetofproofsorpartialproofs,aslongasprefixesforallpossibleproofsare
+included.SuchsetscanbeobtainedfromanincompleteSLD-tree,i.e.,anSLD-tree
+where branches are only extended up to a certain point.
+This motivates ProbLog’s bounded approximation algorithm. The algorithm re-
+lies on a probability threshold γ to stop growing the SLD-tree and thus obtain
+On the Implementation of ProbLog 9
+Algorithm 1 Bounded approximation using iterative deepening with probability
+thresholds.
+function Bounds(interval width δ , initial threshold γ, constant β ∈(0,1))
+d = False; d = False; P(d |T)=0; P(d |T)=1;
+Expand current proof p
+until either p:
+(a) Fails, in this case backtrack to the remaining choice points;
+(b) Succeeds, in this case set d :=d ∨p and d :=d ∨p;
+(c) P(p|T)<γ, in this case set d :=d ∨p
+if d == False then
+set d = True
+Compute P(d |T) and P(d |T)
+DNF formulae for the two bounds3. The lower bound formula d represents all
+proofs with a probability above the current threshold. The upper bound formula
+d additionally includes all derivations that have been stopped due to reaching the
+threshold, as these still may succeed. Our goal is therefore to grow d and d in
+order to decrease P(d |T)−P(d |T).
+Givenanacceptancethresholdδ ,aninitialprobabilitythresholdγ,andashrink-
+ing factor β ∈ (0,1), the algorithm proceeds in an iterative-deepening manner as
+outlined in Algorithm 1. Initially, both d and d are set to False, the neutral
+element with respect to disjunction, and the probability bounds are 0 and 1, as we
+have no full proofs yet, and the empty partial proof holds in any model.
+ItshouldbeclearthatP(d |T)monotonicallyincreases,asthenumberofproofs
+never decreases. On the other hand, as explained above, if d changes from one
+iterationtothenext,thisisalwaysbecauseapartialproofp iseitherremovedfrom
+d andthereforenolongercontributestotheprobability,oritisreplacedbyproofs
+p ,...,p ,suchthatp =p∧s ,henceP(p ∨...∨p |T)=P(p∧s ∨...∨p∧s |T)=
+1 n i i 1 n 1 n
+P(p∧(s ∨...∨s )|T).AsproofsaresubsetsoftheprobabilisticfactsintheProbLog
+program, each literal’s random variable appears at most once in the conjunction
+representing a proof, even if the corresponding subgoal is called multiple times
+when constructing the proof. We therefore know that the literals in the prefix
+p cannot be in any suffix s , hence, given ProbLog’s independence assumption,
+monotonically decreases.
+As an illustration, consider a probability threshold γ = 0.9 for the SLD-tree in
+3 Using a probability threshold instead of the depth bound of (De Raedt et al. 2007) has been
+foundtospeedupconvergence,asupperboundshavebeenfoundtobetighteroninitiallevels.
+10 A. KIMMIG et al
+Figure2.Inthiscase,d encodestheleftsuccesspathwhiled additionallyencodes
+thepathuptopath(e,d),i.e.,d =cd andd =cd∨ce,whereastheformulaforthe
+full SLD-tree is d =cd ∨(ce∧ed). The lower bound thus is 0.9, the upper bound
+(obtained by disjoining d to cd∨(ce∧¬cd)) is 0.98, whereas the true probability
+is 0.94.
+Notice that in order to implement this algorithm we need to compute the prob-
+ability of a set of proofs. This task will be described in detail in Section 4.
+3.2.2 K-Best
+Usingafixednumberofproofstoapproximatetheprobabilityallowsbettercontrol
+oftheoverallcomplexity,whichiscrucialiflargenumbersofquerieshavetobeeval-
+uated, e.g., in the context of parameter learning. (Gutmann et al. 2008) therefore
+introduces the k-probability P (q|T), which approximates the success probability
+by using the k-best (that is, the k most likely) explanations instead of all proofs
+when building the DNF formula used in Equation (7):
+(cid:95) (cid:94)
+where E (q) = {e ∈ E(q)|P (e) ≥ P (e )} with e the kth element of E(q)
+sortedbynon-increasingprobability.Settingk =∞leadstothesuccessprobability,
+whereas k =1 corresponds to the explanation probability provided that there is a
+singlebestproof.Thebranch-and-boundapproachusedtocalculatetheexplanation
+probability can directly be generalized to finding the k-best proofs; cf. also (Poole
+1993b).
+To illustrate k-probability, we consider again our example graph, but this time
+with query path(a,d). This query has four proofs, represented by the conjunctions
+ac∧cd,ab∧bc∧cd,ac∧ce∧ed andab∧bc∧ce∧ed,withprobabilities0.72,0.378,
+0.32 and 0.168 respectively. As P corresponds to the explanation probability P ,
+weobtainP (path(a,d))=0.72.Fork =2,theoverlapbetweenthebesttwoproofs
+hastobetakenintoaccount:thesecondproofonlyaddsinformationifthefirstone
+isabsent.Astheyshareedgecd,thismeansthatedgeac hastobemissing,leading
+0.7956.Similarly,weobtainP (path(a,d))=0.8276andP (path(a,d))=0.83096
+for k ≥4.
+3.2.3 Monte Carlo
+As an alternative approximation technique, we propose a Monte Carlo method,
+where we proceed as follows.
+Execute until convergence:
+1. Sample a logic program from the ProbLog program
+2. Check for the existence of some proof of the query of interest
+On the Implementation of ProbLog 11
+3. Estimate the query probability P as the fraction of samples where the query
+is provable
+We estimate convergence by computing the 95% confidence interval at each m
+samples. Given a large number N of samples, we can use the standard normal
+approximation interval to the binomial distribution:
+Noticethatconfidenceintervalsdonotdirectlycorrespondtotheexactboundsused
+in our previous approximation algorithm. Still, we employ the same stopping crite-
+rion, that is, we run the Monte Carlo simulation until the width of the confidence
+interval is at most δ .
+A similar algorithm (without the use of confidence intervals) was also used in
+the context of biological networks (not represented as Prolog programs) by (Sevon
+et al. 2006). The use of a Monte Carlo method for probabilistic logic programs
+was suggested already by (Dantsin 1991), although he neither provides details nor
+reports on an implementation. Our approach differs from the MCMC method for
+Stochastic Logic Programs (SLPs) introduced by (Cussens 2000) in that we do
+not use a Markov chain, but restart from scratch for each sample. Furthermore,
+SLPs are different in that they directly define a distribution over all proofs of a
+query. Investigating similar probabilistic backtracking approaches for ProbLog is a
+promising future research direction.
+4 Implementation
+This section discusses the main building blocks used to implement ProbLog on
+top of the YAP-Prolog system. An overview is shown in Figure 3, with a typical
+ProbLog program, including ProbLog facts and background knowledge (BK), at
+the top.
+TheimplementationrequiresProbLogprogramstousetheproblogmodule.Each
+programconsistsofasetoflabeledfactsandofunlabeledbackgroundknowledge,a
+generic Prolog program. Labeled facts are preprocessed as described below. Notice
+thattheimplementationrequiresallqueriestonon-groundprobabilisticfactstobe
+ground on calling.
+In contrast to standard Prolog queries, where one is interested in answer substi-
+tutions,inProbLogoneisprimarilyinterestedinaprobability.Asdiscussedbefore,
+two common ProbLog queries ask for the most likely explanation and its probabil-
+ity, and the probability of whether a query would have an answer substitution. We
+have discussed two very different approaches to the problem:
+• In exact inference, k-best and bounded approximation, the engine explicitly
+reasons about probabilities of proofs. The challenge is how to compute the
+probabilityofeachindividualproof,storealargenumberofproofs,andcom-
+pute the probability of sets of proofs.
+12 A. KIMMIG et al
+ProbLog Program
+Facts Background
+ProbLog Library
+Trie2BDD Script
+Trie Library Array Library
+Queries Yap Prolog SimpleCUDD
+Figure3. ProbLogImplementation:AProbLogprogram(top)requirestheProbLog
+library which in turn relies on functionality from the tries and array libraries.
+ProbLog queries (bottom-left) are sent to the YAP engine, and may require calling
+the BDD library CUDD via SimpleCUDD.
+• In Monte Carlo, the probabilities of facts are used to sample from ProbLog
+programs. The challenge is how to compute a sample quickly, in a way that
+inference can be as efficient as possible.
+ProbLogprogramsexecutefromatop-levelqueryandaredriventhroughaProbLog
+query. The inference algorithms discussed above can be abstracted as follows:
+• Initialise the inference algorithm;
+• While probabilistic inference did not converge:
+— initialise a new query;
+— execute the query, instrumenting every ProbLog call in the current proof.
+Instrumentation is required for recording the ProbLog facts required by
+a proof, but may also be used by the inference algorithm to stop proofs
+(e.g., if the current probability is lower than a bound);
+— process success or exit substitution;
+• Proceed to the next step of the algorithm: this may be trivial or may require
+calling an external solver, such as a BDD tool, to compute a probability.
+Notice that the current ProbLog implementation relies on the Prolog engine to
+efficiently execute goals. On the other hand, and in contrast to most other proba-
+bilistic language implementations, in ProbLog there is no clear separation between
+logical and probabilistic inference: in a fashion similar to constraint logic program-
+ming, probabilistic inference can drive logical inference.
+From a Prolog implementation perspective, ProbLog poses a number of interest-
+ing challenges. First, labeled facts have to be efficiently compiled to allow mutual
+calls between the Prolog program and the ProbLog engine. Second, for exact in-
+ference, k-best and bounded approximation, sets of proofs have to be manipulated
+and transformed into BDDs. Finally, Monte Carlo simulation requires representing
+and manipulating samples. We discuss these issues next.
+On the Implementation of ProbLog 13
+4.1 Source-to-source transformation
+We use the term expansion mechanism to allow Prolog calls to labeled facts, and
+for labeled facts to call the ProbLog engine. As an example, the program:
+0.715::edge((cid:48)PubMed 2196878(cid:48),(cid:48)MIM 609065(cid:48)).
+0.659::edge((cid:48)PubMed 8764571(cid:48),(cid:48)HGNC 5014(cid:48)).
+would be compiled as:
+edge(A,B) :− problog edge(ID,A,B,LogProb),
+grounding id(edge(A,B),ID,GroundID),
+add to proof(GroundID,LogProb).
+problog edge(0,(cid:48)PubMed 2196878(cid:48),(cid:48)MIM 609065(cid:48),−0.3348).
+problog edge(1,(cid:48)PubMed 8764571(cid:48),(cid:48)HGNC 5014(cid:48),−0.4166).
+Thus, the internal representation of each fact contains an identifier, the original
+arguments, and the logarithm of the probability4. The grounding id procedure
+will create and store a grounding specific identifier for each new grounding of a
+non-ground probabilistic fact encountered during proving, and retrieve it on re-
+peateduse.Forgroundprobabilisticfacts,itsimplyreturnstheidentifieritself.The
+add to proof procedure updates the data structure representing the current path
+through the search space, i.e., a queue of identifiers ordered by first use, together
+with its probability. Compared to the original meta-interpreter based implementa-
+tion of (De Raedt et al. 2007), the main benefit of source-to-source transformation
+is better scalability, namely by having a compact representation of the facts for
+the YAP engine (Santos Costa 2007) and by allowing access to the YAP indexing
+mechanism (Santos Costa et al. 2007).
+4.2 Proof Manipulation
+ManipulatingproofsiscriticalinProbLog.Werepresenteachproofasaqueuecon-
+taining the identifier of each different ground probabilistic fact used in the proof,
+ordered by first use. The implementation requires calls to non-ground probabilistic
+factstobeground,andduringprovingmaintainsatableofgroundingsusedwithin
+the current query together with their identifiers. Grounding identifiers are based
+on the fact’s identifier extended with a grounding number, i.e. 5 1 and 5 2 would
+refer to different groundings of the non-ground fact with identifier 5. In our imple-
+mentation, the queue is stored in a backtrackable global variable, which is updated
+by calling add to proof with an identifier for the current ProbLog fact. We thus
+exploit Prolog’s backtracking mechanism to avoid recomputation of shared proof
+prefixes when exploring the space of proofs. Storing a proof is simply a question of
+adding the value of the variable to a store.
+As we have discussed above, the actual number of proofs can grow very quickly.
+4 Weusethelogarithmtoavoidnumericalproblemswhencalculatingtheprobabilityofaderiva-
+tion,whichisusedtodriveinference.
+14 A. KIMMIG et al
+ProbLog compactly represents a proof as a list of numbers. We would further like
+to have a scalable implementation of sets of proofs, such that we can compute the
+joint probability of large sets of proofs efficiently. Our representation for sets of
+proofs and our algorithm for computing the probability of such a set are discussed
+next.
+4.3 Sets of Proofs
+StoringandmanipulatingproofsiscriticalinProbLog.Whenmanipulatingproofs,
+thekeyoperationisofteninsertion:wewouldliketoaddaprooftoanexistingsetof
+proofs. Some algorithms, such as exact inference or Monte Carlo, only manipulate
+complete proofs. Others, such as bounded approximation, require adding partial
+derivations too. The nature of the SLD-tree means that proofs tend to share both
+a prefix and a suffix. Partial proofs tend to share prefixes only. This suggests using
+tries to maintain the set of proofs. We use the YAP implementation of tries for
+this task, based itself on XSB Prolog’s work on tries of terms (Ramakrishnan et al.
+1999), which we briefly summarize here.
+Tries (Fredkin 1962) were originally invented to index dictionaries, and have
+sincebeengeneralisedtoindexrecursivedatastructuressuchasterms.Pleaserefer
+to(Bachmairetal.1993;Graf1996;Ramakrishnanetal.1999)fortheuseoftriesin
+automatedtheoremproving,termrewritingandtabledlogicprograms.Anessential
+property of the trie data structure is that common prefixes are stored only once.
+A trie is a tree structure where each different path through the trie data units,
+the trie nodes, corresponds to a term described by the tokens labelling the nodes
+traversed.Forexample,thetokenizedformofthetermf(g(a),1)isthesequenceof
+4 tokens: f/2, g/1, a and 1. Two terms with common prefixes will branch off from
+each other at the first distinguishing token.
+Trie’s internal nodes are four field data structures, storing the node’s token,
+a pointer to the node’s first child, a pointer to the node’s parent and a pointer
+to the node’s next sibling, respectively. Each internal node’s outgoing transitions
+may be determined by following the child pointer to the first child node and, from
+there, continuing sequentially through the list of sibling pointers. When a list of
+sibling nodes becomes larger than a threshold value (8 in our implementation), we
+dynamicallyindexthenodesthroughahashtabletoprovidedirectnodeaccessand
+therefore optimise the search. Further hash collisions are reduced by dynamically
+expanding the hash tables. Inserting a term requires in the worst case allocating
+as many nodes as necessary to represent its complete path. On the other hand,
+inserting repeated terms requires traversing the trie structure until reaching the
+corresponding leaf node, without allocating any new node.
+In order to minimize the number of nodes when storing proofs in a trie, we use
+Prolog lists to represent proofs. For example, a ProbLog proof [3,5 1,7,5 2] uses
+ground fact 3, a first grounding of fact 5, ground fact 7 and another grounding of
+fact5,thatis,listelementsinproofsarealwayseitherintegersortwointegerswith
+an underscore in between.
+Figure 4 presents an example of a trie storing three proofs. Initially, the trie
+On the Implementation of ProbLog 15
+root node root node root node
+LIST LIST LIST
+5_1 5_1 5_1 4
+7 7 9 7 9 7
+5_2 5_2 7 5_2 7 END_LIST
+END_LIST END_LIST 5_2 END_LIST 5_2
+END_LIST END_LIST
+Figure 4. Using tries to store proofs. Initially, the trie contains the root node only.
+Next, we store the proofs: (a) [3,5 1,7,5 2]; (b) [3,5 1,9,7,5 2]; and (c) [3,4,7].
+Figure 5. Binary Decision Diagram encoding the DNF formula cd ∨(ce∧ed), cor-
+responding to the two proofs of query path(c,d) in the example graph. An internal
+node labeled xy represents the Boolean variable for the edge between x and y,
+solid/dashed edges correspond to values true/false and are labeled with the prob-
+ability that the variable takes this value.
+contains the root node only. Next, we store the proof [3,5 1,7,5 2] and six nodes
+(corresponding to six tokens) are added to represent it (Figure 4(a)). The proof
+[3,5 1,9,7,5 2] is then stored which requires seven nodes. As it shares a common
+prefix with the previous proof, we save the three initial nodes common to both
+representations (Figure 4(b)). The proof [3,4,7] is stored next and we save again
+the two initial nodes common to all proofs (Figure 4(c)).
+4.4 Binary Decision Diagrams
+ToefficientlycomputetheprobabilityofaDNFformularepresentingasetofproofs,
+our implementation represents this formula as a reduced ordered Binary Decision
+Diagram (BDD) (Bryant 1986), which can be viewed as a compact encoding of a
+Boolean decision tree. Given a fixed variable ordering, a Boolean function f can
+be represented as a full Boolean decision tree, where each node on the ith level
+16 A. KIMMIG et al
+Algorithm 2TranslatingatrieT representingaDNFtoaBDDgenerationscript.
+Replace(T,C,n ) replaces each occurence of C in T by n .
+function Translate(trie T)
+while ¬leaf(T) do
+S :={(C,P)|C leaf in T and single child of its parent P}
+for all (C,P)∈S do
+write n =P ∧C
+T :=Replace(T,(C,P),n )
+S :={[C ,...,C ]| leaves C are all the children of some parent P in T}
+for all [C ,...,C ]∈S do
+write n =C ∨...∨C
+T :=Replace(T,[C ,...,C ],n )
+write top =n
+is labeled with the ith variable and has two children called low and high. Leaves
+are labeled by the outcome of f for the variable assignment corresponding to the
+pathtotheleaf,whereineachnodelabeledx,thebranchtothelow(high)childis
+taken if variable x is assigned 0 (1). Starting from such a tree, one obtains a BDD
+by merging isomorphic subgraphs and deleting redundant nodes until no further
+reduction is possible. A node is redundant if the subgraphs rooted at its children
+are isomorphic. Figure 5 shows the BDD for the existence of a path between c and
+d in our earlier example.
+We use SimpleCUDD5 as a wrapper tool for the BDD package CUDD6 to con-
+struct and evaluate BDDs. More precisely, the trie representation of the DNF is
+translatedtoaBDDgenerationscript,whichisprocessedbySimpleCUDDtobuild
+theBDDusingCUDDprimitives.ItisexecutedviaProlog’sshellutility,andresults
+are reported via shared files.
+During the generation of the code, it is crucial to exploit the structure sharing
+(prefixesandsuffixes)alreadyinthetrierepresentationofaDNFformula,otherwise
+CUDD computation time becomes extremely long or memory overflows quickly.
+SinceCUDDbuildsBDDsbyjoiningsmallerBDDsusinglogicaloperations,thetrie
+istraversedbottom-uptosuccessivelygeneratecodeforallitssubtrees.Algorithm2
+gives the details of this procedure. Two types of operations are used to combine
+nodes. The first creates conjunctions of leaf nodes and their parent if the leaf is
+a single child, the second creates disjunctions of all child nodes of a node if these
+childnodesareallleaves.Inbothcases,asubtreethatoccursmultipletimesinthe
+trie is translated only once, and the resulting BDD is used for all occurrences of
+that subtree. Because of the optimizations in CUDD, the resulting BDD can have
+On the Implementation of ProbLog 17
+cd ce bc ac ab ac ab
+ed cd ce cd n1 bc n2 bc n3 ab
+ed cd n1 n2 n4 n3 n5
+Figure 6. Translating the DNF for path(a,d).
+Algorithm 3 Calculating the probability of a BDD.
+function Probability(BDD node n )
+If n is the 1-terminal then return 1
+If n is the 0-terminal then return 0
+let h and l be the high and low children of n
+prob(h):= call Probability(h)
+prob(l):= call Probability(l)
+a very different structure than the trie. The translation for query path(a,d) in our
+example graph is illustrated in Figure 6, it results in the following script:
+n1 = ce∧ed
+n2 = cd ∨n1
+n3 = ac∧n2
+n4 = bc∧n2
+n5 = ab∧n4
+n6 = n3∨n5
+After CUDD has generated the BDD, the probability of a formula is calculated
+by traversing the BDD, in each node summing the probability of the high and low
+child,weightedbytheprobabilityofthenode’svariablebeingassignedtrueandfalse
+respectively,cf.Algorithm3.Intermediateresultsarecached,andthealgorithmhas
+atimeandspacecomplexitylinearinthesizeoftheBDD.Forillustration,consider
+againFigure5.Thealgorithmstartsbyassigningprobabilities0and1tothe0-and
+1-leaf respectively. The node labeled ed has probability 0.5·1+0.5·0=0.5, node
+ce has probability 0.8·0.5+0.2·0 = 0.4; finally, node cd, and thus the entire
+formula, has probability 0.9·1+0.1·0.4=0.94.
+18 A. KIMMIG et al
+Algorithm 4 Monte Carlo Inference.
+function MonteCarlo(query q, interval width δ , constant m)
+c =0; i =0; p =0; δ =1;
+while δ >δ do
+Generate a sample P(cid:48);
+if P(cid:48) |=q then
+if i mod m ==0 then
+4.5 Monte Carlo
+The Monte Carlo implementation is shown in Algorithm 4. It receives a query q,
+an acceptance threshold δ and a constant m determining the number of samples
+generated per iteration. At the end of each iteration, it estimates the probability
+p as the fraction of programs sampled over all previous iterations that entailed
+the query, and the confidence interval width to be used in the stopping criterion
+as explained in Section 3.2.3. Monte Carlo execution is quite different from the
+approaches discussed before, as the two main steps are (a) generating a sample
+program and (b) performing standard refutation on the sample. Thus, instead of
+combininglargenumbersofproofs,weneedtomanipulatelargenumbersofdifferent
+programs or samples.
+Our first approach was to generate a complete sample and to check for a proof.
+In order to accelerate the process, proofs were cached in a trie to skip inference on
+a new sample. If no proofs exist on a cache, we call the standard Prolog refutation
+procedure. Although this approach works rather well for small databases, it does
+not scale to larger databases where just generating a new sample requires walking
+through millions of facts.
+We observed that even in large programs proofs are often quite short, i.e., we
+only need to verify whether facts from a small fragment of the database are in
+the sample. This suggests that it may be a good idea to take advantage of the
+independence between facts and generate the sample lazily: we verify whether a
+fact is in the sample only when we need it for a proof. YAP represents samples
+compactly as a three-valued array with one field for each fact, where 0 means the
+fact was not yet sampled, 1 it was already sampled and belongs to the sample, 2 it
+was already sampled and does not belong to the sample. In this implementation:
+1. New samples are generated by resetting the sampling array.
+2. At every call to add to proof, given the current ProbLog literal f:
+(b) if s[f]==1, succeed;
+(c) if s[f]==2, fail;
+On the Implementation of ProbLog 19
+Note that as fact identifiers are used to access the array, the approach cannot di-
+rectly be used for non-ground facts. The current implementation of Monte Carlo
+thereforeusestheinternaldatabasetostoretheresultofsamplingdifferentground-
+ings of such facts.
+5 Experiments
+We performed experiments with our implementation of ProbLog in the context of
+the biological network obtained from the Biomine project (Sevon et al. 2006). We
+used two subgraphs extracted around three genes known to be connected to the
+Alzheimer disease (HGNC numbers 983, 620 and 582) as well as the full network.
+The smaller graphs were obtained querying Biomine for best paths of length 2
+(resulting in graph Small) or all paths of length 3 (resulting in graph Medium)
+startingatoneofthethreegenes.Smallcontains79nodesand144edges,Medium
+5220nodesand11532edges.WeusedSmallforafirstcomparisonofouralgorithms
+on a small scale network where success probabilities can be calculated exactly.
+Scalability was evaluated using both Medium and the entire Biomine network
+with roughly 1,000,000 nodes and 6,000,000 edges. In all experiments, we queried
+for the probability that two of the gene nodes mentioned above are connected,
+that is, we used queries such as path(’HGNC 983’,’HGNC 620’,Path). We used
+the following definition of an acyclic path in our background knowledge:
+path(X,Y,A) :− path(X,Y,[X],A),
+path(X,X,A,A).
+path(X,Y,A,R) :− X \== Y,
+edge(X,Z),
+absent(Z,A),
+path(Z,Y,[Z|A],R).
+As list operations to check for the absence of a node get expensive for long paths,
+we consider an alternative definition for use in Monte Carlo. It provides cheaper
+testing by using the internal database of YAP to store nodes on the current path
+under key visited:
+memopath(X,Y,A) :− eraseall(visited),
+memopath(X,Y,[X],A).
+memopath(X,X,A,A).
+memopath(X,Y,A,R) :− X \== Y, (12)
+edge(X,Z),
+recordzifnot(visited,Z, ),
+memopath(Z,Y,[Z|A],R).
+20 A. KIMMIG et al
+path 983−620 983−582 620−582
+k T T P T T P T T P
+P B P B P B
+1 0 13 0.07 0 7 0.05 0 26 0.66
+2 0 12 0.08 0 6 0.05 0 6 0.66
+4 0 12 0.10 10 6 0.06 0 6 0.86
+8 10 12 0.11 0 6 0.06 0 6 0.92
+16 0 12 0.11 10 6 0.06 0 6 0.92
+32 20 34 0.11 10 17 0.07 0 7 0.96
+64 20 74 0.11 10 46 0.09 10 38 0.99
+128 50 121 0.11 40 161 0.10 20 257 1.00
+256 140 104 0.11 80 215 0.10 90 246 1.00
+512 450 118 0.11 370 455 0.11 230 345 1.00
+1024 1310 537 0.11 950 494 0.11 920 237 1.00
+exact 670 450 0.11 8060 659 0.11 630 721 1.00
+Table 1. k-probability on Small.
+Finally, to assess performance on the full network for queries with smaller proba-
+bilities, we use the following definition of paths with limited length:
+lenpath(N,X,Y,Path) :− lenpath(N,X,Y,[X],Path).
+lenpath(N,X,X,A,A) :− N≥0.
+lenpath(N,X,Y,A,P) :− X\==Y,
+edge(X,Z),
+absent(Z,A),
+NN is N−1,
+lenpath(NN,Z,Y,[Z|A],P).
+AllexperimentswereperformedonaCore2Duo2.4GHz4GBmachinerunning
+Linux.Alltimesreportedareinmsecanddonotincludethetimetoloadthegraph
+into Prolog. The latter takes 20, 200 and 78140 msec for Small, Medium and
+Biomine respectively. Furthermore, as YAP indexes the database at query time,
+we query for the explanation probability of path(’HGNC 620’,’HGNC 582’,Path)
+beforestartingruntimemeasurements.Thistakes0,50and25900msecforSmall,
+Medium and Biomine respectively. We report T , the time spent by ProbLog to
+searchforproofs,aswellasT ,thetimespenttoexecuteBDDprograms(whenever
+meaningful).WealsoreporttheestimatedprobabilityP.Forapproximateinference
+using bounds, we report exact intervals for P, and also include the number n of
+BDDs constructed. We set both the initial threshold and the shrinking factor to
+0.5.Wecomputedk-probabilityfork =1,2,...,1024.Intheboundingalgorithms,
+theerrorintervalrangedbetween10%and1%.MonteCarlorecalculatesconfidence
+intervals after m =1000 samples. We also report the number S of samples used.
+On the Implementation of ProbLog 21
+path 983−620 983−582 620−582
+δ T T n P T T n P T T n P
+P B P B P B
+0.10 0 48 4 [0.07,0.12] 10 74 6 [0.06,0.11] 0 25 2 [0.91,1.00]
+0.05 0 71 6 [0.07,0.11] 0 75 6 [0.06,0.11] 0 486 4 [0.98,1.00]
+0.01 0 83 7 [0.11,0.11] 140 3364 10 [0.10,0.11] 60 1886 6 [1.00,1.00]
+Table 2. Inference using bounds on Small.
+path 983−620 983−582 620−582
+δ S T P S T P S T P
+0.10 1000 10 0.11 1000 10 0.11 1000 30 1.00
+0.05 1000 10 0.11 1000 10 0.10 1000 20 1.00
+0.01 16000 130 0.11 16000 170 0.11 1000 30 1.00
+Table 3. Monte Carlo Inference on Small.
+SmallSizedSample WefirstcomparedouralgorithmsonSmall.Table1showsthe
+resultsfork-probabilityandexactinference.Notethatnodes620and582areclose
+to each other, whereas node 983 is farther apart. Therefore, connections involving
+the latter are less likely. In this graph, we obtained good approximations using a
+small fraction of proofs (the queries have 13136, 155695 and 16048 proofs respec-
+tively). Our results also show a significant increase in running times as ProbLog
+explores more paths in the graph, both within the Prolog code and within the
+BDD code. The BDD running times can vary widely, we may actually have large
+running times for smaller BDDs, depending on BDD structure. However, using
+SimpleCUDD instead of the C++ interface used in (Kimmig et al. 2008) typically
+decreases BDD time by at least one or two orders of magnitude.
+Table 2 gives corresponding results for bounded approximation. The algorithm
+converges quickly, as few proofs are needed and BDDs remain small. Note however
+that exact inference is competitive for this problem size. Moreover, we observe
+largespeedupscomparedtotheimplementationwithmeta-interpretersusedin(De
+Raedt et al. 2007), where total runtimes to reach δ = 0.01 for these queries were
+46234, 206400 and 307966 msec respectively. Table 3 shows the performance of the
+Monte Carlo estimator. On Small, Monte Carlo is the fastest approach. Already
+within the first 1000 samples a good approximation is obtained.
+TheexperimentsonSmallthusconfirmthattheimplementationontopofYAP-
+Prolog enables efficient probabilistic inference on small sized graphs.
+MediumSizedSample ForgraphMediumwitharound11000edges,exactinference
+is no longer feasible. Table 4 again shows results for the k-probability. Comparing
+these results with the corresponding values from Table 1, we observe that the es-
+timated probability is higher now: this is natural, as the graph has both more
+22 A. KIMMIG et al
+path 983−620 983−582 620−582
+k T T P T T P T T P
+P B P B P B
+1 180 6 0.33 1620 6 0.30 10 6 0.92
+2 180 6 0.33 1620 6 0.30 20 6 0.92
+4 180 6 0.33 1630 6 0.30 10 6 0.92
+8 220 6 0.33 1630 6 0.30 20 6 0.92
+16 260 6 0.33 1660 6 0.30 30 6 0.99
+32 710 6 0.40 1710 7 0.30 110 6 1.00
+64 1540 7 0.42 1910 6 0.30 200 6 1.00
+128 1680 6 0.42 2230 6 0.30 240 9 1.00
+256 2190 7 0.55 2720 6 0.49 290 196 1.00
+512 2650 7 0.64 3730 7 0.53 1310 327 1.00
+1024 8100 41 0.70 5080 8 0.56 3070 1357 1.00
+Table 4. k-probability on Medium.
+memo 983−620 983−582 620−582
+δ S T P S T P S T P
+0.10 1000 1180 0.78 1000 2130 0.76 1000 1640 1.00
+0.05 2000 2320 0.77 2000 4230 0.74 1000 1640 1.00
+0.01 29000 33220 0.77 29000 61140 0.77 1000 1670 1.00
+Table 5. Monte Carlo Inference using memopath/3 on Medium.
+nodes and is more connected, therefore leading to many more possible explana-
+tions.Thisalsoexplainstheincreaseinrunningtimes.Approximateinferenceusing
+boundsonlyreachedloosebounds(withdifferences>0.2)onqueriesinvolvingnode
+’HGNC 983’,asupperboundformulaewithmorethan10millionconjunctionswere
+encountered, which could not be processed.
+The Monte Carlo estimator using the standard definition of path/3 on Medium
+did not complete the first 1000 samples within one hour. A detailed analysis shows
+that this is caused by some queries backtracking too heavily. Table 5 therefore
+reportsresultsusingthememorisingversionmemopath/3.Withthisimproveddefi-
+nition,MonteCarloperformswell:itobtainsagoodapproximationinafewseconds.
+Requiring tighter bounds however can increase runtimes significantly.
+Biomine Database The Biomine Database covers hundreds of thousands of enti-
+ties and millions of links. On Biomine, we therefore restricted our experiments to
+the approximations given by k-probability and Monte Carlo. Given the results on
+Medium, we directly used memopath/3 for Monte Carlo. Tables 6 and 7 show the
+results on the large network. We observe that on this large graph, the number of
+possible paths is tremendous, which implies success probabilities practically equal
+to 1. Still, we observe that ProbLog’s branch-and-bound search to find the best
+On the Implementation of ProbLog 23
+path 983−620 983−582 620−582
+k T T P T T P T T P
+P B P B P B
+1 5,760 49 0.16 8,910 48 0.11 10 48 0.59
+2 5,800 48 0.16 10,340 48 0.17 180 48 0.63
+4 6,200 48 0.16 13,640 48 0.28 360 48 0.65
+8 7,480 48 0.16 15,550 49 0.38 500 48 0.66
+16 11,470 49 0.50 58,050 49 0.53 630 48 0.92
+32 15,100 49 0.57 106,300 49 0.56 2,220 167 0.95
+64 53,760 84 0.80 146,380 101 0.65 3,690 167 0.95
+128 71,560 126 0.88 230,290 354 0.76 7,360 369 0.98
+256 138,300 277 0.95 336,410 520 0.85 13,520 1,106 1.00
+512 242,210 730 0.98 501,870 2,744 0.88 23,910 3,444 1.00
+1024 364,490 10,597 0.99 1,809,680 100,468 0.93 146,890 10,675 1.00
+Table 6. k-probability on Biomine.
+memo 983−620 983−582 620−582
+δ S T P S T P S T P
+0.10 1000 100,700 1.00 1000 1,656,660 1.00 1000 1,696,420 1.00
+0.05 1000 100,230 1.00 1000 1,671,880 1.00 1000 1,690,830 1.00
+0.01 1000 93,120 1.00 1000 1,710,200 1.00 1000 1,637,320 1.00
+Table 7. Monte Carlo Inference using memopath/3 on Biomine.
+solutions performs reasonably also on this size of network. However, runtimes for
+obtaining tight confidence intervals with Monte Carlo explode quickly even with
+the improved path definition. Given that sampling a program that does not entail
+the query is extremely unlikely for the setting considered so far, we performed an
+additional experiment on Biomine, where we restrict the number of edges on the
+path connecting two nodes to a maximum of 2 or 3. Results are reported in Ta-
+ble 8. As none of the resulting queries have more than 50 proofs, exact inference is
+much faster than Monte Carlo, which needs a higher number of samples to reliably
+estimate probabilities that are not close to 1.
+Altogether, the experiments confirm that our implementation provides efficient
+inference algorithms for ProbLog that scale to large databases. Furthermore, com-
+pared to the original implementation of (De Raedt et al. 2007), we obtain large
+speedups in both the Prolog and the BDD part, thereby opening new perspectives
+for applications of ProbLog.
+6 Conclusions
+ProbLog is a simple but elegant probabilistic logic programming language that al-
+lowsonetoexplicitlyrepresentuncertaintybymeansofprobabilisticfactsdenoting
+24 A. KIMMIG et al
+len 983−620 983−582 620−582
+δ S T P S T P S T P
+0.10 1000 21,400 0.04 1000 18,720 0.11 1000 19,150 0.58
+0.05 1000 19,770 0.05 1000 20,980 0.10 2000 35,100 0.55
+0.01 6000 112,740 0.04 16000 307,520 0.11 40000 764,700 0.55
+exact - 477 0.04 - 456 0.11 - 581 0.55
+0.10 1000 106,730 0.14 1000 105,350 0.33 1000 45,400 0.96
+0.05 1000 107,920 0.14 2000 198,930 0.34 1000 49,950 0.96
+0.01 19000 2,065,030 0.14 37000 3,828,520 0.35 6000 282,400 0.96
+exact - 9,413 0.14 - 9,485 0.35 - 15,806 0.96
+Table 8. Monte Carlo inference for different values of δ and exact inference using
+lenpath/4 with length at most 2 (top) or 3 (bottom) on Biomine. For exact
+inference, runtimes include both Prolog and BDD time.
+independent random variables. The language is a simple and natural extension of
+the logic programming language Prolog. We presented an efficient implementation
+oftheProbLoglanguageontopoftheYAP-Prologsystemthatisdesignedtoscale
+tolargesizedproblems.WeshowedthatProbLogcanbeusedtoobtainbothexpla-
+nationand(approximationsof)successprobabilitiesforqueriesonalargedatabase.
+To the best of our knowledge, ProbLog is the first example of a probabilistic logic
+programming system that can execute queries on such large databases. Due to the
+useofBDDsforaddressingthedisjoint-sum-problem,theinitialimplementationof
+ProbLog used in (De Raedt et al. 2007) already scaled up much better than alter-
+native implementations such as Fuhr’s pD engine HySpirit (Fuhr 2000). The tight
+integration in YAP-Prolog presented here leads to further speedups in runtime of
+several orders of magnitude.
+Although we focused on connectivity queries and Biomine in this work, similar
+problemsarefoundacrossmanydomains;webelievethatthetechniquespresented
+apply to a wide variety of queries and databases because ProbLog provides a clean
+separation between background knowledge and what is specific to the engine. As
+shown for Monte Carlo inference, such an interface can be very useful to improve
+performance as it allows incremental refinement of background knowledge, e.g.,
+graph procedures. Initial experiments with Dijkstra’s algorithm for finding the ex-
+planation probability are very promising.
+ProbLog is closely related to some alternative formalisms such as PHA and
+ICL (Poole 1993b; Poole 2000), pD (Fuhr 2000) and PRISM (Sato and Kameya
+2001)astheirsemanticsareallbasedon Sato’s distribution semanticseven though
+there exist also some subtle differences. However, ProbLog is – to the best of the
+authors’ knowledge – the first implementation that tightly integrates Sato’s origi-
+nal distribution semantics (Sato 1995) in a state-of-the-art Prolog system without
+On the Implementation of ProbLog 25
+making additional restrictions (such as the exclusive explanation assumption made
+in PHA and PRISM). As ProbLog, both PRISM and the ICL implementation
+AILog2 use a two-step approach to inference, where proofs are collected in the
+first phase, and probabilities are calculated once all proofs are known. AILog2 is
+a meta-interpreter implemented in SWI-Prolog for didactical purposes, where the
+disjoint-sum-problemistackledusingasymbolicdisjoiningtechnique(Poole2000).
+PRISM,builtontopofB-Prolog,requiresprogramstobewrittensuchthatalterna-
+tiveexplanationsforqueriesaremutuallyexclusive.PRISMusesameta-interpreter
+tocollectproofsinahierarchicaldatastructurecalledexplanationgraph.Asproofs
+aremutuallyexclusive,theexplanationgraphdirectlymirrorsthesum-of-products
+structure of probability calculation (Sato and Kameya 2001). ProbLog is the first
+probabilistic logic programming system using BDDs as a basic datastructure for
+probability calculation, a principle that receives increased interest in the proba-
+bilistic logic learning community, cf. for instance (Riguzzi 2007; Ishihata et al.
+2008).
+Furthermore, as compared to SLPs (Muggleton 1995), CLP(BN) (Santos Costa
+et al. 2003), and BLPs (Kersting and De Raedt 2008), ProbLog is a much simpler
+and in a sense more primitive probabilistic programming language. Therefore, the
+relationship between probabilistic logic programming and ProbLog is, in a sense,
+analogoustothatbetweenlogicprogrammingandProlog.Fromthisperspective,it
+isourhopeandgoaltofurtherdevelopProbLogsothatitcanbeusedasageneral
+purposeprogramminglanguagewithanefficientimplementationforuseinstatisti-
+calrelationallearning(GetoorandTaskar2007)andprobabilisticprogramming(De
+Raedtetal.2008).Oneimportantuseofsuchaprobabilisticprogramminglanguage
+is as a target language in which other formalisms can be efficiently compiled. For
+instance,ithasalreadybeenshownthatCP-logic(Vennekensetal.2004),arecent
+elegant probabilistic knowledge representation language based on a probabilistic
+extension of clausal logic, can be compiled into ProbLog (Riguzzi 2007) and it is
+well-knownthatSLPs(Muggleton1995)canbecompiledintoSato’sPRISM,which
+iscloselyrelatedtoProbLog.Furtherevidenceisprovidedin(DeRaedtetal.2008).
+Another, related use of ProbLog is as a vehicle for developing learning and min-
+ing algorithms and tools (Kimmig et al. 2007; De Raedt et al. 2008; Gutmann
+et al. 2008; Kimmig and De Raedt 2009; De Raedt et al. 2009). In the context
+of probabilistic representations (Getoor and Taskar 2007; De Raedt et al. 2008),
+one typically distinguishes two types of learning: parameter estimation and struc-
+ture learning. In parameter estimation in the context of ProbLog and PRISM, one
+starts from a set of queries and the logical part of the program and the problem
+is to find good estimates of the parameter values, that is, the probabilities of the
+probabilistic facts in the program. (Gutmann et al. 2008) introduces a gradient
+descent approach to parameter learning for ProbLog that extends the BDD-based
+methods discussed here. In structure learning, one also starts from queries but has
+tofindthelogicalpartoftheprogramaswell.Structurelearningisthereforeclosely
+related to inductive logic programming. The limiting factor in statistical relational
+learningandprobabilisticlogiclearningisoftentheefficiencyofinference,aslearn-
+ing requires repeated computation of the probabilities of many queries. Therefore,
+26 A. KIMMIG et al
+improvements on inference in probabilistic programming implementations have an
+immediateeffectonlearning.Theabovecompilationapproachalsoraisestheinter-
+estingandlargelyopenquestionwhethernotonlyinferenceproblemsforalternative
+formalismscanbecompiledintoProbLogbutwhetheritisalsopossibletocompile
+learning problems for these logics into learning problems for ProbLog.
+Finally,asProbLog,unlikePRISMandPHA,dealswiththedisjoint-sum-problem,
+itisinterestingtostudyhowprogramtransformationandanalysistechniquescould
+be used to optimize ProbLog programs, by detecting and taking into account situ-
+ations where some conjunctions are disjoint. At the same time, we currently inves-
+tigate how tabling, one of the keys to PRISM’s efficiency, can be incorporated in
+ProbLog (Mantadelis and Janssens 2009; Kimmig et al. 2009).
+Acknowledgements
+We would like to thank Hannu Toivonen, Bernd Gutmann and Kristian Kersting
+fortheirmanycontributionstoProbLog,theBiomineteamfortheapplication,and
+TheofrastosMantadelisforthedevelopmentofSimpleCUDD.Thisworkispartially
+supported by the GOA project 2008/08 Probabilistic Logic Learning. Angelika
+Kimmig is supported by the Research Foundation-Flanders (FWO-Vlaanderen).
+V´ıtor Santos Costa and Ricardo Rocha are partially supported by the research
+projectsSTAMPA(PTDC/EIA/67738/2006)andJEDI(PTDC/EIA/66924/2006)
+and by Funda¸c˜ao para a Ciˆencia e Tecnologia.

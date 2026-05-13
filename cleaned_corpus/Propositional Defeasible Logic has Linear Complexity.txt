@@ -1,0 +1,681 @@
+1v0905040/sc:viXra
+UnderconsiderationforpublicationinTheoryandPracticeofLogicProgramming 1
+Propositional Defeasible Logic has
+Linear Complexity
+DepartmentofMathematicalandComputerSciences
+LoyolaUniversityChicago
+mjm@cs.luc.edu
+SchoolofComputing&InformationTechnology
+GriffithUniversity
+Defeasiblelogicisarule-basednonmonotoniclogic,withbothstrictanddefeasiblerules,andapri-
+orityrelationonrules.Weshowthatinferenceinthepropositionalformofthelogiccanbeperformed
+inlineartime.Thiscontrastsmarkedlywithmostotherpropositionalnonmonotoniclogics,inwhich
+inferenceisintractable.
+1 Introduction
+Mostworkinnon-monotonicreasoninghasfocussedonlanguagesforwhichpropositional
+inference is not tractable. Sceptical default reasoning is Πp-hard, even for very simple
+classesofdefaultrules,asisscepticalautoepistemicreasoningandpropositionalcircum-
+scription. The complexity of sceptical inference from logic programs with negation-as-
+failurevariesaccordingtothesemanticsofnegation.Forboththestablemodelsemantics
+andtheClarkcompletion,scepticalinferenceisco-NP-hard.See(13;9)formoredetails.
+Althoughsuchlanguagesareveryexpressive,andthisexpressivenesshasbeenexploited
+inanswer-setprogramming(26),forexample,theyhavenotledto anypracticalapplica-
+tionsinnon-monotonicreasoning.
+Therehasalso beenwork onmoretractablelanguages.Extensiveworkon inheritance
+networkswithexceptionshasledtopolynomialtimealgorithms(30)andapplications(25).
+Defeasible logic (27; 28) is a generalization(7) of inheritance networkswith exceptions
+underthedirectlyscepticalsemantics(17).Defeasiblelogicreplacestheimplicitspecificity
+relationbyanexplicit,programmablepriorityrelation;generalizescontainmentstatements
+betweenconceptsandtheir complementsto rulesoverliterals;andaddsthe notionofan
+explicitdefeater.Recentworkhasproposedotherlanguages(15;10)whichareessentially
+subsetsofdefeasiblelogic(5).
+We havealreadyestablishedthatfullfirst-orderdefeasiblelogichasa recursivelyenu-
+merableinferenceproblem(22).Inthispaperweestablishthatinferenceinpropositional
+defeasiblelogichaslinearcomplexity.Consideringtheseveralexpressivefeaturesofde-
+feasiblelogic,anditslowcomplexity,itappearstobeasuitablebasisforapplicationsof
+non-monotonicreasoningthatinvolveverylargerulesets.
+Inthenextsectionweintroducetheprooftheoryofdefeasiblelogic,whichdefinesthe
+logic.Thenwe presentatransitionsystem(forasubsetofdefeasiblelogic)thatprogres-
+sivelysimplifies a defeasibletheorywhile accumulatingconclusionsthatcan be inferred
+fromthetheory.Weshowthatthemeaningofthetheoryispreserved,andwhennomore
+transitionsareapplicableallconsequenceshavebeenaccumulated.
+The following section presents an algorithm that can be viewed as performing a par-
+ticularsequenceoftransitions.Byanappropriatechoiceofdatastructures,we showthat
+thesetofallconclusionscanbecomputedintimelinearinthesizeofthetheory.Finally,
+weusethetransformationsof(3;1)tomapanarbitrarydefeasibletheorytothesubsetof
+defeasiblelogictowhichthealgorithmapplies.Thesetransformationsrequireonlylinear
+time,andblowupinthesizeofthetheoryislinear.Thustheresultisalineartimecompu-
+tationoftheconclusionsofthedefeasibletheory.Thisalgorithmhasbeenthebasisofan
+implementationofdefeasiblelogic(23).
+2 DefeasibleLogic
+2.1 AnInformalPresentation
+We begin by presenting the basic ingredients of defeasible logic. A defeasible theory (a
+knowledgebaseindefeasiblelogic,oradefeasiblelogicprogram)consistsoffivedifferent
+kindsofknowledge:facts,strictrules,defeasiblerules,defeaters,andasuperiorityrelation.
+Factsareindisputablestatements,forexample,“Tweetyisanemu”.Writtenformally,this
+wouldbeexpressedasemu(tweety).
+Strict rules are rules in the classical sense: whenever the premises are indisputable (e.g.
+facts) thenso isthe conclusion.An exampleof a strict ruleis “Emusare birds”.Written
+formally:
+Defeasiblerulesarerulesthatcanbedefeatedbycontraryevidence.Anexampleofsuch
+aruleis“Birdstypicallyfly”;writtenformally:
+bird(X)⇒flies(X).
+The idea is that if we know that somethingis a bird, then we may concludethat it flies,
+unlessthereisother,notinferior,evidencesuggestingthatitmaynotfly.
+Defeatersarerulesthatcannotbeusedtodrawanyconclusions.Theironlyuseistopre-
+ventsome conclusions.In other words, they are used to defeat some defeasible rules by
+producingevidencetothecontrary.Anexampleis“Ifananimalisheavythenitmightnot
+beabletofly”.Formally:
+The main point is that the informationthat an animal is heavy is not sufficient evidence
+toconcludethatitdoesnotfly.Itisonlyevidencethattheanimalmaynotbeabletofly.
+In other words, we don’twish to conclude ¬flies(X) if heavy(X), we simply want to
+preventaconclusionflies(X)unlessthereismoreevidencethatoverridestheheaviness
+ofX.
+Thesuperiorityrelationamongrulesisusedtodefineprioritiesamongrules,thatis,where
+one rule may overridethe conclusion of another rule. For example, given the defeasible
+r : bird(X) ⇒flies(X)
+r′ : brokenWing(X) ⇒¬flies(X)
+which contradict one another, no conclusive decision can be made about whether a bird
+withbrokenwingscanfly.Butifweintroduceasuperiorityrelation>withr′ > r, with
+theintendedmeaningthatr′ isstrictlystrongerthanr, thenwecanindeedconcludethat
+thebirdcannotfly.
+Thereareseveralrelevantpointstobemadeaboutthesuperiorityrelationindefeasible
+logic. Notice that a cycle in the superiorityrelation is counter-intuitive.In the above ex-
+ample,itmakesnosensetohavebothr > r′ andr′ > r. Consequently,defeasiblelogic
+requiresthatthesuperiorityrelationisacyclic.
+Asecondpointworthnotingisthat,indefeasiblelogic,prioritiesarelocalinthefollow-
+ingsense:Tworulesareconsideredtobecompetingwith oneanotherexactlywhenthey
+havecomplementaryheads.Thus,sincethesuperiorityrelationisusedtoresolveconflicts
+amongcompetingrules, it is only used to compareruleswith complementaryheads;the
+informationr >r′ forrulesr,r′ withoutcomplementaryheadsmaybepartofthesuperi-
+orityrelation,buthasnoeffectontheprooftheory.
+Finally,setsofruleswithcompetingheadsworkasteamsagainsteachother.Forexam-
+ple,considerthefollowingrulesaboutmammals
+r 1 : monotreme(X) ⇒mammal(X)
+r 2 : hasFur(X) ⇒mammal(X)
+r 3 : laysEggs(X) ⇒¬mammal(X)
+r 4 : hasBill(X) ⇒¬mammal(X)
+with the followingsuperiorityrelation:r > r and r > r . Fora platypus,which sat-
+isfiesallantecedents,noruleissuperiortoallcompetingrules.However,rulesr andr
+togetheraresuperiortorulesr andr .Hencedefeasiblelogicconcludesthataplatypus
+isamammal.
+Defeasiblelogichassomesimilaritieswithdefaultlogic(29):botharenon-monotonic
+logicsthatdistinguishstatementswhichareunarguable(strictrules/facts)fromstatements
+thathave lesser force (defeasiblerules/defaults).However,there are substantialsyntactic
+andsemanticdifferences.
+First,defaultlogichasnonotionofpriorityamongrules,norofadefeaterthatcannotbe
+usedto make inferences.On the other hand,defaultlogicpermitsanylogicalexpression
+as a fact or in a default rule, whereas defeasible logic allows only rules as statements.
+Nevertheless,evenif werestrictattentionto propositionaldefaulttheories(W,D) where
+W is a conjunctionof literals andD consistsof Horndefaultrules(so that the syntaxis
+weaker than defeasible logic), sceptical inference is co-NP-hard (9) whereas, as will be
+showninthispaper,defeasiblelogichaslinearcomplexity.
+AsnotedbyNute(28),acentraldifferencebetweenthetwologicsisintheapplicationof
+rules.Indefaultlogictheapplicabilityofadefaultruleisindependentofanyotherdefault
+rulesothat,givendefaultrules :a and :¬a,eitherdefaultmaybeapplied.Ontheother
+hand,indefeasiblelogicwithrules{⇒a,⇒¬a}neitherrulemaybeapplied,sinceeach
+rule“interferes”with–ordefeats–theother.
+2.2 FormalDefinition
+Inthispaperwerestrictattentiontoessentiallypropositionaldefeasiblelogic.Ruleswith
+free variables can be interpreted as rule schemas, that is, as the set of all variable-free
+instances; in such cases we assume that the Herbrand universe is finite and we regard
+variable-freeatomsaspropositions.Forcompactnessofpresentation,weuseruleschemas
+inexamples.However,inthispaperweassumethatatheoryispresentedinpropositional
+form,andnotwithruleschemas.
+Weassumethatthereaderisfamiliarwiththenotationandbasicnotionsofpropositional
+logic.Ifqisaliteral,∼qdenotesthecomplementaryliteral(ifqisapositiveliteralpthen
+∼qis¬p;andifqis¬p,then∼qisp).
+A rule r : A(r) ֒→ C(r) consistsof its uniquelabelr, its antecedent(or body)A(r)
+(A(r) may be omitted if it is the empty set) which is a finite set of literals, an arrow
+֒→ (which is a placeholder for concrete arrows to be introduced in a moment), and its
+consequent (or head) C(r) which is a literal. In writing rules we omit set notation for
+antecedentsandsometimesweomitthelabelwhenitisnotrelevantforthecontext.There
+arethreekindsofrules,eachrepresentedbyadifferentarrow.Strictrulesuse→,defeasible
+rulesuse⇒,anddefeatersuse❀.
+GivenasetRofrules,wedenotethesetofallstrictrulesinRbyR ,thesetofstrictand
+defeasiblerulesinRbyR ,thesetofdefeasiblerulesinRbyR ,thesetofdefeasible
+rulesanddefeatersinRbyR ,andthesetofdefeatersinRbyR .R[q]denotestheset
+ofrulesinRwithconsequentq.
+A superiority relation on R is a relation > on R. When r > r , then r is called
+superior to r , and r inferior to r . Intuitively,r > r expresses that r overrulesr ,
+2 2 1 1 2 1 2
+shouldbothrulesbeapplicable.Weassume>tobeacyclic(thatis,thetransitiveclosure
+of>isirreflexive).
+AdefeasibletheoryDisatriple(F,R,>)whereF isafinitesetofliterals(calledfacts),
+Rafinitesetofrules,and>anacyclicsuperiorityrelationonR.
+We will use the following defeasible theory to demonstrate several aspects of defeasi-
+blelogic. We assumethere are onlytheconstantsethel andtweety in the language.Let
+D =(F ,R ,> )where:F isthesetoffacts
+bird bird bird bird bird
+emu(ethel).
+bird(tweety).
+R isrepresentedbythesetofruleschemas
+r 1 : emu(X) → bird(X).
+r 2 : bird(X) ⇒ flies(X).
+r 3 : heavy(X) ❀ ¬flies(X).
+r 4 : brokenWing(X) ⇒ ¬flies(X).
+r 5 : ⇒ heavy(ethel).
+andthesuperiorityrelation> containsonlyr > r .
+bird 4 bird 2
+Thefiveruleschemasgiverisetoninepropositionalrulesbyinstantiatingeachvariable
+toethelandtweetyrespectively.Thoserules,whichmakeupR are
+r 1,e : emu(ethel) → bird(ethel).
+r 1,t : emu(tweety) → bird(tweety).
+r 2,e : bird(ethel) ⇒ flies(ethel).
+r 2,t : bird(tweety) ⇒ flies(tweety).
+r 3,e : heavy(ethel) ❀ ¬flies(ethel).
+r 3,t : heavy(tweety) ❀ ¬flies(tweety).
+r 4,e : brokenWing(ethel) ⇒ ¬flies(ethel).
+r 4,t : brokenWing(tweety) ⇒ ¬flies(tweety).
+r 5 : ⇒ heavy(ethel).
+Theruleshavebeenre-labelledpurelytosimplifylaterreference1. Asa result,the supe-
+riorityrelationbecomes{r
+}.
+Asnotedintheprevioussubsection,thetwostatementsr > r andr > r
+4,e bird 2,t 4,t bird 2,e
+havenoeffect,sincetheydonotinvolveruleswithconflictingheads.
+Inthisdefeasibletheory,R
+2.3 ProofTheory
+Defeasiblelogicisdefinedbytheprooftheorypresentedinthissubsection.Therearealso
+characterizations of defeasible logic in other frameworks (22; 14; 20), but they are not
+neededhere.
+AconclusionofDisataggedliteralthatmaybeprovedbyD,andcanhaveoneofthe
+followingfourforms:
++∆q whichisintendedtomeanthatqisdefinitelyprovableinD.
+−∆q whichisintendedtomeanthatwehaveprovedthatqisnotdefinitelyprovableinD.
++∂q whichisintendedtomeanthatqisdefeasiblyprovableinD.
+−∂q whichisintendedto meanthatwe haveprovedthatq isnotdefeasiblyprovablein
+D.
+Conclusions are used only at the meta-level and do not occur in defeasible theories.
+Notice the distinction between −, which is used only to express unprovability, and ¬,
+which expresses classical negation. For example, −∆¬flies(tweety) means that it has
+been provedthat the negatedproposition¬flies(tweety)cannotbe proveddefinitely in
+thedefeasibletheory.
+If we are able to proveq definitely,then q is also defeasiblyprovable.This is a direct
+consequenceoftheformaldefinitionbelow.Similarly,if−∂q isconcludedthenwemust
+alsoconclude−∆q.
+Provability is defined below. It is based on the concept of a derivation (or proof) in
+D = (F,R,>).AderivationisafinitesequenceP = (P(1),...P(n))oftaggedliterals
+1Withoutthere-labellingwewouldhavedifferentruleswiththesamelabel.Thisisnotaproblem,formally,but
+mightbeconfusing.
+constructedby inference rules. There are four inference rules (correspondingto the four
+kindsofconclusion)thatspecifyhowaderivationmaybeextended.(P(1..i)denotesthe
+initialpartofthesequenceP oflengthi):
++∆:WemayappendP(i+1)=+∆qifeither
+Thismeans,toprove+∆qweneedtoestablishaproofforqusingfactsandstrictrules
+only.Thisisadeductionintheclassicalsense–noproofsforthenegationofqneedtobe
+considered(incontrasttodefeasibleprovabilitybelow,whereopposingchainsofreasoning
+mustalsobetakenintoaccount).FromD inExample1wecaninfer+∆emu(ethel)
+(and +∆bird(tweety)) immediately, in a proof of length 1. Using r
+and the second
+clauseoftheinferencerule,wecaninfer+∆bird(ethel)inaproofoflength2.
+Toprove−∆q,thatis,thatqisnotdefinitelyprovable,qmustnotbeafact.Inaddition,
+we need to establish that every strict rule with head q is known to be inapplicable.Thus
+for every such rule r there must be at least one element a of the antecedent for which
+we have established that a is not definitely provable (−∆a). From D , we can infer
+−∆heavy(tweety)and−∆¬flies(tweety)immediately(amongmanyothers),sincein
+thesecasesR [q]isempty.
+Note that this definition of nonprovabilitydoes not involve loop detection. Thus if D
+consistsofthesinglerulep →p,wecanseethatpcannotbeproven,butdefeasiblelogic
+isunabletoprove−∆p.
+Defeasibleprovabilityrequiresconsiderationofchainsofreasoningforthecomplemen-
+taryliteral,andpossibleresolutionusingthesuperiorityrelation.Thustheinferencerules
+fordefeasibleprovabilityaremorecomplicatedthanthosefordefiniteprovability.
++∂: WemayappendP(i+1)=+∂qifeither
+(2.3.2)∃t∈R [q]suchthat
+Let us illustrate this definition. To show that q is provable defeasibly we have two
+choices: (1) We show that q is already definitely provable; or (2) we need to argue us-
+ing the defeasible part of D as well. In particular, we require that there must be a strict
+or defeasible rule with head q which can be applied (2.1).But now we need to consider
+possible“attacks”,thatis,reasoningchainsinsupportof∼q.Tobemorespecific:toprove
+q defeasibly we must show that∼q is not definitely provable (2.2). Also (2.3) we must
+considerthesetofallruleswhicharenotknowntobeinapplicableandwhichhavehead
+∼q (notethatherewe considerdefeaters,too,whereastheycouldnotbeusedtosupport
+theconclusionq; thisisin line with themotivationof defeatersgiveninsubsection2.1).
+Essentiallyeachsuchrulesattackstheconclusionq.Forqtobeprovable,eachsuchrule
+smustbecounterattackedbyaruletwithheadqwiththefollowingproperties:(i)tmust
+be applicable at this point, and (ii) t must be stronger than s. Thus each attack on the
+conclusionqmustbecounterattackedbyastrongerrule.
+FromD inExample1wecaninfer+∂bird(ethel)inaproofoflength3,using(1).
+Otherapplicationsofthisinferencerulefirstrequireapplicationoftheinferencerule−∂.
+Thisinferencerulecompletesthedefinitionoftheprooftheoryofdefeasiblelogic.Itisa
+strongnegationoftheinferencerule+∂ (2).
+−∂: WemayappendP(i+1)=−∂qif
+(2.3.2)∀t∈R [q]either
+Toprovethatqisnotdefeasiblyprovable,wemustfirstestablishthatitisnotdefinitely
+provable.Thenwemustestablishthatitcannotbeprovenusingthedefeasiblepartofthe
+theory.Therearethreepossibilitiestoachievethis:eitherwehaveestablishedthatnoneof
+the(strictanddefeasible)ruleswithheadqcanbeapplied(2.1);or∼qisdefinitelyprovable
+(2.2);ortheremustbeanapplicableruleswithhead∼qsuchthatnopossiblyapplicable
+ruletwithheadqissuperiortos(2.3).
+FromD inExample1wecaninfer−∂brokenWing(ethel)withaproofoflength
+2 using (1) and (2.1),since R[q] is empty.Employingthis conclusion,we can then infer
+−∂¬flies(ethel),againusing(2.1),since the onlyruler is r
+, we can infer
++∂heavy(ethel)by(2)oftheinferencerule+∂;(2.3)holdssinceR[∼q]isempty.Using
+(2.3)oftheinferencerule−∂,wecaninfer−∂flies(ethel),wheretheroleofsistaken
+byr .
+Furthermore,wecaninfer−∂brokenWing(tweety)and−∂heavy(tweety)using(2.1)
+ofinferencerule−∂,sinceinbothcasesR [q]isempty.Employingthoseconclusions,we
+cantheninfer−∂¬flies(tweety),againusing(2.1),sincetheonlyrulesfor¬flies(tweety)
+involveantecedentsalreadyestablishedtobeunprovabledefeasibly.Now,usingthiscon-
+clusion,wecanuse(2),specifically(2.1),oftheinferencerule+∂toinfer+∂flies(tweety).
+The elements of a derivation P in D are called lines of the derivation. We say that a
+taggedliteralLisprovableinD = (F,R,>),denotedD ⊢ L,iffthereisaderivationin
+DsuchthatLisalineofP.Equivalently,wesaythatLisaconclusion(orconsequence)
+ofD.
+Conclusions are the basis of our notion of equivalent defeasible theories. We say D
+areconclusionequivalent(writtenD
+haveidenticalsetsof
+consequences,thatis,D
+⊢L.
+Animportantpropertyofdefeasiblelogicisthatitiscoherent,thatis,thereisnodefea-
+sibletheoryDandliteralpsuchthatD ⊢+∂pandD ⊢−∂p,orD ⊢+∆pandD ⊢−∆p
+(6).Putsimply,thispropertysaysthatwecannotestablishthataliteralissimultaneously
+provableandunprovable.
+Notice that strict rules are used in two different ways. When we try to establish defi-
+nite provability, then strict rules are used as in classical logic: if their bodies are proved
+definitelythentheirheadisproveddefinitely,regardlessofanyreasoningchainswiththe
+oppositeconclusion.Butstrictrulescanalsobeusedtoshowdefeasibleprovability,given
+thatsome other literals are knownto be defeasibly provable.In this case, strict rules are
+used exactly like defeasible rules. For example, a strict rule may have its body proved
+defeasibly,yetit maynotfire becausethere isa rule with the oppositeconclusionthatis
+notweaker.Furthermore,strictrulesarenotautomaticallysuperiortodefeasiblerules.In
+thispaper,wewillchoosetoduplicatestrictrulesasdefeasiblerules,andrequiredefinite
+reasoningtousethestrictrules(asalways),whiledefeasiblereasoningmayuseonlyde-
+feasiblerules.Becauseoftheabovefacts,thisduplicationandseparationofrulesdoesnot
+modifytheconsequences.Whenthereisaduplicatedefeasibleruleforeverystrictrulein
+adefeasibletheory,wesaythatthetheoryhasduplicatedstrictrules.
+Inthispaperwewillfocusonthesubsetofdefeasiblelogicthatinvolvesnosuperiority
+statements and no defeaters, which we call basic defeasible logic. For basic defeasible
+logicthe inferencerulesare simplified (1). We simplifythem furtherbyintroducingtwo
+auxiliarytagsforliterals(+σand−σ)andcorrespondinginferencerules.
+Thesetags(+σ,−σ)representtheability/inabilitytofindatentativereasonfortheliter-
+als.Essentially,wecanprove+σqwhenthereisanargumentforq,butwemustconsider
+allcounter-arguments(for ∼q)beforewecanprove+∂q.Similarly,wecanprove−σq if
+thereisnotevenatentativereasonforq,butthereareotherwaystoconclude−∂q.Tagged
+literalsinvolvingσ,∂ or∆arecalledextendedconclusions.
+Withtheadditionofthesetagsandinferencerules,theinferencerulesfor∂arereduced
+to:
++∂:WemayappendP(i+1)=+∂qifeither
+Thismodifiedproofsystem reducesthe amountof “work”donein anyoneproofstep
+incomparisonwiththeoriginalinferencerules,andisthelogicalbasisforthealgorithm.
+However,the algorithmis also based on repeatedsimplification of the defeasible theory,
+whichwedescribeasatransitionsysteminthenextsection.
+3 TheTransitionSystem
+Thealgorithmisdefinedintermsofatransitionsystemonstates.Astateisapair(D,C)of
+adefeasibletheoryDandasetofextendedconclusionsC.Asthealgorithmproceeds,the
+theoryDissimplifiedandconclusionsofthetheoryareaccumulatedinC.Thetransitions
+forthe positiveconclusionsarebasedonforwardchaining.Thenegativeconclusionsare
+derivedbyadualprocess.
+Definition1
+Thereisatransition(D
+,C i+1)onlyinthefollowingcases:
+ifthereisafactqinD orastrictruleinD withheadqandemptybody
+ifthereisadefeasibleruleinD withheadqandemptybody
+ifthereisnostrictruleinD withheadqandnofactqinD
+ifthereisnoruleinD withheadq
+ifrisastrictruleinD withbodycontainingq,r′isrwithqdeleted,and+∆q ∈C
+if r is a defeasible rule in D with body containing q, r′ is r with q deleted, and
+ifrisastrictruleinD withbodycontainingq,and−∆q ∈C
+ifrisadefeasibleruleinD withbodycontainingq,and−∂q ∈C
+)=6⇒ifthereisnotransition(D
+,C i+1)exceptthose
+,C i+1).
+If(D,∅) =⇒ ··· =⇒ (D′,C′ ) =6⇒andC isthesubsetofC′ involvingonlythetags
++∆,−∆,+∂,and−∂,thenwesaythatDderivesC.
+WedemonstratetheactionofthetransitionsystemonD inExample1.Transition1
+appliestoeachfactandtransition3appliestoallliteralsexceptthefactsandbird(ethel).
+Similarly,transition2appliestoheavy(ethel)andtransition4appliestoseveralliterals,
+includingall brokenWing literals. These transitions do not modify D ; they only accu-
+mulate conclusionsin C . However,as a result of this accumulation,transition 7 deletes
+emu(ethel) from r
+, which then allows transition 1 to add +∂bird(ethel) to C
+transition9deletesr
+.Furthermore,transition5appliesforemu(ethel),bird(tweety),
+andbird(ethel)bythefirstcondition,andthentransition8appliestomodifyr
+similarly,transition6appliestoallbrokenWing literals,whichthenallowsr andr
+tobedeletedbytransition10.Furthertransitionsarepossible.
+It is quite clear that, by ignoring defeaters and superiority statements, the transition
+system is incorrectfor theories of full defeasible logic. The transition system is also in-
+complete,ingeneral,fortheoriesofbasicdefeasiblelogic.Forexample,fromtherules
+thetransitionsystemcannotconclude+σb.Butundertheassumptionthatstrictrulesare
+duplicated as defeasible rules, the transition system is sound and complete, as we now
+show.
+LetDbeabasicdefeasibletheorywithduplicatedstrictrules.Suppose(D,∅)=⇒···=⇒
+Consideratransition(D
+,C i+1).Weprove,byinductiononi,that
+• D i ≡D i+1
+foreveryconclusionc.
+Thefirstpartisstraightforward,sincethefirstsixtransitionsareessentiallyinstancesof
+theinferencerulesofdefeasiblelogic.TheremainderofthetransitionsdonotmodifyC .
+Forthesecondpartonlythelastfourtransitionsarerelevant.Weneedtoshowthat,for
+each transition and every proof in D there is a corresponding proof in D , and vice
+versa.
+Fortransition7:
+If a proof p in D applies the inference rule +∆ using r, then the inference rule is still
+applicableusingr′ andpisalsoaproofinD .Similarly,ifaproofpinD appliesthe
+inference rule −∆ involving r, then p establishes −∆x, for some x in the body of r. x
+cannotbeq,sinceD
+⊢+∆q.ThuspisalsoaproofinD
+.
+Ifa proofp inD
+appliesthe inferencerule+∆usingr′, letp′ bea proofin D
++∆q.Thentheconcatenationofp′andpisaproofinD
+.IfaproofpinD
+appliesthe
+inferencerule−∆involvingr′,thenpisalsoaproofinD .
+Fortransition8:
+Letsbetheheadofr.IfpisaproofinD
+containing+σsthenpisalsoaproofinD
+pisaproofinD
+containing+σs,letp′beaproofinD
+of+∂s.Thentheconcatenation
+ofp′andpisaproofinD .
+Ifpisa proofin D containing−σs,thenthereissomeliteralt inthebodyofr such
+that D ⊢ −∂t. t cannot be q since, by assumption, D ⊢ +∂q, and defeasible logic is
+coherent.ThuspisalsoaproofinD
+.IfpisaproofinD
+containing−σs,thenthere
+issome literalt in thebodyofr′ such thatD i+1 ⊢ −∂t.We mustalso have D i ⊢ −∂t,
+sincetheproofinD cannotuser′,whichwouldintroducecircularity.Thuspisalsoa
+proofinD .
+Fortransition9:
+IfaproofpinD appliestheinferencerule+∆itdoesnotusersinceD ⊢−∆q.Thusp
+isalsoaproofinD
+.IfaproofpinD
+appliestheinferencerule−∆thentheinference
+rulealsoappliesinD .ThuspisalsoaproofinD .
+If a proof p in D i+1 applies the inference rule +∆ then it is also a proof in D i . If a
+proofp in D
+appliesthe inferencerule−∆letp′ bea proofinD
+of−∆q.Thenthe
+concatenationofp′andpisaproofinD .
+Fortransition10:
+Letsbetheheadofr.IfpisaproofinD
+containing−σsthenpisalsoaproofinD
+pisaproofinD
+containing−σs,letp′beaproofinD
+of−∂q.Thentheconcatenation
+ofp′andpisaproofinD .
+If p is a proofin D containing+σs, then the proofof +σs cannotuse r, since D ⊢
+−∂q.ThuspisalsoaproofinD
+.IfpisaproofinD
+containing+σs,thenpisalso
+aproofinD .
+Itfollowsfromtheaboveproofthatthetransformeddefeasibletheoriesareequivalent.
+Corollary1
+LetDbeabasicdefeasibletheorywithduplicatedstrictrules.Suppose(D,∅)=⇒···=⇒
+The transition system is complete:it generatesall the conclusionsthat are inferredby
+defeasiblelogic.
+LetDbeabasicdefeasibletheorywithduplicatedstrictrules.Suppose(D,∅)=⇒···=⇒
+(D′,C′ )=6⇒.Foreveryconclusionc,ifD′ ⊢cthenc∈C′.
+Suppose,toobtainacontradiction,thatthetheoremdoesnothold,andletcbeaconclusion
+ofD′thatisnotinC′ andhasaminimallengthproofinD′amongsuchconclusions.
+Ifcis−∆q theneverystrictrulewithheadq hasabodyliteralbsuchthatD′ ⊢ −∆b.
+Bytheassumption,andsincetheproofforeach−∆bmustbeshorter,−∆b∈C′.Sinceno
+moretransitionsarepossible,andconsideringtransition9,thereisnostrictrulewithhead
+q.Butthen,atransition3thatadds−∆qtoC′,ispossible,contradictingtheassumption.
+Ifc is+∆q thenthereisastrictrulewithheadq andD′ ⊢ +∆bforeachbodyliteral
+b.Bytheassumption,andsincetheprooffor+∆bmustbeshorter,+∆b ∈ C′.Sinceno
+more transitions are possible, and considering transition 7, the body of the rule must be
+empty.Butthen,consideringtransition1,+∆q ∈C′,contradictingtheassumption.
+Similarly, if c is +∂q then there must be a defeasible rule for q with an empty body.
+Furthermore,D′ ⊢−∆∼q,andeverydefeasiblerulefor∼qcontainsabodyliteralbsuch
+that D′ ⊢ −∂b. By the assumption,−∂b ∈ C′, for each b, and −∆∼q ∈ C′. Since no
+moretransitionsare possible, consideringtransition10 theremustbe no defeasiblerules
+for∼q.Thus −σ∼q ∈ C′. Also +σq ∈ C′, since the rule body is empty, and thus the
+transition5applies,leadingtoacontradiction.
+Ifcis−∂qthenD′ ⊢−∆q,andeithereverydefeasibleruleforqcontainsabodyliteral
+bsuchthatD′ ⊢−∂borD′ ⊢+∆∼qorandthereisadefeasiblerulefor∼qsuchthatfor
+allitsbodyliteralsb′,D′ ⊢+∂b′.Bytheassumption,andsinceanyoftheseproofsmustbe
+shorterthantheproofofc,−∆q ∈C′andeithereverydefeasibleruleforqcontainsabody
+literalbsuchthat−∂b ∈ C′ or+∆∼q ∈ C′ orandthereisadefeasiblerulefor∼qsuch
+thatforallitsbodyliteralsb′,+∂b′
+C′.Butthen,sincenotransitionsarepossible,and
+consideringtransition8and10,eithertherearenodefeasiblerulesforq or+∆∼q ∈ C′
+or thereis a defeasible rulefor∼q with an emptybody.Consideringtransitions2 and 4,
+either−σq ∈ C′ or+∆∼q ∈ C′ or+σ∼q ∈ C′.Consequently,becauseoftransition6,
+−∂q∈C′,contradictingtheoriginalassumption.
+Combiningtheprevioustwotheorems,wecanconcludethatthetransitionsystemcom-
+putesexactlytheconclusionsoftheinitialdefeasiblelogicprogram.
+LetDbeabasicdefeasibletheorywithduplicatedstrictrules.SupposeDderivesC.Then,
+foreveryconclusionc,
+D ⊢ciffc∈C
+4 TheLinearAlgorithm
+The algorithm consists of two main parts: (1) a series of transformations to produce an
+equivalentbasic defeasible theory with duplicated strict rules, and (2) the application of
+transitionsfromthetransitionsysteminacomputationallyefficientorder.Thesepartswill
+bediscussedinseparatesubsections.
+4.1 Transformations
+The input to the algorithm is an arbitrary defeasible theory, but the transition system is
+provedcorrectonlyforbasicdefeasibletheorieswithduplicatedstrictrules.Tobridgethis
+gapwemusttransformtheinputdefeasibletheoryintotheappropriateform.
+In(1)threetransformationsareusedtoconvertanydefeasibletheoryintoanequivalent
+basicdefeasibletheory.Thefirstplacesthedefeasibletheoryinanormalform,thesecond
+eliminates defeaters, and the third reduces the superiority relation to the empty relation.
+Let Basicdenote this sequence of transformations. We will use Basicin the inference
+algorithm.
+ItisbeyondthescopeofthispapertopresentadefinitionofBasic;forthat,thereader
+isreferredto(1).However,togivetheflavorofthetransformationswepresentonecom-
+ponenttransformation,elim sup,whichemptiesthesuperiorityrelation.Itintroducestwo
+new propositions for each rule, two rules for each superiority statement, and up to four
+rulesreplacingeachoriginalrule.Itisdefinedasfollows.
+Definition2
+LetDbearegulardefeasibletheorywithrulesR.LetΣbethelanguageofD.
+elim sup(R)=R
+Foreachr,inf+(r)andinf− (r)arenewatomsnotinΣ.Furthermoreallnewatomsare
+distinct.
+Intuitively,the two introducedpropositions, inf+(r) and inf− (r), representthat r is
+inferior to a rule in R (respectively R) that has a defeasibly provable body. If D ⊢
++σinf+(r) then D 6⊢ +∂¬inf+(r) and even when A(r) is proved defeasibly p, the
+consequentofr,cannotbeestablisheddefeasiblyusingrbecausethelinkbetweenthetwo
+isbroken.
+Thetransformationtoeliminatedefeatersisslightlysimilartotheabovetransformation;
+twopropositionsareintroducedforeverypropositioninDanduptothreerulesareusedto
+replaceeachruleinD.Thetwopropositions–p+andp−–introducedforeachproposition
+p,representthatp(respectively¬p)isnotdefeatedbyadefeater.Again,thesepropositions
+formlinksbetweenantecedentandconsequent,andtheeffectofadefeaterisobtainedwith
+adefeasiblerulethatcanbreaksuchalink.Formoredetails,see(1).
+Itisclearthatthesetwotransformationsareprofligateintheirintroductionofproposi-
+tionsandgenerationofrules.Nevertheless,theycanbeappliedinonepass(each)overa
+defeasibletheory,andtheresultingdefeasibletheoryis,atmost,aconstantfactorlarger.
+Thefollowingresultwasprovedin(1),albeitinpartsandwithslightlydifferenttermi-
+nology.
+LetDbeadefeasibletheoryandletΣbethelanguageofD.LetD′ =Basic(D).
+ThenD′isabasicdefeasibletheoryand,forallconclusionscinΣ,
+D ⊢ciffD′ ⊢c.
+Furthermore,D′ can be constructedin timelinear in the size ofD, andthesize ofD′ is
+linearinthesizeofD.
+WemustalsoensurethatthebasicdefeasibletheoryresultingfromBasichasduplicated
+strict rules. To guarantee this property we employ the following simple transformation
+DupStrict2.
+Definition3
+2Thisduplicationisnotstrictlynecessarysinceanappropriateseparationofdefiniteanddefeasiblereasoning
+isachieved bythetransformations of(1).However, inthis context, itissimplertoensurethisproperty by
+duplicationthantoarguethatitholdsoftransformationsthatarenotpresentedhere.
+LetD =(F,R,>).ThenDupStrict(D)=(F,R′,>)where
+ItisstraightforwardtoshowthatDupStrictdoesnotchangetheconclusionsofatheory.
+Proposition1
+ForanydefeasibletheoryD,andanyconclusionc,
+D ⊢ciffDupStrict(D)⊢c
+(Sketch)Definiteprovabilityisaffectedonlybystrictrulesandfacts.ThestrictrulesinR
+andR′ areessentiallythe same,andthe factsareunchanged.Thusdefiniteprovabilityis
+unchangedbyDupStrict.
+Inapplyingthedefeasibleinferencerules,itmakesnodifferencewhetheraruleisstrict
+ordefeasible.So⊢ ′appliedtoDupStrict(D)useseffectivelythesamerulesasItalsomakes
+nodifferencewhwtherthereisoneorseveralcopiesofarule.
+4.2 TheAlgorithm
+Inthe algorithm,whichis presentedin Figure1, p rangesoverliteralsands rangesover
+conclusions.K andS are setsofconclusions.K accumulatestheset ofconclusionsthat
+havebeenprovedandused,whileS holdsthoseprovenconclusionsthathavenotyetbeen
+usedtoestablishmoreconclusions.Distheinputdefeasibletheory.
+TobeginthealgorithmwereduceDtobasicdefeasiblelogicwithduplicatedstrictrules,
+asdiscussedabove.WealsoinitializethesetS,thatis,weaddtoS thoseconclusionsthat
+canimmediatelybeestablished:allfactsaredefinitelytrue,asaretheheadsofstrictrules
+with empty bodies. The headsof defeasiblerules with empty bodiesare tentatively true.
+Similarly,thoseliteralswithno(strict)rulesforthemareunprovable(strictly).
+Thealgorithmproceedsbymodifyingtherulesinthetheory.Forstrictrules,wheninfer-
+ringpositivedefiniteconsequences,thealgorithmissimilartounitresolutionfordefinite
+clauses in classical logic: when an atom is proved,it can be eliminated from the bodies
+of all otherdefinite clauses. In this case, whena literal is established definitely it can be
+deletedfromthebodyofallrules.Similarly,whenitisestablishedthataliteralpcannot
+beprovedthenthosestrictruleswhichhavepasapre-conditioncannotbeusedtoprove
+thehead,andsotheycanbedeleted.Whenastrictrulehasanemptybody,thenitsheadis
+definitelyprovable;whentherearenostrictrulesforaliteral,thentheliteralisunprovable
+definitely.Whenanatomisproveddefinitelyitiseliminatedfrombothstrictanddefeasible
+rules;thisnecessitatesextracodeforthecasewhenthebodyofadefeasiblerulebecomes
+empty.
+When establishing tentative provability, we proceed in exactly the same way as with
+definiteprovability,exceptthatwerestrictattentionto defeasiblerules.We canconclude
++σqpreciselywhenthebodyofadefeasibleruleforqbecomesempty,and−σqprecisely
+whentherearenomoredefeasiblerulesforq.
+When establishing defeasible provability, we use the simplified inference rules intro-
+ducedatthe endofSection2. Eachtimea statementsuchas+σp isinferredbythe sys-
+tem the statement is recorded in the data structure for p and we check to see whether
+R=DupStrict(R′)
+initializeS
+chooses∈SanddeletesfromS
++∆p:
+delete alloccurrencesofpinallrulebodies
+whenever abodyofastrictrulewithheadhbecomesempty
+CheckInference(+∆h,S)
+whenever abodyofadefeasiblerulewithheadhbecomesempty
+CheckInference(+σh,S)
+−∆p:
+delete allstrictruleswherepoccursinthebody
+whenever therearenomorestrictrulesforaliteralh,andthereisnofacth
+CheckInference(−∆h,S)
++∂p:
+delete alloccurrencesofpindefeasiblerulebodies
+whenever abodywithheadhbecomesempty
+CheckInference(+σh,S)
+−∂p:
+delete alldefeasibleruleswherepoccursinthebody
+whenever therearenomoredefeasiblerulesforaliteralh
+CheckInference(−σh,S)
+Fig.1. Inferencealgorithmfordefeasiblelogic
+either of the simplified inference rules for ∂ can be applied. This task is performed by
+CheckInference,whichwilladdeither+∂por−∂p,ifjustified,tothesetS3.Forexample,
+CheckInference(+σp,S)willcheckwhether−∆∼pand−σ∼phavealreadybeenestab-
+lished,so that+∂pmaybe inferredandaddedto S,and if −∆∼phasbeenestablished
+willadd−∂∼ptoS.Similarly,CheckInference(−∆p,S)willcheckwhether+σ∼pand
+−σp,sothat+∂∼pmightbeinferred,andwillcheck−σp,+∆∼pand+σ∼ptodecide
+whether−∂pmightbeproved.
+Executionofthisalgorithmcanbeunderstoodasexecutionofthetransitionsystemof
+3Recallthatdefeasiblelogicwillneverinferboth+∂pand−∂psinceitiscoherent(6).
+Section3.S∪K combinedwiththesetofrecordedextendedconclusionsinthealgorithm
+correspondsto C in the transition system. The deletions in the algorithm correspondto
+transitions7,8,9,and10.Theaddstatementscorrespondtotransitions1and3.Therecord
+statementscorrespondtotransitions1,2,3,2,and4.Thesetransitionsarealsoreflectedin
+theinitializationofS.Finally,CheckInferenceembodiestransitions5and6.
+The algorithm corresponds to a restricted form of the transition system where some
+sequences of transitions are disallowed. For example, the first case of Figure 1 requires
+thatalltransitions7 and8involvingpmustoccuras ablock,uninterruptedbyanyother
+usesofthesetransitions.Furthermore,theonlypossibleothertransitionsintheblockare
+transitions1 and 2, when p is the last remaining literal in a rule, and transitions 5 and 6
+when the recorded informationabout p triggers them. Note, however, that the algorithm
+does not disallow any transitions; it simply restricts the order in which transitions may
+occur.Thusthesoundnessandcompletenessofthetransitionsystemextendstosoundness
+andcompletenessofthealgorithm.
+The key to an efficient implementation of this algorithm is the data structure used to
+representtherules.Itisexemplified(albeitincompletely)inFigure2forthetheory
+r 1 : b,c,d⇒ a
+r 2 : ¬b,d,¬e⇒ a
+r 3 : d,¬e⇒ ¬a
+Each rule body is represented as a doubly-linkedlist (horizontal arrows in Figure 2).
+Furthermore,foreachliteralptherearedoubly-linkedlistsoftheoccurrencesofpinthe
+bodiesofstrict(respectively,defeasible)rules(diagonalarrows).Foreachliteralp,there
+are doubly-linkedlists of the strict (respectively,defeasible) rulesfor p (dashedarrows).
+Each literal occurrence has a link to the record for the rule it occurs in (not shown in
+Figure2).Asmentionedabove,eachliteralpholdsinformationshowingwhichextended
+conclusionsabout p have been established, and there is also a link to the corresponding
+datastructurefor∼p.
+r1 a b c d
+r2 a ¬b d ¬e
+r3 ¬a d ¬e
+Fig.2. DataStructureforRules
+This data structure allows the deletion of literals and rules in time proportionalto the
+numberof literals deleted. Furthermore,we can detect in constant time whether a literal
+deletedwas theonlyliteral in thatbody,and whethera ruledeleted with headh was the
+onlystrict(defeasible)ruleforh.Eachliteraloccurrenceisdeletedatmostonce,andthe
+test for empty body is made at most once per deletion. Similarly, each rule is deleted at
+mostonce,andthetestfornomorerulesismadeonceperdeletion.Thecostofa callto
+CheckInferenceisconstant,sinceallcheckingreliesondatathatisimmediatelyavailable,
+andatmost3checksareneededpercall.Thusthecostofthemainpartofthealgorithmis
+O(N),whereN isthenumberofliteraloccurrencesinD′.
+Furthermore,theinitializationofS issupportedbythedatastructureandhascostpro-
+portionaltothenumberofpropositionsinD′.NotethatS canbeimplementedasaqueue
+or a stack, since the only operations on S are to test for emptiness, add an element, or
+chooseanddeleteanelement.Theseoperationsrequireonlyconstanttime,andthenum-
+ber of operations is, in the worst case, proportionalto the number of rules in D′. Since
+theinitialtransformations(1)thatproduceD′arelinear,thecostoftheentirealgorithmis
+linearinthesizeofD.
+Theconsequencesof a defeasible theoryD can be computedin O(N) time, where N is
+thenumberofsymbolsinD.
+Thisalgorithm,whenrestrictedtopositivedefiniteconclusions,issimilartothebottom-
+uplinearalgorithmfordeterminingsatisfiability ofHornclausesofDowlingandGallier
+(11; 12). One differenceis in the data structures: the Dowling-Gallier algorithmkeeps a
+count of the number of atoms in the body of a rule, rather than keep track of the body.
+Thelatterresultsingreatermemoryusage,butallowsustoreconstructtheresidueofthe
+computation:thesimplifiedrulesthatremain.Thisresidueis usefulin understandingthe
+behaviourofatheory,andcanbeusefulinsomeapplicationsofdefeasiblelogic.
+5 Discussion
+There seem to be several inter-related features of defeasible logic that contribute to its
+linearcomplexity:
+• formoffailure
+The form of failure-to-proveexhibited in the proof conditions for −∆ and −∂ is
+closely related to Kunen’s semantics for logic programs with negation-as-failure
+(22). This form of failure does not include looping failures, and the propositional
+formisknowntohavelinearcomplexity.
+• staticandlocalnatureofconflict
+When trying to derive +∂q or −∂q it is sufficient to look at rules for q and∼q,
+since∼q isthe onlyliteralthatconflictswithq. Thustheset ofconflictingrulesis
+unchangingandreadilyapparent.Inlogicswherethereisnoboundonthenumber
+ofconflictingliteralsand/ortheconflictingrulescannotbeknownapriori(forex-
+ample,plausiblelogic(8))thecorrespondinginferencerulesfor+∂ and−∂ canbe
+expectedtobemorecomplex.
+• linearcosteliminationofsuperiorityrelation
+DefeaterscanbehandledasavariantofdefeasiblerulesusingthetechniquesofSec-
+tion 4. The presenceof a superiorityrelationcomplicatesthese techniquesgreatly,
+althoughitisclearthatthereisalineardirectimplementationoffulldefeasiblelogic
+byimitatingtheeliminationtransformation.Theeliminationofthesuperiorityrela-
+tion isbased ona simple syntactic transformation(1), buta similar transformation
+has been proposed for other logics (19) that have higher complexity. The success
+of such a simple transformation can be partly attributed to the static nature of the
+superiority relation and the static and local nature of conflicting literals, which do
+notchangeoverthecourseofevaluation.
+Asignificantnon-factorinthecomplexityofdefeasiblelogicistheteamdefeataspectof
+thelogic.Thismightbeexpectedtocreatesomedifficultiessince,conceptually,twoteams
+ofrulesarepittedagainsteachother,andthismightgiverise tocombinatorialproblems.
+However,reformulatingtheissueasoneofcompeting/conflictingliteralsclarifiesthatthere
+isafixednumberofpiecesofinformationthatareofinterest,andeachrulecancontribute
+individually.
+We can expect that similar logics, such as the variants discussed in (2) and variants
+wherestrictrulesaresuperiortodefeasiblerules(28),alsohavelinearcomplexityandare
+amenabletothetechniquesusedhere,althoughthedetailswillrequirecarefulverification.
+Similarly,well-foundeddefeasiblelogic(22)canbeexpectedtohavequadraticcomplexity,
+since it employs the well-founded semantics (32) notion of failure, which has quadratic
+complexity.
+6 Conclusion
+We have shown that propositionaldefeasible logic has linear complexity. The algorithm
+thatwehavepresentedherehasbeenimplementedasthesystemDelores(24)andhasun-
+dergoneapreliminaryexperimentalevaluation(23).Itexecutessimple,butlarge,theories
+ofbasicdefeasiblelogicveryquickly.Thelinearcomplexityofthealgorithmissupported
+empirically.
+However,the transformationsused to convertan arbitrary defeasible theory to the ap-
+propriateformforthealgorithmofFigure1imposealargeconstantfactoronthecostof
+initializingS.Althoughthe cause hasnotbeenpinpointed,it appearstobe derivedfrom
+themultiplicationofrulesandpropositionsduringthetransformations.Itshouldbepossi-
+bleto improveperformancebyintegratingthetransformationsof(1) moretightlyand/or
+abandoningthe design goal (1) of incrementality of the transformations(with respect to
+changesintheoriginaldefeasibletheory).
+Workisproceedingonimprovementstotheimplementationofdefeasiblelogicandthe
+applicationofsimilartechniquestoimplementwell-foundeddefeasiblelogic.Wepropose
+tousetheimplementationtosupportreasoningaboutregulations(4).
+Acknowledgements
+ThankstoGrigorisAntoniou,DavidBillington,GuidoGovernatoriandAndrewRockfor
+discussionson defeasible logic and its implementation.Thanksto Tristan Miller for dis-
+cussionofthealgorithmandhisimplementationofDelores.Alsothankstotheanonymous
+refereesfortheircarefulreadingandsugestions.ThisresearchwassupportedbytheAus-
+tralianResearchCouncil.

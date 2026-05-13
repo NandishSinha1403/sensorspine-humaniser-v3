@@ -1,0 +1,1202 @@
+A novel method for calculating relative free energy of similar molecules in two
+environments
+Asaf Farhi 1∗ and Bipin Singh 2
+1 Raymond and Beverly Sackler School of Physics and Astronomy,
+Faculty of Exact Sciences, Tel Aviv University, IL-6997801 Tel Aviv, Israel and
+2Center for Computational Natural Sciences and Bioinformatics (CCNSB),
+International Institute of Information Technology Hyderabad (IIIT-H), Gachibowli, Hyderabad, 500032, India
+(Dated: January 17, 2023)
+Calculating relative free energies is a topic of substantial interest and has many applications
+includingsolvationandbindingfreeenergies,whichareusedincomputationaldrugdiscovery. How-
+ever, there remain the challenges of accuracy, simple implementation, robustness and efficiency,
+whichpreventthecalculationsfrombeingautomatedandlimittheiruse. Herewepresentanexact
+andcompletedecouplinganalysisinwhichthepartitionfunctionsofthecomparedsystemsdecom-
+poseintothepartitionfunctionsofthecommonanddifferentsubsystems. Thisdecouplinganalysis
+isapplicabletosubmoleculeswithcoupleddegreesoffreedomsuchasthemethylgroupandtoany
+potential function (including the typical dihedral potentials), enabling to remove less terms in the
+transformation which results in a more efficient calculation. Then we show mathematically, in the
+context of partition function decoupling, that the two compared systems can be simulated sepa-
+rately,eliminatingtheneedtodesignacompositesystem. Wedemonstratethedecouplinganalysis
+and the separate transformations in a relative free energy calculation using MD simulations for a
+general force field and compare to another calculation and to experimental results. We present a
+unified soft core technique that ensures the monotonicity of the numerically integrated function
+(analytical proof) which is important for the selection of intermediates. We show mathematically
+that in this soft core technique the numerically integrated function can be non-steep only when we
+transform the systems separately, which can simplify the numerical integration. Finally, we show
+that when the systems have rugged energy landscape they can be equilibrated without introducing
+anothersamplingdimensionwhichcanalsoenabletousethesimulationresultsforotherfreeenergy
+calculations.
+Keywords: Free energy, decoupling partition functions, monotonicity of free energy
+derivative, replica exchange
+I. INTRODUCTION (in practice usually more complex transformations are
+used as will be explained later on). In these methods,
+Calculatingfreeenergydifferencesbetweentwophys- the hybrid system is simulated at a set of λ interme-
+icalsystems,isatopicofsubstantialcurrentinterest. A diates and average values are calculated. Then, using
+variety of advanced methods and algorithms have been these values, the free energy difference is calculated.
+introduced to answer the challenge, both in the context ThecommonlyusedmethodsincludeExponentialAver-
+of molecular dynamics (MD) and Monte Carlo (MC) aging/ Free Energy Perturbation (FEP) [15] and Ther-
+simulations [1–7]. Applications of these methods in- modynamic Integration (TI) [4, 16, 17]. Two methods
+clude calculations of binding free energies [8–10], free toestimatefreeenergieswhichareconsideredequivalent
+energiesofhydration[11],freeenergiesofsolvation[12], areBennettAcceptanceRatio(BAR)[18]andWeighted
+chemical reactions [13] and more. Free energy methods Histogram Analysis Method [19] (WHAM).
+are extensively used by various disciplines and the in- Anotherapproachwhichenablestoaccessdirectlythe
+terest in this field is growing - over 3,500 papers using free energy is the Wang-Landau method, in which ran-
+the most popular free energy computation approaches dom walk is performed in energy space [20, 21]. Other
+were published in the last decade, with the publication approaches such as λ Metadynamics and adiabatic MD
+rate increasing ∼17% per year [14]. [22,23]suggesttoconsiderλasacoordinateofthesys-
+Free energy difference between two systems can be tem and to enable the system to wander between λs.
+calculated using equilibrium methods (alchemical free This is performed by introducing in the Hamiltonian a
+energy calculations) and non-equilibrium methods. In potential term which depends on λ which ensures that
+equilibrium methods a hybrid system is used to trans- thesystemspendsmoretimewherethesamplingofthe
+form system A into B, e.g with the transformation free energy as a function of λ is more challenging.
+In non-equilibrium methods the work needed in the
+hybrid A B process of switching between the two Hamiltonians is
+measured. These methods include Jarzynski relation
+[24] and its subsequent generalization by Crooks [25].
+∗ asaffarhi@post.tau.ac.il Calculating binding free energies is fundamental and
+]hp-mehc.scisyhp[
+81v2112.0131:viXra
+has many applications. In particular it has potential to energy difference using TI can be performed as follows:
+advance the field of drug discovery which has to cope
+withnewchallenges. Inthelastyearsthenumberofin- (cid:52)F (β )= A→B hybrid dλ=
+novativenewmolecularentitiesforpharmaceuticalpur- A→B 1 dλ
+poses has remained stable at 5−6 per year. This situa- (2)
+- (cid:90) 1(cid:90) [H
+bacteria. Virtual screening methods, in which the 1060 0
+possible molecules are filtered out, play a large role in where Ω denotes the vector of all coordinates. It can
+modern drug discovery efforts. However, there remains be seen that at λ = 1 for example H does not affect
+thechallengeofselectingthecandidatemoleculesoutof thesystems’behaviorbutitsenergyvaluesareaveraged
+thestillverylargepoolofmoleculesinreasonabletimes. over, which can result in large magnitudes of the inte-
+Equilibrium methods show great potential in enabling gratedfunction. Thus,whenthesystemshavelowphase
+thecomputationofbindingfreeenergieswithreasonable space overlap there are significant changes in the inte-
+computational resources. In these methods instead of gratedfunctionandlargevarianceandhencelargecom-
+simulating the binding processes directly, which would putational cost. This is especially dominant when the
+requireasimulationmanytimesthelifetimeofthecom- two compared molecules have different covalent bond
+plex, the ligand is transmuted into another through in- descriptionwhichresultsinaverylowphasespaceover-
+termediate, possiblynon-physicalstages. Thisisinfact lap(inthenaivesetup). Moreover,sincemolecularforce
+relative free energy calculation in which the difference fieldsincludeelectrostaticandVDWtermsthatdiverge
+between free energy of a process of one molecule and at small atom-atom distances, the average energy can
+another molecule is calculated. If the free energy differ- diverge at λ→0,1.
+ences between the ligands in the two environments are A variety of approaches and techniques have been in-
+calculated, the relative binding free energy between the troduced to address the challenges in the field. These
+two ligands can be calculated (this cyclic calculation is include the topologies for simulating the system, that
+called the Thermodynamic Cycle). usuallytakeintoaccountthefactthatthecomparedsys-
+tems have similarities to generate a hybrid system with
+higher phase space overlap (see Fig. 2). The topologies
+areusuallycombinedwithremovingVDWandCoulomb
+terms of the different atoms which is called decoupling
+in order to further enhance phase space overlap (see e.g
+Fig. 2). Softcore potentialsweresuggestedtoavoidsin-
+gularities at small λs. Common sampling techniques to
+overcomehighenergybarriersincludeTemperatureand
+Hamiltonian Replica Exchange methods [27–29]. We
+will explain these methodologies in the course of the
+derivation of the method.
+However, the calculations in the existing practices
+have several limitations. First, they are notoriously dif-
+ficult to implement correctly [30]. Such complications
+ariseforexamplefromthefactthatthehybridsystemis
+composedofbothsystemsandhenceitusuallyhastobe
+designed (see for example dual topology in Fig. 2 and
+Figure1. Thestandardfreeenergydifferencesschemeinthe Ref. [31]). Moreover, the interactions between atoms
+calculation of binding free energy in the existing methods fromthetwocomparedsystemshavetobeignoredinor-
+der for the calculations to be reasonable. Second, since
+theprocessoftransformingonesystemintotheotheris
+In Fig. 1 a scheme of the free energies in the calcula-
+differentforeachcomparisonandhasnoaprioriknown
+tion of binding free energies in the standard methods is
+properties, the choice of intermediates remains a chal-
+presented (L ,L and R represent the ligands and the
+1 2 lenge. In the context of TI this is equivalent to a func-
+receptor respectively). For solvation there is a similar
+tionthatneedstobenumericallyintegratedwithoutany
+schemeinwhichinsteadofareceptorthereisasolvent.
+knownproperties. Inaddition,sincebothsystemsinter-
+Free energy calculation methods already have suc- act simultaneously with the environment the behavior
+cessesindiscoveringpotentdrugs[26]. However,despite oftheintermediatesystemscannotbepredicted. Third,
+the continuing progress in the field from the original eachtypeofhybridtopologyhassmallphasespaceover-
+concepts, the methods have restrictions which prevent lap in one aspect [31]. Fourth, the existing decoupling
+them from being automatic and limit their use in com- analysis, while explaining several important principles,
+putational drug design. A naive calculation of the free involves approximations and does not treat all the po-
+solvated or bounded vs. unbounded) compared to the
+free energy difference of another molecule in these two
+states. WhileTeIhasmanyadvantages,thatwillalsobe
+apparent in this method, it cannot be directly applied
+to MD. MD simulations at very high temperatures are
+impractical due to the very high velocities which will
+necessitate very small time steps for the integration of
+the equations of motion. In addition in TeI due to the
+simplicity of the energy models considered, effectively,
+λ=1 λ=0.5 λ=0 all the energy terms are completely removed.
+The presented method is based on TeI and is guided
+A B by the goal is to address the challenges previously men-
+tioned - namely accuracy, simple implementation, ro-
+bustness and high phase space overlap. First, in order
+Figure 2. A scheme of the transformation in a hybrid sys- to avoid reaching high temperatures (used in TeI), we
+tem in the dual topology that compares Benzoic Acid and useanadditionalvariableλthatwilltransformthesys-
+Toluene at λ values of 0,0.5 and 1 (one system). The trans- tem, keeping the temperature constant. Second, in or-
+parentatomsintheendstatesAandBaredecoupledatoms der to enahnce phase space overlap we will keep some
+-atomswhoseVDWandCoulombinteractionsareremoved.
+terms constant in the transformation.
+At λ=0.5 the different atoms between the two subsystems
+The method is based on first identifying in each of
+are partly interacting. These calculations are often used
+the compared systems (e.g molecule and environment)
+when the compared systems have a relatively small differ-
+acommonsubsystem(e.gsubmoleculeandtheenviron-
+ence (e.g molecules that differ in few atoms). The transfor-
+mationrepresentsthetoporbottomtransformationsinFig. ment) and a different subsystem (e.g a submolecule).
+1 where A and B represent L and L respectively. Then, each of the systems is transformed in each envi-
+ronment (e.g vacuum or water environment) by remov-
+ing certain potential terms, into a system in which the
+partition functions of the common subsystem and the
+tentials[32](suchasnon-quadraticterms,methylgroup
+different subsystem can be decoupled. This decoupling
+etc.). Fifth,thesoftcoretechnique,whilebeingefficient
+is not trivial as the atoms in one decoupled subsystem
+inremovingsingularitiesfromthecalculations, hasvar-
+will still interact with atoms in another decoupled sub-
+ious disadvantages. One of them is difficult implemen-
+system via potentials that relate between 2, 3 and 4
+tation due to the complicated functions involved and
+atoms. However, this will turn exact due to the fact
+the requirement to transform first the Coulomb terms
+that this is decoupling of the two integrals of the parti-
+andthentheVDWtermsinordertoavoidsingularities.
+tion functions. This novel analysis is applicable to any
+In addition, since it involves changing the shape of the
+potentialfunctionandtosubmoleculeswithcoupledde-
+functionsitresultsinlowerphasespaceoverlapbetween
+grees of freedom, enabling to remove less terms in the
+intermediates. It is worth noting that the free energies
+transformation. Removing less terms in the transfor-
+associated with the transformations (Fig. 1) are often
+mation results in a smaller free energy difference which
+much larger than their difference. Thus, these calcula-
+needstobeintegratedoverandhigherphasespaceover-
+tionshavetobeveryprecisetoproducereliablerelative
+lap (smaller statistical error), which are related to the
+free energy values.
+efficiencyofthecalculation. Sinceeachtransformedsys-
+TemperatureIntegration(TeI)wassuggestedinRefs. tem is simulated in two environments and the different
+[33, 34] as an efficient method to calculate free energy subsystemcanbetreatedasnon-interactingsystem,the
+differences. TeI is based on calculating for each system free energy associated with the different subsystem will
+the lnZ difference (where Z is the partition function), analytically (exactly) cancel out in the thermodynamic
+between the temperature of interest and a high tem- cycle. Thus, instead of transforming between the com-
+perature using a Parallel Tempering procedure. Since pared systems to calculate the relative free energy dif-
+at the high T limit the two systems with the same de- ference, each system is transformed separately into its
+grees of freedom have the same partition function, the replica with some energy terms relaxed (removed) and
+free energy difference can be calculated. In TeI in or- we avoid having ingredients (such as atoms and possi-
+der to ensure the equation of the partition functions bly force fields) of the two systems in the simulation.
+when β → 0, we capped the potential terms - that is This ingredient is in fact a scheme for two separated
+if E was larger than E it was set to E (denoted topologies. Transforming the systems separately has
+in TeI by E ). It is emphasized that the free en- beensuggestedinrecentworks[35,36]andisgivenhere
+ergy difference calculated in TeI is between two differ- inadetailedmathematicaldescriptioninthecontextof
+ent molecules while in relative free energy calculations partitionfunctiondecoupling. Itisnotedthatthesepa-
+the goal is to calculate free energy difference between rate simulations are used here to calculate relative free
+the same molecule in two states (e.g solvated vs. un- energy (difference between two solvation/binding pro-
+cesses) and not only to calculate absolute solvation free This decoupling scheme is applicable to all topologies.
+energy (e.g Ref. [37]). We demonstrate the decoupling The common subsystem is defined as an identical sub-
+analysis and the separate transformations in MD cal- molecule and the environment and the different sub-
+culations of relative free energies which agree with ex- system is defined as the different submolecule between
+perimental results. This decoupling analysis is also in the compared systems. We will maximize the phase
+agreement with our MD simulations in Ref. [38]. We space overlap between the original and the transformed
+then present a unified soft core technique that will re- systems by removing as few terms as possible in the
+sult in less steepintegratedfunction. We prove analyti- transformation (the phase space overlap is related to
+cally that the soft core technique ensures that the inte- the number of intermediate systems needed in order to
+gratedfunctionismonotonic. Thisstatementregarding calculate the free energy difference).
+themonotonicityoftheintegratedfunctionisnoveland Theexistingdecouplingschemeforthehybridtopolo-
+wethenfurtherextendedtonon-lineartransformations. gies is based on the rigid rotor approximation and the
+Sinceformonotonicfunctionsthenumericalintegration HJR technique [32]. In this scheme potential terms
+errorlimitisknowntheintegrationresultwillberobust. are removed in a transformation and then the system’s
+Inadditionthemonotonicitywillenablesimpleselection partition function is decomposed into eight partition
+of intermediates. We also show mathematically that in functions - the partition function of the subsystem in
+thissoftcoretechniquethenumericallyintegratedfunc- common between the compared systems, the partition
+tion can be non-steep only when we transform the sys- function(s) of the different subsystem(s) (according to
+tems separately (novel result). Finally, we show that if theirdefinition)andapolymer-like partwhichconnects
+the systems have rugged energy landscape, instead of between them and decomposes into six partition func-
+using the sampling techniques such as H-REMD in an- tions [32, 40]. In case that the connecting part is not
+other λ or T dimension, we can use only one sampling polymer-like, the potential terms which differentiate it
+dimension. frombeingpolymer-likeare removed inthetransforma-
+Themethodisdividedtoitsindependent ingredients. tion. Forexamplethemethylgroupismodeledwithsix
+Namely, the decoupling analysis is applicable to the ex- bondangletermsandfiveofthemneedtoberemoved in
+isting topologies. The topology ingredient can be used the transformation in order to conform to this require-
+with the existing soft core schemes and the soft core in- ment [32, 40]. In addition, the calculation of the six
+gredient can be used with the existing topologies. Each partition functions is considered and the potentials as-
+ingredient will be presented in a separate section with sociated with them are required to be quadratic [32, 40].
+referencestosimulationsthatdemonstrateitandtothe Thus, non-quadratic potential terms such as dihedral
+state of the art corresponding ingredients. In Section terms (and possibly bond stretching and bond angle
+II present an exact and complete decoupling analysis. terms) are removed in the transformation to enable the
+In Section III we explain mathematically that the two decoupling [12, 40]. This results in atoms which are
+systemscanbesimulatedseparatelytogivethefreeen- bound to move on a sphere relatively to another atom
+ergy difference. This ingredient is related to topology instead of being properly located. When performing
+and can be called Two Topologies. In Section IV we a larger transformation (removing more terms in the
+demonstrate the decoupling analysis and the separate transformation), the computation time increases.
+transformations in MD simulations for a general force Herewepresentanexact analysisinwhichwedecou-
+field. In Section V we present a unified soft core tech- plethepartitionfunctionofthetransformedsysteminto
+nique[34,39]andprovemathematicallythemonotonic- two partition functions - the partition functions of the
+ity of the integrated function. In Appendix D we show common and different subsystems. This analysis is ap-
+mathematicallythatwhenusingthissoft-coretechnique plicabletoany potentialfunctionandthusthedihedral
+it is advantageous to transform the systems separately terms which are usually non-quadratic do not need to
+since the integrated function can be non-steep. In Sec- be removed inthetransformation. Inaddition, weshow
+tion VI we explain how we can equilibrate the systems that when the different submolecule includes bond an-
+by using only one sampling dimension. In Section VII gletermswithcoupleddegreesoffreedom(e.gamethyl
+we summarize and discuss the method. group) it can also be exactly decoupled. Thus, coupled
+bond angle potentials do not need to be removed in the
+transformation. Removing less terms in the transfor-
+II. DECOUPLING THE PARTITION mation results in a smaller free energy difference and
+FUNCTIONS higher phase space overlap. Since the free energy dif-
+ference and the phase space overlap are related to the
+In this section we explain how by removing certain the number intermediates and to the statistical error
+terms in the transformation, the partition function of respectively, it is expected to reduce the computational
+the transformed system can be exactly decoupled into powerneededtoperformthesimulations. Wenotethat
+two partition functions. One partition function will be in this analysis there is no need to consider calculation
+identical between the transformed systems at each en- of integrals.
+vironment and one will be of the different subsystem. Molecularmodelingincludescovalentbond,bondan-
+gle, dihedralangle, improperdihedral, electrostaticand
+VDW potentials (see [41–44] and Appendix A). Co-
+valent bond, bond angle and dihedral angle potential
+terms depend on the coordinates of two, three and four r
+nearest covalently linked atoms respectively. Electro- k+2 rr k+1
+static and VDW potentials relate between every atom kk a
+pair in the system. Thus the energy terms can be sep-
+arated into short range terms (covalent bond, bond an-
+gle, dihedral angle and improper dihedral angle) and
+long range terms (electrostatic and VDW). In the ter-
+minology of the field they are called bonded interac-
+tions and non bonded interactions respectively and we
+use these names in order to emphasize this difference r’
+between them. 1
+To obtain the equilibrium constant, the standard
+Gibbsfreeenergiesareusuallycalculated. Thestandard Figure 3. An example of the new coordinates of the atoms
+state is the hypothetical state with the standard state in Benzoic Acid in comparison to Toluene. The short range
+concentration but exhibiting infinite-dilution behavior interactions that include the different atoms are plotted -
+the bond angle, dihedral and improper dihedral terms are
+(the interactions between e.g the solute molecules are
+marked by arcs, arcs with arrows and three intersecting
+negligible). Hence, when we are interested in the prop-
+dashed lines respectively.
+erties of one substance a single copy of the molecule of
+interest can be simulated either in vacuum or solvent
+environments.
+ringandfewdifferentatoms. Themethodpresentedcan
+We write the partition function of the system, which
+beappliedtomoleculesinwhichthereisoneseparation
+includesthemoleculeofinterestandpossiblythesolvent
+point between the common and different submolecules
+molecules as follows:
+(the different atoms do not form a loop that starts at
+(cid:90) (cid:90) l one atom and ends in another atom in the molecule).
+Z = e−βH(Ω)dΩ= e−βH(Ω)dr(cid:48) i , The numbers of atoms of the two compared molecules
+i can be different since the free energies associated with
+the different subsystems will cancel out in the Thermo-
+whereΩisthecoordinatesvectorofalltheatomsinthe
+systems, r(cid:48) is the coordinate of atom i, β = 1 and dynamic Cycle (Section III, Fig. 9). The decoupling
+i kBT analysis will be demonstrated in a relative free energy
+k is Boltzmann constant. The integration is over all
+possiblevaluesofthevectorsr(cid:48). Wedefinethevariables calculation with two other molecules in Section IV.
+as follows: In Fig. 3 an example of the new coordinates of the
+atomsinthemoleculeBenzoicAcidinitscomparisonto
+Ω={r(cid:48) 1 ,r 2 ,...,r k ,r k+1 ,...,r n ,r(cid:48) n+1 ,...,r(cid:48) l } Toluene is presented. The vector a denotes the relative
+coordinate of the top atom in the ring, and it is used
+since r represents the relative position of this atom
+r ≡r(cid:48) −r(cid:48) , (3) withrespecttoanotheratom. Wewillusethenotations
+i i i−1 on Benzoic Acid in the figure in the next explanations
+which will be chosen as the position of atoms relative and the following analysis is applicable also to Toluene.
+to covalently bounded atoms (bold letters denote vec- We will now turn to explain how the system’s parti-
+tors). r(cid:48) representsthepositionofthelastatomthatis tion function can be separated into two partition func-
+common between the compared systems and r(cid:48) rep- tions identically - the partition function of the com-
+resents the position of the first atom in the different monsubmoleculeandtheenvironmentandthepartition
+submolecule. n denoted the index of the last atom in function of the different submolecule.
+the molecule and (cid:8) r(cid:48) n+1 ,...,r(cid:48) l (cid:9) ≡ Ω env denote (if nec- We first define the coordinates of the atoms of the
+essary) the solvent molecules. The partition function common submolecule as (r(cid:48),r ,...,r ) and the coor-
+can now be written as follows: dinates of the atoms of the different submolecule as
+(r ,r ,r ). In the following analysis it is as-
+(cid:90) k n l k+1 k+2 k+3
+Z = e−βH(Ω)dr(cid:48) (cid:89) dr (cid:89) dr (cid:89) dr(cid:48) , sumed that in the transformed state the interactions
+of the common submolecule with itself and the envi-
+ronment are kept constant. We will also assume that
+Integration over these degrees of freedom will of course there are no improper dihedral and long range terms
+give the same result. that couple atoms from the two subsystems. In Section
+To illustrate the technique we compare the molecules III it will be explained how these terms are removed in
+Benzoic Acid and Toluene which include an aromatic the transformation.
+When a system can be separated into two groups of
+particles that are not interacting with each other it is
+well known that its partition function can be separated
+into the partition functions of the two groups of parti-
+cles and be written as their multiplication. Thus, it is
+clearthatinthetransformedstatetheexistenceofinter-
+actions between the atoms in the different submolecule
+will not prevent us from separating the partition func-
+tion into two partition functions. Hence, terms that
+involve only atoms of the different submolecule can re-
+mainconstantinthetransformation. Thisalsoincludes
+thelongrangetermsbetweentheatomsinthedifferent
+submolecule (in agreement with Ref. [40]). It is worth
+noting that transforming the molecule into a molecule
+Figure4. Anillustrationthatshowsthecorrespondencebe-
+with a different charge in the context of MD can result tween the dihedral angle and φ angle. The triangles are in
+infreeenergychangeduetoartifactsthatoriginatefrom the planes between which the dihedral angle is measured.
+the periodicity of the system [45]. The rectangles are perpendicular to the line of intersection
+We now turn to explain that three types of short oftheseplanes. Thevectorsarebothintheseplanesandin
+range terms that involve atoms from the different the planes which are perpendicular to the intersection line.
+submolecule, including ones that couple the different In the molecule on the right, the bottom vector is placed
+next to the one on top in order to show the correspondence
+and common submolecules, can remain constant in
+between the angles.
+the transformation and will enable us to decouple the
+partition function into the two. In standard molecular
+modeling there are the following covalent bond terms
+We define Ω = (r(cid:48),r ,...,r ,Ω ) and H as
+that depend on the positions of the different atoms: com 1 2 k env com
+all the potential terms that depend on the coordinates
+V (r ),V (r ) and V (r ). The bond angle
+c k+1 c k+2 c k+3 oftheatomsinthecommonsubsystemΩ . Wewrite
+terms that depend on the position of the different com
+the partition function as follows:
+atoms are: V (r ,r ),V (r ,r ),V (r ,r )
+b k k+1 b k k+2 b k+1 k+2
+and V b (r k+2 ,r k+3 ) . Only one (cid:90) (cid:90) k+3
+of the following dihedral terms Z = e−βHcom(Ωcom)dΩ e−βVc(rj)×
+V (r ,r ,r ),V (r ,r ,r ),V (a,r ,r )
+d k−1 k k+1 d k−1 k k+2 d k k+1 j=k+1
+and V (a,r ,r ) is usually used since they model
+the rotation of the different submolecule in which
+the bond angles are kept constant . We will as- e−β[Vd(xˆ,zˆ,rk+2)+Vd(zˆ,rk+2,rk+3)]dr
+sume for the following explanation that the dihedral
+term V (r ,r ,r ) is used. The dihedral term We now notice that given a set of coordinates of the
+d k−1 k k+2
+V (r ,r ,r ) usually also exists. In addition the common submolecule, the only information used in the
+d k k+2 k+3
+improper dihedral term V id (r k ,r k+1 ,r k+2 ) usually integration over Ω dif = {r k+1 ,r k+2 ,r k+3 } is the orien-
+exists and will be removed in the transformation (see tationofxandz axes. Thisinformationdoesnotaffect
+Fig. 3). the integration result since the different submolecule
+If we define does not have a preferred direction. In other words,
+foranysetofcoordinatesofthecommonsubsystemthe
+zˆ≡−rˆ, integrationresultoverΩ isthesame(seeFig. 5). We
+can thus write:
+the bond angle terms that depend on r can depend
+k (cid:90)
+instead on zˆ. Z = e−βHcom(Ωcom)dΩ Z =Z Z , (5)
+com dif com dif
+Thedihedralpotentialtermdependsontheanglebe-
+tween two planes (see Appendix A for details) which
+where Z and Z denote the partition functions of
+canbedefinedastheanglebetweenthevectorsinthese com dif
+thecommonanddifferentsubsystemsrespectively. Note
+planes that are perpendicular to the intersection line
+thatZ isaconstantanddoesnotaffecttheintegration
+of these planes. We notice that the dihedral angle dif
+over Ω . See detailed proof in Appendix B.
+φ(r ,r ,r ) is equal to φ angle in spherical coor- com
+k−1 k k+2 Hence, the bond stretching, bond angle and dihedral
+dinates defined with respect to zˆand
+angle energy terms, effectively, do not couple the par-
+r −(r ·r )rˆ tition functions. This is despite the fact that some of
+these terms involve atoms from the two submolecules.
+k−1 k k−1 k
+This decoupling of the partition functions does not
+(see Fig. 4). Hence the corresponding dihedral term depend on the potential function but only on the vari-
+depends on xˆ,zˆand r . ablesitdependson. Moreover,thepartitionfunctionof
+denotes the partition function of the different sub-
+molecule that does not interact with the environment
+k+3 and the arrow symbolizes the transformation in which
+k+2 r r r energy terms are relaxed. We define A and B to be the
+x z r k+3 k+2 z r compared systems in a certain environment and A(cid:48) and
+rr k+1 x k B(cid:48) as their transformed replicas (the systems without
+k-1 a the terms that couple the partition functions as previ-
+r ously explained). It can thus be written (see Fig. 6):
+A(cid:48) A(cid:48) A(cid:48)
+commonint diffnonint
+B(cid:48) B(cid:48) B(cid:48)
+r’ r’ commonint diffnonint
+1 1 Itisnotedthatinfactthedihedralandbondangleterms
+that include atoms from the common and the different
+Figure 5. Two sets of coordinates of the common subsys- submoleculesareassociatedwithZ (r r ).
+diffnonint k+1,..., n
+tem. The transparent atoms represent atoms whose long The orientations of the r ,r vectors that are in
+range and improper dihedral interactions with the common thecommonsubmolecule,arealsoeffectivelyassociated
+subsystem are removed. The atoms of the common subsys-
+with the different submolecule in the form of arbitrary
+tem, including the water molecules in the case of explicit
+orthogonalxandz axesfortheseparatetheoreticalcal-
+solventcanenterthevolumeofthedifferentatomssincethe
+culation of free energy.
+longrangeinteractionsbetweenthemarerelaxed. Z isthe
+dif In the case of totally different molecules it can thus
+same in both cases.
+be written:
+Z →Z .
+submolecules with coupled degrees of freedom such as diffnonint
+the three bond angle terms associated with the vectors
+In the terminology of the field removing the long range
+r ,r and r decouple exactly.
+k k+1 k+2 energy terms is called decoupling and the decoupled
+In case there will be a dihedral potential term that
+atomsarecalleddummy. Inthiscontextwecancallthe
+depends on the vector r (e.g the dihedral term de-
+k−1 differentsubsystemdummysubsystem sincewecankeep
+fined by r ,r and r ) and a dihedral term that
+k−1 k k+2 theinternalenergytermsinthedifferentsubsystemcon-
+depends on a (e.g the dihedral term defined by a,r
+k stant in the transformation. In addition, in some cases
+and r ), there will be dependence between the par-
+k+1 in binding the long range terms between the different
+tition functions since the coordinates of the atoms in
+subsystem and the common environment (water) may
+the common submolecule will determine x,z axes but
+bekeptconstantandmayhaveasmalleffectonthefree
+also another vector in the xy plane which is related to
+energy. However,thisassumesthatthewatermolecules
+theconfigurationofthecommonsubmolecule. However,
+that are interacting with the different subsystem are
+usually only one dihedral angle energy term is used to
+weakly interacting with the common submolecule and
+relate between such subsystems and this explanation is
+is therefore not recommended in the general case.
+given for generality.
+A similar analysis applied to the improper dihedral
+termsthatrelatebetweenatomsinthetwosubmolecules F = F +F
+shows that the partition function of the different sub-
+system does depend on the coordinates of the atoms in
+thecommonsubsystem. Thus,itissuggestedthatmod-
+eling the planarity of the molecule with dihedral angle
+terms rather than improper dihedral terms (optional in
+Gromacs manual [44]) will result in less removed terms
+in the transformation. F = F +F
+We can write in terms of the partition functions:
+Z(r(cid:48),r ,..,r ,Ω )→ (6)
+Z (r(cid:48),r ,..,r ,Ω )Z (r r ),
+commonint 1 2 k env diffnonint k+1,..., n
+Figure 6. A scheme of the free energy of the transformed
+where Z denotes the partition function of the Toluene in two environments (F denotes free energy)
+common subsystem in which the common submolecule
+interacts with the environment, Ω denotes the coor- In standard molecular modeling the force field pa-
+dinates of the molecules of the environment, Z rameters of the common subsystems are identical, and
+diffnonint
+hence the common subsystems are identical. In Fig. 6 forcefieldsfromthetwocomparedmoleculesinthesim-
+a scheme of the free energies of the transformed repli- ulation (see Fig. 2). These separate simulations can fa-
+cas of Toluene in vacuum and water environments are cilitate automation as it eliminates the need for human
+presented. It can be seen that in both environments intervention in setting up the simulation. Transform-
+the free energy of the transformed replica can be de- ing the systems separately has been suggested in recent
+composed into the free energy of the common and the works [35, 36] and is given here in a detailed mathe-
+different subsystems. The free energy of the different matical description in the context of partition function
+subsystem is equal in the two environments since it ef- decoupling.
+fectively does not interact with the rest of the system. The idea in this section is to first identify in each of
+To summarize the following terms can remain con- thecomparedsystemsacommonsubsystemandadiffer-
+stant in the transformation and yield an exact calcula- ent subsystem. Then, to transform each of the systems
+tion, independently of the potential function: in each environment (e.g vacuum and water for solva-
+tion) by relaxing the Hamiltonian H , into a system in
+1. Bond stretching and bond angle terms. whichthepartitionfunctionsofthecommonsubsystem
+and the different subsystem can be decoupled. In this
+2. Dihedral energy terms, as long as terms that in-
+sectionweassumethatthepotentialtermsthatdiverge
+volveatomsfromthetwosubmoleculesareassoci-
+at r → 0, such as the VDW and electrostatic interac-
+atedwithtwocovalentbondsinthecommonsub-
+tions, when we are close to the transformed state, do
+molecule (e.g r and r ).
+k k−1 not play a role. In the next section we will justify this
+assumption. In Fig. 7 a scheme of the two separate
+3. Potentialtermsthatinvolveonlyatomsofthedif-
+systems suggested in this section is presented. We now
+ferent subsystem.
+We now denote the Hamiltonian with all the terms
+that are removed in the transformation by H . This
+Hamiltonian includes the VDW and electrostatic inter-
+actionsofthedifferentatomswiththerestofthesystem
+and improper dihedral terms (in case they are defined
+in the usual manner) that relate between atoms from
+the different and common submolecules. We denote by
+H theothertermsinthesystem. Thesedefinitionswill
+be used in the next section.
+Verification of the analysis with MD simulations
+Theanalysispresentedinthissectionisinagreement B B’
+with the MD simulation results in Ref. [38] in which
+free energies associated with non-quadratic potentials
+for a methanethiol molecule were calculated. The free
+energies associated with bond angle potential, methyl
+group with coupled bond angle potentials and dihedral
+angle potential in the transformed state were the same
+in vacuum and water environments. This means that
+thepartitionfunctionswhichincludethesetermsdecou-
+ple. This is in agreement with the analysis presented in
+this section according to which such terms do not have
+to be removed in the transformation in order for the λ=1 λ=0.5 λ=0
+partition functions to decouple.
+Figure 7. A scheme of the transformations in the novel
+method (two systems). A and B are the compared systems
+III. TWO SEPARATE SIMULATIONS andA(cid:48)andB(cid:48)arethetransformedreplicas-theoriginalsys-
+temswiththetermsdenotedbyH removed. Thetranspar-
+In relative free energy calculations the difference ent submolecule is the decoupled submolecule as previously
+between solvation/ binding processes of two similar explained.
+molecules is calculated. Our goal here is to calculate
+the relative free energy by transforming each system explainhowthefreeenergydifferencebetweentheorigi-
+separately withouthavingingredientssuchasatomsand nalsystemsandtheirtransformedreplicascanbecalcu-
+latedinthecontextofTI.Weemphasizethatitcanalso
+be calculated with other free energy calculation meth-
+ods (FEP, BAR etc.). The λ dependent Hamiltonians
+canbewrittenasfollows(pleasenotethateachequation
+transforma !on transforma !on
+includes a definition for the system A and a definition 1
+for the system B):
+Binding Binding
+A/B Ar/Br Ac/Bc proc ess proc ess
+wheretheHamiltonianwiththetermsthatareremoved
+inthetransformationandtheHamiltonianincludingall
+transforma !on transforma! on
+the other terms are denoted by H r and H c respectively 1 1 2 2
+as previously explained.
+The free energy between each system and its trans-
+formed replica can be written as follows:
+A/B→A(cid:48)/B(cid:48) Figure8. Aschemeofthefreeenergydifferencesinthenovel
+(cid:2) (cid:3)
+presented. R + L ,R + L denote the ligands bound
+to the receptor. L ,L denote the unbound ligands
+(cid:90) 1 dlnZ A/B (β,λ) (cid:90) 1 (cid:10) (cid:11) in an environment that does not include the receptor.
+B dλ Ar/Br The unbound receptor does not have to be simulated
+since it is the same in both L and L end states. The
+Each system is simulated at a set of λs in the range ligand L / L is transformed into its replica L(cid:48)/ L(cid:48)
+[0,1] that interpolates between the original and trans- with the H terms completely relaxed. The end states
+(cid:10) (cid:11) r
+formed systems. The average energy H is calcu- L ,L ,L(cid:48),L(cid:48),R+L ,R+L ,R+L(cid:48),R+L(cid:48) correspond
+Ar/Br 1 2 1 2 1 2 1 2
+lated in the simulation at each λ value. Thus, we can to the end states A ,B ,A(cid:48),B(cid:48),A ,B ,A(cid:48),B(cid:48) respec-
+numerically integrate and get the free energy difference 1 1 1 1 2 2 2 2
+tively.
+betweentheoriginalandtransformedsystems. Itisem- ThefreeenergydifferencebetweenL(cid:48) andL(cid:48) isequal
+phasized that the free energy difference calculated here tothefreeenergydifferencebetweenR 1 +L(cid:48) an 2 dR+L(cid:48)
+is between A and A(cid:48) or between B and B(cid:48) as opposed 1 2
+(∆F = ∆F ), since the free energy of
+L(cid:48)→L(cid:48) R+L(cid:48)→R+L(cid:48)
+to the standard calculation in which the free energy is 1 2 1 2
+the common subsystems in each environment are equal
+calculated between A and B as in Eq. (1).
+and the free energy of the different subsystems is the
+We now denote the first and second environments
+sameinbothenvironments. Thiscanbewrittenexplic-
+by 1,2 respectively. Examples for two environments
+itly as follows:
+are vacuum and water for solvation free energy and
+water and protein+water for binding free energy. We ∆F =
+L(cid:48)→L(cid:48)
+denote the compared systems in each environment 1 2
+by A ,B ,A ,B and their transformed replicas by
+1 1 2 2 (cid:16) (cid:17)
+A(cid:48),B(cid:48),A(cid:48),B(cid:48). According to the explanations in the −k T lnZ +lnZ −lnZ −lnZ =
+1 1 2 2 B wid L(cid:48) wid L(cid:48)
+previous section, taking into account that the partition 2dif 1dif
+functions of the different subsystems are not coupled to
+(cid:16) (cid:17)
+the environment, we write:
+−k T lnZ −lnZ =
+B L(cid:48) L(cid:48)
+(cid:48) (cid:48) (cid:48) (cid:48)
+A →A ,B →B A →A ,B →B , (10)
+1 1 1 1 2 2 2 2
+(cid:16) (cid:17)
+−k T lnZ +lnZ −lnZ −lnZ =
+B wpid L(cid:48) wpid L(cid:48)
+2dif 1diff
+Z =Z Z , Z =Z Z ,
+1identical A(cid:48)
+(cid:48) 1identical B
+Z =Z Z , Z =Z Z .
+2identical A(cid:48)
+(cid:48) 2identical B
+where the subscripts “w” and “wp” stand for water en-
+(12) vironment and water protein environment respectively.
+It can be seen that the partition functions of the trans- The subscripts “id” and “dif” denote the identical and
+formed replicas are decomposed to sub partition func- different subsystems respectively. The relative free en-
+tionswhichareequaltosubpartitionfunctionsofother ergy can now be written as follows:
+transformed replicas (having the same names). In Fig.
+8 a scheme of the free energies in the novel method is ∆F =
+Asolvation/binding→Bsolvation/binding
+∆F −∆F = ulations we have only the atoms and force fields of the
+L1→R+L1 L2→R+L2
+original molecule. Thus human intervention in order to
+integratebetweenthesystemsandtheirforcefieldsand
+∆F L1→L(cid:48)
+→L(cid:48)
+to disable the interaction between the systems is not
+required. Here we achieve a considerable simplification
+over the simulation in the hybrid system setup, and a
+(cid:0) (cid:1)
+R+L(cid:48)
+simplification and significantly better phase space over-
+lap as compared with the dual topologies setup since
+less terms are removed.
+L1→L(cid:48) 1 L2→L(cid:48) 2 It is noted that this ingredient is different from the
+single reference comparison schemes [12] in which all
+(cid:0) (cid:1) themoleculesarecomparedwithonereferencemolecule.
+− ∆F −∆F =
+2 This is since the single reference comparison is defined
+for a specific group of molecules and the reference sys-
+(cid:90) 1 (cid:90) 1 tem has to be given as an input and is not generated
+(cid:104)H (cid:105)− (cid:104)H (cid:105) from the compared molecules. Using the two origi-
+0 0 nal systems for the comparison allows generality and
+flexibility - can be used for any group of two or more
+(cid:90) 1(cid:68) (cid:69) (cid:90) 1(cid:68) (cid:69) molecules. The use of the molecules themselves as a
++ H − H . reference ensures maximal phase space overlap. The
+Asolvated/boundedr
+Bsolvated/boundedr
+separation of the system into the common and different
+submoleculesensuresthatwemaintainthelargestcom-
+Thus we perform in each environment (in vacuum and
+mon subsystem untransformed. This is as opposed to
+in solvent for solvation and in solvent and in solvent-
+previous works in which the reference molecule is not
+protein environment for binding) one transformation of
+the largest common subsystem (e.g Ref. [12]).
+eachofthecomparedmolecules. Thatis, eachmolecule
+is simulated at a set of λs and the free energy be-
+tween the original and transformed systems is calcu-
+IV. DEMONSTRATIONS OF THE
+lated. These free energy differences will allow us to get
+DECOUPLING ANALYSIS AND THE
+the relative free energy difference. Fig. 9 is a summary SEPARATE TRANSFORMATIONS
+scheme of the transformations and free energy cancel-
+lations. As previously mentioned the cancellations of
+We now demonstrate the decoupling analysis and
+the free energies are exact. It is emphasized that (in
+the separate simulations in calculating the free energy
+all topologies) there is no restriction on the number of
+difference between solvation of para-Cresol and para-
+atomsofthecomparedmoleculessincethesefactorscan-
+Cholorophenol. In the force field we used all the po-
+celoutintheThermodynamicCycle. Ineachofthesim-
+tential terms that depend on the spherical variables are
+non-quadratic
+A 1 A’ 1 B’ 1 B 1
+V = 1 k (cid:0) r2−r2(cid:1)2 , V = 1 k (cosθ−cosθ )2,
+c 2 c 0 b 2 θ 0
+d ijkl φ s
+Therefore, the calculation presented here can be per-
+formed only when using the decoupling analysis pre-
+sented in Section II.
+Instandardforcefieldstheparametersofthecommon
+A 2 in water A’ 2 in water B 2 ’ in water B 2 in water subsystems are usually identical between the compared
+systems. We consider here the general case in which
+the molecules are individually parametrized by Quan-
+tum Mechanics computations [46]. Thus the common
+submolecules do not necessarily have the same terms.
+Figure10isanillustrationofthetransformationsinto
+systems in which the common subsystems are identical
+andthepartitionfunctionsofthedifferentandcommon
+subsystem decouple. The VDW and electrostatic po-
+tentials of the different atoms as well as the improper
+Figure 9. A summary scheme of the transformations and dihedral term (three connected green lines) couple be-
+free energy cancellations (context of solvation)
+tween the two subsystems and are therefore relaxed in
+0.453 0.439 solute (the p-CH3 or p-Cl molecule) and the box edge
+-0.604 -0.604 to prevent interactions of the molecule with its periodic
+0.188 -0.356 0.446 0.188 0.166 0.36 0.166 copyintheadjacentcell,wasused. Therhombicdodec-
+ahedron was selected since it provides a more effective
+-0.356 -0.276 -0.276
+-0.003 -0.053 -0.003 -0.003 -0.003 p te a r ck m in in g im of iz p a e t r i i o o n di a c n i d m e a q g u e i s li t b h r a a n tio r n ect ( a 2 n 00 gu p la s) r , b 2 o 0 xe n s s . a A n f d -
+0.125 0.125 0.125 0.125
+fc=530 fc=530 fc=530 fc=530 1 ns of MD simulations were performed in vacuum and
+-0.15 water respectively under NVT and NPT ensembles, at
+eachofthe19equi-spacedintermediatestates(λstates)
+0.439 0.439
+including the initial (λ = 0) and final states (λ = 1).
+-0.610 -0.604 For each of the λ states, first the coulomb terms were
+0.166 0.36 0.166 0.166 0.36 0.166 relaxed followed by VDW terms. We have computed
+the free energy difference between solvation of p-CH3
+-0.276 -0.276 -0.276 -0.276
+-0.235 0.189 -0.235 -0.003 -0.003 and p-Cl using the BAR (Bennett’s acceptance ratio)
+0.156 0.156 0.125 0.125 method [18].
+fc=560 fc=560 fc=530 fc=530
+0.123 0.123
+0.123 B. Results and comparision
+Figure 10. Illustration of the transformations. The partial
+WefirstcalculatedHelmholtzandGibbsfreeenergies
+charges written in black and green belong to the common
+correspondingtoNVTandNPTensemblesrespectively,
+anddifferentsubsystemsrespectively. Thelightbluedashed
+according to the decoupling analysis in Sec. II. To this
+line denotes the dihedral term. The three connected green
+endweassociatedthebondangleoftheC/Clatomwith
+lines represent the improper dihedral term. In case there is
+thecommonsubsystemandthetheC-C/Cl-Catomdis-
+no term its value is zero.
+tancewiththedifferentsubsystem(therestoftheanal-
+ysis follows from Sec. II). We then performed an addi-
+the transformation. The bond angle terms marked on tional transformation of p-CH3 and p-Cl molecules in
+thefigurehavethesameθ anddifferentk (correspond- which bond angle terms were removed according to the
+ingtof ),whichafterthetransformationsarethesame. existing decoupling analysis. To perform the additional
+The VDW terms are not presented since they are the bonded transformation we defined for p-CH3 molecule
+same for the same atoms. the CH3 group atoms as the different subsystem and
+Similar transformations apply for a group of 3,4 etc. we removed the five bond angle terms and the dihedral
+para-phenols. Inthatcasethetermsofallthemolecules angle term which involve atoms from the common and
+have to be taken into account and average parameter different subsystems. In the additional bonded trans-
+value can be chosen to minimize the transformations. formation of p-Cl we defined Cl as the different subsys-
+tem and removed the two bond angle terms which in-
+volve atoms from the two subsystems. The simulations
+A. Simulation Protocol have been performed with bond length constraints that
+should have a minor effect on the dynamics. In the ad-
+We have used the Gromos53a6 force field parame- ditionalbondedtransformationofp-Clinvacuuminor-
+ters from ATB server [46] for both p-Cresol and p- der to reduce the standard deviation we also performed
+Chlorophenol (p-CH3 and p-Cl) along with spc water in some of the intermediates a transformation without
+model during the simulations. The rhombic dodecahe- constraints.
+dronbox,withaminimumdistanceof1nmbetweenthe The results obtained are the following (in kJ/mol):
+vacuum water vacuum water
+p-CH3 140.18±0.00 147.44±0.14 155.78±0.03 164.2±0.23
+p-Cl 19.74±0.01 29.95±0.65 46.78±0.02 59.06±0.28
+p-CH3 bonded terms -25.51±0.10 -25.89±0.37 -25.72±0.25 –26.87±0.22
+p-Cl bonded terms -7.68±0.78 -7.51±0.24 -8.27±0.79 -7.36±0.07
+p-Cl bonded, no costraints -7.42±0.25 -7.27±0.04
+It can be seen that the free energy difference associ- ated with the removal of the bonded terms is the same
+(within less than a standard deviation) in vacuum and use in MD simulations. We also show mathematically
+waterinNVTensembleasexplainedinSectionII.Gibbs that that the monotonicity of the integrated function is
+free energy, which is usually similar to Helmholtz free ensured.
+energy [44], in vacuum and water was different by 1.15 This soft core technique does not introduce depen-
+kJ/mol for p-CH3 and the same for p-Cl. In the follow- dencyonλandhencethepotentialanditsderivativeare
+ing table we present Helmholtz and Gibbs relative free relativelysimpletoimplement. Inaddition,theoriginal
+energies of solvation (in kJ/mol). shape of the potential constant, which is good in terms
+of phase space overlap. Moreover, the need to remove
+decoupling
+inc. bonded firsttheelectrostatictermsandthentheVDWtermsto
+analysis avoid singularities is eliminated.
+constraints no const.
+∆F -2.95±0.66 -3.5±1.12 -3.24±0.84
+p−Cl→p−CH3
+∆G -3.86±0.28 -5.92±0.91 -4.92±0.44 A. The value of the capping energy
+p−Cl→p−CH3
+It can be seen that ∆F is the same
+(within less than a standard p− d C e l→ vi p a − ti C o H n 3 ) when we re- Sinceatλ=0theenergytermsthatdivergeatr =0
+moved additional bonded terms. Thus, a smaller trans- cause the average energy to diverge, capping is used in
+formationand asimpler implementation resultedin the the long range energy terms (if E > E cap , E = E cap ).
+same relative free energy with a shorter simulation and Thus, the terms at λ → 0 are no longer dominant and
+asmallerstandarddeviation. Thisimpliesthatinorder decoupling is achieved. The proposed calculation of the
+to obtain the same standard deviation using the exist- free energy difference between the two systems is legit-
+ing decoupling analysis a longer simulation is required. imate only if the choice of the capping energy has a
+Forsimilartransformations(inanothercontext)seeRef. negligible effect on the free energy value of each of the
+[38]. twosystemsatλ=1. TheHamiltonianwiththecapped
+The experimental free energy difference is [47] : long range energy terms H(cid:48) is written as follows:
+diff A/B Alr/Blr Asr/Bsr
+It can be seen that there is good agreement between
+where H(cid:48) and H denote the capped long
+the calculation and the experimental free energies. The Alr/Blr Asr/Bsr
+range and the short range terms respectively. The re-
+total simulation time using the decoupling analysis in
+quirement stated above can be written explicitly as fol-
+Sec. II was ∼ 42 days (on a single core). Hence, im-
+lows:
+provement in the efficiency of the calculation is signifi-
+cant in terms of computation time.
+V. REMOVING SINGULARITIES AT SMALL In order for the capping to have a negligible effect on
+λS the partition functions at λ = 1 it has to be set to a
+value that satisfies:
+The potential in the standard soft core technique is
+given by: e−E k c T ap (cid:28)1. (17)
+(cid:34)(cid:18) (cid:16)r(cid:17)6 (cid:19)−2
+H(λ,r)=4(cid:15)λn α(1−λ)m+ + Thus at λ values satisfying e−λE k c T ap ≈ 1 the diverging
+interactions, including the steric, become transparent.
+InFig. 11energyandexp(−E/kT)asafunctionofdis-
+tance for the potential r−12−r−6 are plotted at λ=1
+(cid:18) α(1−λ)m+ (cid:16)r(cid:17)6 (cid:19)−1 (cid:35) . and at λ=0.01. It can be seen that the capping of the
+σ energy has a negligible effect on the probability distri-
+bution at λ = 1 and that at small λs the interactions
+Here we present a soft core technique in which we are transparent.
+cap the diverging energy terms at high energetic values Itissuggestedthatsincetheprobabilitytobeinami-
+in order to remove the singularities at small λs. This crostatedecaysexponentiallywiththeenergywithtypi-
+is a unification of the approach in Ref. [34] in which caldecayscaleofk T andsincethedensityofstatesfor
+accessible capping energies with a negligible effect on E >E isverylow,cappingtheenergyatavaluesev-
+the free energy are suggested, resulting in integrated eral times k T higher than the equilibrium total atom-
+functions that are less steep, and Ref. [39] in which atom long range energy will have a negligible effect on
+the derivative of the potential is continuous, enabling the free energy value at λ=1.
+0.8 0.9 1 1.1 1.2 1.3 1.4 1.5
+]lom/laCk[
+Energy with capping
+exp(−E/kT) without capping
+exp(−E/kT) with capping
+0 0.5 1 1.5
+Distance [A]
+]lom/laCk[
+gratedfunction. Thismonotonicitywillenableasimple
+selection of intermediates for the calculation of the free
+energy difference. For example of integrated functions
+that are not monotonic see Ref. [12], Fig. 3.
+This monotonicity for the soft core technique when
+used with the transformation of Eq. (8) can be under-
+stood by recalling that the integrated function (cid:104)H (cid:105) Ar
+in Eq. (9) is calculated with the governing Hamilto-
+nian H +λH . A system will spend time in each
+configuration proportional to the Boltzmann weight of
+thatconfigurationwhichisdeterminedbythegoverning
+Hamiltonian. When energy terms are multiplied by a λ
+value smaller than 1, the energy heights and valleys of
+Distance [A]
+that terms will appear smaller. Thus, the system will
+spend more time in these heights and less time in these
+valleys. In the calculation of the average energy, the
+energylandscapedidnotchangeastheHamiltonianre-
+mained the same. Thus, since the system now spends
+more time in less favorable states, the calculated aver-
+age energy will be higher. This is similar to heating the
+system as λ plays the role of β. Thus low values of λ
+correspond to high temperatures, leading to higher av-
+erage energies. This is expressed in the known result
+(cid:68) (cid:69)
+−∂U = (∆E)2 [48]. However, hereλmultipliessome
+of the terms so it can be regarded as “partial heating”
+(seeEq. (8)). Also,inthiscasetheaverageenergy(cid:104)H (cid:105) r
+is only of the removed terms.
+We now prove that the integrated is monotonic for
+transformationswhichdependlinearlyonλ. Itiseasyto
+showthatfor
+=0(seedetailedproofinAppendix
+Figure11. Energyandexp(−E/kT)asafunctionofdistance
+for the potential r−12 − r−6 with E cap =7kcal/mol (a) at
+(cid:19) (cid:42)(cid:20)
+(cid:29)(cid:21)2 (cid:43)
+Demonstrations (cid:28)(cid:104) (cid:68) (cid:69)(cid:105)2 (cid:29)
+It has been demonstrated that E values of ∼ Hence, the suggested soft core technique, which does
+5kcal/mol enable accurate free energy calculations [34]. not introduce dependency on λ combined with linear
+In this reference the free energy calculation results for transformations in λ such as the transformations of Eq.
+E = 5kcal/mol and E = 4.4kcal/mol were similar (1) or Eq. (8) results in a monotonic change in the
+(see Fig. 29 there). In addition in Ref. [35] the free integrated function.
+energy difference calculation between two systems com- Interestingly, this also shows that the variance of
+posed of two atoms with E cap = 7kcal/mol was very dH(λ) isproportionaltotheslopeoftheintegratedfunc-
+accurate(seeSupplementaryMaterialwhichappearsin tio d n λ . Thus, steep slopes of the integrated function are
+the same document). See also Fig. 11. Note that in challengingbothtosampleandtonumericallyintegrate.
+Ref. [34] β is varied rather than λ. However, the soft
+The monotonicity is important for the integration
+coretechniquepresentedthereismathematicallyequiv-
+since at two adjacent intermediates there can be no ex-
+alent to the one presented here. The conditions for the
+tremum point, which can cause a free energy difference
+capping energy here involve λ rather than β.
+that is not taken into account in the numerical integra-
+tion. Themonotonicityofthefunctionenablesaccurate
+numerical integration and facilitates the selection of in-
+B. The monotonicity of the integrated function termediates.
+Setting λ → λn preserves monotonicity in both hy-
+In this subsection we explain why the suggested soft brid and separate transformations. When performing
+core technique ensures the monotonicity of the inte- separatetransformationsthereisa“softcoretransition”
+(steep integrated function) near λ=0. When perform- the standard long range potential and the flat potential
+inghybridtransformationstherearetwo“softcoretran- is needed. This has been developed independently and
+sitions” - near λ = 0 and near λ = 1. Setting λ → λn implementedinMDwithacubicswitchingfunctionand
+when n > 1 results in a less steep integrated function an energetically inaccessible capping energy (reaches a
+near λ = 0 and more steep integrated function near state in which E >E once every 1014 moves), which
+λ = 1. This is useful in separate transformations but validates the use of the capping in the context of MD
+not in hybrid transformation in which it will improve for high energetic values (40kcal/mol) [39]. This use of
+thesamplingforonetransitionbutworsenfortheother a switching function with E = 40kcal/mol as a soft
+transition. (see Appendix D for more details). core techniques appeared to perform marginally better
+This statement regarding the monotonicity of the in- compared to the standard soft core technique [39].
+tegrated function is in agreement with Ref. [39] (Fig.
+5),inwhichthesoftcoretechnique(forinaccessiblecap-
+pingenergy)withalineartransformationofthetypeof E. Unifying the approaches
+Eq. (8) results in a monotonic change in the integrated
+function (has not been pointed out). Thus a unified approach that uses a switching func-
+tion and a capping energy that is accessible and has
+a negligible effect on the free energy (e.g E =
+C. The effect of the capping energy on the 7kcal/mol) is suggested as a soft core technique. This
+integrated function condition results in significantly lower value of E as
+compared with the one needed in order to ensure in-
+We now analyze the effect of the capping en- accessibility and thus sampling is much easier (see the
+ergy value on the integrated function. We choose comparison of the behavior of the integrated function
+two legitimate capping energies E cap =7kcal/mol and for two different E cap values in Ref. [34] Fig. 28). Now
+E =15kcal/mol. For simplicity in the following para- Eq. (14) can be written as follows:
+graph we omit the units. The free energy change asso-
+ciated with the transition to "transparent" VDW and ∆F Asolvation/binding→Bsolvation/binding =
+electrostatic interactions is concentrated in the range
+0.05(cid:46)exp(−βλE )(cid:46)0.95.Takingβ →1forsimplic-
+cap (cid:90) 1 (cid:90) 1
+ity,wegetthatthefreeenergychangeisconcentratedin (cid:10) H(cid:48) (cid:11) − (cid:10) H(cid:48) (cid:11)
+0.05 (cid:46) λ (cid:46) 3 . This translates into 0.007 (cid:46) λ (cid:46) 0.42 Br Ar
+Ecap Ecap 0 0
+and0.003(cid:46)λ(cid:46)0.2forE =7andE =15respec-
+tively. It can thus be seen that the range in which the
+(cid:90) 1(cid:68) (cid:69) (cid:90) 1(cid:68) (cid:69)
+free energy changes is smaller and the change occurs + H(cid:48) − H(cid:48) .
+at smaller λs as E cap is higher. Since (cid:82) 0 1(cid:10)d d H λ A (cid:11) dλ is 0 Asolvated/boundedr 0 Bsolvated/boundedr (19)
+the same to a good accuracy for both capping energies
+(equal area), the integrated function reaches a higher
+value at λ=0 for high E values.
+cap VI. SAMPLING RUGGED ENERGY
+LANDSCAPE IN ONE λ DIMENSION
+Demonstrations
+When the systems, between which the free energy
+difference is calculated, have rugged energy landscape
+It has been demonstrated in molecular MC simula-
+in conformational space (as a function of the coordi-
+tionsthatthereisatrade-offwhenchoosingE . That
+cap nates of the atoms), one can use techniques such as
+is, high E value results in a more accurate calcu-
+cap H-REMD/H-PT (Hamiltonian Replica Exchange MD/
+lation but an integrated function that is steeper and
+Hamiltonian Parallel Tempering, variant of Parallel
+reaches a higher value. See Ref. [34] (Fig. 28) in
+Tempering/Replica Exchange [27–29]) to alleviate sam-
+which the integrated functions for E = 5kcal/mol
+cap pling problems [49]. In this technique the system is
+and E =4.4kcal/mol are compared. See also the in-
+cap simulatedatasetofλsandexchangesofconfigurations
+setinFig. 5inRef. [39]inwhichtheintegratedfunction
+between them are performed every certain number of
+with E =40kcal/mol is plotted (MD simulations).
+cap steps according to the Metropolis criterion. Thus, the
+systems at the low λs, that can cross energetic barri-
+ers, helpthesystemofinteresttobesampledwell.This
+D. Continuity of the potential and its derivative technique,eventhoughishighlyefficient,introducesan-
+other sampling dimension since the simulations of the
+In order to have continuity in the derivative that replicas at a set of λs are performed at each intermedi-
+will enable the integration over the equations of mo- ate of the hybrid system (sampling the dimensions of λ
+tion in MD to be valid, a switching function between that interpolates between the systems and of λ of the
+replicas that are used for the equilibration). Here, the and guiding principles in choosing the intermediates in
+simulations at the different λs will be used also to cal- the H-REMD/PT procedure see Refs. [33, 50, 51].
+culate the free energy difference by integration and the
+need for another sampling dimension is eliminated.
+In order to equilibrate the entire system, the energy VII. DISCUSSION
+terms that are not multiplied by λ can be written as
+follows: Anovelmethodforcalculatingrelativefreeenergiesis
+(cid:40) presented. Themethodcanbeusedtocalculatethefree
+H →f(λ)H , f(λ)= eq (20) energydifferencebetweensolvation/bindingfreeenergy
+λ eq λ<λ eq , of two molecules with any number of atoms and is ap-
+plicable to MD and MC simulations and to all types of
+whereλ denotestheminimalλforequilibrationinthe
+eq molecularmodelings. Thearticleiscomposedofseveral
+H-REMD procedure. Here we transform all the terms
+independentingredients. First,weshowedthatthepar-
+only up to λ in order to have a minimal transfor-
+eq titionfunctionsofthecommonanddifferentsubsystems
+mation. Thus the H-REMD procedure is in its origi-
+decouple exactly and hence there is no error involved.
+nal form in the range λ = [1,λ ] and the systems at
+eq Thisanalysisisapplicabletoallpotentialfunctionsand
+λ = [λ ,0], in which only H is lowered, can be simu-
+eq r to submolecules with coupled degrees of freedom. Then
+lated separately since the energy barriers are accessible
+wesuggestedtousethetwoseparatesystemsinsteadof
+for these λ values. See Fig. 12.
+one system that includes ingredients of the two systems
+in order to calculate the relative free energy. This has
+theadvantageoflargephasespaceoverlapsincethesys-
+tems are inherently correlated and simplicity since the
+simulationsareperformedonlyonthetwo(almost)orig-
+inalsystemsintwoseparatesimulationsandtheneedfor
+extensivedesigniseliminated. Thethirdingredientisa
+unified approach to soft core potentials. This technique
+issimpletoimplementandresultsinmonotonicchange
+of the integrated function. The monotonicity enables
+simple selection of intermediates and ensures accuracy
+in the numerical integration and hence a robust result.
+λ=1 λ=λ =0.9 λ=0 We also show how if the systems have rugged energy
+eq landscape, instead of using the sampling techniques in
+anotherλorT dimension,wecanuseonlyonesampling
+B B’ dimension. since the λs used in the H-REMD/H-PT
+procedure are also used as intermediates in the calcu-
+lation of free energy difference, a convergence for sys-
+tems with rugged energy landscape is achieved without
+introducing another sampling dimension. Both in the
+calculation of the integral for the free energy difference
+and in the H-REMD/H-PT procedures, the chosen in-
+tervals between the λs have to be smaller where the
+internal energy varies significantly, in the free energy
+difference calculation in order to have good sampling of
+thefunctionandinH-REMDinordertomaintainopti-
+λ=1 λ=λ =0.9 λ=0 mal acceptance rates. Thus, no additional unnecessary
+λs have to be sampled.
+IthasbeenshownanalyticallyandinMDsimulations
+Figure 12. A scheme of the two transformations suggested. that less terms need to be removed in the transforma-
+At λ=λ all the energy terms that need equilibration are tion as compared to the existing methodology such as
+multiplied by λ . At λ = 0 H is removed and the other the dihedral terms. Since each removal of a term in
+terms remain multiplied by the same λ as when λ=λ eq . the transformation has a free energy energy value as-
+sociated with it, removing less terms necessarily means
+H-REMD, which is in its standard use here, is ex- that the free energy difference in the transformation is
+plained and demonstrated in Ref. [49]. A general ex- smaller and less intermediate systems are required. In
+amplewhichdemonstratesfreeenergycalculationofsys- addition the monotonicity of the integrated function in
+tems with rugged energy landscape in one λ dimension the soft core technique has both been proved analyti-
+with further methodological advances can be seen in cally and backed up in existing MD simulations. The
+Ref. [35], Supplementary Material. For methodologies monotonicityoftheintegratedfunctionensuresthatthe
+functionwillnothaveextremaandenablestoknowthe
+upper limit of the numerical integration error. Thus
+it is expected that less intermediates will be needed
+to sample the function. The relation between the free
+energy difference and the number of intermediates re- k
+quired can be understood for example from the upper
+limit of the numerical integration error of a monotonic
+function ∆x∆y/2 which depends linearly on this differ-
+ence. Thus,forintegrationresultwithinagivennumeri-
+calerror,lessintermediatesareexpectedtoberequired.
+Finally,cappingthepotentialatanenergyvaluethatis
+energeticallyaccessibleinthesoftcoretechnique,which
+has been demonstrated in MC simulations, results in a
+function that is less steep and reaches a lower value as
+compared to the case of an energetically inaccessible
+capping energy. Thus, again, less intermediates are re-
+quired. Sincethenumberofintermediatesisdirectlyre-
+latedtothecomputationalpowerneeded,theprinciples Figure 13. Benzoic Acid molecule with atom indices that
+presentedhereareexpectedtoincreasetheefficiency of suit the defined dihedral terms
+the calculations.
+Theseadvantagesareofhighimportanceforautomat-
+ingfreeenergycalculationsandcomputationaldrugdis- imk atoms. The atoms in this case have different co-
+covery. Thus, using this method, preceded by virtual valent connectivity. The Coulomb and VDW terms are
+screeningfiltering,anautomatedfreeenergycalculation
+definedbythe1/randr−12−r−6potentialsrespectively.
+thatwillresultinthebestcandidatesmaybeperformed. Thecoefficientsfortheseinteractionsaredeterminedby
+Itisnotedthatthemethodmayhaveotherapplications the VDW coefficients/charges of both atoms.
+in physics, where the environment for example can be
+external electric or magnetic field.
+Appendix B: Decoupling the partition function -
+detailed proof
+Appendix A: Molecular potentials
+Since we vary over all possible values of Ω the in-
+Here we briefly describe the molecular potentials. tegration result does not depend on xˆ and zˆ.
+The covalent bond between two atoms is modeled We can change the coordinate system of the different
+with the following potential: subsystem so that xˆ and zˆand accordingly yˆwill be its
+newaxesxˆ =O−1x =xˆandsimilarlyforyand
+V c =k c (r−d)2, (A1) z axes, wh n e e r w e O−1 is t (0 h , e 0,1 r ) otation matrix that rotates
+thepreviouslydefinedaxes[(0,0,1),(0,1,0),(1,0,0)]to
+where r is the distance between the atoms. The bond
+xˆ,yˆ,zˆ.Ω isrotatedwithO inordertoberepresented
+angletermbetweenthreeatomsisusuallymodeledwith in the ne d w if system of coordinates Ω˜ = OΩ . The
+the following potential: Jacobianofrotationis1dΩ˜ =dΩ di . f Theinte d g if ration
+V b (θ)= 1 2 k θ (θ−θ 0 )2. (A2) l t i h m e it n s ew of s x˜ y j s , t y e ˜ m j a o n f d co z˜ o j r a d r i e na − te ∞ s a t r o e ∞ (0, . 0 xˆ , n 1 e ) w a a n n d d (1 zˆ , n 0 ew ,0) in .
+We can thus write
+The commonly used dihedral angles potential is of the
+following type:
+(cid:90) (cid:90)
+d ijkl φ ijkl s
+where φ is defined by the angle between the plane
+formed by the ijk atoms and the plane formed by the (cid:90)
+jkl atoms. The improper dihedral term that is used to e−βHcom(Ωcom)dΩ Z =Z Z .
+com dif com dif
+enforce planarity is defined as follows:
+Alternatively,wecanswitchΩ torelativespherical
+V (φ ijkm )= 2 k(φ ijkm −φ s )2, (A4) variables and this integration will not depend on Ω com .
+Here we define xˆ,zˆ for every atom in the different sub-
+where φ is defined by the angle between the plane moleculesimilarlytothedefinitionsabove. Wecanthus
+formed by the ijm atoms and the plane formed by the write
+Appendix D: Setting λ→λn preserves monotonicity
+(cid:90) and results in improved behavior of the integrated
+Z = e−βHcom(Ωcom)dΩ × function when used in separate transformations
+Wenowexplainthatwhenperformingseparatesimu-
+e−βHdif(rk+1,rk+2,rk+3,θk+1,θk+2,θk+3,φk+1,φk+2,φk+3)× lationswecanchooseatransformationthatwillpreserve
+the monotonicity and result in improved behavior of
+the integrated function. We will investigate free energy
+k+3 functions which can be mapped from the free energy
+r2sinθ dr dθ dφ = functions with linear transformations. For example the
+j=k+1 free energy for the separate and linear transformation
+H (λ)=λH +H canbemappedintothisofthetrans-
+ms r c ls ms
+e−βHcom(Ωcom)dΩ com Z dif =Z com Z dif The integrated function of a mapped function F m (λ)
+from a linear function F (λ) for any λ → λn,λ ∈ [0,1]
+mapping is monotonic
+Appendix C: Detailed proof of the monotonicity of
+the integrated function
+− m =− l =
+d (cid:18) dF (cid:19) (cid:82) e−βH(λ)
+− d2 d H λ ( 2 λ)
+dΩ − d2F l (λn) (cid:18) dλn(cid:19)2 =− d2F l (λ)(cid:0) nλn−1(cid:1)2 >0.
+dλ dλ Z(λ)
+It can be readily seen that the hybrid and linear
+− (cid:90) e−βH(λ) dH(λ) dΩ d (cid:104) Z(λ)−1 (cid:105) . (C1) t m ra a n p s p f e o d rm in a t t o ion th H e l t h r ( a λ n ) sf = orm λ a H t r io + n ( H 1 m − h λ 1 ) (λ H ) c = can λ n n o H t r b + e
+dλ dλ (1−λ)2H . For example for n = 2, λ = 0.1 we have
+Differentiating Z(λ)−1 with respect to λ we get: H mh1 (λ=0.1) = 0.01 · H r + 0.81 · H c which has no
+corresponding value in F . F can be mapped into
+d (cid:104) Z(λ)−1 (cid:105) =−Z(λ)−2 dZ =−Z(λ)−2 d (cid:82) e−βH(λ)dΩ = H m M h a 2 p = pi λ ng nH of r λ + → (1− λn λ r n e ) s H ul c t . s in (cid:0) nλn−1(cid:1)2 factor which
+dλ dλ dλ (cid:113)
+equals 1 at λ = n−1 1 and for n > 1 increases with λ.
+dΩ.
+For example for n = 2 this factor equals 1 at λ = √1
+.
+dλ Thismeansthattheslopeoftheintegratedfunctionwill
+be smaller for λ< √1 and larger for λ> √1 compared
+And finally: 2 2
+to the original one. Such a mapping will result in less
+(cid:82) e−βH(λ) (cid:20) β (cid:16) dH(λ) (cid:17)2 − d2H(λ) (cid:21) dΩ steep integrated functions for transitions at small λ s
+d (cid:18) dF (cid:19) dλ dλ2 but steeper integrated functions for transitions at high
+− dλ dλ = Z λ s. Thus d d F λ ls in which the transition occurs at small
+λ s will benefit from such a mapping but dFlh which
+(cid:28) (cid:29)(cid:28) (cid:29) includes a transition near λ(cid:119)1 will experience steeper
+−β . (C2) changes in the region of this transition (see for example
+[35] Fig. 3 (a)). In conclusion, λ→λn,n>1 mapping
+For H that depends linearly on λ the second derivative in separate simulations will result in both monotonic
+vanishes and we can write: integrated function and more equally spaced intermedi-
+ates.
+(cid:19) (cid:34)(cid:42)(cid:18)
+(cid:19)2 (cid:43) (cid:28)
+(cid:29)(cid:28)
+(cid:29)(cid:35)
+Appendix E: Sampling rugged energy landscape in
+one λ dimension - additional explanations
+(cid:42)(cid:20)
+(cid:29)(cid:21)2 (cid:43)
+dλ dλ ThefreeenergydifferencecalculatedintheH-REMD
+procedure, whichisintherangeλ=[1,λ ]canalsobe
+(cid:28)(cid:104) (cid:68) (cid:69)(cid:105)2 (cid:29) usedforcomparisonstoothermoleculesthathaveasub-
+dλ dλ system in common. The simulations in the range λ =
+[λ ,0] can be used for comparison to other molecules with lowered energy barriers. Thus only when we relax
+that have the same common subsystem as the one in terms up to a value in which the states can be sampled
+the transformation that was performed. Covalent bond well will the simulations converge. This option is thus
+and bond angle energy terms may not need equilibra- possible only when using the topology and soft core in-
+tion(multiplicationbyλ)astheyarenotexpectedtobe gredients presented before.
+associated with rugged energy landscape. It is empha-
+sized that any transformation can be combined with H-
+REMD.However,itusuallydoesnotensureconvergence Acknowledgments
+of the simulations and another dimension is needed.
+Sincehereweuseonlytheoriginalmoleculeinthetrans- D. J. Bergman, A. Nitzan, G. Falkovich, D. Harries,
+formation it can be performed in such a way that will andR.Peledareacknowledgedfortheusefulcomments.
+ensure convergence. This originates from the fact that I. Khavrutskii, M. Shirts, K. Vanommeslaeghe, F. Bue-
+in order to achieve convergence the system needs to ex- lens and C. Junghans are acknowledged for the fruitful
+change configurations with its replica in a Hamiltonian discussions.
+[1] M.P.Allen,D.J.Tildesley,etal.,Computersimulation 1011 (1992).
+of liquids (Clarendon press Oxford, 1987). [20] F. Wang and D. Landau, Physical review letters 86,
+[2] K. Binder and D. W. Heermann, Monte Carlo simu- 2050 (2001).
+lation in statistical physics: an introduction (Springer, [21] D.Landau,S.-H.Tsai, andM.Exler,AmericanJournal
+2010). of Physics 72, 1294 (2004).
+[3] D. P. Landau and K. Binder, A Guide to Monte Carlo [22] P. Wu, X. Hu, and W. Yang, The journal of physical
+Simulations in Statistical Physics (Cambridge Univer- chemistry letters 2, 2099 (2011).
+sity Press, 2014). [23] J. B. Abrams, L. Rosso, and M. E. Tuckerman, The
+[4] D. Frenkel and B. Smit, Understanding molecular sim- Journal of chemical physics 125, 074115 (2006).
+ulation: from algorithms to applications (Academic [24] C. Jarzynski, Physical Review Letters 78, 2690 (1997).
+Press, Inc. Orlando, FL, USA, 1996). [25] G. E. Crooks, Physical review E 61, 2361 (2000).
+[5] M. Newman and G. Barkema, Monte Carlo Methods [26] W.L.Jorgensen,Accountsofchemicalresearch42,724
+in Statistical Physics chapter 1-4 (Oxford University (2009).
+Press: New York, USA, 1999). [27] A.FerrenbergandR.Swendsen,Physicalreviewletters
+[6] C. Chipot and A. Pohorille, Free energy calculations: 61, 2635 (1988).
+theoryandapplicationsinchemistryandbiology,Vol.86 [28] U. Hansmann, Chemical Physics Letters 281, 140
+(Springer, 2007). (1997).
+[7] D. M. Zuckerman, Annual review of biophysics 40, 41 [29] D. Earl and M. Deem, Physical Chemistry Chemical
+(2011). Physics 7, 3910 (2005).
+[8] P. Kollman, Chemical Reviews 93, 2395 (1993). [30] M.R.Shirts,inComputationalDrugDiscoveryandDe-
+[9] Y. Deng and B. Roux, The Journal of Physical Chem- sign (Springer, 2012) pp. 425–467.
+istry B 113, 2234 (2009). [31] D.A.Pearlman,TheJournalofPhysicalChemistry98,
+[10] C.Woods,M.Malaisree,S.Hannongbua, andA.Mul- 1487 (1994).
+holland,JournalofChemicalPhysics134,4114(2011). [32] S. Boresch, F. Tettinger, M. Leitgeb, and M. Karplus,
+[11] T.StraatsmaandH.Berendsen,TheJournalofchemi- TheJournalofPhysicalChemistryB107,9535(2003).
+cal physics 89, 5876 (1988). [33] A. Farhi, G. Hed, M. Bon, N. Caticha, C. Mak, and
+[12] I.V.KhavrutskiiandA.Wallqvist,Journalofchemical E. Domany, Physica A: Statistical Mechanics and its
+theory and computation 6, 3427 (2010). Applications 392, 5836 (2013).
+[13] W. L. Jorgensen, J. M. Briggs, and J. Gao, Journal of [34] A.Farhi,M.ScThesis,Arxivpreprint1212.4081 (2011).
+the American Chemical Society 109, 6857 (1987). [35] A. Farhi, arXiv preprint arXiv:1307.1620 (2013).
+[14] J.D.Chodera,D.L.Mobley,M.R.Shirts,R.W.Dixon, [36] S. Liu, Y. Wu, T. Lin, R. Abel, J. P. Redmann, C. M.
+K.Branson, andV.S.Pande,Currentopinioninstruc- Summa, V. R. Jaber, N. M. Lim, and D. L. Mob-
+tural biology 21, 150 (2011). ley,Journalofcomputer-aidedmoleculardesign27,755
+[15] R. Zwanzig, The Journal of Chemical Physics 22, 1420 (2013).
+(1954). [37] H. Schäfer, W. F. Van Gunsteren, and A. E. Mark,
+[16] J. Kirkwood, The Journal of Chemical Physics 3, 300 Journal of computational chemistry 20, 1604 (1999).
+(1935). [38] A. Farhi and B. Singh, New Journal of Physics 18,
+[17] T.StraatsmaandJ.McCammon,TheJournalofchem- 023039 (2016).
+ical physics 95, 1175 (1991). [39] F.P.BuelensandH.Grubmüller,JournalofComputa-
+[18] C. Bennett, Journal of Computational Physics 22, 245 tional Chemistry 33, 25 (2012).
+(1976). [40] M.L.MugnaiandR.Elber,Journalofchemicaltheory
+[19] S.Kumar,J.Rosenberg,D.Bouzida,R.Swendsen, and and computation 8, 3022 (2012).
+P. Kollman, Journal of Computational Chemistry 13,
+[41] S.L.Mayo,B.D.Olafson, andW.A.Goddard,Journal [46] A. K. Malde, L. Zuo, M. Breeze, M. Stroet, D. Poger,
+of Physical Chemistry 94, 8897 (1990). P. C. Nair, C. Oostenbrink, and A. E. Mark, Journal
+[42] J. C. Phillips, R. Braun, W. Wang, J. Gumbart, of chemical theory and computation 7, 4026 (2011).
+E. Tajkhorshid, E. Villa, C. Chipot, R. D. Skeel, [47] R. C. Rizzo, T. Aynechi, D. A. Case, and I. D. Kuntz,
+L. Kale, and K. Schulten, Journal of computational Journal of Chemical Theory and Computation 2, 128
+chemistry 26, 1781 (2005). (2006).
+[43] B. Hess, C. Kutzner, D. Van Der Spoel, and E. Lin- [48] R. K. Pathria, Statistical mechanics (Butterworth-
+dahl, Journal of chemical theory and computation 4, Heinemann, 1972) pp. 69–70.
+435 (2008). [49] H.Fukunishi,O.Watanabe, andS.Takada,TheJour-
+[44] M. Abraham, D. Van Der Spoel, E. Lindahl, and nal of chemical physics 116, 9058 (2002).
+B. Hess, GROMACS User Manual version 5 (2015). [50] S. Trebst, M. Troyer, and U. Hansmann, The Journal
+[45] P.H.HünenbergerandJ.A.McCammon,TheJournal of chemical physics 124, 174903 (2006).
+of chemical physics 110, 1856 (1999). [51] W. Nadler and U. H. Hansmann, The Journal of Phys-
+ical Chemistry B 112, 10386 (2008).

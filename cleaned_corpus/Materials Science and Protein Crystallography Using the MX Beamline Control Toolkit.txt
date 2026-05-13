@@ -1,0 +1,394 @@
+]ics-lrtm.tam-dnoc[
+1v3440120/tam-dnoc:viXra
+Materials Science and Protein Crystallography
+Using the MX Beamline Control Toolkit
+W. M. Lavender
+Biological, Chemical, and Physical Sciences Department,
+Illinois Institute of Technology, Chicago, Illinois 60616
+(Dated: November6, 2018)
+MXisaportablebeamlinecontrolsystemthathasbeendescribedatpreviousNOBUGSmeetings.
+ThispaperwillbrieflyreviewMXandthendiscussimportantchangesandimprovementsmadesince
+thelast meeting in 2000.
+Formaterials science, work hasfocused on extendingthesupportfor multichannelanalyzers and
+for fast data acquisition using quick scans. MX MCA support has focused on the development of
+interfaces to the X-Ray Instrumentation Associates DXP-2X and X10P (Saturn) MCAs. The MX
+DXP-2XsupporthasbeenusedbyMR-CATattheAdvancedPhotonSourcetoreadouta13-element
+Ge detector at input count rates of up to 1.5∗106 counts per second per detector channel. The
+other major addition is support for quick scans using multichannel scalers. Quick scanning is now
+routinely used for XAFS and diffraction measurements at MR-CAT and will soon be implemented
+on some MX crystallography beamlines as well. We have also begun work to allow XIA MCAs to
+beread out duringquick scans.
+For protein crystallography, we have primarily focused on implementing MX for new beamlines,
+namely, SER-CAT at the APS and GCPCC at CAMD, with others pending at the APS. Progress
+has also been made on the integration of MX with vendorCCD and robotics software.
+I. INTRODUCTION Group Experiment Type Beamline Equipment
+MR-CAT Material Science EPICS motor, scaler, MCS,
+The MX beamline control toolkit is a general package (APS) McLennan, Compumotor,
+for control of synchrotronradiation beamlines and labo- Newport, XIAMCAs, etc.
+ratory X-ray generator systems that is being jointly de-
+IMCA-CAT Crystallography EPICS motor, scaler,
+veloped by the MR-CAT[1][2], IMCA-CAT[3][4][5], and
+(APS) McLennan, Compumotor,
+SER-CAT[6] sectors at the Advanced Photon Source. It
+Newport, etc. hasbeendescribedatpreviousNOBUGSmeetings[7][8]
+and elsewhere[9]. This paper will focus on changes and SER-CAT Crystallography Delta Tau PMAC,
+additions to MX made since the last NOBUGS meeting (APS) Struck VMEMCS
+in 2000. DND-CAT Crystallography SCIPE motor, counter,
+(APS) timer support, XIAMCA
+GCPCC Crystallography Compumotor 6K,
+II. REVIEW OF MX
+(CAMD) Ortec counter/timer,
+MX is a portable beamline control toolkit available
+Current users of MX are listed in Table I. The primary
+goalof MX is to make it possible to write beamline con-
+trol system software that can be reused in almost any • MX localizes dependencies on particular network
+environment. This goal was conceived based on the au-
+protocols to relatively small areas of the code.
+thor’s frustration with several previous control systems
+Thus, while MX comes with its own network pro-
+he had worked with that paid little or no attention to
+tocol, it is designed to make it easy to use other
+transportability of the code.
+network protocols instead. For example, it is easy
+MX attempts to achieve this goal in several ways:
+touse MXonabeamline thatusesonlyEPICS[10]
+• MX is designed to be easily ported to new operat- network protocols.
+ing systems. It already runs on Linux, Microsoft
+• ThecoreofMXisdesignedasmiddlewarethatcan
+Win32, MacOS X, Solaris, Irix, HP/UX, and Cyg-
+be inserted into other systems as necessary. This
+winwithlegacysupportforSunOS4,andMSDOS.
+is done by providing a high level application pro-
+• MXiswritteninANSI Ctomaximizeitsabilityto gramminginterface(API)toapplicationsorservers
+be invokedfromother packages. Mostapplications whichtriestoavoidmakingassumptionsaboutthe
+and scripting languages that support an external nature of those applications and servers. At the
+calling interface can easily invoke code written in low end, a device driver API is provided that tries
+C. to avoid making assumptions about the nature of
+the hardware underneath.
+MX has been under development since 1995 and has
+developed a relatively large number of device drivers.
+Currently there are 34 drivers for various motor con-
+trollers,devicesthatcanbetreatedasmotors,andforac-
+cesstomotorscontrolledbyothercontrolsystemssuchas
+EPICS. There are also 17 pseudomotor drivers for items
+like X-ray energy, monochromator control and goniostat
+table control. In addition, there are a variety of drivers
+for other devices such as scalers, timers, MCAs, MCSs,
+and so forth with over 250 drivers in all.
+WhileMXcanbeviewedasasetofcomponents,itcan
+also be used as a complete beamline control system. It
+providesanMXserverthatcanbeusedtomanagebeam-
+line hardware and a set of graphical user interface tools.
+At present, MX supports developing GUI programs via
+its Python and Tcl/Tk scripting interfaces. The most
+important of these include:
+• Imcagui - A primary user interface for crystallog-
+raphy seen in Figure 1. It provides support for
+monochromator,slit,andfiltercontrol. Italsopro-
+vides a way of executing fluorescence and absorp-
+tion scans for multiwavelength anomalous diffrac-
+tion(MAD) experiments as seen in Figure 2 which FIG. 1: The Imcagui protein crystallography program.
+arethenprocessedbyChoochtocomputef′ andf′′
+values. It was originally developed for IMCA-CAT
+but is now used at other beamlines as well.
+• Optimize and optimize auto - Automatic beamline
+intensityoptimizationprogramsthatgivebeamline
+users a simplified interface for maximizing X-ray
+intensity on their own initiative.
+• Mxgui - A more staff-oriented GUI for performing
+motor moves and executing arbitrary scans.
+There are also a number of command line programs and
+utilities for MX. The most important of these is motor
+whichisroutinelyusedatMR-CATformaterialsscience
+experiments.
+Most of our existing GUI programs are written in
+Tcl/Tk. However, we now plan to write most new GUIs
+in Python instead. Our experience has been that the
+syntax of Python seems more natural to scientists than
+that of Tcl. There also appears to be a groundswell of
+support for Python at synchrotronradiation facilities as
+well, given Python’s extensive support for scientific and
+numerical programming. With that in mind, we have
+now created an MX interface to Python called MP and
+have begun writing applications using it. FIG. 2: Imcagui MAD experiment control window.
+III. XIA MULTICHANNEL ANALYZERS ontheDXP-2XandtheSaturn,formerlycalledtheDXP-
+X10P.
+A major task has been the development of software TheDXP-2XisaCAMACbasedsystemthatcontains
+to interface with the new high performance multichan- four MCA channels per CAMAC module. The existing
+nel analyzers (MCAs) from X-Ray Instrumentation As- MXinterfaceusestheXerxeslibraryprovidedbyXIAto
+sociates in Newark, California. Our efforts have focused control the DXP-2X. The Xerxes library provides direct
+access to many of the low level features of the MCA. Quick scans are designed as a direct replacement for
+Since the DXP-2X is a very powerful and complicated many types of step scans. The problem with step scans
+system,ittookasubstantialamountofefforttocorrectly isthatthereisalargedelayassociatedwithslowingdown
+program the MX software interface. XIA now provides the motor to a stop to take the data point and then ac-
+a new high-level software library called Handel, but this celerating back to speed. Quick scans avoid this issue
+wasnotavailableatthetime ofthe originaldevelopment by acquiring data continuously while the motors are in
+of our software. motion. Quickscansareavailableformostmotordrivers
+There were a number of problems encountered in get- andformanyofthepseudomotordriversaswell. Forex-
+tingtheDXP-2Xtorunreliably,butthesewerepartially ample,itispossibletoquickscanmonochromatorenergy
+duetothefactthattheDXP-2Xfirmwarewasstillunder pseudomotors.
+development at the time. Most of the problems we en- Of course, quick scans need a place to store the data
+counteredhavebeen solvednowandthe DXP-2Xowned as it is acquired. This role is normally played by a
+by MR-CAT has been reliably used with a 13-element multichannelscaler(MCS).Amultichannelscalercounts
+GedetectorfromCanberraforseveralexperimentalruns pulsesfromasetofinputsandthen,onreceiptofachan-
+now. Ithasprovedtobecapableofhandlingmuchhigher nel advance pulse, writes the counter values to a buffer
+inputcountratesthantheothercompetingsystemsthat and then starts acquiring again. This is then repeated
+wereavailableatthetimeofpurchase. TheDXP-2Xwas foreachdatapointandattheendofthe scan,the buffer
+recentlyusedatMR-CAT to acquiredata froma sample containing all of the measurements is read out.
+of Pu(VI) adsorbed on MgO at input count rates of up Forthe datato be useful, wemust alsorecordthe mo-
+to 1.5∗106 counts per second per MCA channel. tor positions for each point in the scan. This is most
+MR-CAT currently controls the DXP-2X via an MX easily done by recording some signal that depends on
+server running on a Windows 98 computers. Since the the motor position. The most obvious candidate is a
+XIA staff currently do all of their development and test- quadratureencodersignalfromthemotorcontrollerthat
+ing on Windows platforms, it was regarded as desirable is slaved to the position of the motor. At MR-CAT, this
+to use the vendor libraryas providedto maximize XIA’s ishandledbytakingtheencodersignalsintoasmallelec-
+ability to diagnose problems. Most of the rest of the tronics module that converts the signals into two pulse
+beamlinerunsunderLinux,soweanticipatemovingcon- trains. Onepulsetraincorrespondstomotionintheposi-
+trol of the XIA MCAs over to Linux at some point. If tivedirection,whilethesecondpulsetraincorrespondsto
+it is moved to the Linux user interface computer, this motion in the negative direction. If the motor controller
+will also improve performance by eliminating a network starts the move a few measurements after the MCS has
+transfer that must otherwise be done. started acquiring data, then the absolute position of the
+Another XIA multichannel analyzer that we are inter- motor can be determined by taking the difference be-
+ested in is the Saturn, which was formerly known as the tweenthepulsecountinthepositivemotionchanneland
+DXP-X10P. This is a single channel MCA that is con- the pulse count in the negative motion channel.
+trolled via a PC parallel port. The Xerxes library used
+This mode of quick scanning is currently only possi-
+withtheDXP-2XalsosupportstheSaturn. Thus,aftera
+ble for motors that have associated encoder outputs. At
+few initial difficulties, we were able to getthe MX driver
+MR-CAT, only two motors have this capability, namely
+to work with the Saturn as well. An optional feature of
+the monochromatorBraggangle and the 8-circle diffrac-
+the Saturn that is not available for the DXP-2X is 16
+tometer’s primary two theta angle. However, SER-CAT
+TTL output connectors that are associated with the 16
+plans to make this possible for almost all motors on the
+regions of interest (ROIs) of the Saturn. In this configu-
+beamline. For SER-CAT, this is practical because they
+ration, when a detector pulse falls within the boundary
+areusingtheTurboPMAClineofmotorcontrollersfrom
+of a region of interest, a TTL pulse is synthesized on
+Delta Tau. The Turbo PMAC is an up to 32 axis mo-
+the corresponding output channel. Thus, in this mode
+tor controller capable of driving both stepper and servo
+one canthink of the Saturnas a set of 16 programmable
+motors, although SER-CAT is using only servo motors.
+single channel analyzers whose output can be fed into
+Turbo PMAC controllers are able to slave one of its mo-
+conventional pulse-counting scaler/timer systems. This
+tor axes to any of the other 31 motors controlled by it.
+is the mode that DND-CAT currently uses.
+Theslaveaxiscanthenbecommandedtogenerateastep
+anddirectionoutputwhichcanbe convertedbyexternal
+electronics into the same kind of positive and negative
+IV. QUICK SCANS pulse trains as are used by MR-CAT. Since the associa-
+tionofmasterandslaveaxescanbechangedatruntime,
+Another major effort over the last two years has been this makes it possible to quick scan any of the other 31
+the developmentof software to support quick scans, also motors controlled by this PMAC. While SER-CAT does
+knownasslewscansorfastscans. Thiswasunderinitial not yet routinely operate in this mode, a prototype of
+development at the time of the last NOBUGS meeting this configuration has already successfully been tested.
+and has been routinely used now for two years at MR- At present, most of the support for multichannel
+CAT. scalersin MX is for the Struck SIS3801MCS. There is a
+smallamountofsupportforalternateMCSsystems,but V. PERFORMANCE
+themainfocushasbeenontheSIS3801. TheSIS3801isa
+VME-basedMCSthatcanhaveupto32inputchannels. The most important current task in MX development
+The SIS3801 acts as an MCS by transferring its mea- is improvement in the performance of pieces of MX that
+surements into a FIFO that can hold up to 128K scaler areperceivedtobeslow. Whenexaminedindetail,most
+values upon receipt of a channel advance pulse. If all 32 oftheseissuesrevolvearoundperformanceproblemswith
+channels are in use, this allows up to 4K measurements the default MX network protocol. We are currently ad-
+per channel. However, the SIS3801 can be programmed dressing this issue in more than one way.
+to ignore some or even most of its input channels, which
+First of all, one possible solution is to use a differ-
+then leaves more space for the remaining channels. For
+ent network protocol. In an APS environment, the most
+example, if only 4 channels are used, then up to 32K
+obvious alternative is the EPICS Channel Access pro-
+measurements per channel can be taken.
+tocol. The author originally was concerned about its
+dependence on VME crates and an expensive real time
+operating system. However, recent changes in EPICS li-
+Currently, MX has two drivers for the SIS3801. The
+censing and the porting of the server side of EPICS Ioc-
+first, called epics mcs, is for SIS3801s controlled by the
+Core to Linux, Solaris, Win32, and RTEMS have gone a
+EPICS MCA record written by Mark Rivers of the Uni-
+long way toward mitigating these concerns. MX can al-
+versityof Chicago [11]. The second, calledsis3801, talks
+readybeusedasanEPICSclientviaMXdriverssuchas
+directly to the module via MX VME I/O. This configu-
+epics motor, epics scaler, and epics mcs. We have also
+rationis intended for use with VME cratesthat are con-
+begunworkonmaking the MX driversandtoolkitavail-
+trolled via PCI-to-VME bus interfaces or by MX servers
+able from the EPICS IocCore server which is described
+running directly on a VME crate controller. The exis-
+further in Section VII.
+tence of two drivers allows MX to support both VME
+WearealsopursuingimprovementstotheexistingMX
+crates controlled by EPICS and VME crates that are
+network protocol. It has been suggested that much of
+not controlled by EPICS. At a higher level, the two MX
+the overhead may be due to the formatting and parsing
+drivers behave similarly. The primary difference is that
+of data sent over the network and due to the lack of
+theepics mcs driveriscurrentlyrestrictedtoamaximum
+caching of the identity of remote records. The author
+of4000measurementsper channeldue toarestrictionin
+will be focusing his efforts on this and similar ideas for
+themaximumlengthofEPICSChannelAccessmessages.
+therestof2002andoninto2003. Someofthetestingwill
+revolvearoundimprovingthe performancespecificallyof
+networkXIAMCAreadout,sincethismakesparticularly
+TheSIS3801canbetriggeredtomovetothenextmea-
+heavy use of the network.
+surement by either an internal or an external channel
+Perceivedresponsivenessisalsoimportantforusersat-
+advance. Use of the built-in 10 MHz clock with the in-
+isfaction [12]. Early versions of Imcagui, the main user
+ternal channel advance allows the SIS3801 to run in a
+GUI for crystallography, had a beamline status update
+stand alone fashion. However, sometimes it is desirable
+routine that could take around a second to run. This
+to synchronize measurements by an SIS3801 with exter-
+meant that if the user typed or clicked something on the
+naldevices. Forthisreason,MXalsosupportstheuseof
+screen, it might take up to a second for the GUI to ac-
+the external channel advance signal. Consequently, MR-
+knowledge this. When the status update routine was
+CATandSER-CAThavebothpurchasedStruckSIS3807
+modified to force frequent updates of the screen, the de-
+pulsegeneratormodulestoserveasmasterclocksforthe
+lay in responding to user input dropped down to a small
+beamline. Theoretically,onecouldsynchronizethe oper-
+fraction of a second. The users were much happier with
+ation of multiple SIS3801s in this fashion.
+this version of the GUI even though it was really doing
+work at about the same rate as before.
+A more interesting use of the external channel ad-
+vance support is for synchronizationwith the MultiSCA
+firmware for the XIA DXP-2X MCA. With this special VI. NEW AND UPGRADED BEAMLINES
+firmware, the DXP-2X acts similarly to a multichannel
+scaler in that each channel buffers a new set of 16 ROI A significant amount of the recent work in MX has
+integralmeasurements upon receipt of an externalchan- been in porting the software to new beamlines. Table I
+nel advance signal. With a common external clock such lists the beamlines where MX is currently in routine use
+as the SIS3807, it will be possible to implement quick and highlights of the equipment used there. One thing
+scansthatalsorecordMCAmeasurementsforeachpoint that should be apparent from Table I is that MX is able
+of the quick scan. Although some preliminary work has to support a heterogeneous mix of equipment.
+been done, this mode of operationhas not yet been fully Much of the new work has been in support of the
+implementedbyMXyet. However,wehopetobeableto SER-CAT sector (Sector 22) at the Advanced Photon
+provide this mode of operation at MR-CAT by the end Source. SER-CAT uses almost exclusively Delta Tau
+of 2003. Turbo PMACs for motion control which are controlled
+and aligned, followed by CCD data acquisition and pro-
+cessing. The plans for how this will be implemented are
+not complete yet, but SER-CAT plans to begin working
+dv_dn dv_up
+on this very soon. In fact, some early steps have already
+been taken such as the purchase of x-y sample position-
+ing stages from Oceaneering Space Systems that are to
+be used as part of automatic crystal alignment.
+ThefirstphaseforSER-CATwillinvolvedevelopment
+of a standard interface for interaction with the remote
+experimenter, including a method for transmitting im-
+offset ages of diffraction patterns for remote evaluation. At
+first, the staff will do the work, and then transmit the
+distance results. Later, more real-time interaction will be devel-
+detector oped. ThiswillprobablyneedtobeintheformofaCGI
+horiz. angle X rays to allowthe interactionandauthentication. Controlwill
+comelater,andisactuallyeasier. Theotherpushwillbe
+FIG. 3: The A-framedetector support for SER-CAT. the developmentof roboticsfor automationof alignment
+and sample changing, which will require motion control
+programming.
+via RS-422 by several Linux-based MX servers. Struck Another aspect of the automation is the develop-
+SIS3801 multichannel scalers are used for counter/timer ment of automatic beamline alignment andoptimization
+support. They are controlled from a National Instru- scripts, further automation of the fluorescence measure-
+ments PCI-to-VME bus interface via MX drivers. ment, automation of data collection strategy for multi-
+axis diffractometry, and automated data reduction.
+SER-CAT beamline specific workhas included the de-
+velopment of pseudomotors to handle A-frame detector
+supports of the type originally developed for SBC-CAT
+VII. MX AS DEVICE SUPPORT FOR EPICS
+as shown in Figure 3. These pseudomotors transform
+the vertical and horizontal motions of the detector into
+detector two-theta angle, detector distance, and detec- A recent major development in the EPICS world has
+tor offset. Other work has included the development of been the porting of the EPICS server software, called
+software to control the PMAC-based beamline goniostat IocCore, to Linux, Solaris, Win32, and RTEMS. This is
+fromtheMarCCDandBrukerProteusCCDsystemsvia inbetareleasesofwhatistobecomeEPICSrelease3.14.
+MX. PreviousversionsofIocCoreonlyranonVxWorks. How-
+ever, the device drivers for previous versions of IocCore
+At IMCA-CAT, a recent development has been sup-
+were generally also VxWorks specific and most have not
+portfortheRigaku/MSCsamplechangingrobotderived
+been ported. This means that the workstation version
+from the original Abbott design. This task and support
+ofIocCorehasrelativelyfew device driversatthis point.
+of the Bruker Proteus system at SER-CAT has moti-
+One of the design goals for MX has been to make it eas-
+vated the development of a simplified server controlled
+ily embeddable in other packages. Thus, an interesting
+via ASCII commands. The idea here is to make it as
+idea would be to embed MX inside of EPICS IocCore.
+easy as possible for vendors to interface their systems to
+The EPICS motor record now has a partially finished
+the beamline.
+port to EPICS 3.14, so it is an ideal test case for this.
+A recent addition has been the new DND-CAT pro-
+Correspondingly, I am now working with Ron Sluiter to
+teincrystallographybeamlineatAPSSector5-BM.This
+develop such an interface.
+beamline implements low level hardware control using
+Since MX presents the same abstract high level API
+their own protocol called SCIPE [13]. MX applications
+forallofits motordrivers,myplanis toessentiallytreat
+are supported on this beamline via a set of MX devices
+MX as an EPICSdriversupport package. Then, all that
+drivers such as scipe motor, scipe scaler, and so forth
+remains to be done is to create a device support module
+thatareanalogoustotheonesusedtocommunicatewith
+fortheEPICSmotorrecordthattranslatesrequestsfrom
+EPICS controlled devices. Another new user of MX is
+EPICS into a form that MX can understand and then
+the Gulf Coast Protein Crystallography Consortium at
+translate MX’s responses back into a form that EPICS
+CAMD. They are operating their beamline with Com-
+can understand. I believe that there is a good chance
+pumotor6Kmotorcontrollers,Ortec974counter/timers,
+that this can be completed quickly and hope to have a
+and XIA Saturn MCAs.
+working version by the end of 2002.
+One task that will become important in the near fu-
+The benefits of implementing such an interface are:
+ture will be more complete automation of crystallogra-
+phy data collection. The ideal will be to make it so that 1. The EPICSMEDMprogramis agoodstatic inter-
+crystals can be shipped to the beamline in standardized face builder. This would allow MEDM to be used
+containers. These will then be automatically mounted with MX-controlled motors.
+2. This would allow Spec to operate MX-controlled automation and new experimental techniques.
+motors.
+3. MX has a fairly large motor driver library which TheauthorwouldliketothankMR-CAT,IMCA-CAT,
+currentlycontains34motordriversand17pseudo- and SER-CAT for the support they have provided dur-
+motor drivers. These would all then be available ing the development of this software. MR-CAT related
+more or less immediately to the rest of EPICS. development was supported in part by funding from
+the U. S. Department of Energy under grant number
+The initial development work for this will be done on DEFG0200ER45811. IMCA-CAT related development
+Linux. Once it works well, it will then be ported to wassupportedbythecompaniesoftheIndustrialMacro-
+Solaris, Win32, and maybe even RTEMS. molecular Crystallography Association through a con-
+tractwithIllinoisInstituteofTechnology(IIT),executed
+through the IIT’s Center for Synchrotron Radiation Re-
+VIII. CONCLUSIONS search and Instrumentation. SER-CAT related develop-
+ment was supported by the institutes of the South East
+In summary, much progress has been made in the last Regional Collaborative Access Team through a contract
+couple ofyears. MX is nowa full featuredbeamline con- with the University of Georgia. Use of the Advanced
+trolsystemformaterialsscience,proteincrystallography, Photon Source was supported by the U. S. Department
+andotherexperiments. Itisexpectedthatmanynewfea- ofEnergy,BasicEnergySciences,OfficeofScience,under
+tureswillbeaddedasneededtosupportbetterbeamline Contract No. W-31-109-Eng-38.
+Lavender, P. W. Plag, A. S. King, A. J. Kropf, B. A. anl.gov/xfd/bcda/nobugs/welcome.new1.html.
+Bunker, P. Dutta, R. S. Duran, J. Kaduk, “The MR- [8] W. M. Lavender, “MX: A Portable Toolkit for Dis-
+CAT Insertion Device Beamline at the Advanced Pho- tributedDataAcquisition andControl”, NOBUGS2000
+EleventhUSNationalConference,AIPConf.Proc. 521, dl.ac.uk/nobugs/nobugs3/.
+419 (2000). [9] W. M. Lavender, “MX: A Beamline Control Sys-
+[4] J. F. Fait, W. M. Lavender, “Data Collection at the EleventhUSNationalConference,AIPConf.Proc. 521,
+IMCA Beamlines”, American Crystallographic Associa- 332 (2000).
+W. Lavender, K. J. Kim, A. J. Howard, “The User Pro- [12] J.Johnson,GUIBloopers,MorganKaufmannPublishers
+gram of the Industrial Macromolecular Crystallography (2000).
+Association CAT”, American Crystallographic Associa- [13] J. P. G. Quintana, “SCIPE - A simple control interface
+tion AnnualMeeting, (2001). protocol for experimenters”, J. Synchrotron Rad. 5, 600
+[7] W.M.Lavender,“MX: APortable Toolkit for DataAc-

@@ -1,0 +1,351 @@
+CoMOGrad and PHOG: From Computer Vision to Fast and
+Accurate Protein Tertiary Structure Retrieval
+Rezaul Karim 1 , Mohd. Momin Al Aziz1 , Swakkhar Shatabda 2 , M. Sohel Rahman 1,
+Md. Abul Kashem Mia1 and Farhana Zaman1, Salman Rakin1
+1Department of Computer Science and Engineering,
+Bangladesh University of Engineering and Technology,
+Palashi, Dhaka-1000, Bangladesh.
+2Department of Computer Science and Engineering,
+United International University,
+House 80, Road 8A, Dhanmondi, Dhaka-1209, Bangladesh.
+Due to the advancements in technology number of entries in the structural database of pro-
+teins are increasing day by day. Methods for retrieving protein tertiary structures from this large
+databaseisthekeytocomparativeanalysisofstructureswhichplaysanimportantroletounder-
+stand proteins and their function. In this paper, we present fast and accurate methods for the
+retrievalofproteinsfromalargedatabasewithtertiarystructuressimilartoaqueryprotein. Our
+proposed methods borrow ideas from the field of computer vision. The speed and accuracy of
+our methods comes from the two newly introduced features, the co-occurrence matrix of the ori-
+entedgradientandpyramidhistogramoforientedgradientandfromtheuseofEuclideandistance
+as the distance measure. Experimental results clearly indicate the superiority of our approach
+in both running time and accuracy. Our method is readily available for use from this website:
+1 Introduction
+Proteins perform a large array of functions within a living organism. Proteins are polymers of amino-
+acidmonomers. Linearsequenceofaminoacidsiscalledtheprimarystructureofaprotein. Thereare
+three other levels of structural complexity: secondary, tertiary and quaternary. Secondary structure
+is the local spatial arrangement of the backbone atoms formed by intramolecular and intermolecular
+hydrogen bonding of amide groups. Tertiary structure refers to the three-dimensional structure of an
+entire polypeptide and quaternary structure is the spatial arrangement of two or more polypeptide
+1v4180.9041:viXra
+chains known as sub-units.
+Every protein has a unique, stable and kinetically accessible [1] three dimensional structure or
+tertiary structure also known as the native structure. The functionalities of a protein are principally
+correlatedtoitstertiarystructure. Thatiswhyaproteinceasestofunctionwhenitstertiarystructure
+is broken by denaturation at a high temperature; although, its primary structure may still remain
+intact [21]. Proteins with similar tertiary structure have similar ligand binding sites and pockets
+[22]. Moreover, tertiary structures are more conserved than amino acid sequence during evolution
+[11]. Misfolded proteins are the cause of many critical diseases like Alzheimer’s disease [6]. Therefore,
+analysis and study of similar tertiary structures is of great importance in function prediction of novel
+proteins, study of evolution, disease diagnosis, drug discovery, antibody design and many other fields.
+Following the determination of the first tertiary structure in 1958 using crystallography [12], biol-
+ogists have successfully determined a large number of structures by now. Due to recent developments
+in X-ray crystallography and nuclear magnetic resonance imaging, there has been a rapid increase
+in the number of experimentally determined structures stored in the world-wide repository, Protein
+structures. As of February 11, 2014, the number of protein structures stored in PDB was more than
+97,789. With this increase in the number of known protein structures, the need for fast and accurate
+algorithms for the retrieval of protein tertiary structures is now greater than ever. In the protein ter-
+tiary structure retrieval problem, the task is to retrieve proteins having most similar structures from
+the known structure database. The results are ranked based on similarity or distance measures.
+Thereexistnumerousapproachesintheliteraturethatfocusonfastandaccurateretrievalofprotein
+tertiary structures. The traditional way to compare structures is to treat each one as a rigid three-
+dimensional object and superimpose one on the other. Differences are then calculated using different
+distance metrics, e.g., least-squares method. In the pattern recognition literature, the structures are
+often represented by feature vectors and similarity or dissimilarity is measured by comparing the
+feature vectors with one another. As a feature to represent the tertiary structure of a protein chain,
+the α carbon distance matrix is widely used by many researchers [20, 10]. Here, the 3D coordinate
+data is mapped to a two dimensional feature matrix. The α carbon distance matrix gives the intra-
+molecular distances of α carbons in a protein chain. This α carbon distance matrix resembles the
+tertiarystructureofaproteinandthesecondarystructureelementsconservedinit. Notably,αcarbon
+distance matrix based exact algorithms run in O(N!) time assuming that the input matrix is of size
+N ×N.
+DALI [10]comparesstructuresbyaligningtheαcarbondistancematrices. Eachdistancematrixis
+decomposedintosub-matricesoffixedsizewhichiscalledtheelementarycontactpatterns. Itcompares
+thosecontactpatterns(pair-wise), andstorethematchingpairsinalistwithamatchingscore. Then,
+it assembles pairs in the correct order using Monte Carlo optimization to yield the overall alignment
+andthefinalmatchingscore. Inalaterversion,ithasusedbranchandboundmethodtoassemblethe
+pairs [9]. The CE method [19] also takes the α carbon distance matrix as the feature vector and uses
+combinatorial extension and Monte Carlo optimization to compare protein structures in a way much
+similar to DALI. Both DALI and CE require lots of computation and hence the corresponding web
+servers respond to the query requests via email only after a certain period that is required for costly
+processing. A faster approach based on the α carbon distance matrix as a feature is MatAlign [2]. It
+provides an O(N4) dynamic programming solution where N is the dimension of the distance matrix.
+MatAligncomparesdistancematrixofthequeryproteinandthetargetproteinrowbyrowandbuilds
+up a dynamic programming table based on a row by row matching score. Then, it aligns rows of the
+query protein with the rows of the target protein to maximize the corresponding matching score. The
+higher is the matching score, the more is the similarity in the corresponding structures.
+Marsolo et al. [14] have introduced a wavelet based approach that resizes the distance matrices of
+the protein structures before the actual comparison is done. Later on Mirceva et al. have introduced
+MASASW [15] that uses wavelet coefficients of distance matrices as the feature vector. It has been
+shownin[15]thatDaubechies-2 wavelets improvesaccuracythanothers. MASASW transformsallthe
+α carbondistancematricesintoa32×32matrixbyinterpolationandwavelettransformation. Itthen
+compares them like MatAlign but with a sliding window to reduce the number of comparisons. The
+time complexity of MASASW is O(wWN2) where w and W are window sizes and N is the dimension
+of the distance matrices. As has been mentioned above, MASASW assumes N =32.
+Despite that several methods are found in the literature for protein structure retrieval, the quest
+for even faster and more accurate methods still continues as the number of known protein structures
+is growing very fast. In this paper, we present an extremely fast and highly accurate novel method of
+retrievingproteinswithsimilartertiarystructuresfromalargedatabase. Inparticular,herewepresent
+anultrafastalgorithmbasedontwonovelfeaturevectors. ThesearetheCo-occurrenceMatrixofthe
+OrientedGradientof DistanceMatrices(CoMOGrad)andPyramidHistogramof OrientedGradient
+(PHOG). Additionally, as will be reported later, our proposed algorithm gives more accurate results
+thanthestateoftheartmethods. Verybriefly,muchofthespeedandaccuracywehaveachievedcomes
+from the introduction of the novel features from the field of computer vision and pattern recognition.
+Ouraimhasbeentointroduceafeaturewhichdoesnotrequireanycomplexalgorithmtocomparethe
+tertiarystructures. Rather,asimpledistancemeasuretocalculatethedistancebetweenthetwovector
+quantities is used in our approach. As has already been mentioned above, some previous methods in
+theliteraturehaveusedtheα carbondistancematrixasafeaturevector. Uponanalyzingthetertiary
+structure and α carbon distance matrix represented as a gray-scale image, we have observed that not
+all data in the matrix seem to be equally important. We further have realized that the co-occurrence
+matrix(aswillbereportedlater)oftheorientedgradientofthedistancematrixisthemostimportant
+featurewithrespecttothecomparisonoftertiarystructures. Finally,wehavefoundthattheEuclidean
+distance or (cid:96)2 norm of our novel features as the distance measure outperforms the widely used costly
+alignment distance/similarity measure of α carbon distance matrices. As a result, the combination of
+the above ideas gives us an extremely fast method without sacrificing the accuracy.
+Laterinthispaper,wefirstdescribeourproposedapproachalongwiththenovelfeatures. Following
+this, we report the experimental results and relevant discussion. Finally, we conclude the paper with
+an outline of the future works.
+We have carefully analyzed the gray-scale images from the α carbon distance matrices and the
+tertiary structures. We have observed that the α helices and the anti-parallel beta sheets appear as
+dark lines parallel to the diagonal dark line and parallel beta sheets appear as dark lines normal to
+the diagonal dark line. Beta sheets of two strips appear as one dark line normal to the diagonal; beta
+sheets of three strips appear as two dark lines normal to the diagonal and one dark line parallel to the
+diagonal. In general, for a standard beta sheet, the number of points of co-occurrence of parallel and
+anti-parallel diagonal lines depends on the number of strips in the beta sheets. Again, the number of
+single parallel lines depends on the number of standard α helices. Moreover, length of those lines near
+thediagonalregionisproportionaltothelengthoftheαhelices. Thedistanceoftheparallellinesfrom
+the diagonal dark line is proportional to the radius of the α helix. Figure 1 depicts the corresponding
+α carbon distance matrix as a gray scale image of a tertiary structure of a protein with beta sheets.
+In the gray scale image, the 7 anti-parallel dark lines near the diagonal dark line correspond to the
+presence of 8 beta sheets in the corresponding protein structure and the lengths of those dark lines
+are proportional to the lengths of the beta sheets. Figure 2 represents the gray scale image of the
+correspondingα carbondistancematrixofaproteintertiarystructurewithtwoalphahelices. Herein
+Figure 1: Representation of β sheets of domain d1n4ja [13] in α carbon distance matrix gray-scale
+image.
+Figure 2: Representation of α helices of domain d1irqa [16] in α carbon distance matrix gray-scale
+image.
+the image, the two parallel dark lines near the diagonal dark line correspond to the presence of two α
+helices in the protein structure and the lengths of the dark lines are proportional to the lengths of the
+α helices.
+In the contemporary literature of computer vision and digital image processing [8] the lines in
+digital images are usually recognized from the gradient of the images. This leads us to believe that,
+the co-occurrence of gradient angles represents the secondary structure elements more precisely than
+just the distance matrix image. The tertiary structure involves the presence of secondary structure
+elements(SSEs), theirsizeandpositioninthechainandtheirorientation. Fromtheimagesofprotein
+structures and their corresponding α carbon distance matrix gray-scale image, it is clear that the
+SSEs are represented by the orientation of dark lines at the near diagonal region of the α carbon
+distance matrix image. The position of the SSEs in a protein chain is represented by the position of
+thedarklinesattheneardiagonalregionoftheimage. Here,near diagonal region istheregionnearby
+the diagonal dark line. The size of the SSEs are represented by the length of the dark line at the
+near diagonal region. The orientation of the SSEs are represented by the presence of the dark lines
+at the far diagonal regions and the darkness and orientation of those dark lines. Here, far diagonal
+region is the region in the image that is distant from the main diagonal dark line. Therefore, we
+need to incorporate the gradient orientation angle along with the gradient magnitude and gradient
+spatial orientation to incorporate the orientation of the SSEs in the feature vector. We also need co-
+occurrenceofgradientangles. BasedonourstudyweintroduceCo-occurrenceMatrixoftheOriented
+Gradient (CoMOGrad) as our first feature vector which incorporates gradient orientation angles and
+co-occurrence of the gradient orientation angles. This feature enables implementation of an algorithm
+that can facilitate more than 100 times faster comparison than MASASW. However, this speed is
+achieved at the cost of a slight decrease in the accuracy. Subsequently, we introduce another feature
+vector, namely, the Pyramid Histogram of Oriented Gradient (PHOG) by incorporating the spatial
+information and gradient magnitude. The combination of both CoMOGrad and PHOG features in
+comparing structures results in an algorithm that is not only more accurate but also more than 40
+timesfasterthanMASASW incomparingtwostructures. Thedetailsoftheexperimentsarepresented
+later in the results section.
+2 Methods and Materials
+2.1 Feature vectors and feature extraction.
+Mapping 3D coordinates to 2D function: Distance matrix of α carbons in residues is a good
+candidate to transform the 3D structure to the corresponding 2D vector representation as shown in
+MASASW [15] and the wavelet based approach by Marsolo et al. [14]. This distance matrix gives
+the pairwise distance between all pairs of α carbons in the polypeptide chain. Proteins with similar
+tertiary structures will have similar distance matrices and vice versa. As stated earlier, if we consider
+thematrixasamonochromaticimage,α-helicesandparallelβ-sheetswillappearasdarklinesparallel
+tothemaindiagonalandantiparallelbetasheetswillappearasdarklinesnormaltothemaindiagonal.
+This distance matrix feature also has a very appealing property, i.e., this is translation, scaling and
+rotation invariant.
+Interestingly, as it is a two dimensional matrix like a digital image we can easily apply image
+processing and computer vision algorithms on it. Similarly, we can use this matrix as an adjacency
+matrixandinterpretitasagraph. Subsequently,graphtheorytechniquesmayalsobeappliedtosolve
+the tertiary structure retrieval problem with this feature. In this paper, we apply ideas from the field
+ofimageprocessingandcomputervision. Mostrecentlytheseideashavegottheirnicheinpedestrians
+and car detection [23, 18].
+Scaling Cα-Cα distance matrix images to the same dimension
+Bi-cubic interpolation: Asdifferentproteinchainshavedifferentnumberofαcarbons,thedimen-
+sions of their α carbon distance matrices vary. Therefore, we need to scale the distance matrices to
+thesamedimension. Forscalingthedistancematrices, weusethemethodsofdigitalimageprocessing
+used for image resizing. At first, we scale all the images to the dimension that is a power of 2 and
+nearest to their original dimension. As an example, if the image dimension is 80×80 we scale it to
+64×64 and if the original image dimension is 100×100 we scale to 128×128. For this step, we use
+bi-cubic interpolation.
+Wavelet transform: After scaling the images as mentioned above, we apply wavelet transform
+to transform all the images to the same dimension. Notably, wavelet transform is the most widely
+used technique for image scaling or resizing in digital image processing. Using wavelet transform,
+we scale all images to 128×128 dimension as most of the images in the previous step were found
+to be of that dimension. For wavelet filter we used Daubechies-2 wavelet [5] as this filter has been
+shown to have outperformed other traditional wavelets for protein structure feature representation by
+MASASW [15]. Wavelet transform of an image gives four images, namely, the approximate detail,
+horizontal detail, diagonal detail and vertical detail. Each of these images has dimension that is half
+of the original image. We take the approximate detail to scale a large image to a smaller size since
+this is the approximate sub sampled image. For the images with dimension greater than 128×128,
+we perform wavelet transform on each images multiple times to get the approximate coefficient of size
+128×128. For images with dimension less than 128×128, we first perform wavelet transform on the
+images. Thenusingbi-cubicinterpolation,wescaleallfourcoefficientstotwicetheirinitialsize. After
+that,withinversewavelettransformonthefourscaledwaveletcoefficients,wegetoriginalimagescaled
+uptotwiceitsinitialsize. Withrepeatedapplicationofscalingup(down)theimagesthataresmaller
+(higher) than dimension 128×128, we finally get all of them in the desired dimension of 128×128.
+Novel features from scaled Cα-Cα distance matrix images
+Co-occurrence matrix of oriented gradient (CoMOGrad): After having all the images of
+dimension 128×128 we extract our CoMOGrad feature. First we take the gradient of each of the
+imagesandcomputethegradientangleandmagnitude. Astheanglevaluesarecontinuousquantities,
+we have quantized those values. For quantization, we tuned the number of quantization bins as a
+parameter. With experiments using various bin sizes (9, 16, 32 etc), we have found that using 16
+bins with bin size 22.5 degree gives excellent results. After quantization to 16 bins, we compute co-
+occurrence matrix which is a 16×16 matrix. We convert this 16×16 matrix to a vector of size 256.
+This is our CoMOGrad feature vector. With this feature, we can simply take Euclidean distance to
+compare structures rather than using the alignment technique of α carbon distance matrices used by
+MASASW and MatAlign. Clearly, introduction of this feature makes the comparison method much
+simpler and faster.
+Pyramid histogram of oriented gradient (PHOG): The use of CoMOGrad gives us an ultra
+fast structure retrieval algorithm. However it achieves this speed at the cost of some reduction in
+accuracy. From the discussion in the previous sections, it is clear that we have to incorporate the
+gradient magnitude and spatial orientation of gradient along with the angular orientation of gradient
+toaccuratelydescribethetertiarystructureofaprotein. TheCoMOGradfeatureonlyincludesangular
+orientationofgradientandco-occurrenceofangularorientationofgradient. Toincorporatethegradient
+magnitude and spatial orientation of gradient along with angular orientation of gradient, we take
+anotherfeaturenamedpyramidhistogramoforientedgradient(PHOG)togetherwithourCoMOGrad
+feature to improve the accuracy. PHOG was first proposed by Bosch et al. [4] and successfully used
+in object classification and pattern recognition. We create a quad tree of the original image with the
+originalimageattherootasfollows. Eachnodeofthequadtreehas fourchildren,namely, top-left ,
+top-right,bottom-left andbottomright. Eachoftheseimagesareofsizeonefourthoftheoriginalimage.
+InFigure3, wehaveshownaquadtreeuptolevel1. Inourexperiments, wehavetakenthequadtree
+uptolevel3andachievedexcellentresults. Forquadtreeuptolevel3,thereare1+4+4*4+4*4*4=85
+nodes. We create gradient orientation histogram with 9 bins each with 40 degree range for each of the
+nodes. Now, we have 85*9=768 features. We incorporate these 768 features to a vector of size 768.
+Then, we normalize the vector by dividing it with the sum of its 768 components. This is our PHOG
+feature vector. Now, PHOG combined with CoMOGrad gives a total of 256+768=1021 features.
+Distance Measure
+We use the Euclidean distance or (cid:96)2 norm as the distance measure of our new features. PHOG
+combined with CoMOGrad can be seen as a vector of length 1021. Suppose, f and f denote the
+feature vectors of the query protein q and a protein i in the database, respectively. Then the distance
+Figure 3: Level 1 quad tree of α carbon distance matrix image.
+score dq of protein q and i would be calculated according to Eqn. 1 below.
+(cid:117)1021
+dq i = (cid:117) (cid:116) (cid:88) (|f q [j]−f i [j]|)2 (1)
+Clearly, the above distance measure can be calculated in O(N) time where N =1021 is the size of our
+feature vector. Also, note that for CoMOGrad alone, N =256 only. Our algorithm needs to compute
+dq for each protein i in the database and then sort the results to rank them. As will be reported
+later, the (cid:96)2 norm distance of the CoMOGrad and PHOG gives us a fast and much accurate retrieval
+algorithm.
+3 Results and Discussion
+Comograd/. We have implemented our algorithm in Java (jdk 1.6) with Netbeans IDE and MySQL
+database. The feature extraction has been done Using MATLAB R2012. Our source code of our im-
+retrieval-. The experiments have been run on GNU/Linux debian ubuntu i686 operating system.
+Wehaveusedamachinehaving Intel (R)Core(TM)i53470CPU3.20GHzwith4GBRAM.Wehave
+compared our methods with the tertiary structure retrieval method, MASASW [15], which is shown
+to be the best performer in the literature to date. We have implemented two versions of our method,
+one using CoMOGrad and the other combining CoMOGrad with PHOG.
+3.1 Benchmark Datasets.
+For the experiments, we have used SCOP [7, 17] domains classification. SCOP is well accepted as the
+benchmarkintheliterature. Wehavetaken152,487chainsfromSCOP domainasthesearchspaceand
+extractedfeaturesfromthem. Asthequeryproteins,wehaveused4965proteinchainsfrom417SCOP
+family, 330 superfamily, 234 folds and 11 classes. We have run all 4965 queries over the search space
+of 152,487 proteins using our methods and sorted them all in ascending order based on our distance
+measure. ForMASASW[15],weranthesameexperimentandsortedresultsindescendingorderbased
+on its similarity measure. Then we compare the results considering the top four SCOP labels, namely
+class, fold, superfamily and family. List of the query sequences are given in the Supplementary Table
+1.
+3.2 Accuracy Comparison.
+The comparison of the accuracy of the query results among MASASW and our two methods are
+provided in Figure 4. In the line graphs plotted in this figure, the horizontal axis entitled “number of
+top results” tracks the number of top ranked query results. The vertical axes in each figure entitled
+“% of ‘label’ match” indicates the average number of query results that have matched the SCOP
+‘label’ with the corresponding query protein. So, each point in the figure reports the average number
+query results that have matched the SCOP ‘label’ with the corresponding query protein for a specific
+number of top results. We report the results for all the SCOP labels, i.e., class, fold, superfamily and
+family.
+As an example, suppose, we consider the top 50 results of the query and have run a total of 3
+queries. Assume that, among the query results, the numbers of match for the label family are 40,
+42 and 48 respectively. Then the average number of family match is (40+42+48)/3=45 and the
+percentage of family match for the top 50 retrieval results is (45×100 ) /(50) = 90 percent. The line
+graphs are drawn with percentage of matches for class, fold, superfamily and family for the top 5 to
+top 50 retrieval results based on the selected 4965 queries.
+0 10 20 30 40 50
+egatnecrep
+100 CoMOGrad
+CoMOGrad+PHOG
+0 10 20 30 40 50
+number of top results
+egatnecrep
+CoMOGrad+PHOG
+number of top results
+0 10 20 30 40 50
+ylimafrepus
+egatnecrep
+MASAW CoMOGrad+PHOG 90
+0 10 20 30 40 50
+number of top results
+egatnecrep
+MASAW CoMOGrad+PHOG
+number of top results
+Figure 4: Percentage of matches of Class, Fold, Superfamily and Family for up to top 50 retrieval
+results.
+Table 1: Comparison of query time.
+Method Loading Time Query Time Time Per Query
+MASASW 28 min 11 s 42 min 18 s 25.38 s .
+CoMOGrad 18 m 31s 1 m 23 0.83 s
+CoMOGrad + PHOG 27 min 24 s 5min 32 s 3.32 s.
+3.3 Runtime Comparison .
+The time required to retrieve the protein tertiary structures for all three methods are reported in
+Table 1. The run time is recorded by executing 100 queries for each of the methods. In the table,
+Loading Time is the time needed to load the feature vectors from disk to memory which is done once
+when the system starts. The Time Per Query in the table is the time needed to compare the feature
+vector of a query protein with that of all the 152,487 proteins in our protein database and sort the
+resultsbasedonthedistance/similaritymeasureandtoreturnthesortedtoprankedresults. Notethat
+the query time reported excludes the loading time. The Query Time in the table indicates the total
+timeneededfor100querystructures. Theresultsindicatethatthequerytimeforthevariantwithonly
+the CoMOGrad feature is ultra fast albeit at the cost of some reduction in the accuracy. However,
+the variant using both CoMOGrad and PHOG as features is both super fast and more accurate than
+MASASW.
+3.4 Discussion.
+The exact algorithm for the matching of tertiary structures with α carbon distance matrix runs in
+O(N!) time assuming that the input matrix is of size N ×N. The time complexity of MASASW for
+comparingtwofeaturesis O(wWN2),whichassumes N =32asthedimensionofthedistancematrix.
+Here, W and w are the size of the sliding windows to align matrices and to align rows, respectively.
+TheauthorsofMASASWhaveempiricallyobtainedthemostreasonableandsuitablevaluesforW and
+w which are 5 and 8 respectively. Our CoMOGrad feature is a vector of size 256 and the combination
+ofCoMOGradandPHOGgivesusafeaturevectorofsizeof1021. Forbothofourmethods, therun
+time for comparing two features is just O(N). Therefore, when only the CoMOGrad feature is used,
+the time to compare two features is approximately (32×32×5×8)/(256)= 160 times faster than
+MASASW.And,thecombinationofCoMOGradandPHOGisapproximately(32×32×5×8)/(1021)=
+40 times faster than MASASW in this respect. The feature extraction of the query protein as and
+when it is submitted as a coordinate file in the PDB format does not have noticeable effect on the
+running time as this operation is done for one, i.e., the query protein only; the features of all the
+proteins in the target search space (i.e., in the database) are made available beforehand as they have
+already been preprocessed.
+Compared to MASASW, the query time of the variant with CoMOGrad is almost 30 times and
+thevariantwithCoMOGradandPHOGismorethan7timesfaster. Asseeninourearlierdiscussion,
+theoretically the variant with CoMOGrad is 160 times faster and the variant with CoMOGrad and
+PHOGis40timesfasterincomparingtwofeatures. However,inadditiontothefeaturecomparison,the
+actualretrievalalgorithmneedstoperformasortingoperationontheresultsofthedistance/similarity
+valuesofalltheproteinsinthedatabaseagainstthequeryprotein. NotethatbothMASASWandour
+two methodsneed tousethis sortingalgorithm. MASASWhoweversorts indescending orderbecause
+it uses a similarity measure. As a result the actual improvement in the query time achieved by our
+methods does not completely match with the theoretical deduction.
+In terms of accuracy, the performance of our method using only the CoMOGrad feature is almost
+similar to that of MASASW. Nonetheless, compared to MASASW, the combination of CoMOGrad
+andPHOGachieves ahigherdegreeofaccuracy. Theexperimentaldatasetcontainsofproteinstaken
+from 417 various families and the number is significant. The most significant achievement of the
+novel features we have used is the substantial reduction of the query processing time. Together the
+accuracyandreducedqueryprocessingtimemakesthestructuralcomparisonthesimpleststateofthe
+art technique.
+Conclusion
+In this paper, we have presented two novel features, namely, CoMOGrad and PHOG, for faster and
+accurate retrieval of the protein tertiary structures. We have compared our results considering all the
+levels of SCOP classification hierarchy. We have reported average percentage of matching for class,
+fold, super family and family of our retrieval results with the query protein while most of the works
+in the literature have only shown similarity on only class and fold; very few in fact have worked
+on automated similarity match for the lower levels. Our results are in good compliance with the
+SCOP classification. CoMOGrad feature is ultra fast as compared to the state of the art methods
+but this extreme speed is achieved at the cost of a slight reduction in the accuracy. The combination
+of CoMOGrad with PHOG is also very fast and at the same time is superior in terms of accuracy as
+compared to state of the art methods. This creates the possibility to implement a web based service
+for the protein tertiary structure retrieval with a truly online behaviour, i.e., that can provide the
+results in seconds, while the present web services usually provide query results via email only.

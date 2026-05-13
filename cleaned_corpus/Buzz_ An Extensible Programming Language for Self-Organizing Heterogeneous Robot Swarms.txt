@@ -1,0 +1,994 @@
+Buzz: An Extensible Programming Language for
+Self-Organizing Heterogeneous Robot Swarms
+Carlo Pinciroli, Adam Lee-Brown, Giovanni Beltrame
+Abstract—We present Buzz, a novel programming language In this paper, we argue that a DSL is an indispensable
+forheterogeneousrobotswarms.Buzzadvocatesacompositional tool towards the deployment of real-world robot swarms.
+approach, offering primitives to define swarm behaviors both
+The dynamics of robot swarms are made complex by the
+from the perspective of the single robot and of the overall
+presence of both spatial aspects (body shape, sensing, actu-
+swarm.Single-robotprimitivesincluderobot-specificinstructions
+andmanipulationofneighborhooddata.Swarm-basedprimitives ation) and networks aspects (message loss, volatile topology).
+allow for the dynamic management of robot teams, and for Additionally, to render the production of large-scale swarms
+sharinginformationgloballyacrosstheswarm.Self-organization affordable, the robots suffer from significant limitations in
+stemsfromthecompletelydecentralizedmechanismsuponwhich
+termsofcomputationalpower,especiallywhencomparedwith
+the Buzz run-time platform is based. The language can be
+robots designed to act alone. Thus, a DSL for robot swarms
+extended to add new primitives (thus supporting heterogeneous
+robot swarms), and its run-time platform is designed to be has the potential to act as a platform that (i) Filters the low-
+laid on top of other frameworks, such as Robot Operating level details concerning space and networking, in an efficient,
+System. We showcase the capabilities of Buzz by providing resource-aware fashion; (ii) Offers a coherent abstraction of
+code examples, and analyze scalability and robustness of the
+the system; (iii) Acts as common platform for code reuse and
+run-time platform through realistic simulated experiments with
+benchmarking.
+representative swarm algorithms.
+In this paper, we present Buzz, a novel DSL for robot
+Index Terms—distributed robot systems, control architectures
+swarms. To drive the design of Buzz, we identified key
+and programming, swarm robotics, swarm engineering
+requirements a successful programming language for swarm
+robotics must meet.
+I. INTRODUCTION First, as mentioned, the language must allow the program-
+mer to work at a suitable level of abstraction. The complexity
+SWARM robotics systems [1] are envisioned for large-
+of concentrating on individual robots and their interactions,
+scale application scenarios that require reliable, scalable,
+i.e., a bottom-up approach, increases steeply with the size
+and autonomous behaviors. Among the many hurdles towards
+of the swarm. Conversely, a purely top-down approach, i.e.,
+real-world deployment of swarm robotics systems, one of
+focused on the behaviour of the swarm as a whole, might
+the most important is the lack of dedicated tools, especially
+lackexpressivepowertofine-tunespecificrobotbehaviors.We
+regarding software [2]. In particular, one problem that has
+believe that a language for robot swarms must combine both
+received little attention in the literature is programmability.
+bottom-up and top-down primitives, allowing the developer to
+Thecurrentpracticeofswarmbehaviordevelopmenttypically
+pick the most comfortable level of abstraction to express a
+focusesonindividualbehaviorsandlow-levelinteractions[3].
+swarm algorithm.
+This approach forces developers to constantly ‘reinvent the
+Second, the language must enable a compositional ap-
+wheel’ to fit well-known algorithms into new applications,
+proach, by providing predictable primitives that can be com-
+resulting in a slow and error-prone development process.
+binedintuitivelyintomorecomplexalgorithmsandconstructs.
+Topromotecodereuse,twogeneralapproachesarepossible.
+Third,thelanguagemustprovegenericenoughto(i)express
+Thefirstapproachisthedevelopmentofsoftwarelibrariesthat
+the most common algorithms for swarm coordination, such as
+encapsulatecertainalgorithms.Whilethishastheadvantageof
+flocking, task allocation, and collective decision making; and
+leveraging pre-existing frameworks and tools, it falls short of
+(ii) support heterogeneous swarms.
+screeningtheuserfromunnecessarydetail,suchasnon-trivial
+Fourth, the run-time platform of the language must ensure
+compilation configuration or language-specific boilerplate.
+acceptable levels of scalability (for increasing swarm sizes)
+The second approach is the creation of a domain-specific
+and robustness (in case of temporary communication issues).
+language (DSL) exposing only the relevant aspects of the
+Currently,themanagementofthelow-levelaspectsandcorner
+problemtosolve.Awell-designedDSLshapesthewayasys-
+cases concerning these issues constitutes a sizable portion of
+tem is conceived, by offering powerful abstractions expressed
+the development process of swarm behaviors. Alleviating this
+through concise constructs.
+burden with a scalable and robust run-time platform is crucial
+for real-world deployment of swarm behaviors.
+C. Pinciroli and G. Beltrame are with the Department of Computer
+and Software Engineering, E´cole Polytechnique de Montre´al, PO Box The main contribution of this paper is the design and
+6079, Succ. Centre-ville Montre´al, Que´bec, Canada H3C 3A7. E-mail: implementation of Buzz, a programming language that meets
+{carlo.pinciroli,giovanni.beltrame}@polymtl.ca the requirements discussed above. Buzz is released as open-
+A.Lee-BrowniswiththeSchoolofElectricalandElectronicEngineering,
+source software under the MIT license. It can be downloaded
+RoyalMelbourneInstituteofTechnology,124LaTrobeSt,MelbourneVIC
+3v64950.7051:viXra
+The text is organized as follows. In Sec. II, we present the operation of intersection, union, or difference between two
+design principles we followed. In Sec. III, we introduce the pre-existing swarms. Each swarm can be atomically assigned
+Buzz syntax. In Sec. IV we illustrate the run-time platform. operations to perform. Swarms can be employed to encode
+In Sec. V we report a number of scripts meant to showcase complex task coordination strategies.
+the capabilities of Buzz, in particular its conciseness and Situated communication. Each robot is assumed to be
+generality.InSec.VIweanalyzethescalabilityandrobustness equippedwithadevicecapableofsituatedcommunication[5].
+of the Buzz run-time. In Sec. VII we discuss related work, Such device broadcasts messages within a limited range and
+outlining similarities and differences of Buzz with respect to receives messages from neighboring robots in direct, unob-
+existing languages and frameworks. Finally, in Sec. VIII we structed line-of-sight. Upon receipt of a message, a robot
+draw concluding remarks. also detects the relative distance and angle of the message
+sender. Situated communication has been used extensively in
+swarm robotics to achieve global coordination in algorithms
+II. DESIGNPRINCIPLES
+for, e.g., pattern formation [6], flocking [7], exploration [8],
+The design of Buzz was based on a set of high-level
+and task allocation [9]. This communication modality can be
+principles, that are described in the following.
+achieved on-hardware with robots such as the Kilobot [10],
+Discreteswarm,step-wiseexecution.Aswarmisconsidered
+the e-puck [11], and the marXbot [12], although with lim-
+as a discrete collection of devices, each running the Buzz
+ited payload size, and a dedicated module for low-cost 3D
+virtual machine (BVM), and executing the same Buzz script.
+communication was proposed in [13]. Alternatively, situated
+Script execution proceeds independently on each robot in a
+communicationcanbesatisfactorilyrealizedthroughWiFiand
+step-wise fashion. Each time-step is divided in five phases:
+GPS(foroutdoorscenarios)ortrackingsystemssuchasVicon
+1) Sensor readings are collected and stored in the BVM;
+(for indoor scenarios).
+2) Incoming messages are collected and processed by the
+Information sharing. Buzz provides two ways for robots
+BVM; 3) A portion of the Buzz script is executed; 4) The
+to share information: virtual stigmergy and neighbor queries.
+messages in the BVM output queue are sent (as many as
+Virtual stigmergy is a data structure that allows the robots in
+possible,accordingtotheavailablepayloadsize;seeSec.IV);
+a swarm to globally agree on the values of a set of variables.
+5) Actuator values are collected from the BVM state and
+From an abstract point of view, virtual stigmergy is akin to
+applied. The length of a time-step is constant over the life-
+a distributed key-value storage. Among its many potential
+time of the script, although it does not need to be the same
+applications, this structure may be employed to coordinate
+for every robot. If the execution time of a step is shorter than
+task execution, e.g., mark the tasks that have already been
+theallottedtime,therobotsleepsforaperiod.Iftheexecution
+completed and/or share progress on the uncompleted ones.
+is longer, a warning message is printed on the screen and the
+Neighbor queries allow a robot to inquire its direct neighbors
+execution proceeds.
+on the value of a certain variable. Upon receiving a request,
+Predictableandcomposablesyntax.Buzzemploysasimple,
+the neighbors reply with the current value of the variable;
+imperative syntax inspired by languages such as Python, Lua,
+these replies are then collected into a list by the robot who
+and JavaScript. While this syntax ensures a short learning
+requested the data. Neighbor queries are useful when robots
+curve, it also allows for predictable and composable scripts.
+must perform local data aggregation, such as calculating
+By predictable, we mean that a programmer can easily infer
+averages [14] or constructing spatial gradients.
+the results of the execution of a program by reading its code.
+Composability refers to the ability to structure a complex III. LANGUAGEDEFINITION
+programintosimplerelements,suchasfunctions,classes,etc. A. Robot-wise operations and primitive types
+that can later be used as modules.
+The simplest operations available in Buzz are robot-wise
+Support for heterogeneous robots. Buzz is explicitly de-
+operations. These operations are executed by every robot
+signed to support heterogeneous robot swarms. To this aim,
+individually. Assignments, arithmetic operations, loops and
+Buzz is conceived as an extension language, that is, a lan-
+branches fall into this category. E.g.:
+guage that exports and enhances the capabilities of an already
+# Assignment and arithmetic operation
+existing system. This design choice allows one to stack the
+Buzz run-time on top of well-known single-robot frameworks # Loop
+such as ROS,1 OROCOS,2 or YARP.3 The Buzz syntax and i = 0; while(i < a) i = i + 1
+# Branching
+primitivesareminimal,concise,andpowerful;theprogrammer if(a == 10) i = 0
+can add new primitives and constructs that link to relevant
+Buzzisadynamicallytypedlanguagethatoffersthefollow-
+features of the underlying system.
+ing types: nil, integer, floating-point, string, table, closure,
+Swarm-levelabstraction.OneofthenovelaspectsofBuzzis
+swarm,andvirtualstigmergy.Thenil,integer,floating-point,
+theabilitytomanageswarmsofrobots.Theconceptofswarm
+andstringtypesworkanalogouslytootherscriptinglanguages
+is a first-class language object [4]. Swarms can be created
+suchasPythonorLua.Theswarmandvirtualstigmergytypes
+and disbanded; new swarms can be created as a result of an
+are introduced in Sec. III-B and III-D, respectively.
+Tables are the only structured type available in Buzz, and
+# Create an empty table # Check whether a robot belongs to s
+# Index syntax, use as array
+Once a swarm is created, it is possible to assign tasks to it
+# Dot syntax, use as dictionary
+t.b = 9 through the method exec(). This method accepts a closure
+# Index syntax, use as dictionary
+as parameter.
+t["b"] = 10
+# Assigning a task to a swarm
+Buzz also supports functions as first-class objects, imple- s.exec(function() { ... })
+mented as closures [16]. Two types of closures exist: native
+Internally, the closure is executed as a swarm function call.
+closures and C closures. Native closures refer to functions
+This call modality differs from normal closure calls in that
+defined within a Buzz script, while C closures refer to C
+the current swarm id is pushed onto a dedicated swarm
+functions registered into the BVM (see Sec. IV-F).
+stack. Upon return from a swarm function call, the swarm
+# Function definition
+stack is popped. When the swarm stack is non-empty, the
+function f(a) { return a }
+# Native closure assignment swarm.id()methodisdefined.Ifcalledwithoutarguments,
+it returns the swarm id at the top of the swarm stack (i.e., the
+# Function call using f. x is set to 9
+x = f(9) current swarm id); if passed an integer argument n > 0, it
+# Function call using n. x is set to 5
+returns the n-th element in the swarm stack. Besides making
+# Native closures can be defined anonymously (a.k.a. lambdas) the swarm.id() command possible, the swarm stack is
+l = function(a,b) { return a+b }
+instrumental for neighbor operations (see Sec. IV-D).
+x = l(2,3) # x is set to 5
+The programmer can create new swarms that result from
+Thecombinationoftablesandclosuresallowsforthecreation operations on pre-existing swarms. Four such operations are
+ofclass-likestructures.Followingtheobject-orientedprogram- available: intersection, union, difference, and negation. The
+ming jargon, we refer to functions assigned to table elements first three operations act on two swarms:
+as methods:
+# a, b are swarms defined earlier in the script
+# Create empty table # Create new swarm with robots belonging to both a and b
+t = {} # The first argument is a unique swarm identifier
+# Add attribute to table i = swarm.intersection(100, a, b)
+t.a = 4 # Create new swarm with robots belonging to a or b
+# Add method to table u = swarm.union(101, a, b)
+# ’self’ refers to the table owning the method # Create new swarm with robots belonging to a and not to b
+t.m = function(p) { return self.a + p } d = swarm.difference(102, a, b)
+# Method call
+x = t.m(6) # x is set to 10 The fourth operation, negation, is encoded in the others()
+methodanditcreatesanewswarmthatcontainsalltherobots
+that do not belong to a given swarm:
+B. Swarm management
+# Create a new swarm n as the negation of swarm s
+Buzzletstheprogrammersubdividetherobotsintomultiple n = s.others(103)
+teams. In Buzz parlance, each team is called a swarm. Buzz
+treats swarms as first-class objects. To create a swarm, the
+C. Neighbor operations
+programmer must provide a unique identifier, which is known
+andsharedbyalltherobotsinthecreatedswarm.Thereturned Buzz offers a rich set of operations based on the neigh-
+value is a class-like structure of type swarm. borhood of a robot. These operations include both spatial and
+communication aspects.
+# Creation of a swarm with identifier 1
+s = swarm.create(1) The neighbors structure. The entry point of all neighbor
+operations is the neighbors structure. For each robot, this
+Once a swarm is created, it is initially empty. To have robots
+structure stores spatial information on the neighbors within
+join a swarm, two methods are available: select() and
+communication range. The structure is updated at each time
+join(). With the former, the programmer can specify a
+step. It is internally organized as a dictionary, in which the
+condition, evaluated by each robot individually, for joining
+index is the id of the neighbor and the data entry is a tuple
+a swarm; with the latter, a robot joins a swarm uncondition-
+(distance, azimuth, elevation).
+ally. To leave a swarm, Buzz offers the analogous methods
+Iteration, transformation, reduction. The neighbors
+unselect() and leave(). A robot can check whether it
+structure admits three basic operations: iteration, transfor-
+belongs to a swarm through the method in().
+mation, and reduction. Iteration, encoded in the method
+# Join the swarm if the robot identifier (id) is even foreach(), allows the programmer to apply a function
+# - ’id’ is an internal symbol that refers to the
+without return value to each neighbor. For instance, to print
+# numeric id of the robot executing the script
+# - % is the modulo operator the data stored for each neighbor, one could write:
+s.select(id % 2 == 0)
+# Join the swarm unconditionally # Iteration example (rid is the neighbor’s id)
+s.join() neighbors.foreach(
+# Leave the swarm if the robot id is greater than 5 function(rid, data) {
+s.unselect(id > 5) print("robot ", rid, ": ",
+# Leave the swarm unconditionally "distance = ", data.distance, ", "
+"azimuth = ", data.azimuth, ", " D. Virtual stigmergy
+"elevation = ", data.elevation) })
+Virtual stigmergy is a data structure that allows a swarm
+Transformation, encoded in the method map(), applies a of robots to share data globally. Essentially, virtual stig-
+mergy works as a distributed tuple space analogous to
+functionwithreturnvaluetoeachneighbor.Thereturnvalueis
+Linda[17].Threemethodsareavailable:create(),put(),
+theresultofanoperationonthedataassociatedtoaneighbor.
+The end result of mapping is a new neighbors structure, and get(). As the names suggest, create() is a method
+that creates a new virtual stigmergy structure, while put()
+in which each neighbor id is associated to the transformed
+and get() access the structure, writing or reading (key,
+data entries. For example, to transform the neighbor data into
+value) entries.
+cartesian coordinates, one could proceed as follows:
+# Create a new virtual stigmergy
+# Transformation example # A unique id (1 here) must be passed
+cart = neighbors.map( v = stigmergy.create(1)
+function(rid, data) { # Write a (key,value) entry into the structure
+var c = {} v.put("a", 6)
+c.x = data.distance * math.cos(data.elevation) * # Read a value from the structure
+math.cos(data.azimuth) x = v.get("a")
+c.y = data.distance * math.cos(data.elevation) *
+math.sin(data.azimuth)
+c.z = data.distance * math.sin(data.elevation) A virtual stigmergy structure can handle only a subset of
+return c }) the primitives types: integer, floating-point, string, and table.
+These types can be used either as keys or values.
+Reduction, encoded in the method reduce(), applies a
+The name virtual stigmergy derives from the indirect,
+function to each neighbor to produce a single result. For
+environment-mediatedcommunicationofnest-buildinginsects
+instance, this code sums the cartesian vectors calculated in
+such as ants and termites [18]. The key idea in natural
+the previous example:
+stigmergy is that environmental modifications to organize the
+environmentoccurinastep-wisefashion,wherebyamodifica-
+# Reduction example. accum is a table
+# with values x, y, and z, initialized to 0 tion performed by an individual causes a behavioral response
+result = cart.reduce(function(rid, data, accum) {
+inanotherindividual,withoutthetwoindividualseverdirectly
+accum.x = accum.x + data.x
+accum.y = accum.y + data.y interacting.Fromthepointofviewoftheprogrammer,virtual
+accum.z = accum.z + data.z
+return accum stigmergy works as a virtual shared environment: a robot
+}, {x=0, y=0, z=0}) modifies an entry, and this modification triggers a reaction
+in another robot without the two having to interact directly.
+Filtering. It is often useful to apply the presented operations AsshowninSec.V,virtualstigmergyisapowerfulconcept
+to a subset of neighbors. The filter() method allows that enables the implementation of a large class of swarm
+the programmer to apply a predicate to each neighbor. The behaviors.
+end result of the filter() method is a new neighbors
+structure storing the neighbors for which the predicate (a
+function) was true. For instance, to filter the neighbors whose
+IV. RUN-TIMEPLATFORM
+distance is within 1m from a robot, one could write: A. The Buzz virtual machine
+# Filtering example Therun-timeplatformofBuzzisbasedonacustom,stack-
+onemeter = neighbors.filter(function(rid, data) {
+based virtual machine written entirely in C. The organization
+# We assume the distance is expressed in centimeters
+return data.distance < 100 }) of the modules composing the VM is depicted in Fig. 1.
+The implementation of a new VM is motivated by the design
+Another common necessity is filtering neighbors by their choices in Buzz. In particular, the integration of swarm man-
+membership to a swarm. The kin() method returns a agement and virtual stigmergy into a VM for a dynamically-
+neighbors structure that contains the robots that belong typed,extensiblelanguageforcedustofinddedicatedsolutions
+to the same top-of-the-stack swarm as the current robot. The fordatarepresentation,stack/heapmanagement,andbytecode
+nonkin() method returns the complementary structure. An encoding. The specifics on these aspects are purely technical
+example application for these methods is offered in Sec. V. andgobeyondthescopeofthispaper.Anotablefactaboutthe
+Communication. Another use for the neighbors structure BVM is its tiny size (12KB) which fits most robots currently
+is to exchange and analyze local data. To make this possible, in use for swarm robotics research.
+Buzz offers two methods: broadcast() and listen(). At each time step, the BVM state is updated with the latest
+The former allows the robot to broadcast a (key, value) sensor readings. Sensor readings are typically stored in the
+pair across its neighborhood. The latter takes two inputs: heap as data structures (e.g., tables). Incoming messages are
+the key to listen to, and a listener function to execute then inserted in the BVM, which proceeds to unmarshal them
+upon receiving a value from a neighbor. The BVM executes andupdatetherelevantmodules.Subsequently,theinterpreter
+the listener whenever data is received until the method is called to execute a portion of the script. At the end of this
+neighbors.ignore(key) is called. As an example, in phase, the updated actuator data is read from the BVM heap
+Sec.VIwereportanexperimentinwhicharobotswarmforms and part of the messages in the outbound queue are sent by
+a distance gradient from a robot acting as source. the underlying system.
+swarm to 1 and queues a message <SWARM_JOIN,
+robot_id, swarm_id>. Analogously, when a robot
+Activation leaves a swarm, the BVM sets the corresponding flag to
+SwarmStack
+RecordStack 0 and queues a message <SWARM_LEAVE, robot_id,
+NeighborData swarm_id>. Because leaving and joining swarms is not
+a particularly frequent operation, and motion constantly
+changes the neighborhood of a robot, it is likely for a
+Interpreter
+Virtual robot to encounter a neighbor for which no information is
+Stigmergy available. To maintain everybody’s information up-to-date,
+the BVM periodically queues a message <SWARM_LIST,
+robot_id, swarm_id_list> containing the complete
+InputMessage Heap Output list of swarms to which the robot belongs. The frequency of
+FIFO MessageFIFO
+this message is chosen by the developer when configuring
+the BVM installed on a robot.
+Sensordata Actuatordata Neighbor swarm data. The BVM stores the information in a
+hashmapindexedbyrobotid.Eachelementofthehashmapis
+Fig.1. ThestructureoftheBuzzvirtualmachine. a(swarm_id_list, age)pairwhereswarm_id_list
+correspondsthelistofswarmsofwhichtherobotisamember,
+and age is a counter of the time steps since the last reception
+B. Code Compilation
+of a swarm update. Upon receipt of a swarm-related message
+ThecompilationofaBuzzscriptinvolvestwotools:acom- (i.e., SWARM_JOIN, SWARM_LEAVE, SWARM_LIST), the
+piler called buzzc and an assembler/linker called buzzasm. BVM updates the information on a robot accordingly and
+Theformerisaclassicalrecursivedescentparserthatgenerates zeroes the age of the entry. This counter is employed to
+an annotated object file in a single pass. The latter parses the forgetinformationonrobotsfromwhichnomessagehasbeen
+object file, performs the linking phase, and generates the byte received in a predefined period. When the counter exceeds a
+code. The compilation process is typically performed on the thresholddecidedwhenconfiguringtheBVM,theinformation
+programmer’s machine, and the generated byte code is then on the corresponding robot is removed from the structure.
+uploaded on the robots. This simple mechanism allows the robots to commit memory
+Because Buzz is an extension language, it is likely for the storage on active, nearby robots while avoiding waste of
+compilertoencounterunknownsymbols.Thistypicallyoccurs resourcesonunnecessaryrobots,suchasout-of-rangeordam-
+when robots with different capabilities are employed. For in- aged robots. In addition, this mechanism prevents excessive
+stance, flying robots may provide a fly_to() command for memory usage when the swarm size increases.
+motion,whilewheeledrobotsmayprovideaset_wheels() Message queue optimizations. To minimize the bandwidth
+command (see also Sec. IV-F). requiredforswarmmanagement,theBVMperformsanumber
+By default, the compiler treats unknown symbols as global of optimizations on the queue of swarm-related outbound
+symbols. Only at run-time, when a symbol is accessed, its messages.
+actual value is retrieved. In case the symbol is unknown at
+• If a SWARM_LIST message is queued, the information
+run-time, its value is set to nil. This mechanism provides
+contained in the message is more up-to-date than any
+a flexible way to write scripts that can work on robots with
+other message in the queue. Thus, all the queued mes-
+diverse capabilities. As a simple example, to create a swarm
+sages are removed and only the latest SWARM_LIST
+that contains all the flying robots, it is enough to write:
+message is kept.
+aerial = swarm.create(1) • If a SWARM_JOIN message is queued, three situations
+aerial.select(fly_to) can occur:4 (i) The queue does not contain any message
+regarding the same swarm id; (ii) The queue contains an
+olderSWARM_LISTmessage;or(iii)Thequeuecontains
+C. Swarm management
+anolderSWARM_LEAVEmessageforthesameswarmid.
+The management of swarm information is performed trans-
+Inthefirstcase,theSWARM_JOINmessageiskeptinthe
+parently by the BVM. Essentially, each robot maintains two
+queue. In the second case, the SWARM_JOIN message
+data structures about swarms: the first structure concerns the
+is dropped, the SWARM_LIST message is kept in the
+swarmsofwhichtherobotisamember;thesecondstoresdata
+queue, and the swarm id of the SWARM_JOIN message
+regarding neighboring robots. The membership management
+is added to the list if not already present. In the third
+mechanisms are loosely inspired by CYCLON [19].
+case, the SWARM_LEAVE message is dropped and the
+Membership management. Every time a
+SWARM_JOIN message is kept in the queue.
+swarm.create() command is executed, the BVM
+• If a SWARM_LEAVE message is queued, three situations
+stores the identifier of the created swarm into a dedicated
+can occur: (i) The queue does not contain any message
+hash table, along with a flag encoding whether the robot
+is a member of the swarm (1) or not (0). Upon joining
+4IfanolderSWARM_JOINmessageforthesameswarmidispresent,the
+a swarm, the BVM sets the flag corresponding to the newmessageisdiscarded.
+regarding the same swarm id; (ii) The queue contains an a message <VSTIG_PUT, vstig_id, key, value,
+olderSWARM_LISTmessage;or(iii)Thequeuecontains timestamp, robot_id>. Nearby robots, upon receipt of
+an older SWARM_JOIN message for the same swarm id. themessage,checkwhetheritstimestampishigherthanthe
+In the first case, the SWARM_LEAVE message is kept locallyknownone.Ifthisisthecase,therobotspropagatethe
+in the queue. In the second case, the SWARM_LEAVE message. Otherwise, they ignore it. It might happen that two
+message is dropped, the SWARM_LIST message is kept robots advertise an update on the same key with the same
+in the queue, and the swarm id of the SWARM_LEAVE timestamp. When this happens, a user-defined conflict-
+message is removed from the list if present. In the third solverfunctioniscalled.Thisfunctionisgiventheconflicting
+case, the SWARM_JOIN message is dropped and the entries as parameters, and must return an entry as result. The
+SWARM_LEAVE message is kept in the queue. resulting entry can be either picked as-is from the input ones,
+or be a newly created one. To help resolve conflicts, each
+D. Neighbor operations input entry also contains a robot_id field storing the robot
+idthatgeneratedtheentry.Ifnoconflictsolverisspecifiedby
+Neighboroperationsinvolvethecollectionandmanipulation
+the user, the entry with the highest robot id is propagated. A
+of data about nearby robots.
+further user-defined function is executed by the robot that lost
+Neighbor data handling. Neighbor information is stored in
+the conflict. By default, this function does nothing; however,
+a sparse array indexed by the robot id of a neighbor. Each
+in some applications a robot might need to react, e.g. retry
+entry is a tuple containing the id of the neighbor, its distance,
+sending its update. An example usage of these functions is
+azimuth, and elevation angles expressed with respect to the
+reported in Sec. V-B.
+robot’s frame of reference.
+Reading from a virtual stigmergy structure. When a robot
+Neighbor data collection. Data collection involves the use of
+R1 reads a value from a virtual stigmergy structure, the
+situated communication devices, as discussed in Sec. II. At
+locally known value is returned by the BVM. Subsequently,
+each time step, a robot broadcasts a message <robot_id>.
+the BVM queues a message <VSTIG_GET, vstig_id,
+Upon receiving this message, neighboring robots use their
+key, value1, timestamp1, robot_id1>toinquire
+situatedcommunicationdevicestodetectthedistance,azimuth
+nearby robots on whether the local entry is up-to-date or
+andelevationofthesendingrobot.Theneighborsstructure
+not. Upon receiving this message, a robot R2 checks its
+is cleared and reconstructed at each time step, to ensure
+internal data structure. If R2 knows more up-to-date informa-
+that the data is constantly up-to-date. This operation is not
+tion, it replies with a message <VSTIG_PUT, vstig_id,
+expensive, because typically the number of neighbors of a
+key, value2, timestamp2, robot_id2> contain-
+robot is lower than 10.
+ing its local version of the entry. If, instead, R2 possesses
+Neighbor queries. Neighbor queries allow robots
+older information, its BVM updates the entry and then
+to inquire and share information on the value of a
+broadcasts a message <VSTIG_PUT, vstig_id, key,
+specific symbol. When a robot executes the command
+value1, timestamp1, robot_id1>. This mechanism
+neighbors.listen(key, listener), the BVM
+allows robots to automatically update information after tem-
+stores the passed listener in a map indexed by key.
+porary disconnections or when random message loss occurs.
+Whenevertherobotprocessesamessageidentifiedbykey,the
+Messagequeueoptimizations.Thefactthatmessagesaresent
+BVM executes the corresponding listener. The command
+only when an entry is written or read ensures that maximum
+neighbors.ignore(key) removes listener from
+resourcesareconcentratedon‘hot’data.Thisallowstherobots
+the map. The method neighbors.broadcast(key,
+to avoid expensive updates of the entire tuple space. In this
+value) queues a message <key, value>. If a message
+way,avirtualstigmergystructurecangrowinsizeifnecessary,
+with the same key is already present in the output queue,
+knowingthatminimaloverheadisnecessarytokeep‘hot’data
+the BVM keeps the most recent one.
+up-to-date. However, the fact that each access to a virtual
+stigmergy structure entails the production of a message can
+E. Virtual stigmergy
+quicklyfillthemessagequeue.Toavoidthisproblem,whena
+Virtual stigmergy structures are stored by the BVM in a message is queued, the BVM checks for existing messages in
+sparse array indexed by the id provided in the Buzz script. the outbound queue that refer to the same entry in the same
+Each entry of the sparse array is a separate virtual stig- virtualstigmergystructure,andonlykeepsthemostup-to-date
+mergy structure. Internally, a virtual stigmergy structure is a message.
+hash map that stores tuples (key, value, timestamp,
+robot_id) where key is a Buzz primitive type that iden-
+F. Integrating and Extending Buzz
+tifies the entry, value is a primitive type that contains the
+value of the entry, timestamp is a Lamport clock [20] As an extension language, Buzz provides the necessary
+used to impose a temporal ordering on the entry updates, and mechanisms to add new commands and add data structures
+robot_id is the id of the robot that last changed the entry. that export parts of an underlying system (e.g. ROS [21]).
+Writing into a virtual stigmergy structure. When a Adding new data structures. Sensor readings are a common
+robot writes a new value into a virtual stigmergy struc- aspect that must be integrated with Buzz. Typically, this is
+ture, the BVM first creates or updates the local en- realizedbyaddingdedicateddatastructures(e.g.,tables)tothe
+try in the hash map. Subsequently, the BVM queues BVM. For instance, the e-puck is equipped with 8 proximity
+sensors placed in a ring around the robot body. The C code to V. EXAMPLES
+create a Buzz table that contains these values is as follows:
+The objective of this section is to showcase Buzz, by
+/* The Buzz virtual machine, assumed already initialized */ providing examples of common swarm algorithms for motion
+buzzvm_t vm;
+/* The proximity readings, assumed already filled */ and task coordination. These examples show how to build
+int prox[8]; complex swarm behaviors starting from simpler primitives,
+/* Create a new Buzz table for the proximity readings */
+buzzvm_pusht(vm); anddemonstratethegeneralityandcomposabilityofBuzz.The
+buzzobj_t pt = buzzvm_stack_at(vm, 1); examplesarealsodesignedtosuggesthowalibraryofreusable
+buzzvm_pop(vm);
+/* Store the proximity readings in the table */ swarmbehaviorscouldbeconstructedusingBuzz.Thescripts
+for(int i = 0; i < 8; ++i) { were tested with ARGoS [22], an accurate, physics-based
+buzzvm_push(pt); /* push table */
+buzzvm_pushi(vm, i); /* push table index */ simulator that includes models for Spiri5, a commercial quad-
+buzzvm_pushi(vm, prox[i]); /* push prox reading */ rotor robot.
+buzzvm_tput(vm); /* store in table */
+/* Store the table as the global symbol "prox" */
+buzzvm_pushs(vm, buzzvm_string_register(vm, "prox")); A. Motion and Spatial Coordination
+buzzvm_push(pt);
+buzzvm_gstore(pt); In heterogeneous swarms, the presence of robots with
+diverse motion means can enhance the capabilities of the
+In Buzz, one could then write the following:
+swarm [23]. Buzz does not offer native motion primitives,
+if(prox[0] > 100 or prox[7] > 100) {
+# obstacle in front, turn around leavingthedesignerwiththefreedomtosetonesthataremost
+} suitable for each robot. In this section, we assume that every
+robotisendowedwithaprimitivegoto(),whichtakesa2D
+Adding new commands. Adding new commands allows a
+direction as input in the form of a table {x,y}. The direction
+programmer to extend Buzz with new capabilities. External C
+isthentransformedintolow-levelactuationaccordinglytothe
+functionsareintegratedwithBuzzasCclosures.Forinstance,
+specific motion means of a robot (e.g., wheels, propellers).
+the code to integrate a function that sets the e-puck wheel
+speeds is as follows (error checking is omitted for brevity): Pattern formation [6] is a basic swarm behavior that has
+been employed in several applications including flocking [7]
+int set_wheels(buzzvm_t vm) {
+/* Read arguments */ and area coverage [8]. One of the most common approaches,
+buzzvm_lload(vm, 1); and the one we show here, is to implement pattern formation
+buzzvm_lload(vm, 2);
+int leftwheel = buzzvm_stack_at(vm, 2); through virtual physics [6]. Essentially, every robot is consid-
+int rightwheel = buzzvm_stack_at(vm, 1); eredasachargedparticleimmersedinapotentialfield,which
+/* Set wheel speed using low-level e-puck library */
+... is ‘virtual’ because it is calculated from neighbor positioning
+/* Return no value to Buzz */ data. The direction vector of each robot is calculated as
+return buzzvm_ret0(vm);
+} the weighted sum of the virtual forces that derive from the
+/* Register function as global symbol */ interaction of a robot with its neighbors. We employ the
+buzzvm_pushs(vm, buzzvm_string_register(vm, "set_wheels"));
+buzzvm_pushcc(vm, buzzvm_function_register(vm, set_wheels)); followingformula[6]tocalculatethemagnitudeofthevirtual
+buzzvm_gstore(vm); force f due to a neighbor n:
+As a result, in Buzz one could write:
+(cid:32)(cid:18)
+(cid:19)4 (cid:18)
+(cid:19)2 (cid:33)
+# Set e-puck wheel speeds |f n |=− d d − d ,
+set_wheels(10.0, 5.0) n n n
+Calling Buzz functions from C. It is sometimes necessary where d is the current distance between the robot and its
+to call a (native or C) closure from C code. This happens, for neighbor n, δ is the target distance, and (cid:15) is a gain. The
+instance,whentheexecutionloopismanagedoutsideBuzz.In direction vector a robot must follow is calculated as the
+thiscase,aBuzzscriptistypicallyorganizedinfunctionssuch average of the vectors of the virtual forces f :
+as init(), step(), and destroy(). These functions are
+called by the underlying system when necessary. As a simple 1 (cid:88)
+f = f .
+example, let us take the increment function: N n
+# Buzz function that accepts a single argument
+function inc(x) { return x + 1 } The neighbors structure provides a natural way to im-
+plement this behavior. First, one must implement the function
+To call it from C code, one needs to push its argument on the
+that calculates |f |:
+stack (an integer, in this example) and then call the function n
+buzzvm_function_call(): # Virtual force parameters (manually fitted)
+DELTA = 50.
+/* Push the function argument on the stack */ EPSILON = 2700.
+buzzvm_pushi(vm, 5); # Virtual force magnitude
+/* Call the function with: function force_mag(dist, delta, epsilon) {
+* 1. The VM data return -(epsilon / dist) *
+* 2. The function name ((delta / dist)ˆ4 - (delta / dist)ˆ2)
+* 3. The number of parameters passed }
+buzzvm_function_call(vm, "inc", 1);
+(a)Hexagonalpatternformation. (b)Segregation.
+Fig.2. ARGoSscreenshotsoftheswarmbehaviorspresentedinSec.V-A.
+Next, we need a function to calculate f n from the positional BARRIER_VSTIG = 1
+information of a neighbor. This function is then used in # Function to mark a robot ready
+function barrier_set() {
+neighbor.reduce() to calculate f: # Create a vstig
+barrier = stigmergy.create(BARRIER_VSTIG)
+# Virtual force accumulator }
+function force_sum(rid, data, accum) { # Function to mark a robot ready
+var fm = force_mag(data.distance, DELTA, EPSILON) function barrier_ready() {
+accum.x = accum.x + fm * math.cos(data.azimuth) barrier.put(id, 1)
+accum.y = accum.y + fm * math.sin(data.azimuth) }
+return accum # Function to wait for everybody to be ready
+} function barrier_wait(threshold) {
+# Calculates the direction vector while(barrier.size() < threshold) barrier.get(id);
+function direction() { }
+var dir = neighbors.reduce(force_sum, {x=0,y=0})
+dir.x = dir.x / neighbors.count()
+An example usage of the barrier is presented in Sec. V-C.
+dir.y = dir.y / neighbors.count()
+return dir
+# Executed at each step C. Separation into Multiple Swarms
+# The loop is assumed managed outside Buzz
+function step() { Segregation is a basic motion behavior whereby a group of
+goto(direction())
+robots divides into two or more subgroups. A possible way
+to implement this behavior in Buzz consists of defining two
+Fig. 2a reports an ARGoS screenshot depicting the structure swarms, and use pattern formation to impose a short distance
+achieved by the robots after 30 seconds of simulated time. betweenkinrobots,andalongonebetweennon-kinones.The
+following modifications to the pattern formation algorithm in
+B. Collective Decision-Making Sec. V-A capture the interaction among the different swarms:
+Collective decision-making is an important aspect in multi- # Virtual force parameters (manually fitted)
+DELTA_KIN = 50.
+robot coordination. In this section, we concentrate on one
+EPSILON_KIN = 2700.
+of the simplest and widespread behaviors in this class—the DELTA_NONKIN = 150.
+EPSILON_NONKIN = 8000.
+barrier. A barrier is a synchronization mechanism that allows
+# Virtual force accumulator for kin robots
+a swarm to wait until a sufficient number of robots are ready # Same as force_sum, with _KIN constants
+function force_sum_kin(rid, data, accum) { ... }
+to proceed. Quorum sensing has been proposed as a way
+# Virtual force accumulator for non-kin robots
+to achieve this behavior [24]. Quorum sensing refers to the # Same as force_sum, with _NONKIN constants
+function force_sum_nonkin(rid, data, accum) { ... }
+progressive build-up of a chemical in cell colonies. When the
+# Calculates the direction vector
+cells detect that the concentration of such chemical exceeds a function direction() {
+threshold, a new behavior is triggered.
+dir = neighbors.kin().reduce(force_sum_kin, {x=0,y=0})
+Virtualstigmergyoffersameantoimplementquorumsens- dir = neighbors.nonkin().reduce(force_sum_nonkin, dir)
+dir.x = dir.x / neighbors.count()
+ing.Everytimearobotwantstomarkitselfasready,itputsa
+dir.y = dir.y / neighbors.count()
+pair (id, 1) in the virtual stigmergy structure, where id is return dir
+arobot’snumericid.Thesize()methodreturnsthenumber
+of tuples in the virtual stigmergy, which here corresponds to The decision on which group a robot belongs to depends on
+the count of ready robots. When this count reaches the swarm the application. In the following, we concentrate on the case
+size (or another application-dependent threshold value), the in which two different targets are present in the environment.
+robots collectively trigger the next phase. Each target is marked by a colored light—one red, one blue.
+# A numeric id for the barrier virtual stigmergy The Spiri is equipped with a frontal camera that can detect
+a target and its color. We assume that not all of the robots Experimental setup. Our experimental setup consists of a
+are capable of detecting the target, due to obstructions or square arena of side L in which N robots are scattered. The
+sensor range limitations. The uninformed robots must rely coordinates (x,y) of each robot are chosen uniformly from
+on the information shared by the informed robots to pick the U(−L/2,L/2).6 We define the robot density D as the ratio
+closesttarget.Apossiblesolutiontoachievethisisemploying between the area occupied by all the robots and the total area
+a virtual stigmergy structure, in which each robot advertises ofthearena.Toensurecomparableconditionsacrossdifferent
+its distance to the closest target and its color: choices of N, we keep the density constant (D = 0.1) and
+calculate L with:
+NUM_ROBOTS = 10
+MAX_DISTANCE = 10000 # 100 meters (cid:114)
+TARGET_VSTIG = 2 NπR2 NπR2
+# Create virtual stigmergy D = ⇒L= ,
+targetvstig = stigmergy.create(TARGET_VSTIG) L2 D
+# Get target data
+var mytargetdata = {} where R = 8.5cm is the radius of a marXbot. We focus our
+if(camera.targetdata) analysis on two parameters that directly affect the properties
+# Can see the target directly
+mytargetdata = camera.targetdata that we intend to analyze: (i) The number of robots N, which
+targetvstig.put(id, mytargetdata) impactsscalability;and(ii)Themessagedroppingprobability
+targetfound = 1
+else { P, which affects robustness and accounts for an important,
+# Can’t see the target directly unavoidable phenomenon that influences the efficiency of
+mytargetdata.dist = MAX_DISTANCE
+mytargetdata.color = nil current devices for situated communication. For N, we chose
+mytargetdata.closest = nil {10,100,1000}; for P, we chose {0,0.25,0.5,0.75,0.95}.
+targetfound = nil
+} Eachexperimentalconfiguration(cid:104)N,P(cid:105)wastested100times.
+# Keep monitoring neighbors until everybody Virtual stigmergy. To analyze the efficiency of virtual stig-
+# advertises a distance
+while(not targetfound) { mergy, we devised an experiment in which the robots must
+targetfound = 1 agree on the highest robot id across the swarm. This experi-
+mytargetdata = neighbors.reduce(
+function(rid, rdata, accum) { ment is representative of a wide class of situations in which a
+var d = targetvstig.get(rid) robot swarm must agree on the maximum or minimum value
+if(d != nil) {
+if(d.dist < DISTANCE_MAX) { of a quantity (e.g., sensor reading). As performance measure,
+if(accum.dist > rdata.distance + d.dist) { we employed the number of time steps necessary to reach
+accum.dist = rdata.distance + d.dist
+accum.closest = rid global consensus. We report in Fig. 3 the script we executed
+accum.color = d.color andthedatadistributionweobtained.Ourresultsindicatethat,
+} up to P =0.75, the number of time steps necessary to reach
+else targetfound = nil consensusisaffectedweaklybyN,andpracticallyunaffected
+else targetfound = nil by P. Interestingly, for (cid:104)N = 1000,P = 0.75(cid:105), consensus is
+return accum reached in at most 15 time steps (a time step corresponds to
+}, mytargetdata)
+# Advertise choice 0.1s in our simulations). This positive result can be explained
+targetvstig.put(id, mytargetdata) by noting that, with P = 0.75, 3 messages out of 4 are lost;
+# Neighbors done?
+if(targetfound) barrier_ready() however,theuniformdistributionoftherobotsensuresthat,on
+} average,eachrobothasmorethan3neighbors.Thus,messages
+# Wait for others to finish
+barrier_wait(NUM_ROBOTS); can still flow throughout the network. The effect of packet
+# When we get here, everybody has picked a target dropping is apparent for very pessimistic values (P =0.95).
+Once the choice is done and the barrier is overcome, the Neighbor queries. To analyze the performance of neighbor
+robots form two swarms and move accordingly: queries, we devised an experiment in which the robots must
+construct a distance gradient from a robot acting as source.
+sred = swarm.create(COLOR_RED)
+sred.select(mytargetdata.color == COLOR_RED) This experiment is representative because the formation of
+sblue = swarm.create(COLOR_BLUE) gradients is a fundamental coordination mechanism in swarm
+sblue.select(mytargetdata.color == COLOR_BLUE)
+while(1) { behaviors. As performance measure, we employ the time
+sred.exec(function() { goto(direction()) }) necessaryforeveryrobottoestimateitsdistancetothesource.
+sblue.exec(function() { goto(direction()) })
+} The script and the data plot are reported in Fig. 4. The
+dynamics are analogous to virtual stigmergy: convergence
+Fig.2breportsanARGoSscreenshotdepictingthestructure
+time depends weakly on N and is unaffected by P up to
+achieved by the robots after 2 minutes of simulated time.
+P =0.75; for (cid:104)N =1000,P =0.75(cid:105) convergence is reached
+in a maximum of 13 time steps; for P = 0.95, convergence
+VI. EXPERIMENTALEVALUATION
+times increase sensibly. Again, this is arguably due to the
+In this section, we analyze the scalability and robust-
+dense distribution of robots, which facilitates the circulation
+ness of the Buzz run-time. We focus our analysis on two
+of messages across the swarm, thus mitigating the effects of
+subsystems, virtual stigmergy and neighbor queries, because
+message dropping.
+of their key role in swarm coordination. The evaluation is
+conducted through simulations in ARGoS with the ground-
+6When a coordinate choice causes physical overlap with already placed
+based marXbot robot [12]. robots,anewcoordinateispickeduntilnooverlapoccurs.
+0.00 0.25 0.50 0.75 0.95
+Packet drop probability
+Virtual stigmergy convergence times
+100 Robots
+1000 Robots 30
+0.00 0.25 0.50 0.75 0.95
+Packet drop probability
+# Executed at init time
+function init() {
+# Create a vstig
+vs = stigmergy.create(1)
+# Set onconflict manager
+vs.onconflict(function(k,l,r) {
+# Return local value if
+# - Remote value is smaller than local, OR
+# - Values are equal, robot of remote record is
+# smaller than local one
+if(r.data < l.data or
+(r.data == l.data and
+r.robot < l.robot)) {
+# Otherwise return remote value
+else return r
+# Initialize vstig
+vs_value = id
+vs.put(VSKEY, vs_value)
+# Executed at each time step
+function step() {
+# Get current value
+vs_value = vs.get(VSKEY)
+Fig.3. Virtualstigmergyperformanceassessment.Theplotreportstheme-
+dian,max,andminvaluesofthedistributionsobtainedforeachexperimental
+configuration(cid:104)N,P(cid:105).Themarkersareslightlyoffsettomakethemvisible.
+VII. RELATEDWORK
+Most of the literature in programming languages designed
+for robotics focus on individual robots. Prominent examples
+of this body of work are Willow Garage’s Robot Operating
+System (ROS) [21], and the event-based language URBI [25].
+In swarm robotics, SWARMORPH-script [26] is a bottom-
+up behavior-based scripting language designed to achieve
+morphogenesis with mobile robots.
+The last decade saw the introduction of the first top-
+downapproachestothedevelopmentofdistributedcomputing
+systems. Various abstractions and programming languages
+have been proposed in the sensor network community [27].
+A programming methodology inspired by embryogenesis and
+designed for self-assembly applications was proposed in [28].
+Dantuetal.proposedKarma[29],aframeworkthatcombines
+centralizedanddistributedelementstoperformtaskallocation
+in a swarm of aerial robots unable to communicate directly.
+Proto [30] is a language designed for “spatial computers,”
+that is, a collection of connected computing devices scattered
+Neighbor query convergence times
+100 Robots
+1000 Robots
+# Constant for infinite distance (500 m)
+DISTANCE_INF = 50000.
+# Executed at init time
+function init() {
+# Source robot
+mydist = 0.
+# Other robots
+mydist = DISTANCE_INF
+# Listen to other robots’ distances
+neighbors.listen("dist_to_source",
+function(vid, value, rid) {
+mydist = math.min(
+neighbors.get(rid).distance + value)
+# Executed at each time step
+function step() {
+neighbors.broadcast("dist_to_source", mydist)
+Fig.4. Neighborqueryperformanceassessment.Theplotreportsthemedian,
+max, and min values of the distributions obtained for each experimental
+configuration(cid:104)N,P(cid:105).Themarkersareslightlyoffsettomakethemvisible.
+in a physical space. The spatial computer is modeled as
+a continuous medium in which each point is assigned a
+tuple of values. The primitive operations of Proto act on
+this medium. The LISP-like syntax of Proto is modular by
+design and produces predictable programs. Proto shines in
+scenarios in which homogeneous devices perform distributed
+spatial computation—the inspiration for Buzz’ neighbors
+construct was taken from Proto. However, as a language for
+robotics, Proto presents a number of limitations: (i) As a
+functional language, maintaining state over time is cumber-
+some; (ii) Every node handlesonly single tuples; (iii) Support
+for robot motion is limited; (iv) No explicit support for
+heterogeneous devices is present. Part of these issues have
+been addressed in [31].
+Meld [32] is a declarative language that realizes the top-
+down approach by allowing the developer to specify a high-
+level, logic description of what the swarm as a whole should
+achieve. The low-level (communication/coordination) mecha-
+nisms that reify the high-level goals, i.e., the how, are left
+to the language implementation and are transparent to the
+developer. The main concepts of the language are facts and
+rules. A fact encodes a piece of information that the system little attention in the literature, and Buzz constitutes an ideal
+considerstrueatagiventime.AcomputationinMeldconsists platform to study them. In particular, we will study more in
+of applying the specified rules progressively to produce all depth the impact of the network topology on the efficiency of
+the true facts, until no further production is possible. Meld message passing, and we will investigate adaptive methods to
+supportsheterogeneousrobotswarmsbyendowingeachrobot detect and mitigate the issues of unoptimal topologies.
+with facts that map to specific capabilities. A similar concept
+exists in Buzz, with robot-specific symbols (see Sec. IV-B).
+ACKNOWLEDGMENTS
+ThemainlimitationofMeldforswarmroboticsisthefactthat
+its rule-based mechanics produce programs whose execution This work was supported by an NSERC Engage Grant. Computations were
+is difficult to predict and debug, and it is thus impossible to made on the supercomputer Mammouth-Ms from Universite´ de Sherbrooke,
+decompose complex programs into well-defined modules. managed by Calcul Que´bec and Compute Canada. The operation of this
+Voltron [33] is a language designed for distributed mobile supercomputer is funded by the Canada Foundation for Innovation (CFI),
+sensing. Voltron allows the developer to specify the logic to NanoQue´bec, RMGA and the Fonds de recherche du Que´bec — Nature et
+be executed at several locations, without having to dictate technologies(FRQ-NT).
+how the robots must coordinate to achieve the objectives.
+Coordination is achieved automatically through the use of REFERENCES
+a shared tuple space, for which two implementations were
+[1] G. Beni, “From Swarm Intelligence to Swarm Robotics,” Swarm
+tested—acentralizedone,andadecentralizedonebasedonthe Robotics,vol.3342,pp.1–9,2005.
+concept of virtual synchrony [34]. In Buzz, virtual stigmergy [2] J. McLurkin, J. Smith, J. Frankel, D. Sotkowitz, D. Blau, and
+B. Schmidt, “Speaking Swarmish : Human-Robot Interface Design
+was loosely inspired by the capabilities of virtual synchrony,
+for Large Swarms of Autonomous Mobile Robots,” in AAAI Spring
+although the internals of the two systems differ substantially. Symposium: To Boldly Go Where No Human-Robot Team Has Gone
+Voltron excels in single-robot, single-task scenarios in which Before. AAAI,2006,pp.3–6.
+[3] M. Brambilla, E. Ferrante, M. Birattari, and M. Dorigo, “Swarm
+pure sensing is involved; however, fine-grained coordination
+robotics: a review from the swarm engineering perspective,” Swarm
+of heterogeneous swarms is not possible, because Voltron’s Intelligence,vol.7,no.1,pp.1–41,Jan.2013.
+abstraction hides the low-level details of the robots. [4] M. Scott, Programming Language Pragmatics. San Francisco, CA:
+MorganKaufmannPublishers,2006.
+[5] K. Støy, “Using situated communication in distributed autonomous
+VIII. CONCLUSIONSANDFUTUREWORK mobilerobots,”inProceedingsofthe7thScandinavianConferenceon
+ArtificialIntelligence. IOSPress,2001,pp.44–52.
+We presented Buzz, a novel programming language de- [6] W. M. Spears, D. F. Spears, J. C. Hamann, and R. Heil, “Distributed,
+Physics-Based Control of Swarms of Vehicles,” Autonomous Robots,
+signed for large-scale, heterogeneous robot swarms. The con-
+vol.17,no.2/3,pp.137–162,Sep.2004.
+tributions of our work include: (i) a mixed paradigm for the [7] E. Ferrante, A. E. Turgut, A. Stranieri, C. Pinciroli, M. Birattari,
+implementation of robot swarms, which allows the developer and M. Dorigo, “A self-adaptive communication strategy for flocking
+in stationary and non-stationary environments,” Natural Computing,
+to specify fine-grained, bottom-up logic as well as reason in
+vol.13,no.2,pp.225–245,2014.
+a top-down, swarm-oriented fashion; (ii) the definition of a [8] C.Pinciroli,M.Bonani,F.Mondada,andM.Dorigo,“Adaptationand
+compositional and predictable approach to swarm behavior awareness in robot ensembles: Scenarios and algorithms,” in Software
+Engineering for Collective Autonomic Systems, M. Wirsing, M. Ho¨lzl,
+development; (iii) the implementation of a general language
+N.Koch,andP.Mayer,Eds. SpringerInternationalPublishing,2015,
+capable of expressing the most common swarm behaviors. vol.LNCS8998,ch.IV.2,pp.471–494.
+Besides these contributions, we believe that one of the [9] A. Brutschy, G. Pini, C. Pinciroli, M. Birattari, and M. Dorigo, “Self-
+organizedtaskallocationtosequentiallyinterdependenttasksinswarm
+most important aspects of Buzz is its potential to become
+robotics,”AutonomousAgentsandMulti-AgentSystems,vol.28,no.1,
+an enabler for future research on real-world, complex swarm pp.101–125,2014.
+robotics systems. Currently, no standardized platform exists [10] M. Rubenstein, C. Ahler, and R. Nagpal, “Kilobot: A low cost scal-
+able robot system for collective behaviors,” 2012 IEEE International
+that allows researchers to compare, share, and reuse swarm
+ConferenceonRoboticsandAutomation,pp.3293–3298,May2012.
+behaviors.Inescapably,developmentinvolvesacertainamount [11] F. Mondada, M. Bonani, X. Raemy, J. Pugh, C. Cianci, A. Klaptocz,
+of re-coding of recurring swarm behaviors, such as flocking, J.-C. Zufferey, D. Floreano, and A. Martinoli, “The e-puck , a Robot
+Designed for Education in Engineering,” in Proceedings of Robotica
+barriers, and creation of gradients. The design of Buzz is
+2009–9thConferenceonAutonomousRobotSystemsandCompetitions,
+motivatedandnurturedbythenecessitytoovercomethisstate P. J. S. Gonc¸alves, P. J. D. Torres, and C. M. O. Alves, Eds., vol. 1.
+of affairs. We hope that Buzz will have a lasting impact on IPCB,CasteloBranco,Portugal,2006,pp.59–65.
+[12] M. Bonani, V. Longchamp, S. Magnenat, P. Re´tornaz, D. Burnier,
+the growth of the swarm robotics field.
+G. Roulet, F. Vaussard, H. Bleuler, and F. Mondada, “The marXbot,
+Future work on Buzz will involve several activities. Firstly, a miniature mobile robot opening new perspectives for the collective-
+wewillintegratetherun-timeintomultipleroboticsplatforms roboticresearch,”inProceedingsoftheIEEE/RSJInternationalConfer-
+enceonIntelligentRobotsandSystems(IROS). Piscataway,NJ:IEEE
+of different kinds, such as ground-based and aerial robots.
+Press,2010,pp.4187–4193.
+Secondly, we will create a library of well-known swarm [13] O.DeSilva,G.Mann,andR.Gosine,“Anultrasonicandvision-based
+behaviors, which will be offered open-source to practitioners relative positioning sensor for multirobot localization,” IEEE Sensors
+Journal,vol.15,no.3,pp.1716–1726,2014.
+as part of the Buzz distribution. This will be the first true
+[14] M.Jelasity,A.Montresor,andB.O.,“Gossip-basedaggregationinlarge
+collection of ‘swarm patterns’, in the classical sense the word dynamic networks,” ACM Transactions on Computer Systems, vol. 23,
+‘pattern’ assumes in software engineering [35]. Finally, we no.3,pp.219–252,2005.
+[15] R. Ierusalimschy, L. H. De Figueiredo, and W. Celes Filho, “The
+willtacklethedesignofgeneralapproachestoswarmbehavior
+implementation of lua 5.0,” Journal of Universal Computer Science,
+debugging and fault detection. These topics have received vol.11,no.7,pp.1159–1176,2005.
+[16] P.J.Landin,“Themechanicalevaluationofexpressions,”TheComputer
+Journal,vol.6,no.4,pp.308–320,1964.
+[17] D.Gelernter,“GenerativecommunicationinLinda,”ACMTransactions
+onProgrammingLanguagesandSystems(TOPLAS),vol.7,no.1,pp.
+80–112,1985.
+[18] P. Grasse´, “La reconstruction du nid et les coordinations inter-
+individuelleschezbellicositermesnatalensisetcubitermessp.lathe´orie
+de la stigmergie: Essai d’interpre´tation des termites constructeurs.”
+InsectsSociaux,vol.6,pp.41–83,1959.
+[19] S. Voulgaris, D. Gavidia, and M. Van Steen, “CYCLON: Inexpensive
+membership management for unstructured P2P overlays,” Journal of
+NetworkandSystemsManagement,vol.13,no.2,pp.197–216,2005.
+[20] L. Lamport, “Time, clocks, and the ordering of events in a distributed
+system,”CommunicationsoftheACM,vol.21,no.7,pp.558–565,Jul.
+1978.
+[21] M. Quigley, K. Conley, B. P. Gerkey, J. Faust, T. Foote, J. Leibs,
+R. Wheeler, and A. Y. Ng, “ROS: an open-source Robot Operating
+System,”inICRAworkshoponopensourcesoftware,2009,p.5.
+[22] C.Pinciroli,V.Trianni,R.O’Grady,G.Pini,A.Brutschy,M.Brambilla,
+N.Mathews,E.Ferrante,G.DiCaro,F.Ducatelle,M.Birattari,L.M.
+Gambardella,andM.Dorigo,“ARGoS:amodular,parallel,multi-engine
+simulatorformulti-robotsystems,”SwarmIntelligence,vol.6,no.4,pp.
+271–295,2012.
+[23] M. Dorigo, D. Floreano, L. Gambardella, F. Mondada, S. Nolfi,
+T. Baaboura, M. Birattari, M. Bonani, M. Brambilla, A. Brutschy,
+D. Burnier, A. Campo, A. Christensen, A. Decugnie`re, G. Di Caro,
+F.Ducatelle,E.Ferrante,A.Fo¨rster,J.Guzzi,V.Longchamp,S.Magne-
+nat,J.MartinezGonzales,N.Mathews,M.MontesdeOca,R.O’Grady,
+C. Pinciroli, G. Pini, P. Re´tornaz, J. Roberts, V. Sperati, T. Stirling,
+A.Stranieri,T.Stu¨tzle,V.Trianni,E.Tuci,A.Turgut,andF.Vaussard,
+“Swarmanoid: a novel concept for the study of heterogeneous robotic
+swarms,” IEEE Robotics & Automation Magazine, vol. 20, no. 4, pp.
+60–71,2013.
+[24] R.Nagpal,“ACatalogofBiologically-InspiredPrimitivesforEngineer-
+ing Self-Organization,” in Engineering Self-Organising Systems, G. Di
+MarzoSerugendo,A.Karageorgos,O.F.Rana,andF.Zambonelli,Eds.
+SpringerBerlinHeidelberg,2004,pp.53–62.
+[25] J.-C.Baillie,“URBI:towardsauniversalroboticlow-levelprogramming
+language,” in 2005 IEEE/RSJ International Conference on Intelligent
+RobotsandSystems. IEEEPress,Piscataway,NJ,2005,pp.820–825.
+[26] R.O’Grady,A.L.Christensen,andM.Dorigo,“SWARMORPH:Mor-
+phogenesiswithSelf-AssemblingRobots,”inMorphogeneticEngineer-
+ing:TowardProgrammableComplexSystems,R.Doursat,H.Sayama,
+andO.Michel,Eds. SpringerBerlinHeidelberg,2012,ch.2,pp.27–60.
+[27] L. Mottola and G. P. Picco, “Programming wireless sensor networks:
+Fundamental concepts and state of the art,” ACM Computing Surveys
+(CSUR),vol.43,no.3,p.PaperID19,2011.
+[28] R. Nagpal, “Programmable self-assembly using biologically-inspired
+multiagentcontrol,”inProceedingsofthefirstinternationaljointcon-
+ferenceonAutonomousagentsandmultiagentsystemspart1-AAMAS
+’02. NewYork,NewYork,USA:ACMPress,2002,pp.418–425.
+[29] K.Dantu,B.Kate,J.Waterman,P.Bailis,andM.Welsh,“Programming
+micro-aerial vehicle swarms with Karma,” in Proceedings of the 9th
+ACMConferenceonEmbeddedNetworkedSensorSystems-SenSys’11.
+NewYork,NewYork,USA:ACMPress,2011,pp.121–134.
+[30] J. Bachrach, J. Beal, and J. McLurkin, “Composable continuous-space
+programs for robotic swarms,” Neural Computing and Applications,
+vol.19,no.6,pp.825–847,May2010.
+[31] M.Viroli,D.Pianini,andJ.Beal,“LindainSpace-Time:AnAdaptive
+Coordination Model for Mobile Ad-Hoc Environments,” Coordination
+2012,LNCS7274,pp.212–229,2012.
+[32] M. P. Ashley-Rollman, P. Lee, S. C. Goldstein, P. Pillai, and J. D.
+Campbell,“Alanguageforlargeensemblesofindependentlyexecuting
+nodes,” in Logic Programming, ser. LNCS 5649, P. M. Hill and D. S.
+Warren,Eds.,vol.5649LNCS. SpringerBerlinHeidelberg,2009,pp.
+265–280.
+[33] L. Mottola, M. Moretta, K. Whitehouse, and C. Ghezzi, “Team-level
+Programming of Drone Sensor Networks,” in SenSys ’14 Proceedings
+ofthe12thACMConferenceonEmbeddedNetworkSensorSystemsSys-
+tems. ACMNewYork,NY,2014,pp.177–190.
+[34] K. Birman and T. Joseph, “Exploiting virtual synchrony in distributed
+systems,”inProceedingsoftheeleventhACMSymposiumonOperating
+systemsprinciples(SOSP’87),vol.21,no.5. ACMNewYork,1987,
+pp.123–138.
+[35] E. Gamma, R. Helm, R. Johnson, and J. Vlissides, Design Patterns:
+Elements of Reusable Object-Oriented Software. Addison-Wesley,
+1995.

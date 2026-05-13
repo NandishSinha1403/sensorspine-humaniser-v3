@@ -1,0 +1,507 @@
+Toward Designing Intelligent PDEs for Computer
+Vision: An Optimal Control Approach
+RishengLiua,ZhouchenLinb,WeiZhangc,KeweiTanga,ZhixunSua
+aSchoolofMathematicalSciences,DalianUniversityofTechnology,Dalian,China.
+bMicrosoftResearchAsia,Beijing,China,e-mail: zhoulin@microsoft.com.
+cDepartmentofInformationEngineering,TheChineseUniversityofHongKong,China.
+Many computer vision and image processing problems can be posed as solving
+partialdifferentialequations(PDEs). However,designingPDEsystemusuallyre-
+quires high mathematical skills and good insight into the problems. In this paper,
+we consider designing PDEs for various problems arising in computer vision and
+imageprocessinginalazymanner: learningPDEsfromrealdataviadata-based
+optimal control. We first propose a general intelligent PDE system which holds
+thebasictranslationalandrotationalinvarianceruleformostvisionproblems. By
+introducingaPDE-constrainedoptimalcontrolframework,itispossibletousethe
+trainingdataresultingfrommultipleways(groundtruth,resultsfromothermeth-
+ods,andmanualresultsfromhumans)tolearnPDEsfordifferentcomputervision
+tasks. The proposed optimal control based training framework aims at learning a
+PDE-based regressor to approximate the unknown (and usually nonlinear) map-
+pingofdifferentvisiontasks. TheexperimentalresultsshowthatthelearntPDEs
+can solve different vision problems reasonably well. In particular, we can obtain
+PDEs not only for problems that traditional PDEs work well but also for prob-
+lems that PDE-based methods have never been tried before, due to the difficulty
+indescribingthoseproblemsinamathematicalway.
+PreprintsubmittedtoIVC May26,2018
+1v7501.9011:viXra
+Keywords: OptimalControl,PDEs,ComputerVision,ImageProcessing.
+1. Introduction
+Thewideapplicationsofpartialdifferentialequations(PDEs)incomputervi-
+sionandimageprocessingcanbeattributabletotwomainfactors[1]. First,PDEs
+in classical mathematical physics are powerful tools to describe, model, and sim-
+ulatemanydynamicssuchasheatflow,diffusion,andwavepropagation. Second,
+many variational problems or their regularized counterparts can often be effec-
+tivelysolvedfromtheirEuler-Lagrangeequations. Therefore,ingeneralthereare
+two types of methods for designing PDEs for vision tasks. For the first kind of
+methods, PDEs are written down directly (e.g., anisotropic diffusion [2], shock
+filter [3], based on some understandings on the properties of mathematical oper-
+ators and the physical natures of the problems, and curve-evolution-based equa-
+tions [4]). The second kind of methods basically define an energy functional and
+thenderivetheevolutionequationsbycomputingtheEuler-Lagrangeequationof
+the energy functional (e.g., total-variation-based variational methods [5][6][7]).
+In either way, people have to heavily rely on their intuition on the vision tasks.
+Therefore,traditionalPDE-basedmethodsrequiregoodmathematicalskillswhen
+choosing appropriate PDE forms and predicting the final effect of composing re-
+lated operators such that the obtained PDEs roughly meet the goals. If people do
+not have enough intuition on a vision task, they may have difficulty in acquiring
+effective PDEs. For example, although there has been much work on PDE-based
+image segmentation [8][9][10][11], the basic philosophy is always to follow the
+strongedgesintheimageandalsorequiretheedgecontourtobesmooth. Canwe
+have a PDE system for objective detection (Fig. 1) that locates the object region
+Figure1: CanwedesignaPDEsystemwhichcandetecttheobjectofinterest(e.g.,thehelicopter
+intheleftimage)anddoesnotrespondiftheobjectisabsent(e.g.,therightimage)?
+if the object is present and does not respond if the object is absent? We believe
+that this is a big challenge to human intuition and is much more difficult than
+traditional segmentation tasks if a PDE-based method is required, because it is
+hard to describe an object class, which may have significant variation in shape,
+texture and pose. Without using additional information to judge the content, the
+existing PDEs for segmentation, e.g., [10], always output an “object region” for
+any non-constant image. In short, current PDE design methods greatly limit the
+applications of PDEs to a wider and more complex scope. This motivates us to
+explore whether we can acquire PDEs that are less artificial yet more powerful.
+Inthispaper,wegiveanaffirmativeanswertothisquestion. Wedemonstratethat
+learning particular coefficients of a general intelligent PDE system from a given
+training data set might be a possible way of designing PDEs for computer vision
+in a lazy manner. Furthermore, borrowing this learning strategy from machine
+learningcangeneralizePDEstechniquesformorecomplexvisionproblems.
+Inspired by the electromagnetic field theory and Maxwell’s equations [12],
+weassumethatthevisualprocessinghastwocoupledevolutionsindifferentscale
+spaces: oneisintheimagescalespace,whichcontrolstheevolutionoftheoutput,
+and the other is in the indicator scale space that helps collect the global informa-
+tion to guide the evolution in the image scale space. In this way, our general
+intelligent PDE system consists of two coupled evolutionary PDEs. Both PDEs
+are coupled equations between the image and indicator, up to their second order
+partial derivatives. Another key idea of our general intelligent PDE system is to
+assumethatthePDEsthataresoughtcouldbewrittenascombinationsof“atoms”
+which satisfy the general properties of vision tasks. As a preliminary investiga-
+tion, we utilize all the translational and rotational invariants as such“atoms” and
+propose the general intelligent PDE system as a linear combination of all these
+invariants [13]. Then the problem boils down to determining the combination
+coefficientsamongsuch“atoms”.
+Thetheoryofoptimalcontrol[14]hasbeenwelldevelopedforoverfiftyyears.
+With the enormous advances in computing power, optimal control is now widely
+usedinmulti-disciplinaryapplicationssuchasbiologicalsystems,communication
+networksandsocio-economicsystemsetc[15]. Optimaldesignandparameteres-
+timation of systems governed by PDEs give rise to a class of problems known
+as PDE-constrained optimal control [16]. In this paper, a PDE-constrained opti-
+mal control technique as the training tool is introduced for our PDE system. We
+further propose a general framework for learning PDEs to accomplish a specific
+vision task via PDE-constrained optimal control, where the objective functional
+istominimizethedifferencebetweentheexpectedoutputsandtheactualoutputs
+of the PDEs, given the input images. Such input-output image pairs are provided
+in multiple ways (e.g., ground truth, results from other methods or manually gen-
+erated results by humans) for different tasks. Therefore, we can train the general
+intelligent PDE system to solve various vision problems which traditional PDEs
+mayfinddifficultorevenimpossible.
+Insummary,ourcontributionsareasfollows:
+1. Our intelligent PDE system provides a new way to design PDEs for com-
+puter vision. Based on this framework, we can design particular PDEs for
+differentvisiontasksusingdifferentsourcesoftrainingimages1. Thismay
+be very difficult for traditional PDE design methods. However, we would
+like to remind the readers that we have no intention to beat all the existing
+approachesforeachtask,becausetheseapproacheshavebeencarefullyand
+speciallytunedforthetask.
+2. Weproposeageneraldata-basedoptimalcontrolframeworkfortrainingthe
+PDEsystem. Fedwithpairsofinputandoutputimages,theproposedPDE-
+constrainedoptimalcontroltrainingmodelcanautomaticallylearnthecom-
+bination coefficients in the PDE system. Unlike previous design methods,
+our approach requires much less human wits and can solve more difficult
+problemsincomputervision.
+The rest of the paper is structured as follows. We first introduce in Section 2
+the general intelligent PDE system. In Section 3 we utilize the PDE-constrained
+optimal control technique as the training framework for our intelligent PDE sys-
+tem. Then in Section 4 we evaluate our intelligent PDE system with optimal
+control training framework by a series of computer vision and image processing
+problems. Finally, we give concluding remarks and a discussion on the future
+workinSection5.
+1Similar idea also appeared in [17]. But in that work, the authors only train special PDEs
+involving the curvature operator for basic image restoration tasks. In contrast, our work here
+proposesamoreunifiedandelegantframeworkformoreproblemsincomputervision.
+2. GeneralPDESystemforComputerVision
+2.1. ElectromagneticFieldvs. ImageEvolution
+Electromagnetism is the force that causes the interaction among electrically
+charged particles. The areas in which electromagnetic interaction happens are
+calledtheelectromagneticfields. Butinphysics,electricallychargedobjectswere
+first thought to produce two types of fields associated with their charge property:
+An electric field and a magnetic field. Over time, it was realized that the electric
+and magnetic fields are better thought of as two parts of a greater whole – the
+electromagnetic field [12]. It affects the behavior of charged objects in the vicin-
+ity of the field. The electromagnetic field extends infinitely throughout space and
+describestheelectromagneticinteraction. Thetheoreticalimplicationsofelectro-
+magnetism also led to the development of special relativity by Albert Einstein in
+1905.
+In this paper, inspired by this fundamental force of nature, we consider the
+image evolution in a similar way. For a target image signal u(t), different from
+mosttraditionalways,whichonlyconsidertheevolutionintheimagescalespace,
+we define a companion signal v(t) named the indicator signal. It changes with
+time and guides the evolution of u(t) by collecting large scale information in the
+image. Inthisway,thesetwosignalsevolveintwocoupledscalespaces.
+2.2. TheIntelligentPDESystem
+Similar to Maxwell’s equations [12], which are a set of PDEs describing how
+the electric and magnetic fields relate to their sources and how they develop with
+time,weproposeageneralPDEsystemfortheevolutionofourcoupledsignals.
+ThespaceofallPDEsisinfinitelydimensional. Tofindtherightform,westart
+withthepropertiesthatourPDEsystemshouldhave,inordertonarrowdownthe
+search space. We notice that translationally and rotationally invariant properties
+are very important for computer vision, i.e., in most vision tasks, when the input
+image is translated or rotated, the output image is also translated or rotated by
+the same amount. So we require that our PDE system is translationally and ro-
+tationally invariant. According to the differential invariant theory [13], the form
+of our PDEs must be functions of the fundamental differential invariants under
+the group of translation and rotation. The fundamental differential invariants are
+invariantundertranslationandrotationandotherinvariantscanbewrittenastheir
+functions. We list those up to second order in Table 1, where some notations can
+be found in Table 2. In the sequel, we shall use {inv (u,v)}16 to refer to them
+in order. Note that those invariants are ordered with u going before v. We may
+reorderthemwithv goingbeforeu. Inthiscase,thej-thinvariantwillbereferred
+to as inv (v,u). So the simplest choice of our general PDE system is the linear
+combinationofthedifferentialinvariants,leadingtothefollowingform:
+ ∂u −F(u,v,{a }16 ) = 0, (x,y,t) ∈ Q,
+  u(x,y,t) = 0, (x,y,t) ∈ Γ,
+ ∂v −F(v,u,{b }16 ) = 0, (x,y,t) ∈ Q,
+ v(x,y,t) = 0, (x,y,t) ∈ Γ,
+F(u,v,{a }16 ) = (cid:80)16 a (t)inv (u,v),
+j j=0 j=0 j j
+F(v,u,{b }16 ) = (cid:80)16 b (t)inv (v,u),
+j j=0 j=0 j j
+Ω is the rectangular region occupied by the input image I, T is the time that the
+PDE system finishes the visual information processing and outputs the results,
+and f and f are the initial functions of u and v, respectively. The meaning of
+other notations in (1) can be found in Table 2. For computational issues and the
+ease of mathematical deduction, I will be padded with zeros of several pixels
+width around it. As we can change the unit of time, it is harmless to fix T =
+1. {a (t)}16 and {b (t)}16 are sets of functions defined on Q that are used to
+j j=0 j j=0
+control the evolution of u and v, respectively. As ∇u and H change to R∇u
+and RH RT, respectively, when the image is rotated by a matrix R, it is easy
+to check the rotational invariance of those quantities. So the PDE system (1)
+is rotationally invariant. Furthermore, the following proposition implies that the
+controlfunctionsa (t)andb (t)canbefunctionsoftonly.
+Proposition 2.1. Suppose the PDE system (1) is translationally invariant, then
+thecontrolfunctions{a }16 and{b }16 mustbeindependentof(x,y).
+j j=0 j j=0
+TheproofofProposition2.1ispresentedinAppendix A.
+3. TrainingthePDESystemviaData-basedOptimalControl
+In this section, we propose a data-based optimal control framework to train
+theintelligentPDEsystemforparticularvisiontasks.
+3.1. TheObjectiveFunctional
+Given the forms of PDEs shown in (1), we have to determine the coeffi-
+cientfunctionsa (t)andb (t). Wemaypreparetrainingsamples{(I ,O )}M ,
+j j m m m=1
+where I is the input image and O is the expected output image, and compute
+Table 1: Translationally and rotationally invariant fundamental differential invariants up to the
+secondorder.
+j inv (u,v)
+0,1,2 1,v,u
+3,4 (cid:107)∇v(cid:107)2 = v2 +v2,(cid:107)∇u(cid:107)2 = u2 +u2
+5 (∇v)T∇u = v u +v u
+6,7 tr(H ) = v +v ,tr(H ) = u +u
+v xx yy u xx yy
+8 (∇v)TH ∇v = v2v +2v v v +v2v
+v x xx x y xy y yy
+9 (∇v)TH ∇v = v2u +2v v u +v2u
+u x xx x y xy y yy
+10 (∇v)TH ∇u = v u v +(v u +v u )v +v u v
+v x x xx x y y x xy y y yy
+11 (∇v)TH ∇u = v u u +(v u +v u )u +v u u
+u x x xx x y y x xy y y yy
+12 (∇u)TH ∇u = u2v +2u u v +u2v
+v x xx x y xy y yy
+13 (∇u)TH ∇u = u2u +2u u u +u2u
+u x xx x y xy y yy
+14 tr(H2) = v2 +2v2 +v2
+v xx xy yy
+15 tr(H H ) = v u +2v u +v u
+v u xx xx xy xy yy yy
+16 tr(H2) = u2 +2u2 +u2
+Table2: Notations.
+Ω AnopenboundedregioninR2 ∂Ω BoundaryofΩ
+(x,y) (x,y) ∈ Ω,spatialvariable t t ∈ (0,T),temporalvariable
+|·| Theareaofaregion XT Transposeofmatrix(orvector)
+(cid:107)·(cid:107) L2 norm tr(·) Traceofmatrix
+∇u Gradientofu H Hessianofu
+℘ ℘ = {(0,0),(0,1),(1,0),(0,2),(1,1),(2,0)},indexsetforpartialdifferentiation
+thecoefficientfunctionsthatminimizethefollowingfunctional:
+m m=1 j j=0 j j=0
+= 1 (cid:80)M (cid:82) [u (x,y,1)−O ]2dΩ (3)
+2 m=1 Ω m m
++1 (cid:80)16 λ (cid:82)1 a2(t)dt+ 1 (cid:80)16 µ (cid:82)1 b2(t)dt,
+2 j=0 j 0 j 2 j=0 j 0 j
+where u (x,y,1) is the output image at time t = 1 computed from (1) when
+the input image is I , and λ and µ are positive weighting parameters. The first
+termrequiresthatthefinaloutputofourPDEsystembeclosetothegroundtruth.
+The second and the third terms are for regularization so that the optimal control
+problemiswellposed,astheremaybemultipleminimizersforthefirstterm.
+3.2. SolvingtheOptimalControlProblem
+ThenwehavethefollowingoptimalcontrolproblemwithPDEconstraints:
+argmin J({u }M ,{a }16 ,{b }16 )
+m m=1 j j=0 j j=0
+ ∂u −F(u,v,{a }16 ) = 0, (x,y,t) ∈ Q,
+  u(x,y,t) = 0, (x,y,t) ∈ Γ,
+s.t.
+ ∂v −F(v,u,{b }16 ) = 0, (x,y,t) ∈ Q,
+ v(x,y,t) = 0, (x,y,t) ∈ Γ,
+By introducing the adjoint equation of (4), the Gaˆteaux derivative of J can be
+computedandconsequently,the(local)optimal{a }16 and{b }16 canbecom-
+j j=0 j j=0
+puted via gradient-based algorithms (e.g., conjugate gradient). Here, we give the
+adjointequationandGaˆteauxderivativedirectly:
+3.2.1. AdjointEquation
+  ∂t m m m m
+  ∂t m m m m
+E(u ,v ,ϕ ,φ )
+E(v ,u ,φ ,ϕ )
+pq ∂upq j=0 j ∂upq pq ∂xp∂yq
+pq ∂vpq j=0 j ∂vpq pq ∂xp∂yq
+3.2.2. GaˆteauxDerivativeoftheFunctional
+Withthehelpoftheadjointequation,ateachiterationthederivativeofJ with
+respecttoa (t)andb (t)areasfollows:
+∂J = λ a − (cid:80) (cid:82) ϕ inv (u ,v )dΩ, j = 0,...,16,
+∂aj j j Ω m j m m
+∂J = µ b − (cid:80) (cid:82) φ inv (v ,u )dΩ, j = 0,...,16,
+∂bj j j Ω m j m m
+wheretheadjointfunctionsϕ andφ arethesolutionsto(5).
+3.2.3. Initialization
+Good initialization increases the approximation accuracy of the learnt PDEs.
+In our current implementation, we simply set the initial functions of u and v as
+theinputimage:
+u (x,y,0) = v (x,y,0) = I (x,y), m = 1,2,...,M.
+Then we employ a heuristic method to initialize the control functions. At each
+time step, ∂um is expected to be d (t) = Om−um(t) so that u (t) moves towards
+∂t m 1−t m
+theexpectedoutputO andbytheformof(1)wemaysolve{a (t)}16 suchthat
+M (cid:90)
+m m j j=0 m
+is minimized2. In this way, we initialize a (t) successively in time while fixing
+b (t) = 0,j = 0,1,...,16.
+3.2.4. FiniteDifferenceMethodforNumericalSolution
+TosolvetheintelligentPDEsystemnumerically,wedesignafinitedifference
+scheme[18]forthePDEs. WediscretizethePDEs,i.e. replacethederivatives ∂f,
+∂f and ∂2f withfinitedifferencesasfollows:
+The discrete forms of ∂f, ∂2f and ∂2f can be defined similarly. In addition, we
+discretizetheintegrationsas
+ (cid:82) f(x,y)dΩ = 1 (cid:80) f(x,y),
+Ω N Ω (10)
+(cid:80)Tm
+where N is the number of pixels in the spatial area, ∆t is a properly chosen time
+step size and T = (cid:98) 1 +0.5(cid:99) is the index of the expected output time. Then we
+useanexplicitschemetocomputethenumericalsolutions.
+3.3. TheOptimal-Control-BasedTrainingFramework
+We now summarize in Algorithm 1 the data-based optimal control training
+framework for the intelligent PDE system. After the PDE system is learnt, it can
+be applied to new test images by solving (1), whose inputs f and f are both the
+testimageandthesolutionu(t)| isthedesiredoutputimage.
+2Itistominimizethedifferencebetweentheleftandtherighthandsidesof(1).
+Algorithm 1 (Data-based optimal control framework for training the PDE
+Input: Trainingimagepairs{(I ,O )}M .
+1: Initialize a (t), t = 0,∆t,...,1 − ∆t, by minimizing (8) and fix b (t) = 0,
+j = 0,1,...,16.
+2: whilenotconvergeddo
+3: Compute ∂J and ∂J ,j = 0,...,16,using(7).
+4: Decidethesearchdirectionusingtheconjugategradientmethod[19].
+5: Perform golden search along the search direction and update a (t) and
+b (t),j = 0,...,16.
+6: endwhile
+Output: Thecoefficientfunctions{a (t)}16 and{b (t)}16 .
+j j=0 j j=0
+4. ExperimentalResults
+In this section, we apply our data-based optimal control framework to learn
+PDEs for four groups of basic computer vision problems: Natural image denois-
+ing, edge detection, blurring and deburring, and image segmentation and object
+detection. As our goal is to show that the data-based optimal control framework
+could be a new approach for designing PDEs and an effective regressor for many
+computer vision tasks, NOT to propose better algorithms for these tasks, we are
+not going to fine tune our PDEs and then compare it with the state-of-the-art al-
+gorithmsineverytask.
+4.1. LearningfromGroundTruth: NaturalImageDenoising
+Image denoising is one of the most fundamental low-level vision problems.
+Forthistask,wecompareourlearntPDEswiththeexistingPDE-baseddenoising
+methods, ROF [5] and TV-L1 [6], on images with unknown natural noise. This
+task is designed to demonstrate that our method can solve problems by learning
+fromthegroundtruth. Thisisthefirstadvantageofourdata-basedoptimalcontrol
+model. We take 240 images, each with a size of 150 × 150 pixels, of 11 objects
+using a Canon 30D digital camera, setting its ISO to 1600. For each object, 30
+images are taken without changing the camera settings (by fixing the focus, aper-
+ture and exposure time) and without moving the camera position. The average
+imageofthemcanberegradedasthenoiselessgroundtruthimage. Werandomly
+choose 8 objects. For each object we randomly choose 5 noisy images. These
+noisy images and their ground truth images are used to train the PDE system.
+ThenwecompareourlearntPDEswiththetraditionalPDEsin[5]andTV-L1 [6]
+onimagesoftheremaining3objects.
+Fig.2showsthecomparisonresults. OnecanseethatthePSNRsofourintelli-
+gentPDEsaredramaticallyhigherthanthoseoftraditionalPDEs. Thisisbecause
+our data-based PDE learning framework can easily adapt to unknown types of
+noiseandobtainPDEformstofitforthenaturalnoisewell,whilemosttraditional
+PDE-based denoising methods were designed under specific assumptions on the
+types of noise (e.g., ROF is designed for Gaussian noise [5] while TV-L1 is de-
+signed for impulsive noise [20]). Therefore, they may not fit for unknown types
+of noise as well as our intelligent PDEs. The curves of the learnt coefficients for
+imagedenoisingareshowninFig.3.
+4.2. LearningfromOtherMethods: EdgeDetection
+The image edge detection task is used to demonstrate that our PDEs can be
+learntfromtheresultsofdifferentmethodsandachieveabetterperformancethan
+all of them. This is another advantage of our data-based optimal control model.
+Figure 2: The results of denoising images with natural noise. (a) original noiseless image. (b)
+noisy image with real noise. (c)-(e) denoised images using the ROF, TV-L1, and our intelligent
+PDEsystem,respectively. ThePSNRsarepresentedbeloweachimage.
+Figure3:LearntcoefficientsoftheintelligentPDEsystemforthenaturalnoisedenoisingproblem.
+(a) the coefficients {a (t)}16 for the image evolution. (b) the coefficients {b (t)}16 for the
+j j=0 j j=0
+indicatorevolution.
+For this task, we use three simple first order edge detectors [21] (Sobel, Roberts
+Cross, and Prewitt) to generate the training data. We randomly choose 7 images
+from the Berkeley image database [22] and use the above three detectors to gen-
+erate the output images3, together with the input images, to train our PDE system
+foredgedetection.
+Fig.4showspartoftheedgedetectionresultsonotherimagesintheBerkeley
+image database. One can see that our PDEs respond selectively to edges and
+basically produce visually significant edges, while the edge maps of other three
+detectors are more chaotic. Note that the solution to our PDEs is supposed to
+be a more or less smooth function. So one cannot expect that our PDEs produce
+an exactly binary edge map. Instead, an approximation of a binary edge map is
+produced. The curves of the learnt coefficients for edge detection are shown in
+Fig.5.
+4.3. Learning to Solve Both Primal and Inverse Problems: Blurring and Deblur-
+The traditional PDEs for solving different problems are usually of very dif-
+ferent appearance. The task of solving both blurring and deblurring is designed
+to show that the same form of PDEs can be learnt to solve both the primal and
+inverse problems. This is the third advantage of our data-based optimal control
+model.
+Fortheimageblurringtask(theprimalproblem),theoutputimageisthecon-
+volution of the input image with a Gaussian kernel. So we generate the output
+3Thisimpliesthatweactuallyuseakindofcombinationoftheresultsfromdifferentmethods
+totrainourPDEsystem.
+Figure4: Theresultsofedgedetection. (a)originalimage. (b)-(e)edgedetectionresultsusingthe
+Sobel,RobertsCross,Prewitt,andourintelligentPDE,respectively.
+Figure5: LearntcoefficientsoftheintelligentPDEsystemfortheedgedetectionproblem. (a)the
+coefficients{a (t)}16 fortheimageevolution. (b)thecoefficients{b (t)}16 fortheindicator
+j j=0 j j=0
+evolution.
+images by blurring high resolution images using a Gaussian kernel with σ = 1.
+The original images are used as the input. As shown in the third row of Fig. 6,
+the output is nearly identical to the ground truth (the second row of Fig. 6). For
+the image deblurring task (the inverse problem), we just exchange the input and
+outputimagesfortraining. OnecanseeinthebottomrowofFig.6thattheoutput
+is very close to the original image (first row of Fig. 6). The curves of the learnt
+coefficientsforimagedeblurringareshowninFig.7.
+Figure6: Theresultsofimageblurringanddeblurring. Thetoprowaretheoriginalimages. The
+secondrowaretheblurringresultsofaGaussiankernel. Thethirdrowaretheblurringresultsof
+ourIntelligentPDE.ThebottomrowarethedeblurringresultsofourIntelligentPDE.ThePSNRs
+arepresentedbeloweachimage.
+Figure7:LearntcoefficientsoftheintelligentPDEsystemforimageblurring(toprow)anddeblur-
+ring(bottomrow)problems. (a)and(c)arethecoefficients{a (t)}16 fortheimageevolutions.
+(b)and(d)arethecoefficients{b (t)}16 fortheindicatorevolutions.
+4.4. LearningfromHumans: ImageSegmentationandObjectDetection
+Imagesegmentationandobjectdetectionaredesignedtodemonstratethatour
+PDE system can learn from the human behavior directly (learn the segmentation
+anddetectionresultsprovidedbyhumans,e.g.,manuallysegmentedmasks).
+For image segmentation, it is a highly ill-posed problem and there are many
+criteria that define the goal of segmentation, e.g., breaking an image into regions
+with similar intensity, color, texture, or expected shape. As none of the current
+image segmentation algorithms can perform object level segmentation well out
+of complex backgrounds, we choose to require our PDEs to achieve a reasonable
+goal, namely segmenting relatively darker objects against relatively simple back-
+grounds, where both the foreground and the background can be highly textured
+and simple thresholding cannot separate them. So we select 60 images from the
+Corel image database [23] that have relatively darker foregrounds and relatively
+simplebackgrounds,buttheforegroundisnotofuniformlylowergraylevelsthan
+thebackground,andalsopreparethemanuallysegmentedbinarymasksastheout-
+putsofthetrainingimages,wheretheblackregionsarethebackgrounds(Fig.8).
+Figure8: Examplesofthetrainingimagesforimagesegmentation. Ineachgroupofimages,on
+theleftistheinputimageandontherightisthegroundtruthoutputmask.
+Part of the segmentation results are shown in Fig. 9, where we have set a
+threshold for the output mask maps of our learnt PDEs with a constant 0.5. We
+seethatourlearntPDEsproducefairlygoodobjectmasks. Wealsotesttheactive
+contour method by Li et al. [10]4 and the normalized cut method [24]5. One can
+see from Fig. 9 that the active contour method cannot segment object details due
+to the smoothness constraint on the object shape and the normalized cut method
+cannot produce a closed foreground region. To provide a quantitative evaluation,
+weusetheF-measuresthatmergetheprecisionandrecallofsegmentation:
+(1+α)·recall·precision
+F = , where
+α·precision+recall
+recall = , precision = ,
+in which A is the ground truth mask and B is the computed mask. The most
+common choice of α is 2. On our test images, the F measures of our PDEs, [10]
+and [24] are 0.90±0.05, 0.83±0.16 and 0.61±0.20, respectively. One can see
+that the performance of our PDEs is better than theirs, in both visual quality and
+quantitativemeasure. Thecurvesofthelearntcoefficientsforimagesegmentation
+areshowninFig.10.
+Wealsopresenttheevolutionprocessofthemaskmapsacrosstime(Fig.11).
+Onecanseethatalthoughtheforegroundisrelativelydarkerthanthebackground,
+the PDEs correctly detect the most salient points/edges and then propagate the
+informationacrosstheforegroundregion,resultinginabrighter outputregionfor
+theforeground.
+NowweapplyourintelligentPDEsforamorecomplextask: Objectdetection.
+Namely, the PDEs should respond strongly to the object of interest while not
+responding(orrespondingmuchmoreweakly)iftheobjectisabsentintheimage.
+It should be challenging enough for one to manually design PDEs to perform
+Figure9: Theresultsofimagesegmentation. Thetoprowarethesegmentationresultsofactive
+contour [10] on the original images. The bottom row are the results obtained by our Intelligent
+PDE.
+Figure 10: Learnt coefficients of the intelligent PDE system for image segmentation problems.
+(a) the coefficients {a (t)}16 for the image evolution. (b) the coefficients {b (t)}16 for the
+j j=0 j j=0
+indicatorevolution.
+Figure11: Theevolutionofthemaskmaps. Foreachrow,thefirstimageistheinputimage,the
+second to the fifth are the mask maps at time t = 0.25,0.50,0.75,1.0, respectively, and the last
+imageisthefinalmaskmapwithathresholdof0.5.
+such a problem. As a result, we are unaware of any PDE-based method that can
+accomplish this task. The existing PDE-based segmentation algorithms always
+outputan“objectregion”eveniftheimagedoesnotcontaintheobjectofinterest.
+Incontrast,wewillshowthatasdesiredourPDEsareabletorespondselectively.
+We choose the “plane” data set in Corel [23]. We select 30 images from this data
+set as positive samples and also prepare 30 images without the object of interest
+as negative samples. We also provide their ground truth object masks6 in order to
+completethetrainingdata.
+InFig.12,onecanseethatourlearntPDEsrespondwelltotheobjectsofinter-
+est(firstthreeimages),whiletheresponsetoimageswithouttheobjectsofinterest
+isrelativelylowacrossthewholeimages(lasttwoimages). ItseemsthatourPDEs
+automatically identify that the concurrent high-contrast edges/junctions/corners
+are the key features of planes. The above examples show that our learnt PDEs
+are able to differentiate the object/non-object regions, without requiring the user
+6For the positive samples, we manually segment binary masks as the output images. For the
+negativesamples,thegroundtruthoutputmasksareall-zeroimages.
+to teach them what features are and what factors to consider. The curves of the
+learntcoefficientsforobjectdetectionareshowninFig.13.
+Figure12: Theresultsof“plane”detection. Thetoprowaretheoriginalimages,thefirstthreeare
+images containing planes and the last two are without planes. The bottom row are the detection
+resultsofourintelligentPDEforimageswithandwithoutplanes,respectively.
+Figure 13: Learnt coefficients of the intelligent PDE system for the plane detection problem.
+(a) the coefficients {a (t)}16 for the image evolution. (b) the coefficients {b (t)}16 for the
+j j=0 j j=0
+indicatorevolution.
+5. Conclusion
+In this paper, we have presented a framework for using data-based optimal
+control to learn PDEs as a general regressor to approximate the nonlinear map-
+pingsofdifferentvisualprocessingtasks. Theexperimentalresultsonsomecom-
+puter vision and image processing problems show that our framework is promis-
+ing. However, the current work is still preliminary, so we plan to improve and
+enrich our work in the following aspects. First, more theoretical issues should be
+addressed for this PDE system. For example, we will try to apply the Adomian
+decompositionmethod[25]toexpresstheexactanalyticalsolutionto(1)andthen
+analyze its physical properties. Second, we would like to develop more com-
+putationally efficient numerical algorithms to solve our PDE-constrained optimal
+control problem (4). Third, we will apply our framework to more vision tasks to
+findouttowhatextentitworks.
+Appendix A. ProofofProperty2.1
+We prove that the coefficients {a }16 and {b }16 must be independent of
+j j=0 j j=0
+(x,y).
+Proof. WeproveforF(u,v,{a }16 )in(1)only. Wemayrewrite
+F(u,v,{a }16 ) = F ˜ (u,v,x,y,t).
+ThenitsufficestoprovethatF isindependentof(x,y).
+By the definition of translational invariance, when I(x,y) changes to I(x −
+x ,y−y )byshiftingwithadisplacement(x ,y ),u(x,y)andv(x,y)willchange
+tou(x−x ,y−y )andv(x−x ,y−y ),respectively. Sothepairu(x−x ,y−y )
+0 0 0 0 0 0
+andv(x−x ,y −y )fulfils(1),i.e.,
+−F(u(x−x ,y −y ),v(x−x ,y −y ),x,y,t) = 0.
+Next,wereplace(x−x ,y −y )intheaboveequationwith(x,y)andhave:
+−F(u(x,y),v(x,y),x+x ,y +y ,t) = 0.
+Ontheotherhand,thepair(u(x,y),v(x,y))alsofulfils(1),i.e.,
+−F(u(x,y),v(x,y),x,y,t) = 0.
+Therefore, F(u,v,x+x ,y +y ,t) = F(u,v,x,y,t), ∀(x ,y ) that confines the
+inputimageinsideΩ. SoF isindependentof(x,y).
+Acknowledgment
+ThisworkwaspartiallysupportedbythegrantsoftheNationalScienceFoun-
+dationofChina,No. U0935004and60873181.

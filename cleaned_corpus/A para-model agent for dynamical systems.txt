@@ -1,0 +1,552 @@
+A para-model agent for dynamical systems
+*** 10 years of model-free control methodology ***
+Lo¨ıc MICHEL
+Consider a dynamical system u (cid:55)→ x,x˙ = f (x,u) where f is a nonlinear
+(convex or nonconvex) function, or a combination of nonlinear functions
+that can eventually switch. We present, in this preliminary work1, a
+generalization of the standard model-free control, that can either control
+the dynamical system, given an output reference trajectory, or optimize
+the dynamical system as a derivative-free optimization based ”extremum-
+seeking” procedure. Multiple applications2 are presented and the robust-
+ness of the proposed method is studied in simulation.
+by-nc-sa/4.0/. Email of the corresponding author : loic.michel54@gmail.com
+2The control of the Epstein frame (described in §3.4) has been experimentally validated and the
+results have been presented at the French Symposium of Electrical Engineering in Grenoble, Jun.
+6v7074.2021:viXra
+1 Introduction 1
+2 General Principle 1
+2.1 Definition of the closed-loop . . . . . . . . . . . . . . . . . . . . . . . 2
+2.2 Definition of the PMA algorithm . . . . . . . . . . . . . . . . . . . . 2
+2.3 Performances in simulation . . . . . . . . . . . . . . . . . . . . . . . . 4
+3 Applications of the C -control 6
+3.1 Motor control in the dq frame . . . . . . . . . . . . . . . . . . . . . . 6
+3.2 Control of switched non-minimum and minimum phase systems . . . 9
+3.3 Ballistic and the fire control . . . . . . . . . . . . . . . . . . . . . . . 16
+3.4 Control of the HIV-1 model . . . . . . . . . . . . . . . . . . . . . . . 25
+3.5 Control of the Epstein frame . . . . . . . . . . . . . . . . . . . . . . . 28
+4 Derivative-free & ”extremum-seeking” control 35
+4.1 Proposed C -control scheme . . . . . . . . . . . . . . . . . . . . . . . 35
+4.2 Numerical applications . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+5 Concluding remarks 37
+1 Introduction
+Based on the model-free control methodology, originally proposed by Fliess & Join
+[1] [2] [3] ten years ago, which is referred to as a self-tuning controller in [4] and which
+has been widely and successfully applied to many mechanical and electrical processes,
+the para-model agent (PMA) aims to generalize the model-free control by not only
+controllingnonlinearsystem, butalsoperformingan”extremum-seeking”control. On
+theonehand, westudiedthedynamicperformanceswhencontrollinggenericswitched
+minimum phase, non-minimum phase systems (e.g. [5] [6] [7] [8] [9] [10] [11]) as well
+as the control of some nonlinear systems taken from applications in physics. On the
+other hand, we present how the PMA can be used to find the optimum of some classes
+of nonlinear functions. The proposed para-model agent3 is a simple derivation of the
+discrete model-free control law [12]. The last progresses result in two contributions:
+first, the substitution of the computation of the numerical derivatives in the original
+model-freecontrolapproach[3], byaninitializationfunctionthatmakesthecontroller
+more robust when stabilizing for example switched processes4. Then, we propose to
+extend the properties of the model-free controller to include the extremum seeking
+control of nonlinear systems without any computation of derivative or gradient. In
+this case, instead of tracking a working point of nonlinear systems, an appropriate
+choice of the output reference may stabilize nonlinear systems to their extremum.
+The paper is structured as follows. Section 2 presents the general principle of
+the proposed para-model agent. In Section 3, some examples illustrate the control
+of generic switched linear systems, the control of a three-phase motor, the control of
+a ballistic fire, the control of a biological system and the control of the measure of
+magnetic hysteresis in the framework of magnetic materials characterization (this last
+application is also referred to as the control of nonlinear switched systems). Section 4
+presents how the proposed PMA approach can be used as derivative-free optimization
+/ ”extremum-seeking” control.
+2 General Principle
+We consider a nonlinear SISO dynamical system to control:
+u (cid:55)→ y, nl (1)
+where f is a nonlinear system, the para-model agent is an application (y∗,y) (cid:55)→ u
+whose purpose is to control the output y of (1) following an output reference y∗.
+3A justification of the proposed name ”para-model” is given in the note of the conclusion.
+4Thefirststepstowardtheelaborationoftheproposedalgorithmweretoextendthecapabilities
+of the model-free control regarding the control of switched non-minimum phase systems [13].
+In simulation, the system (1) is controlled in its ”original formulation” without any
+modification / linearization.
+2.1 Definition of the closed-loop
+Consider the control scheme depicted in Fig. 1 where C is the proposed PMA
+controller.
+Figure 1: Proposed PMA scheme to control or optimize a nonlinear system.
+2.2 Definition of the PMA algorithm
+For any discrete moment t , k ∈ N∗, one defines the discrete controller C such that
+symbolically:
+(cid:90) t (cid:12)
+(cid:12) (cid:8) (cid:9)
+C π : (y,y∗) (cid:55)→ u k = K i ε k−1 dτ(cid:12) (cid:12) ui k−1 +K p (k α e−k β k −y k−1 ) (2)
+0 k−1(cid:124) (cid:123)(cid:122) (cid:125)
+where: y∗ is the output reference trajectory; K and K are real positive tuning
+gains; ε = y∗ − y is the tracking error; ui = ui +K (k e−k β k − y ) is an
+k−1 k k−1 k k−1 p α k−1
+internal recursive term where k e−k β k − y is the associated exponential tracking
+error in which k e−k β k is an initialization function where k and k are real constants;
+practically, the integral part is discretized using e.g. Riemann sums. The internal
+recursion5 on ui is defined such as: ui = ui +K (k e−k β k −y ).
+k k k−1 p α k−1
+The set of C -parameters of the controller, that needs to be adjusted by the user, is
+defined as the set of coefficients {K ,K ,k ,k }.
+5We refine the definition of the PMA algorithm, for which we aim to optimize the construction;
+inparticular,furtherinvestigationsconcernthestudyofadirectrecursiononu takingintoaccount
+the K -integration and thus comparing internal recursion (involving ui,ui ) vs external recursion
+(involving u ,ui )...
+Practical algorithm A possible algorithmic implementation of the simple defini-
+tion (2) is given below (for all ii ∈ N∗):
+y_int(ii) = k_alpha*exp(-k_beta*ii); % exp. init. function
+para_exp_err = y_int(ii-1) - y(ii-1); % exp. tracking error
+para_stand_err(ii) = y_ref(ii) - y(ii-1); % stand. tracking error
+para_u(ii) = para_u(ii-1) + Kp*para_exp_err; % internal recursion
+para_G(ii) = Kint*para_stand_err(ii); % def. of the integral part
+% trapezoidal integration
+para_u_output = para_u(ii)*para_tr(ii);
+% final product (integrator X internal recursion)
+where:
+• ii is the index of the sample in the (optional) vectorized process;
+• exp is the exponential function;
+• para exp err is the exponential tracking error;
+• para stand err is the (standard) output tracking error;
+• para u is the ”internal” recursion;
+• para G constitutes the discrete integrator;
+• para u output is the output of the controller that corresponds to the final
+product between the discrete integrator and the internal recursive function.
+and k alpha, k beta, Kp and Kint are real constants.
+Remark The proposed PMA algorithm could been seen as a ”deformed” integrator
+since the internal recursion ui multiplies directly the integrator
+K ε dτ.
+2.3 Performances in simulation
+2.3.1 Optimization of the closed-loop
+Optimizing the performances in simulation means that we want to solve the problem
+of finding the most appropriate set of C -parameters relating to the minimization of
+some performances index 6, that may quantify the dynamical performances of the
+closed-loop. This problem is thus equivalent to an optimization problem for which
+any optimization solver can be a priori used. In particular, meta-heuristic solvers or
+derivative-free optimization solvers are preferred due to the pretty complexity of the
+closed-loop nonlinear form (in general). We are interested in using the ”Brute Force
+Optimization” (BFO) solver [14] that is very convenient and efficient to use. Figure
+2 illustrates a closed-loop first order system, whose the controlled transient has been
+BFO-optimized in Fig. 3.
+Figure 2: Simulation with a set of C -parameters arbitrary fixed to ensure at least
+asymptotic stability.
+2.3.2 Sobol-based sensibility of the controlled transient
+To investigate the interactions between the C -parameters that influence the mini-
+mization of the performances index, we propose a preliminary study of the sensibility
+of the C -parameters using the Sobol index methodology [15]. Consider a controlled
+nonlinear system, for which the ISE index is evaluated under strict conditions w.r.t.
+6The classical performance index that are available are IAE, ISE, ITAE,
+18674-learning-pid-tuning-iii--performance-index-optimization/content/html/
+optimalpidtuning.html) for a quick review (in the context of PID tuning).
+Figure 3: Simulation with a set of C -parameters BFO-optimized to minimize a tran-
+sient performance index.
+the management of the C -parameters7, the Sobol-based sensibility is evaluated only
+during the initialization / transient of the closed-loop.
+Figure 4 shows that a priori the coefficient k does not influence the dynamical
+performances during the transient.
+Figure 4: Sobol-based analysis of the ISE index during the closed-loop initialization.
+7case1: thevalueoftheevaluatedindexisboundedto100andatoleranceof±10%ispermitted
+on the C -parameters; case 2 : the value of the evaluated index is not bounded and a tolerance of
+±50% is permitted on the C -parameters. The results are very similar between the two cases and
+the Sobol index for {K ,K ,k ,k } are respectively {0.3324,0.3318,0.3326,0.0002}.
+3 Applications of the C -control
+3.1 Motor control in the dq frame
+Consider a three-phase motor driven in the dq frame; the motor is supplied by a e
+voltagesourcerotatingatanω angularfrequencyandmodeledbyasimpleRC circuit
+with an additional voltage source e that acts as an (internal) disturbance. Figure
+5 depicts the proposed model (a single phase is represented) where P(θ) and Pi(θ)
+are respectively the Park and the inverse Park transform. The purpose is to control
+simultaneously the d and q axis with an a priori unknown disturbance e considering
+also that the angular frequency ω is increasing according to the time.
+Figure 5: Model of the motor in the dq frame including an explicit disturbance e .
+The disturbance e is of the general form:
+(cid:0) (cid:1)
+d d2 2 (cid:0) d 3 (cid:1)
+where the amplitude A and the angular frequency ω of each phase i could depend
+on the time. The control structure is composed of two C controllers: the d axis
+is ”maintained” close to zero (d∗ denotes the output ref. and d , the controlled
+output) and the q axis tracks a specific reference (q∗ denotes the output ref. and
+q , the controlled output).
+The following figures illustrate some cases with different ”behavior” of the distur-
+bance e . Figure 6 presents the most simple case where A = A = A = Cst and
+ω = Cst; in Fig. 7 is considered a time-varying disturbance where A = A = A are
+increasing according to the time; in Fig. 8, small variations of amplitudes of A ,A
+and A are considered (symbolically, A ∼ A ∼ A ), and finally, Fig. 9 depicts the
+case where ω is time-varying only over a short period of time.
+Figure 6: Control in the dq frame with ”simple” disturbance e .
+Figure 7: Control in the dq frame with an increasing amplitude of each component
+of e .
+Figure 8: Control in the dq frame with variation of amplitude of each component of
+e .
+Figure 9: Control in the dq frame with variation of the ω frequency of e .
+3.2 Control of switched non-minimum and minimum phase
+Consider the set Σ of stable linear systems such that Σ = {Σ },i = 1,2,···n, which
+are minimum and non-minimum phase systems, and which are considered as unknown
+in the sense that no explicit model has been identified for control purposes. Assume
+now that for all systems, there exists an integer p = {1,··· ,8}, called the switching
+index, such that during a short time window, we have:
+p y = C x(t)
+where u and y are respectively the input and the output of the system Σ (p is the
+switching index). The step responses of these p systems are presented Fig. 10.
+Figure 10: Step responses of each system Σ .
+Figures 11 12 13 14 present some examples of the application of the C -control under
+different arbitrary switching sequences that involve both minimum and non-minimum
+phase systems. The first switching time is t , the second is t and the third is t .
+Consider now the existence of a delay τ on y that modify (4) such that:
+This delay can e.g. simulate the propagation delay inside a sensor network. Figures
+15 and 16 present two examples of the application of the C -control under different
+switching sequences that involve both minimum and non-minimum phase systems.
+(a) Step responses of each system Σ .
+(b) Controlled switched sequence.
+Figure 11: Switched sequence #1 for t = 0.01 s and t = 0.05 s.
+(a) Step responses of each system Σ .
+(b) Controlled switched sequence.
+Figure 12: Switched sequence #2 for t = 0.025 s and t = 0.072 s.
+(a) Step responses of each system Σ .
+(b) Controlled switched sequence.
+Figure 13: Switched sequence #3 for t = 0.018 s, t = 0.035 s and t = 0.072 s.
+(a) Step responses of each system Σ .
+(b) Controlled switched sequence.
+Figure 14: Switched sequence #4 for t = 0.35 s, t = 0.58 s.
+(a) Step responses of each system Σ .
+(b) Controlled switched sequence.
+Figure 15: Switched sequence #5 for t = 0.015 s, t = 0.055 s. An addition of a
+time-delay occurs at t = 0.06 s.
+(a) Step responses of each system Σ .
+(b) Controlled switched sequence.
+Figure 16: Switched sequence #6 for t = 0.025 s, t = 0.072 s. An addition of a
+time-delay occurs at t = 0.06 s.
+Discussions
+These results have been obtained with a single specific set of the C -parameters; to
+improve the tracking performances, one may consider an on-line adjustment of the
+C -parameters. Although resonances occur at the instants of switches, the stability
+of the control is preserved (regarding the studied cases) when switching from the
+different types of systems. In the same manner, a direct tuning of the C -parameters
+could damp (ideally, could cancel) the resonant effects.
+The presented simulation results show that the proposed control law is robust to
+”strong” model variations and in particular when the model is a switching non-
+minimum phase or minimum phase system that include eventually time-delay. More-
+over, the proposed control law seems to have the same properties than the original
+model-free control [2] [3] for which its performances have been successfully verified
+especially in simulation.
+3.3 Ballistic and the fire control
+If one fire a projectile at an initial angle and an initial speed, then general physics
+allows calculating how far it will travel... but would it be possible to control the initial
+speed needed in such manner that the projectile reaches a precise distance? That’s
+what we propose to do using the C -control.
+3.3.1 Ballistic simplified model
+We define first a simple model of the trajectory w(t) = (w (t), w (t)) of a projectile
+of mass m in the usual frame of reference (Oxz) fired with an initial speed magnitude
+v that makes a fire angle θ with the horizontal reference i.e. v(t) = v cos(θ)e +
+v sin(θ)e . The origin (0,0) of the frame reference is considered as the initial position
+of the projectile.
+Denote a the acceleration vector and v the speed vector of the projectile. From
+Newton law, considering the action of the gravity g and the air resistance cv2, we
+have:
+m = ma = mg−cv2 (6)
+with the initial conditions:
+(cid:12) (cid:12)
+(t)(cid:12) dw
+(cid:12) = v cosθ, (cid:12) = v sinθ (7)
+dt (cid:12) dt (cid:12)
+Considering no air resistance i.e. c = 0, (6) is simplified:
+  m x = 0
+whose solution reads:
+w (t) = v cosθt+cte
+  w (t) = v sinθt− gt2 +cte
+From (9), the range (or the target) of the projectile x at z = 0 can be easily
+deduced. We have:
+2v2cosθsinθ
+d = 0 . (10)
+3.3.2 Ballistic-fire control methodology
+Proposed strategy Consider by hypothesis that a ”virtual” trajectory w∗ of the
+projectile hits a target x∗ from an initial speed v∗ and an initial fire angle θ∗.
+Consider now the ”true” projectile to fire with a trajectory w. To hit the target x∗
+(at z = 0) from a small initial speed v , one controls the projectile in such manner
+that the projectile reaches quickly the initial speed v∗ and the initial fire angle θ∗
+required to hit the specified target x∗ according to (10). During such ”launching”
+phase, that we define as the ”launching” distance ∆x for which the trajectory of
+the projectile is fully controlled, we start from an initial condition that prevents the
+projectile to reach its target x∗ i.e. :
+(cid:12) (cid:12)
+(t)(cid:12) dw
+(cid:12) = v cosθ , (cid:12) = v sinθ (11)
+dt (cid:12) dt (cid:12)
+where v < v∗ and θ ≤ θ∗ are positive resp. initial speed magnitude and fire angle.
+Figure 17 illustrates simulation examples of a ”virtual” trajectory (subj. to v∗ and
+θ∗) and a ”true” trajectory (subj. to v and θ∗) that is not controlled; the simulations
+of the trajectories considering c (cid:54)= 0 are presented in Fig. 17(b).
+The goal is to accelerate the projectile using a specific mechanical device in such
+manner that the references v∗ and θ∗ are reached quickly. We consider therefore
+controlling the trajectory w(t) of the projectile over the launching distance ∆x .
+(a) Case c=0
+(b) Case c=0 and c(cid:54)=0
+Figure 17: Example of comparison of the uncontrolled ”true” projectile (subj. to v
+and θ∗) and the ”virtual” trajectory (subj. to v∗ and θ∗), considering c = 0 and c (cid:54)= 0.
+We took c = 0.05, θ = θ∗ = π/3, v = 10 m/s and v = 9 m/s.
+Controllable ballistic model
+To simulate a controllable model of the trajectory w of the projectile, we consider
+adding an external acceleration force in (6) that represents the mechanical action of
+the specific mechanical device over the distance ∆x . We have:
+m = mg−cv2 +aext (12)
+where aext(t) = (aext(t), aext(t)) is equivalent to the external force provided by the
+mechanicaldevice. Sincesuchdeviceactsonlyover∆x ,thenweassumethataext = 0
+for all x > ∆x .
+3.3.3 Implementation of the C -controller
+A possible control scheme is to consider controlling the trajectory w that must be
+”as close as possible” to the reference w∗ over the distance ∆x . Therefore, w is
+physically measured and the external acceleration aext is driven by the C -controller,
+through the specific mechanical device.
+We build a closed-loop that creates a feedback between (2) and (12). We have ”sym-
+bolically”, for all x ≤ ∆x :
+ (cid:90) t (cid:12)
+      u k = ae k xt = 0 K i (w k ∗ −1 −w k−1 )dτ (cid:12) (cid:12) (cid:12) k−1(cid:124) (cid:8) ui k−1 +K p (α (cid:123) e (cid:122) −βk −w k−1 ) (cid:9) (cid:125)
+  d2w(t)
+   m dt2 = mg−cv2 +u k
+Determination of the distance ∆x ∗
+Since we expect that the projectile is fired from ∆x with a speed that is very close to
+v∗ (and follows, via the C -control, the same trajectory i.e. w ≈ w∗ over ∆x ), then,
+weproposeapossibledefinitionofthetheoreticallaunchingdistance∆x∗, (considered
+only over the x axis) that corresponds to the solution in w of:
+Geometrically, the theoretical launching distance ∆x∗ is associated to the speed v
+that is reached by the projectile (launched with the initial speed v < v∗) when v is
+close to v∗ .
+3.3.4 Numerical simulations
+Case ∆x > ∆x ∗
+Consider the simulated ”virtual” trajectory, presented in Fig. 17, as the control
+reference w∗; to simplify, we consider θ as constant. Figure 18 presents the case
+where the fire is controlled considering c = 0 over ∆x = 0.11 m. In particular, Fig.
+18(a) presents, at the top, the evolution of the controlled trajectory w in comparison
+withthereferencew∗, and, atthebottom, thecalculatedspeeddw /dtincomparison
+with the initial speed v cosθ. Figure 18(b) presents the complete ”true” controlled
+trajectory in comparison with the virtual trajectory. Figure 19 presents the same
+simulations in the case c (cid:54)= 0.
+Case ∆x ∼ ∆x ∗
+Consider the simulated ”virtual” trajectory, presented in Fig. 17, as the control
+reference w∗; to simplify, we consider θ as constant. Figure 20 presents the case
+where the fire is controlled considering c = 0 over ∆x∗. In particular, Fig. 20(a)
+presents, at the top, the evolution of the controlled trajectory w in comparison with
+the reference w∗, and, at the bottom, the calculated speed dw /dt in comparison
+with the initial speed v cosθ. Figure 20(b) presents the complete ”true” controlled
+trajectory in comparison with the virtual trajectory. Figure 21 presents the same
+simulations in the case c (cid:54)= 0.
+Discussions
+These results have been obtained using the same set of the C -parameters. The
+properties of stabilization of the control law, like in the previous case when deal-
+ing with switching systems (§3.2) , seem to be preserved and ensure good tracking
+performances in particular when considering c = 0 and c (cid:54)= 0.
+Further generalizations would allow using multiple and parallel C -controllers in
+order to control simultaneous physical quantities. In particular, the speed profile v
+could be controlled simultaneously with the trajectory w...
+(a) Atthetop,controlledtrajectorywrelatingtothereferencew∗;atthebottom,calculatedspeeddw /dt
+relating to the initial speed v cosθ.
+(b) Complete controlled ”true” trajectory in comparison with the virtual trajectory.
+Figure 18: Example of controlled trajectory considering c = 0 over ∆x = 0.11 m.
+We took θ = θ∗ = π/3, v = 10 m/s and v = 9 m/s.
+(a) At the top, controlled trajectory w relating to the reference w∗; at the bottom, calculated speed
+dw /dt relating to the initial speed v cosθ.
+(b) Complete controlled ”true” trajectory in comparison with the virtual trajectory.
+Figure 19: Example of controlled trajectory considering c (cid:54)= 0 over ∆x = 0.11 m.
+We took c = 0.05, θ = θ∗ = π/3, v = 10 m/s and v = 9 m/s.
+(a) At the top, controlled trajectory w relating to the reference w∗; at the bottom, calculated speed
+dw /dt relating to the initial speed v cosθ.
+(b) Complete controlled ”true” trajectory in comparison with the virtual trajectory.
+Figure 20: Example of controlled trajectory considering c = 0 over ∆x∗. We took
+θ = θ∗ = π/3, v = 10 m/s and v = 9 m/s.
+(a) At the top, controlled trajectory w relating to the reference w∗; at the bottom, calculated speed
+dw /dt relating to the initial speed v cosθ.
+(b) Complete controlled ”true” trajectory in comparison with the virtual trajectory.
+Figure 21: Example of controlled trajectory considering c (cid:54)= 0 over ∆x∗. We took
+c = 0.05, θ = θ∗ = π/3, v = 10 m/s and v = 9 m/s.
+3.4 Control of the HIV-1 model
+The problem is to control the predator-prey like model that describes the evolution
+of the HIV-1 when subjected to an external ”medical agent”. From a mathematical
+point of view, we study the possibility of controlling the model (15) for which the
+purpose is to control the output y (corresponding to the viral load) using the double
+inputs u and u in such manner that y converges rapidly to zero 8 [16] [17].
+ 1 1 1 1 3
+2 1 1 3 2 (15)
+ (cid:0) (cid:1)
+ y = 0 0 γ x
+where (mathematically) : d = 0.02,k = 100,s = 10,β = 2.4.10−5,µ = 0.24,c = 2.4.
+γ is a scaling factor that allows normalizing the output. Figure 22 presents the
+evolution of the output y in open-loop when u = u = 0 i.e. when no medical drug
+is considered. Figures 23 and 24 illustrate the control of y considering two different
+ratios between u and u .
+Figure 22: Transient response of y considering u = u = 0.
+8Since we are trying to control this model only from the mathematical point of view, we do not
+take into account the constraints that are medically imposed.
+(a) Output y
+(b) Input u
+Figure 23: Controlled output y (viral load) in correspondence with u = u = u.
+(a) Output y
+(b) Input u
+Figure 24: Controlled output y (viral load) in correspondence with u = u = 1u.
+3.5 Control of the Epstein frame
+The Epstein frame (see Fig. 25 9) aims to characterize a magnetic material by de-
+termining its B −H hysteresis curve. The principle is to create a magnetic field H
+inside the material using a ”magnetizing” current i . The material gives a response
+to the field H that physically corresponds to the measurable magnetic induction field
+B. This B field creates a voltage v through magnetic induction and the quantities
+v and i is a representation of the magnetic hysteresis curve B − H. To describe
+experimentally the major B − H hysteresis loop, the material under study has to
+be magnetized using a current i that is alternative and of enough magnitude in
+order to describe the magnetic behavior at saturation. The purpose of the control law
+implementation is to control i such that the output voltage of the Epstein frame v
+remains ”as close as possible” to a desired reference waveform.
+Figure 25: An experimental Epstein frame to characterize magnetic materials.
+3.5.1 Epstein frame control
+Proposed C -control scheme Consider the control scheme depicted in Fig. 26
+where C is the proposed PMA controller. K and K are positive real gains.
+Denote f the numerical Jiles-Atherton model that is associated to the magnetic
+hysteresis B −H and f is the complete hysteresis to control.
+Epstein_frame.jpg.
+Figure 26: Proposed PMA scheme to control the electrical waveforms measured from
+a magnetic hysteresis.
+Jiles-Atherton based hysteresis model The Jiles-Atherton model [18] describes
+a magnetic hysteresis cycle B −H. It reads:
+dM 1 M −M c dM
+where c, δk, M , α are physical coefficients well identified from magnetic hysteresis
+measurement and we assume that the current i corresponds to the magnetization H
+i.e. i ∝ H andthevoltagev correspondstothederivativeofthemagneticinduction
+field response B = µ H + J (H) (where J describes the B − H hysteresis via
+(16)).
+Simplified model of the Epstein frame The Epstein frame admits a complex
+model based on the Jiles-Atherton model that represents all electric phenomena that
+occur inside the Epstein frame10. To simplify the model of the Epstein frame to
+control, we consider controlling a nonlinear function f , which represents a modified
+Jiles-Atherton model. Denote v = f (i ) the nonlinear dynamical system that
+describes the B −H hysteresis as a function of i , and consider controlling directly
+the hysteresis cycle in such manner that C controls i in order to get v = f (i )
+π H H JA H
+as close as possible to a reference waveform.
+Todefinetheglobalf hysteresisfunctionthatiscontrolledbyC , whichincludes
+the scaling coefficients needed by the C corrector, consider i = K u, y = K v
+π H in out H
+and a coefficient K such that:
+y = f (u) = K K u+K J (K u). (17)
+JA in e out BH in
+10TheEpsteinframeisequivalenttoatransformerandthe”mutualinteractions”betweenprimary
+and secondary coils must be taken into account in addition to the hysteresis behavior.
+The small coefficient K #10−4 compensates the very small variations of f when
+B is close to B . Such variations may induce time-delays in the response of the
+C -controller that induce some distortions of the output signal y. The model (17)
+could be seen as an ”affine” derivation of the original Jiles-Atherton model.
+The B−H loops, obtained from the Jiles-Atherton model, are depicted in Fig. 27
+consideringthefrequencies5Hz, 50Hz, 500Hz, 1kHzand10kHz. Sincethishystere-
+sis model does not allow H > H , a limitation is necessary to bound the evolution
+of H, that may occur eventually during the transient of the dynamic stabilization of
+the control loop (ex. in Fig. 31).
+.
+Figure 27: Simulation of the Jiles-Atherton model for different operating frequencies.
+3.5.2 Simulation results
+Figures 28, 29, 30, 31 and 32 depict the input u and the (rescaled) output y of the
+control loop according to the time. Given a particular operating frequency, for which
+a particular H −B hysteresis is studied (see Fig. 27), and assuming that the output
+reference y∗ is a sinusoid, whose magnitude corresponds to the theoretical H of
+the H − B hysteresis, different frequencies are considered (5 Hz, 50 Hz, 500 Hz,
+1 kHz and 10 kHz) in order to highlight the behavior of the controlled voltage v
+when the frequency changes. In particular, high frequencies (e.g. Figures 31 and 32)
+introduce an important transient response on y due to the fact that the variations
+of y∗ are too fast to get an immediate stabilization to the dynamic working point
+of the hysteresis. The simulation show that the C -controller gives very interesting
+dynamic performances over a wide range of dynamic working points relating to the
+operatingfrequency. Anoptimizationalgorithm(see§2.3)hasbeenusedtoadjustthe
+parameters of the C -controller in such manner that the shape of the output response
+y is ”as close to” a sine shape11.
+Remarks This hysteresis model is composed of three subsystems (the first magne-
+tization branch, the increasing and decreasing branches) that switch depending on
+the value of dH/dt. When H << H , the switch between the branches may not be
+smooth and such ”connection” may induce a small transient on y. An illustration is
+presented in Fig. 33 at a low frequency in comparison with Fig. 30.
+The closed-loop has been also tested using a triangular shaped output reference
+y∗. Figure 34 depicts the magnitude of the magnetic field H and the corresponding
+(rescaled)magneticinductionB duringthecontrolloopprocessaccordingtothetime.
+The frequency of 5 Hz has been considered as an example holding the parameters of
+the simulation with the sine reference at 5 Hz.
+Figure 28: Simulated u and y signals according to the time at 5 Hz.
+11Remember that the purpose of the optimization procedure is to minimize the tracking error
+y∗−y in such manner that ideally y ≡y∗ for the particular sine output reference y∗.
+Figure 29: Simulated u and y signals according to the time at 50 Hz.
+Figure 30: Simulated u and y signals according to the time at 500 Hz.
+Figure 31: Simulated u and y signals according to the time at 1 kHz.
+Figure 32: Simulated u and y signals according to the time at 10 kHz.
+Figure 33: Simulated u and y signals according to the time at 500 Hz (H << H ).
+Figure 34: Simulated H and y signals according to the time at 5 Hz.
+4 Derivative-free & ”extremum-seeking” control
+To describe how the PMA could be used as a derivative-free optimization (DFO)
+algorithm (e.g. [19] [20]) or as an ”extremum-seeking” (ES) control scheme (e.g. [21]
+[22] [23]), we first define each element of the associated control scheme and then, we
+derive the operating conditions that would allow to minimize nonlinear functions. We
+assume that it is possible to derive a control scheme such that the PMA can be used
+to minimize nonlinear functions.
+4.1 Proposed C -control scheme
+Definition of the closed loop Consider the control scheme depicted in Fig. 35
+where C is the proposed PMA ”extremum-seeking” controller. K and K are
+positive real gains. We consider either a static nonlinear function fs (regarding
+DFO), which does not have any internal dynamical properties, or a nonlinear SISO
+dynamical system (1) (regarding ES), to minimize. The function Q is e.g. a basic
+first order transfer function.
+Figure 35: Proposed PMA scheme to minimize a nonlinear function f .
+Function to control
+• Define the fs static function to optimize such that:
+nl u(cid:48) (cid:55)→ y
+or consider a nonlinear SISO dynamical system (1).
+This function represents the ”nonlinear optimization problem”. Currently, the
+assumption n ≤ 2 is considered and we denote u(cid:48) the input variable for n = 1.
+• Q is a standard linear transfer function (typically of first order), such that:
+Q : du(cid:48) (cid:12) (19)
+dt (cid:12) k k
+where γ is a time-constant, chosen in such manner that the step response of Q
+is very fast. As presented in the Fig. 35, Q is associated with fs in order to
+provide some minimal dynamical properties regarding the system fs to control.
+Obviously, the Q function is not necessary when f is already a dynamical
+function like (1)12.
+A single C -controller13 drives a single input of f (eventually through Q), as
+presented in Fig. 35.
+4.2 Numerical applications
+SincethePMAisdesignedfornonlinearsystemsanddoesnotcontainanyderivatives,
+it is assumed that the ”extremum-seeking” control is possible considering a specific
+definition of y∗ in order to reach and stabilize f to its minimum.
+Let us assume that the following (eventually constrained) minimization problem
+(described for a single variable):
+min f (x), (x = u(cid:48)identically inside the control scheme) (20)
+isequivalenttothecontrolschemedescribedinFig. 35, forwhichtheoutputreference
+y∗ ”follows” the minimum value of f . We denote x = x the value that gives the
+minimum of f .
+Results For each case in 1D, are plotted: the difference between two iterations
+y , y and the error between x and the evolution of x through the closed-loop. In
+these cases, all the parameters of C have been set experimentally to give interesting
+performances but are not optimal (the choice of the y∗ function may influence the
+speed of the convergence). The following numerical cases are studied:
+12Last investigations suggest that the linear transfer function Q may be not necessary even for
+a fs function to control. The properties of the para-model algorithm are currently under study
+considering nonlinear systems that are ”non-dynamical”.
+13To extend this scheme to multi-input variables (n > 2) of f , one may consider the use of a
+C -controller per input variable.
+• See Fig. 36 regarding the minimization of a 1D convex function such that:
+• SeeFig. 37regardingtheminimizationofa1Dconvexfunctionwithaminimum
+that changes according to the time at an unknown instant t such that:
+min(x−30)2 t →1? min(x−40)2 (22)
+• See Fig. 38 regarding the minimization of a 1D non convex function such that:
+min 10(1.5cos(x)−x)+exp(x−5)+100 subj. to : y ≥ 15x−60 (23)
+5 Concluding remarks
+We presented how the proposed para-model agent14, as a model-free and derivative-
+freebasedcontroller,canbeusedtocontrolnonlinearsystemsorperformoptimization
+/ ”extremum-seeking” control. Further investigations include extensive tests and
+applications to complex systems as well as a complete study of the stability.
+Acknowledgement
+The author is sincerely grateful to Dr. Edouard Thomas for his strong guidance and
+his valuable comments that improved this paper. The author is also sincerely grateful
+to Olivier Ghibaudo, Ph.D. student at G2Elab-CNRS (Grenoble) France, for having
+worked on the numerical version of the hysteresis model.
+14Why ”para-model”? Based on the ”model-free” methodology, for which the model is not cor-
+related to the controller in the sense that the controller does not need an explicit definition of the
+modeltobeparametrizedandcanthusrebuildanultra-localmodelfrommeasurements,wepropose
+the prefix ”para” to highlight the fact that the agent is ”in close proximity” to the model of the
+processthathecontrols. AlthoughnospecificinformationisneededforthePMAcontrolpart,some
+basic information may be needed to configure properly the PMA and the output reference y∗ in
+the case of extremum-seeking control approach. The stability study is an essential part that should
+formalize the proposed PMA approach in order to justify theoretically the operating conditions of
+the C -control.
+Figure 36: min(x−30)2 (initial condition in red spot).
+Figure37: min f = (x−30)2 t →1? minf = (x−40)2 (initialconditioninredspot).
+Figure38: min 10(1.5cos(x)−x)+exp(x−5)+100 subj. to : y ≥ 15x−60(ini-
+tial condition in red spot).

@@ -1,0 +1,322 @@
+Proceedings of the 1st Workshop on
+Robotics Challenges and Vision
+June 27, 2013
+Table of Contents
+Soft Subdivision Search in Motion Planning........................... 1
+Large Motion Libraries: Toward a “Google” for Robot Motions........ 5
+Kris Hauser
+Predicting the Change - A Step Towards Life-Long Operation in
+Everyday Environments............................................... 9
+Niko Su¨nderhauf, Peer Neubert and Peter Protzel
+The Social Co-Robotics Problem Space: Six Key Challenges........... 13
+Laurel D. Riek
+Wearable vision systems for personal guidance and enhanced
+assistance............................................................. 17
+Gonzalo Lopez-Nicolas, Aitor Aladren and J.J. Guerrero
+Learning the Relation of Motion Control and Gestures Through
+Self-Exploration....................................................... 21
+Saˇsa Bodiroˇza, Aleksandar Jevti´c, Bruno Lara and Verena Hafner
+1v3123.2041:viXra
+Program Committee
+Nancy Amato Texas A & M University
+Hamidreza Chitsaz Wayne State University
+Howie Choset Carnegie Mellon University
+Kamal Gupta Simon Fraser University
+Seth Hutchinson University of Illinois at Urbana-Champaign
+Lydia Kavraki Rice University
+Moslem Kazemi Carnegie Mellon University
+Dinesh Manocha University of North Carolina-Chapel Hill
+Proceedingsofthe1stWorkshopon ii
+RoboticsChallengesandVision(RCV2013)
+inconjunctionwithRobotics: ScienceandSystems
+June27,2013–Berlin,Germany
+Best Paper Awards
+1st Soft Subdivision Search in Motion Planning
+2nd Large Motion Libraries: Toward a “Google” for Robot Motions
+3rd Predicting the Change - A Step Towards Life-Long Operation in
+Everyday Environments
+Proceedingsofthe1stWorkshopon iii
+RoboticsChallengesandVision(RCV2013)
+inconjunctionwithRobotics: ScienceandSystems
+June27,2013–Berlin,Germany
+Soft Subdivision Search in Motion Planning
+Chee K. Yap
+Courant Institute, New York University
+New York, NY 10012 USA
+Email: yap@cs.nyu.edu
+Abstract—The main paradigm for practical motion planning planning. See [5] for a rare non-algebraic planning problem
+in the last two decades is Probabilistic Road Map (PRM). that is computable using transcendental number theory.
+We propose an alternative paradigm called Soft Subdivision
+Search (SSS). The SSS approach is based on two ingredients:
+the standard subdivision of space, coupled with soft predicates. 2. Practice. Since the mid 1990’s,the Probabilistic Road
+Suchpredicatesareconservativeandconvergentrelativetoexact Map (PRM) paradigm has been dominant;Kavraki et al. [11]
+predicates.Thisleadstoanewclassofresolution-exactplanners. gave the basic formulation. A more general viewpoint [12]
+We view PRM and SSS as frameworks for broad classes of regards PRM as the probabilistic form of “Sampling Road
+planners. There are many parallels between SSS and PRM:
+Maps”. For simplicity, we use “PRM” as surrogate for all
+bothframeworksareversatile,practical,easytoimplement,with
+sampling methods. Quoting Choset et al [6, p.201]: “PRM,
+adaptive local complexity. The critical difference is that SSS
+avoids the Halting Problem of PRM. We address three issues: EST, RRT, SRT, and their variants have changed the way
+(1) We axiomatize some basic properties that allow resolution- pathplanningis performed for high-dimensionalrobots. They
+exact planners to be constructed in the SSS framework. have also paved the way for the development of planners for
+(2) We show how soft predicatescan beeffectively andcorrectly
+problems beyond basic path planning.” In his invited talk at
+implemented using numerical approximations.
+the workshop1 on open problems in this field, J.C. Latombe
+(3) We recover exact planners by extending our framework.
+The SSS framework is a theoretically sound basis for new stated that the major openproblemof PRM is that it doesnot
+classesofalgorithmsinmotionplanningandbeyond.Wediscuss knowhow to terminate when there is no path. In practice,the
+the prospects of SSS planners being able to solve currently algorithm is timed-out, but this leads to problems such as the
+challenging problems and their relation to PRM.
+“Climbers Dilemma” giving rise to issues like the “Climbers
+I. INTRODUCTION Dilemma” (Bretl 2005). We will call it the Halting Problem
+forPRM(liketheHaltingProbleminTuringmachines,itisa
+Motion Planning is a fundamental problem in robotics. It
+semi-decidable).Itistheultimateformofthe“NarrowPassage
+originated as the “findpath problem” in Artificial Intelligence
+Problem” [6, p. 201]. Latombe’s talk suggested promising
+[3]. In the 1980s, computational geometers began the algo-
+approachessuch as Lazy PRM [2], but clearly a large part of
+rithmic study of motion planning [19, 9], focusing on exact
+the literatureis devoted to this issue. The theoreticalbasis for
+planners: such planners return a path if any exists, and report
+PRM algorithms is probabilistic completeness [10], or more
+“No Path” otherwise. It was early observedthat there are two
+generally, “sampling completeness”. But the Halting Problem
+universalapproachesformotionplanning:CellDecomposition
+is inherent in such completeness.
+[16] and Retraction [19]. After the work of Canny [4], the
+retraction is popularly known as the “roadmap approach”. In
+3. Common Ground. We seek a common ground for
+the 1990’s the roadmap approach takes another turn. ¶
+theoryandpractice:strongertheoreticalguaranteeswithoutthe
+inordinate demands of exactness. Fortunately, exactness is a
+1. Theory. Today, exact motion planning is textbook
+¶ mismatchforrobotics.Thisisevidentfromtheremarkthatall
+material[6,13]andcontinuestobeactivelyinvestigated(e.g.,
+physicalconstants,devicesand sensorshavelimited accuracy.
+[8]).Neverthelessitsimpactonroboticsismodest:Zhangetal.
+Yet it does not absolve us from mathematical precision if
+[22] noted that exact implementations have been limited to 3
+we wish the theoretical development of robotic algorithms
+degrees of freedom, and for simple robots only. Exactness
+to thrive. This tension between practice and theory has led
+is costly as it implicitly requires algebraic numbers. The
+to their divergent paths described above. We turn to the idea
+techniques of Exact Geometric Computation [20] can avoid
+of “resolution complete” methods, noting that the early work
+direct manipulation of algebraic numbers, and is practical
+of Brooks and Lozano-Perez [3] was already on this track.
+for many basic problems. Nevertheless, the usual expedi-
+It is known that resolution complete methods can avoid the
+ent is to replace exact arithmetic by approximate machine
+Halting Problem [22]. The notion of resolution completeness
+arithmetic, leading to the ubiquitous problems of numerical
+is seldom scrutinized. Our companion paper [17] pointed
+non-robustness. Efficiency aside, there is a fundamental but
+out some untenable or lacking interpretations, and proposed
+less well-known barrier: the Turing computability of exact
+algorithms for most non-algebraic problems is unknown [5].
+1 IROS 2011 Workshop on Progress and Open Problems in Motion
+Thisbarrierexistsinmostproblemsbeyondkinematicmotion Planning, September30,2011,SanFrancisco.
+Proceedingsofthe1stWorkshopon 1
+RoboticsChallengesandVision(RCV2013)
+inconjunctionwithRobotics: ScienceandSystems
+June27,2013–Berlin,Germany
+the notion of resolution-exactness. Surprisingly, resolution- defines a configuration space C
+exactnesshas“inherent”indeterminacy,evenfordeterministic planner input is (ε,Ω,α,β) where ε > 0 is the resolution
+algorithms using exact predicates. This indeterminacyis mild parameter, Ω R k is a polyhedral set, and α,β C space .
+comparedtosamplingcompleteness,andagoodmatchforthe Theplannerisresolution-exact(orε-exact)ifithasaconstant
+needs of robotics. K > 1 such that on any input, it outputs an Ω-avoiding path
+Resolution-exactness is basically a numeric/analytic con- from α to β if there exist paths with clearance Kε; and it
+cept, but exactness is not an adjective we associate with outputs “No Path” if there are no paths with clearance ε/K.
+numerics. Our main contribution is to explicate ideas that are The role of K is critical: it causes indeterminacy, but is also
+intuitivelyknowntopractitioners,toprovideaclearfoundation the key to avoiding exact computation.
+for theoretical algorithm designers to ply their craft. This There are two ingredients in resolution-based methods:
+seems critical: without a clear foundation, many theoreticians first is the subdivision of C . The subdivision may be
+would shun such algorithms. Exact computation has served organized as a subdivision tree, often called quadtrees. Tree
+as the foundation for over 2 decades, but its limitations are nodes correspond to subsets B C with simple shapes
+showing(asdiscussed above).Whatwe needis a viableexact such as boxes or simplices. Although grid search is often
+numerical foundation (cf. Smale’s effort in this direction). identified with resolution complete algorithms, we stress that
+We will argue that algorithms in our framework are not just grid methods are usually a form of sampling and inadequate
+theoretically-sound but implementable and useful. for ε-exactness. The second ingredient is a classification
+predicate to decide if a node B is free or not. The obstacle
+4.OverviewofPaper. Ourfullpaper[21]aimstoexpose setΩdefinesthefreespace,C free =C free (R 0 ,Ω) C space .
+thefoundationsofresolutionexactness.Therearefourthemes: Wlog, C is an open set; its boundary ∂C comprises
+(0) We take a leaf from the success of PRM research: the the semi-free configurations. Say α C space is stuck if it is
+simplicity and generality of PRM framework ensures that neither free nor semi-free. The exact classification predicate
+implementers of this framework can get easy access to a is C :B C(B) FREE,STUCK,MIXED such that
+whole family of algorithms. This led us to formulate an
+FREE if B C ,
+analogous framework called soft subdivision search (SSS). ⊆ free
+Curious aside: PRM and SSS correspond (resp.) roughly to C(B)=  STUCK if B ∩ C free is empty,
+the two universal approaches to motion planning, namely 
+MIXED else.
+retraction/roadmap and cell-decomposition.
+ItiseasytoconstructexactplannersusingC.MoreoverC(B)
+(1) Next, we axiomatize the setting for SSS planners by
+could be computed exactly for nice B (e.g., B is a box). But
+consideringtheproblemoffindingpathsinY X connecting
+⊆ ourthrustistoavoidthehighcostofexactness.Thebasicidea
+givenα,β Y where X is a normedlinear space. The boxes
+∈ (ansatz) is: in the presence of subdivision, exact predicates
+in subdivision trees may be shapes such as simplices. The
+can be replaced by suitable approximations. More precisely,
+goal is to derive general principles to guide the design of
+a predicate C :B C(B) FREE,STUCK,MIXED is a soft
+SSSplanners.Herewemustavoidthetemptationofexcessive 7→ ∈{ }
+versionofC ifitisconservative(i.e.,C(B)=MIXEDimplies
+generality,leadingtoweakgenericresultsaboutmetricspaces. 6
+We aim at a balance which capturesa largeclass of problems
+C(B) = C(eB)), andeconvergent (i.e., B
+i implies C(B ) C(p)). Foreanalysis, we may also
+about which non-trivial theorems can be proved. → ∞ i →
+neeed some measure of “effectivity” or convergencerate.
+(2) One bane of exact algorithms is the “implementation
+Whatwe knowe:softpredicatesare relativelyeasy todesign
+gap”.Exactprimitivesaretypicallyalgebraicbutimplementers
+and to implement. Indeed, the computation of C can be
+use machine arithmetic approximation, thereby forfeiting all
+correlatedto the expansionof the subdivisiontree . LaValle
+the guarantees of exactness. We derive principles for correct T
+insightfully call this aspect of our work as “openieng up the
+implementation of soft predicates, and derive error estimates
+blackboxof collision testing”. Softpredicateshave nice prop-
+to allow machine arithmetic filters.
+(3) SSS planners take an input resolution parameter ε which ertieslikecomposability:ifapolyhedralrobotR 0 ⊆ R k hasa
+coverR = m T thenweobtainasoftpredicateforR from
+must be positive. If we admit ε = 0, the planners become 0 ∪i=1 i i
+softpredicatesfortheT ’s.Thuspredicatesforcomplexrobots
+non-halting like PRM. We indicate solutions, leading to new i
+like R is reducibleto simpler robotsT . To ensure efficiency
+classes of exact algorithms. 0 i
+and adaptivity, the technique of filters will prove essential (a
+Within the constraints of this workshop presentation, we
+well-known phenomenon in numerical methods). We refer to
+only address theme (0) and give a critical evaluation of SSS
+related work (notjust in motion planning)exemplifyingthese
+planners for solving challenging planning problems.
+remarks (e.g., [14, 17, 18, 15]).
+II. BASICS
+To aid further discussion, we need some definitions. Our 5. Critical Discussion. It is hard to claim novelty in an
+terminologyisquitestandard,butwerelyonreaders’intuition oldidealikeresolution-basedmethods,althoughweclaimnew
+for now. Consider the standard kinematic motion planning theoreticalfoundations.Itishardertoimproveupona20-year
+problem for a fixed rigid robot R 0 R k (k = 2,3) which oldparadigmlikePRM,whereremarkableadvanceshavebeen
+Proceedingsofthe1stWorkshopon 2
+RoboticsChallengesandVision(RCV2013)
+inconjunctionwithRobotics: ScienceandSystems
+June27,2013–Berlin,Germany
+made over the years. Nevertheless, we claim a place for SSS data structures and subroutines.
+planners in practical robotics under PRM’s shadow.
+First, we address a conceptual objection. Some critiques 6. The PRM Framework. There are many possible
+formulations, but we follow LaValle [13, Section 5.4.1]: to
+view the “No Path” outcome in SSS planners as equivalent
+find a path connecting α,β C , we maintain a graph
+to the “PRM time-out” but in resolution space. Hence it is G = (V,E) where α,β ∈ V C and edges in E
+no less “arbitrary”. This analogy can mislead in two ways. correspond to paths. { We n } ee ⊆ d thre ⊆ e predicates: Free(u) to
+First, the said inherent inaccuracies in sensors, actuators and test if configuration u is free; Connect(v,u) to test if the
+physicalconstantsmeanthatpathswithclearancebelowsome (straight)motion fromv to u is free; a termination criterion
+that returns “success” (a path is found) or “failure” (time-out
+(calculable) resolution are as good as “No Path”. So the
+or other condition).
+“No Path” outcome in SSS planners may be principled, not
+arbitrary. Second, “time-out” in resolution search is only the
+PRMFRAMEWORK:
+mostobviouswayterminate(weuseitbelow),butitisnotthe While (termination criterion fails):
+onlyway.Infact,itisadeeplyinterestingquestiontodevelop 1. Vertex Selection Method (VSM):
+techniques for fast detection of “No Path” (cf. [22, 7]). Choose a vertex v in V for expansion.
+2. Configuration Generation Method (CGM):
+Consider our suggestion that SSS is practical. The subdi-
+Generate some u C space (perhaps near v)
+vision infrastructureis well-understoodand based on efficient 3. Local Planning Method ∈ (LPM):
+data structures like union-find. The soft predicates we design If Free(u),
+[17] can mostly reduce to estimating distances between two Add u to V
+If Connect(v,u), add (v,u) to E.
+obstaclefeatures(i.e.,point,lineorplane).Thisalmostseems
+Return success or failure accordingly.
+trivial compared to exact algorithms; so SSS planners are
+clearly implementable. But will these implementations be Chosetetal. [6,p.198]notedthatPRM ispracticalbecause
+practically efficient? Here, we invoke the evidence of prior the predicate Free(u) is relatively cheap. The large literature
+resolution-basedwork such as Zhu and Latombe [23], Barhe- oncollisiondetectionisaboutthispredicate.We offeranother
+hennandHutchinson[1],andZhang,KimandManocha[22]. reason for the great success of PRM: the framework allows
+Ofcourse,wemustreinterpretthemusingournewperspective; one to easily modify the constituentcomponents(VSM, CGM,
+it is illuminating to revisit these papers with hindsight. LPM) to obtaina variety ofalgorithmsfor diverse needs.The
+The preceding paragraph is not new except for our SSS basicinfrastructureisrelativelystable,thankstothesimplicity
+perspective. The deeper debate among roboticists is about the and generality of PRM. We want to emulate this in SSS.
+ability of resolution methods to scale up in dimension. The
+consensus is that resolution methods can only reach medium 7. The SSS Framework. In addition to the usual input
+degrees-of-freedom(DOF), while PRM reachesmuch higher2 (ε,Ω,α,β), an initial box B C is given: we are
+degrees. Choset [6, p. 202] suggests that state-of-art PRM interested in paths restricted to B . The subdivision tree
+can handle DOF in the range 5 12. They noted that a 10 is rooted at B , and each node B B is classified by a
+DOF planar robot from Kavraki (1995) cannot be tackled by softpredicateC.Wegrow byexpandingsuccessiveMIXED-
+other methods. However, we find no conceptual barriers for leaves until we find a path or conclude “No Path”.
+SSS to match PRM. Randomness is not pertinent since SSS e
+can also expand randomly. A naive approach to resolution SSSFRAMEWORK
+methodsyieldstreesizesthatareexponentialinthedepth;but 1. While (C(Box(α))=FREE) ⊳ Initialization
+If Box(α) has length <ε, Return (”No Path”)
+related subdivision work in root isolation [15] shows we can
+ElseeExpand(Box(α))
+achieve tree size that is worst-case polynomial in the depth.
+The performance of SSS planners are highly dependent on 6
+... do the same for β ...
+the tree expansion strategy; this is no different from PRM. 2. While (Feind(Box(α))=Find(Box(β))) ⊳ Main Loop
+Indeed, the tree structure of subdivision seems to give SSS a If Q is empty, Return(“No Path”)
+greatadvantage.Currently,we have limited (butencouraging) B Q.GetNext()
+experiments to support our intuition, but we feel the field is
+3. Compute a FREE channel P from Box(α) to Box(β)
+wide open for experimentation.
+Generate and return the “canonical path” P inside P.
+III. TWO FRAMEWORKS FORMOTION PLANNING. A priority queue Q=Q holds all MIXED-leaves of radius
+We intend to view PRM as an algorithmic frameworkfor r(B) ε.TheroutineQ.GetNext()returnsaleafofhighest
+a largeclass ofsampling-basedplanners.An algorithmwithin priority which is split by Expand(B). The FREE boxes are
+the frameworkis3 justa specific instantiation,usingparticular storedinaunion-findstructurefortheconnectedcomponents:
+twoboxesB,B aredirectlyconnectedifdim(B B )=d 1.
+2Wedonotconsiderveryhighlyflexiblerobotssuchasmolecules,snakes, If “Box(α)” is a leaf of containing α, our algorithm halts
+humanoids, etc., where the DOF can go much higher than discussed here. as soon as Box(α) and B T ox(β) are in the same component.
+Whatcounts as“success” ismuchlessformalinsuchsettings.
+The performance of SSS is naturally adaptive but highly
+3Tobesure,therearedegreesofspecificity.Themostspecificinstantiation
+mightbecalled “implementation” ofsomelessspecific“algorithm”. dependentonGetNext() andExpand(). Ford 4degreesof
+Proceedingsofthe1stWorkshopon 3
+RoboticsChallengesandVision(RCV2013)
+inconjunctionwithRobotics: ScienceandSystems
+June27,2013–Berlin,Germany
+freedom,carefulexpansioniscritical;donotalwaysexpectto RobotMotion:Theory,Algorithms,andImplementations.
+split into 2d children. The methods in [23, 1, 22] fall under MIT Press, 2005.
+our framework. [7] J.DennyandN.M.Amato. TogglePRM:Acoordinated
+mappingofC-freeandC-obstacleinarbitrarydimension.
+8. Similarities and Differences. There are many simi- In Proc. WAFR. MIT, Cambridge, USA. June 2012.
+laritiesbetweenPRM and SSS, especiallyin theircontraststo [8] M. Safey el Din and E. Schost. A baby steps/giant
+exact algorithms. Both have two key subroutines: (i) search steps probabilistic algorithm for computing roadmaps in
+strategies (VSM in PRM, GetNext() in SSS), and (ii) free- smooth bounded real hypersurface. Discrete and Comp.
+ness testing (Free(u) in PRM, C(B) in SSS). Both SSS Geom., 45(1):181–220,2011.
+and PRM have the ability to find paths before exploring [9] D. Halperin, L. Kavraki, and J.-C. Latombe. Robotics.
+the entire C . Thus, Hsu et al.e[10, p. 640] calls this a In J. E. Goodman and J. O’Rourke, eds., Handbook of
+“foundational choice in PRM planning”. In contrast, exact Discrete and Comp. Geom., chap. 41. CRC Press, 1997.
+methods require expensive (non-adaptive) pre-processing to [10] D. Hsu, J.-C. Latombe, and H. Kurniawati. On
+compute a description of C . Both frameworks naturally the probabilistic foundations of probabilistic roadmap
+compute a path, i.e., a parametrized curve in C ; exact planning. IJRR, 25(7):627–643,2006.
+methods require a separate subalgorithm for this. [11] L. Kavraki, P. Sˇvestka, C. Latombe, and M. Over-
+The key difference is that SSS planners have no Halting mars. Probabilistic roadmaps for path planning in high-
+Problem. In SSS we use a more demanding predicate C(B) dimensionalconfiguration spaces. IEEE Trans. Robotics
+than Free(u). The benefit is that SSS can compute free and Automation, 12(4):566–580,1996.
+channelsjustbycheckingadjacencyoftwoFREEboxes;ePRM [12] S. LaValle, M. Branicky, and S. Lindemann. On the re-
+needs an extra predicate Connect(v,u). lationshipbetweenclassicalgridsearchandprobabilistic
+roadmaps. IJRR, 23(7/8):673–692,2004.
+IV. CONCLUSION
+[13] Steven M. LaValle. Planning Algorithms. Cambridge
+In this paper, we described the SSS framework for ε- U. Press, 2006.
+exactplanners.Ideasofresolution-limitedalgorithmsarewell- [14] S. Plantinga and G. Vegter. Isotopic approximation of
+known, but to our knowledge, the simple4 properties of soft implicitcurvesandsurfaces.InProc.SGP,pp. 245–254,
+classifiers have never been isolated. These “simple ideas” New York, 2004. ACM Press.
+promise to create new algorithms that are practical and theo- [15] M. Sagraloffand C.K. Yap. A simple but exactand effi-
+retically sound, not only in motion planning. There are many cient algorithm for complex root isolation. 36th ISSAC,
+openquestionsconcerningSSS.Althoughthereareinteresting pp. 353–360, 2011. June 8-11, San Jose, California.
+theoretical questions, we feel the immediate challenge is to [16] J. T. Schwartz and M. Sharir. On the piano movers’
+prove the practical power of SSS. Following up on [17], we problem: II. General techniques for computing topolog-
+plantodothisbydesigningandimplementingavarietyofsoft ical properties of real algebraic manifolds. Advances in
+predicates and search strategies, from 6DOF robots, medium Appl. Math., 4:298–351, 1983.
+DOFflexiblerobots(e.g.,Kavrakirobot),andcomplexrobots. [17] C.Wang,Y.-J.Chiang,andC.Yap. OnSoftPredicatesin
+Like PRM, we expect many variants of SSS to arise. Subdivision Motion Planning. In 29th Symp. on Comp.
+Geom.. To Appear. Rio de Janeiro. Jun 17-20, 2013.

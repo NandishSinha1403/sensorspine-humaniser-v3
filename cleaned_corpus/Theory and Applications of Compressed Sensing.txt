@@ -1,0 +1,664 @@
+Theory and Applications of Compressed Sensing
+Gitta Kutyniok
+October 15, 2018
+Compressedsensingisanovelresearcharea,whichwasintroducedin2006,andsince
+then has already become a key concept in various areas of applied mathematics, com-
+puter science, and electrical engineering. It surprisingly predicts that high-dimensional
+signals, which allow a sparse representation by a suitable basis or, more generally, a
+frame, can be recovered from what was previously considered highly incomplete linear
+measurements by using efficient algorithms. This article shall serve as an introduction
+to and a survey about compressed sensing.
+Key Words. Dimension reduction. Frames. Greedy algorithms. Ill-posed inverse
+problems. (cid:96) minimization. Random matrices. Sparse approximation. Sparse recovery.
+Acknowledgements. The author is grateful to the reviewers for many helpful sugges-
+tionswhichimprovedthepresentationofthepaper. ShewouldalsoliketothankEmmanuel
+Cand`es, David Donoho, Michael Elad, and Yonina Eldar for various discussions on related
+topics, and Sadegh Jokar for producing Figure 3. The author acknowledges support by the
+Einstein Foundation Berlin, by Deutsche Forschungsgemeinschaft (DFG) Grants SPP-1324
+KU 1446/13 and KU 1446/14, and by the DFG Research Center Matheon “Mathematics
+for key technologies” in Berlin.
+1 Introduction
+Theareaofcompressedsensingwasinitiatedin2006bytwogroundbreakingpapers,namely
+[18] by Donoho and [11] by Cand`es, Romberg, and Tao. Nowadays, after only 6 years, an
+abundance of theoretical aspects of compressed sensing are explored in more than 1000
+articles. Moreover, this methodology is to date extensively utilized by applied mathemati-
+cians, computer scientists, and engineers for a variety of applications in astronomy, biology,
+medicine, radar, and seismology, to name a few.
+The key idea of compressed sensing is to recover a sparse signal from very few non-
+adaptive, linear measurements by convex optimization. Taking a different viewpoint, it
+concerns the exact recovery of a high-dimensional sparse vector after a dimension reduction
+step. From a yet another standpoint, we can regard the problem as computing a sparse
+coefficient vector for a signal with respect to an overcomplete system. The theoretical foun-
+dation of compressed sensing has links with and also explores methodologies from various
+2v5183.3021:viXra
+other fields such as, for example, applied harmonic analysis, frame theory, geometric func-
+tional analysis, numerical linear algebra, optimization theory, and random matrix theory.
+Itisinterestingtonoticethatthisdevelopment–theproblemofsparserecovery–canin
+factbetracedbacktoearlierpapersfromthe90ssuchas[24]andlatertheprominentpapers
+by Donoho and Huo [21] and Donoho and Elad [19]. When the previously mentioned two
+fundamental papers introducing compressed sensing were published, the term ‘compressed
+sensing’ was initially utilized for random sensing matrices, since those allow for a minimal
+number of non-adaptive, linear measurements. Nowadays, the terminology ‘compressed
+sensing’ is more and more often used interchangeably with ‘sparse recovery’ in general,
+which is a viewpoint we will also take in this survey paper.
+1.1 The Compressed Sensing Problem
+To state the problem mathematically precisely, let now x = (x )n ∈ Rn be our signal of
+interest. As prior information, we either assume that x itself is sparse, i.e., it has very few
+non-zero coefficients in the sense that
+(cid:107)x(cid:107) := #{i : x (cid:54)= 0}
+is small, or that there exists an orthonormal basis or a frame1 Φ such that x = Φc with c
+being sparse. For this, we let Φ be the matrix with the elements of the orthonormal basis
+or the frame as column vectors. In fact, a frame typically provides more flexibility than an
+orthonormalbasisduetoitsredundancyandhenceleadstoimprovedsparsifyingproperties,
+hence in this setting customarily frames are more often employed than orthonormal bases.
+Sometimes the notion of sparsity is weakened, which we for now – before we will make this
+precise in Section 2 – will refer to as approximately sparse. Further, let A be an m × n
+matrix, which is typically called sensing matrix or measurement matrix. Throughout we
+will always assume that m < n and that A does not possess any zero columns, even if not
+explicitly mentioned.
+Then the Compressed Sensing Problem can be formulated as follows: Recover x from
+knowledge of
+or recover c from knowledge of
+y = AΦc.
+In both cases, we face an underdetermined linear system of equations with sparsity as prior
+information about the vector to be recovered – we do not however know the support, since
+then the solution could be trivially obtained.
+This leads us to the following questions:
+• What are suitable signal and sparsity models?
+• How, when, and with how much accuracy can the signal be algorithmically recovered?
+• What are suitable sensing matrices?
+1Recall that a frame for a Hilbert space H is a system (ϕ ) in H, for which there exist frame bounds
+0<A≤B <∞ such that A(cid:107)x(cid:107)2 ≤ (cid:80) |(cid:104)x,ϕ (cid:105)|2 ≤B(cid:107)x(cid:107)2 for all x∈H. A tight frame allows A=B. If
+A=B =1 can be chosen, (ϕ ) forms a Parseval frame. For further information, we refer to [12].
+Inthissection,wewilldiscussthesequestionsbrieflytobuildupintuitionforthesubsequent
+sections.
+1.2 Sparsity: A Reasonable Assumption?
+Asafirstconsideration, onemightquestionwhethersparsityisindeedareasonableassump-
+tion. Due to the complexity of real data certainly only a heuristic answer is possible.
+If a natural image is taken, it is well known that wavelets typically provide sparse
+approximations. This is illustrated in Figure 1, which shows a wavelet decomposition [50]
+of an exemplary image. It can clearly be seen that most coefficients are small in absolute
+value, indicated by a darker color.
+Figure 1: (a) Mathematics building of TU Berlin (Photo by TU-Pressestelle); (b) Wavelet
+decomposition
+Depending on the signal, a variety of representation systems which can be used to
+provide sparse approximations is available and is constantly expanded. In fact, it was
+recently shown that wavelet systems do not provide optimally sparse approximations in
+a regularity setting which appears to be suitable for most natural images, but the novel
+system of shearlets does [47, 46]. Hence, assuming some prior knowledge of the signal to be
+sensed or compressed, typically suitable, well-analyzed representation systems are already
+at hand. If this is not the case, more data sensitive methods such as dictionary learning
+algorithms (see, for instance, [2]), in which a suitable representation system is computed
+for a given set of test signals, are available.
+Depending on the application at hand, often x is already sparse itself. Think, for
+instance, of digital communication, when a cell phone network with n antennas and m
+users needs to be modelled. Or consider genomics, when in a test study m genes shall be
+analyzed with n patients taking part in the study. In the first scenario, very few of the
+users have an ongoing call at a specific time; in the second scenario, very few of the genes
+are actually active. Thus, x being sparse itself is also a very natural assumption.
+In the compressed sensing literature, most results indeed assume that x itself is sparse,
+andtheproblemy = Axisconsidered. Veryfewarticlesstudytheproblemofincorporating
+a sparsifying orthonormal basis or frame; we mention specifically [61, 9]. In this paper, we
+will also assume throughout that x is already a sparse vector. It should be emphasized that
+‘exact’ sparsity is often too restricting or unnatural, and weakened sparsity notions need
+to be taken into account. On the other hand, sometimes – such as with the tree structure
+of wavelet coefficients – some structural information on the non-zero coefficients is known,
+which leads to diverse structured sparsity models. Section 2 provides an overview of such
+models.
+1.3 Recovery Algorithms: Optimization Theory and More
+Let x now be a sparse vector. It is quite intuitive to recover x from knowledge of y by
+(P ) min(cid:107)x(cid:107) subject to y = Ax.
+Due to the unavoidable combinatorial search, this algorithm is however NP-hard [53]. The
+main idea of Chen, Donoho, and Saunders in the fundamental paper [14] was to substitute
+the (cid:96) ‘norm’ by the closest convex norm, which is the (cid:96) norm. This leads to the following
+minimization problem, which they coined Basis Pursuit:
+(P ) min(cid:107)x(cid:107) subject to y = Ax.
+Duetotheshapeofthe(cid:96) ball,(cid:96) minimizationindeedpromotessparsity. Foranillustration
+of this fact, we refer the reader to Figure 2, in which (cid:96) minimization is compared to (cid:96)
+minimization. We would also like to draw the reader’s attention to the small numerical
+example in Figure 3, in which a partial Fourier matrix is chosen as measurement matrix.
+min(cid:107)x(cid:107) s.t. y=Ax
+min(cid:107)x(cid:107) s.t. y=Ax
+Figure 2: (cid:96) minimization versus (cid:96) minimization
+The general question of when ‘(cid:96) = (cid:96) ’ holds is key to compressed sensing. Both nec-
+essary and sufficient conditions have been provided, which not only depend on the sparsity
+of the original vector x, but also on the incoherence of the sensing matrix A, which will be
+made precise in Section 3.
+Since for very large data sets (cid:96) minimization is often not feasible even when the solvers
+are adapted to the particular structure of compressed sensing problems, various other types
+of recovery algorithms were suggested. These can be roughly separated into convex opti-
+mization, greedy, and combinatorial algorithms (cf. Section 5), each one having its own
+advantages and disadvantages.
+Figure 3: (a) Original signal f with random sample points (indicated by circles); (b) The
+Fourier transform fˆ; (c) Perfect recovery of fˆby (cid:96) minimization; (d) Recovery of fˆby (cid:96)
+minimization
+1.4 Sensing Matrices: How Much Freedom is Allowed?
+Asalreadymentioned,sensingmatricesarerequiredtosatisfycertainincoherenceconditions
+such as, for instance, a small so-called mutual coherence. If we are allowed to choose the
+sensing matrix freely, the best choice are random matrices such as Gaussian iid matrices,
+uniform random ortho-projectors, or Bernoulli matrices, see for instance [11].
+Itisstillanopenquestion(cf. Section4formoredetails)whetherdeterministicmatrices
+can be carefully constructed to have similar properties with respect to compressed sensing
+problems. At the moment, different approaches towards this problem are being taken such
+asstructuredrandommatricesby, forinstance, Rauhutetal.in[58]or[60]. Moreover, most
+applications do not allow for a free choice of the sensing matrix and enforce a particularly
+structured matrix. Exemplary situations are the application of data separation, in which
+the sensing matrix has to consist of two or more orthonormal bases or frames [32, Chapter
+11], or high resolution radar, for which the sensing matrix has to bear a particular time-
+frequency structure [38].
+1.5 Compressed Sensing: Quo Vadis?
+At present, a comprehensive core theory seems established except for some few deep ques-
+tionssuchastheconstructionofdeterministicsensingmatricesexhibitingpropertiessimilar
+to random matrices.
+One current main direction of research which can be identified with already various
+existing results is the incorporation of additional sparsity properties typically coined struc-
+tured sparsity, see Section 2 for references. Another main direction is the extension or
+transfer of the Compressed Sensing Problem to other settings such as matrix completion,
+seeforinstance[10]. Moreover,wearecurrentlywitnessingthediffusionofcompressedsens-
+ing ideas to various application areas such as radar analysis, medical imaging, distributed
+signal processing, and data quantization, to name a few; see [32] for an overview. These
+applicationsposeintriguingchallengestotheareaduetotheconstraintstheyrequire,which
+in turn initiates novel theoretical problems. Finally, we observe that due to the need of, in
+particular, fast sparse recovery algorithms, there is a trend to more closely cooperate with
+mathematicians from other research areas, for example from optimization theory, numerical
+linear algebra, or random matrix theory.
+As three examples of recently initiated research directions, we would like to mention
+the following. First, while the theory of compressed sensing focusses on digital data, it is
+desirable to develop a similar theory for the continuum setting. Two promising approaches
+were so far suggested by Eldar et al. (cf. [52]) and Adcock et al. (cf. [1]). Second, in
+contrast to Basis Pursuit, which minimizes the (cid:96) norm of the synthesis coefficients, several
+approachessuchasrecoveryofmissingdataminimizethe(cid:96) normoftheanalysiscoefficients
+– as opposed to minimizing the (cid:96) norm of the synthesis coefficients –, see Subsections 6.1.2
+and 6.2.2. The relation between these two minimization problems is far from being clear,
+andtherecentlyintroducednotionofco-sparsity[54]isaninterestingapproachtoshedlight
+onto this problem. Third, the utilization of frames as a sparsifying system in the context
+of compressed sensing has become a topic of increased interest, and we refer to the initial
+paper [9].
+The reader might also want to consult the extensive webpage dsp.rice.edu/cs con-
+taining most published papers in the area of compressed sensing subdivided into different
+topics. We would also like to draw the reader’s attention to the recent books [29] and [32]
+as well as the survey article [7].
+1.6 Outline
+In Section 2, we start by discussing different sparsity models including structured sparsity
+and sparsifying dictionaries. The next section, Section 3, is concerned with presenting both
+necessary and sufficient conditions for exact recovery using (cid:96) minimization as a recovery
+strategy. The delicateness of designing sensing matrices is the focus of Section 4. In Section
+5, other algorithmic approaches to sparse recovery are presented. Finally, applications such
+as data separation are discussed in Section 6.
+2 Signal Models
+Sparsity is the prior information assumed of the vector we intend to efficiently sense or
+whose dimension we intend to reduce, depending on which viewpoint we take. We will start
+by recalling some classical notions of sparsity. Since applications typically impose a certain
+structure on the significant coefficients, various structured sparsity models were introduced
+which we will subsequently present. Finally, we will discuss how to ensure sparsity through
+an appropriate orthonormal basis or frame.
+2.1 Sparsity
+The most basic notion of sparsity states that a vector has at most k non-zero coefficients.
+This is measured by the (cid:96) ‘norm’, which for simplicity we will throughout refer to as a
+norm although it is well-known that (cid:107)·(cid:107) does not constitute a mathematical norm.
+Definition 2.1 A vector x = (x )n ∈ Rn is called k-sparse, if
+(cid:107)x(cid:107) = #{i : x (cid:54)= 0} ≤ k.
+The set of all k-sparse vectors is denoted by Σ .
+We wish to emphasize that Σ is a highly non-linear set. Letting x ∈ Rn be a k-sparse
+signal, it belongs to the linear subspace consisting of all vectors with the same support set.
+Hence the set Σ is the union of all subspaces of vectors with support Λ satisfying |Λ| ≤ k.
+From an application point of view, the situation of k-sparse vectors is however unrealis-
+tic, wherefore various weaker versions were suggested. In the following definition we present
+one possibility but do by no means claim this to be the most appropriate one. It might
+though be very natural, since it analyzes the decay rate of the (cid:96) error of the best k-term
+approximation of a vector.
+Definition 2.2 Let 1 ≤ p < ∞ and r > 0. A vector x = (x )n ∈ Rn is called p-
+compressible with constant C and rate r, if
+σ (x) := min (cid:107)x−x˜(cid:107) ≤ C ·k−r for any k ∈ {1,...,n}.
+2.2 Structured Sparsity
+Typically, the non-zero or significant coefficients do not arise in arbitrary patterns but are
+rather highly structured. Think of the coefficients of a wavelet decomposition which exhibit
+a tree structure, see also Figure 1. To take these considerations into account, structured
+sparsity models were introduced. A first idea might be to identify the clustered set of
+significant coefficients [22]. An application of this notion will be discussed in Section 6.
+In the following definition as well as in the sequel, for some vector x = (x )n ∈ Rn and
+some subset Λ ⊂ {1,...,n}, the expression 1 x will denote the vector in Rn defined by
+x : i ∈ Λ,
+(1 x) = i i = 1,...,n.
+Λ i 0 : i (cid:54)∈ Λ,
+Moreover, Λc will denote the complement of the set Λ in {1,...,n}.
+Definition 2.3 Let Λ ⊂ {1,...,n} and δ > 0. A vector x = (x )n ∈ Rn is then called
+δ-relatively sparse with respect to Λ, if
+(cid:107)1 x(cid:107) ≤ δ.
+The notion of k-sparsity can also be regarded from a more general viewpoint, which
+simultaneously imposes additional structure. Let x ∈ Rn be a k-sparse signal. Then it
+belongs to the union of linear one-dimensional subspaces consisting of all vectors with
+exactly one non-zero entry; this entry belonging to the support set of x. The number of
+suchsubspacesequalsk. Thus,anaturalextensionofthisconceptisthefollowingdefinition,
+initially introduced in [49].
+Definition 2.4 Let (W )N be a family of subspaces in Rn. Then a vector x ∈ Rn is
+k-sparse in the union of subspaces
+W , if there exists Λ ⊂ {1,...,N}, |Λ| ≤ k, such
+x ∈ W .
+At about the same time, the notion of fusion frame sparsity was introduced in [6].
+Fusion frames are a set of subspaces having frame-like properties, thereby allowing for
+stability considerations. A family of subspaces (W )N in Rn is a fusion frame with bounds
+A and B, if
+A(cid:107)x(cid:107)2 ≤ (cid:107)P (x)(cid:107)2 ≤ B(cid:107)x(cid:107)2 for all x ∈ Rn,
+where P denotes the orthogonal projection onto the subspace W , see also [13] and [12,
+Chapter 13]. Fusion frame theory extends classical frame theory by allowing the anal-
+ysis of signals through projections onto arbitrary dimensional subspaces as opposed to
+one-dimensional subspaces in frame theory, hence serving also as a model for distributed
+processing, cf. [62]. Fusion frame sparsity can then be defined in a similar way as for a
+union of subspaces.
+Applications such as manifold learning assume that the signal under consideration lives
+on a general manifold, thereby forcing us to leave the world of linear subspaces. In such
+cases, the signal class is often modeled as a non-linear k-dimensional manifold M in Rn,
+with Θ being a k-dimensional parameter space. Such signals are then considered k-sparse
+in the manifold model, see [65]. For a survey chapter about this topic, the interested reader
+is referred to [32, Chapter 7].
+We wish to finally mention that applications such as matrix completion require gener-
+alizations of vector sparsity by considering, for instance, low-rank matrix models. This is
+however beyond the scope of this survey paper, and we refer to [32] for more details.
+2.3 Sparsifying Dictionaries and Dictionary Learning
+If the vector itself does not exhibit sparsity, we are required to sparsify it by choosing an
+appropriate representation system – in this field typically coined dictionary. This problem
+can be attacked in two ways, either non-adaptively or adaptively.
+If certain characteristics of the signal are known, a dictionary can be chosen from the
+vast class of already very well explored representation systems such as the Fourier basis,
+wavelets, or shearlets, to name a few. The achieved sparsity might not be optimal, but
+various mathematical properties of these systems are known and fast associated transforms
+are available.
+Improved sparsity can be achieved by choosing the dictionary adaptive to the signals
+at hand. For this, a test set of signals is required, based on which a dictionary is learnt.
+This process is customarily termed dictionary learning. The most well-known and widely
+used algorithm is the K-SVD algorithm introduced by Aharon, Elad, and Bruckstein in
+[2]. However, from a mathematician’s point of view, this approach bears two problems
+which will hopefully be both solved in the near future. First, almost no convergence results
+for such algorithms are known. And, second, the learnt dictionaries do not exhibit any
+mathematically exploitable structure, which makes not only an analysis very hard but also
+prevents the design of fast associated transforms.
+3 Conditions for Sparse Recovery
+After having introduced various sparsity notions, in this sense signal models, we next con-
+sider which conditions we need to impose on the sparsity of the original vector and on the
+sensing matrix for exact recovery. For the sparse recovery method, we will focus on (cid:96) min-
+imization similar to most published results and refer to Section 5 for further algorithmic
+approaches. In the sequel of the present section, several incoherence conditions for sensing
+matrices will be introduced. Section 4 then discusses examples of matrices fulfilling those.
+Finally, we mention that most results can be slightly modified to incorporate measurements
+affected by additive noise, i.e., if y = Ax+ν with (cid:107)ν(cid:107) ≤ ε.
+3.1 Uniqueness Conditions for Minimization Problems
+We start by presenting conditions for uniqueness of the solutions to the minimization prob-
+lems (P ) and (P ) which we introduced in Subsection 1.3.
+3.1.1 Uniqueness of (P )
+Thecorrectconditiononthesensingmatrixisphrasedintermsoftheso-calledspark,whose
+definition we first recall. This notion was introduced in [19] and verbally fuses the notions
+of ‘sparse’ and ‘rank’.
+Definition 3.1 Let A be an m×n matrix. Then the spark of A denoted by spark(A) is
+the minimal number of linearly dependent columns of A.
+It is useful to reformulate this notion in terms of the null space of A, which we will
+throughout denote by N(A), and state its range. The proof is obvious. For the definition
+of Σ , we refer to Definition 2.1.
+Lemma 3.1 Let A be an m×n matrix. Then
+and spark(A) ∈ [2,m+1].
+This notion enables us to derive an equivalent condition on unique solvability of (P ).
+Since the proof is short, we state it for clarity purposes.
+Theorem 3.1 ([19]) Let A be an m×n matrix, and let k ∈ N. Then the following condi-
+tions are equivalent.
+(i) If a solution x of (P ) satisfies (cid:107)x(cid:107) ≤ k, then this is the unique solution.
+(ii) k < spark(A)/2.
+Proof. (i) ⇒ (ii). We argue by contradiction. If (ii) does not hold, by Lemma 3.1, there
+exists some h ∈ N(A), h (cid:54)= 0 such that (cid:107)h(cid:107) ≤ 2k. Thus, there exist x and x˜ satisfying
+h = x−x˜ and (cid:107)x(cid:107) ,(cid:107)x˜(cid:107) ≤ k, but Ax = Ax˜, a contradiction to (i).
+(ii) ⇒ (i). Let x and x˜ satisfy y = Ax = Ax˜ and (cid:107)x(cid:107) ,(cid:107)x˜(cid:107) ≤ k. Thus x−x˜ ∈ N(A)
+and (cid:107)x−x˜(cid:107) ≤ 2k < spark(A). By Lemma 3.1, it follows that x−x˜ = 0, which implies (i).
+3.1.2 Uniqueness of (P )
+Due to the underdeterminedness of A and hence the ill-posedness of the recovery problem,
+in the analysis of uniqueness of the minimization problem (P ), the null space of A also
+plays a particular role. The related so-called null space property, first introduced in [15], is
+defined as follows.
+Definition 3.2 Let A be an m×n matrix. Then A has the null space property (NSP) of
+order k, if, for all h ∈ N(A)\{0} and for all index sets |Λ| ≤ k,
+(cid:107)1 h(cid:107) < 1(cid:107)h(cid:107) .
+An equivalent condition for the existence of a unique sparse solution of (P ) can now be
+stated in terms of the null space property. For the proof, we refer to [15].
+Theorem 3.2 ([15]) Let A be an m×n matrix, and let k ∈ N. Then the following condi-
+tions are equivalent.
+(i) If a solution x of (P ) satisfies (cid:107)x(cid:107) ≤ k, then this is the unique solution.
+(ii) A satisfies the null space property of order k.
+It should be emphasized that [15] studies the Compressed Sensing Problem in a much
+more general way by analyzing quite general encoding-decoding strategies.
+3.2 Sufficient Conditions
+The core of compressed sensing is to determine when ‘(cid:96) = (cid:96) ’, i.e., when the solutions of
+(P ) and (P ) coincide. The most well-known sufficient conditions for this to hold true are
+phrased in terms of mutual coherence and of the restricted isometry property.
+3.2.1 Mutual Coherence
+The mutual coherence of a matrix, initially introduced in [21], measures the smallest angle
+between each pair of its columns.
+Definition 3.3 Let A = (a )n be an m×n matrix. Then its mutual coherence µ(A) is
+defined as
+|(cid:104)a ,a (cid:105)|
+i(cid:54)=j (cid:107)a i (cid:107) 2 (cid:107)a j (cid:107) 2
+The maximal mutual coherence of a matrix certainly equals 1 in the case when two
+columns are linearly dependent. The lower bound presented in the next result, also known
+as the Welch bound, is more interesting. It can be shown that it is attained by so-called
+optimal Grassmannian frames [63], see also Section 4.
+Lemma 3.2 Let A be an m×n matrix. Then we have
+(cid:104) n−m (cid:105)
+Let us mention that different variants of mutual coherence exist, in particular, the Babel
+function [19], the cumulative coherence function [64], the structured p-Babel function [4],
+the fusion coherence [6], and cluster coherence [22]. The notion of cluster coherence will in
+fact be later discussed in Section 6 for a particular application.
+Imposing a bound on the sparsity of the original vector by the mutual coherence of the
+sensing matrix, the following result can be shown; its proof can be found in [19].
+Theorem 3.3 ([30, 19]) Let A be an m×n matrix, and let x ∈ Rn\{0} be a solution of
+(P ) satisfying
+Then x is the unique solution of (P ) and (P ).
+3.2.2 Restricted Isometry Property
+We next discuss the restricted isometry property, initially introduced in [11]. It measures
+the degree to which each submatrix consisting of k column vectors of A is close to being an
+isometry. Notice that this notion automatically ensures stability, as will become evident in
+the next theorem.
+Definition 3.4 Let A be an m×n matrix. Then A has the Restricted Isometry Property
+(RIP) of order k, if there exists a δ ∈ (0,1) such that
+(1−δ )(cid:107)x(cid:107)2 ≤ (cid:107)Ax(cid:107)2 ≤ (1+δ )(cid:107)x(cid:107)2 for all x ∈ Σ .
+k 2 2 k 2 k
+Severalvariationsofthisnotionwereintroducedduringthelastyears,ofwhichexamples
+are the fusion RIP [6] and the D-RIP [9].
+Although also for mutual coherence, error estimates for recovery from noisy data are
+known, in the setting of the RIP those are very natural. In fact, the error can be phrased
+in terms of the best k-term approximation (cf. Definition 2.2) as follows.
+Theorem 3.4 ([8, 15]) Let A be an m×n matrix which satisfies the RIP of order 2k with
+δ < 2−1. Let x ∈ Rn, and let xˆ be a solution of the associated (P ) problem. Then
+(cid:107)x−xˆ(cid:107) ≤ C ·
+for some constant C dependent on δ .
+The best known RIP condition for sparse recovery by (P ) states that (P ) recovers all
+k-sparse vectors provided the measurement matrix A satisfies δ < 0.473, see [34].
+3.3 Necessary Conditions
+Meaningful necessary conditions for ‘(cid:96) = (cid:96) ’ in the sense of (P ) = (P ) are significantly
+harder to achieve. An interesting string of research was initiated by Donoho and Tanner
+with the two papers [25, 26]. The main idea is to derive equivalent conditions utilizing the
+theory of convex polytopes. For this, let Cn be defined by
+Cn = {x ∈ Rn : (cid:107)x(cid:107) ≤ 1}. (1)
+A condition equivalent to ‘(cid:96) = (cid:96) ’ can then be formulated in terms of properties of a
+particular related polytope. For the relevant notions from polytope theory, we refer to [37].
+Theorem 3.5 ([25, 26]) Let Cn be defined as in (1), let A be an m×n matrix, and let
+the polytope P be defined by P = ACn ⊆ Rm. Then the following conditions are equivalent.
+(i) The number of k-faces of P equals the number of k-faces of Cn.
+The geometric intuition behind this result is the fact that the number of k-faces of P
+equalsthenumberofindexingsetsΛ ⊆ {1,...,n}with|Λ| = ksuchthatvectorsxsatisfying
+suppx = Λ can be recovered via (P ).
+Extending these techniques, Donoho and Tanner were also able to provide highly ac-
+curate analytical descriptions of the occurring phase transition when considering the area
+of exact recovery dependent on the ratio of the number of equations to the number of un-
+knowns n/m versus the ratio of the number of nonzeros to the number of equations k/n.
+The interested reader is referred to [27] for further details.
+4 Sensing Matrices
+Ideally, we aim for a matrix which has high spark, low mutual coherence, and a small
+RIP constant. As our discussion in this section will show, these properties are often quite
+difficult to achieve, and even computing, for instance, the RIP constant is computationally
+intractable in general (see [59]).
+In the sequel, after presenting some general relations between the introduced notions of
+spark, NSP, mutual coherence, and RIP, we will discuss some explicit constructions for, in
+particular, mutual coherence and RIP.
+4.1 Relations between Spark, NSP, Mutual Coherence, and RIP
+Beforediscussingdifferentapproachestoconstructasensingmatrix, wefirstpresentseveral
+known relations between the introduced notions spark, NSP, mutual coherence, and RIP.
+This allows to easily compute or at least estimate other measures, if a sensing matrix is
+designed for a particular measure. For the proofs of the different statements, we refer to
+[32, Chapter 1].
+Lemma 4.1 Let A be an m×n matrix with normalized columns.
+(i) We have
+spark(A) ≥ 1+ .
+(ii) A satisfies the RIP of order k with δ = kµ(A) for all k < µ(A)−1.
+(iii) Suppose A satisfies the RIP of order 2k with δ < 2−1. If
+then A satisfies the NSP of order 2k.
+4.2 Spark and Mutual Coherence
+Let us now provide some exemplary classes of sensing matrices with advantageous spark
+and mutual coherence properties.
+The first observation one can make (see also [15]) is that an m×n Vandermonde matrix
+A satisfies
+spark(A) = m+1.
+One serious drawback though is the fact that these matrices become badly conditioned as
+n → ∞.
+Turning to the weaker notion of mutual coherence, of particular interest – compare
+Subsection 6.1 – are sensing matrices composed of two orthonormal bases or frames for Rm.
+If the two orthonormal bases Φ and Φ , say, are chosen to be mutually unbiased such as
+the Fourier and the Dirac basis (the standard basis), then
+which is the optimal bound on mutual coherence for such types of m×2m sensing matrix.
+Other constructions are known for m×m2 matrices A generated from the Alltop sequence
+[38] or by using Grassmannian frames [63], in which cases the optimal lower bound is
+attained:
+µ(A) = √ .
+The number of measurements required for recovery of a k-sparse signal can then be deter-
+mined to be m = O(k2logn).
+We begin by discussing some deterministic constructions of matrices satisfying the RIP.
+The first noteworthy construction was presented by DeVore and requires m (cid:38) k2, see [17].
+A very recent, highly sophisticated approach [5] by Bourgain et al. still requires m (cid:38) k2−α
+with some small constant α. Hence up to now deterministic constructions require a large
+m, which is typically not feasible for applications, since it scales quadratically in k.
+TheconstructionofrandomsensingmatricessatisfyingRIPisapossibilitytocircumvent
+this problem. Such constructions are closely linked to the famous Johnson-Lindenstrauss
+Lemma, which is extensively utilized in numerical linear algebra, machine learning, and
+other areas requiring dimension reduction.
+Theorem 4.1 (Johnson-Lindenstrauss Lemma [41]) Let ε ∈ (0,1), let x ,...,x ∈
+Rn, and let m = O(ε−2logp) be a positive integer. Then there exists a Lipschitz map
+f : Rn → Rm such that
+(1−ε)(cid:107)x −x (cid:107)2 ≤ (cid:107)f(x )−f(x )(cid:107)2 ≤ (1+ε)(cid:107)x −x (cid:107)2 for all i,j ∈ {1,...,p}.
+i j 2 i j 2 i j 2
+The key requirement for a matrix to satisfy the Johnson-Lindenstrauss Lemma with
+high probability is the following concentration inequality for an arbitrarily fixed x ∈ Rn:
+(cid:16) (cid:17)
+P (1−ε)(cid:107)x(cid:107)2 ≤ (cid:107)Ax(cid:107)2 ≤ (1+ε)(cid:107)x(cid:107)2 ≤ 1−2e−c0ε2m, (2)
+with the entries of A being generated by a certain probability distribution. The relation of
+RIP to the Johnson-Lindenstrauss Lemma is established in the following result. We also
+mention that recently even a converse of the following theorem was proved in [43].
+Theorem 4.2 ([3]) Let δ ∈ (0,1). If the probability distribution generating the m × n
+matrices A satisfies the concentration inequality (2) with ε = δ, then there exist constants
+such that, with probability ≤ 1−2e−c2δ2m, A satisfies the RIP of order k with δ for
+all k ≤ c δ2m/log(n/k).
+This observation was then used in [3] to prove that Gaussian and Bernoulli random
+matrices satisfy the RIP of order k with δ provided that m (cid:38) δ−2klog(n/k). Up to a
+constant, lower bounds for Gelfand widths of (cid:96) -balls [35] show that this dependence on k
+and n is indeed optimal.
+5 Recovery Algorithms
+In this section, we will provide a brief overview of the different types of algorithms typically
+used for sparse recovery. Convex optimization algorithms require very few measurements
+butarecomputationallymorecomplex. Ontheotherextremearecombinatorialalgorithms,
+which are very fast – often sublinear – but require many measurements that are sometimes
+difficult to obtain. Greedy algorithms are in some sense a good compromise between those
+extremes concerning computational complexity and the required number of measurements.
+5.1 Convex Optimization
+In Subsection 1.3, we already stated the convex optimization problem
+min(cid:107)x(cid:107) subject to y = Ax
+most commonly used. If the measurements are affected by noise, a conic constraint is
+required; i.e., the minimization problem needs to be changed to
+min(cid:107)x(cid:107) subject to (cid:107)Ax−y(cid:107)2 ≤ ε,
+for a carefully chosen ε > 0. For a particular regularization parameter λ > 0, this problem
+is equivalent to the unconstrained version given by
+min 1(cid:107)Ax−y(cid:107)2+λ(cid:107)x(cid:107) .
+Developed convex optimization algorithms specifically adapted to the compressed sens-
+ing setting include interior-point methods [11], projected gradient methods [33], and it-
+erative thresholding [16]. The reader might also be interested to check the webpages
+www-stat.stanford.edu/~candes/l1magic and sparselab.stanford.edu for available
+code. It is worth pointing out that the intense research performed in this area has slightly
+diminished the computational disadvantage of convex optimization algorithms for com-
+pressed sensing as compared to greedy type algorithms.
+5.2 Greedy Algorithms
+Greedy algorithms iteratively approximate the coefficients and the support of the original
+signal. They have the advantage of being very fast and easy to implement. Often the
+theoreticalperformanceguaranteesareverysimilarto, forinstance,(cid:96) minimizationresults.
+The most well-known greedy approach is Orthogonal Matching Pursuit, which is de-
+scribed in Figure 4. OMP was introduced in [57] as an improved successor of Matching
+Pursuit [51].
+Interestingly, a theorem similar to Theorem 3.3 can be proven for OMP.
+Theorem 5.1 ([64, 20]) Let A be an m×n matrix, and let x ∈ Rn\{0} be a solution of
+(P ) satisfying
+Then OMP with error threshold ε = 0 recovers x.
+Other prominent examples of greedy algorithms are Stagewise OMP (StOMP) [28],
+Regularized OMP (ROMP) [56], and Compressive Sampling MP (CoSaMP) [55]. For a
+survey of these methods, we wish to refer to [32, Chapter 8].
+An intriguing, very recently developed class of algorithms is Orthogonal Matching
+Pursuit with Replacement (OMPR) [40], which not only includes most iterative (hard)-
+thresholding algorithms as special cases, but this approach also permits the tightest known
+analysis in terms of RIP conditions. By extending OMPR using locality sensitive hashing
+(OMPR-Hash), this also leads to the first provably sub-linear algorithm for sparse recovery,
+see [40]. Another recent development is message passing algorithms for compressed sensing
+pioneered in [23]; a survey on those can be found in [32, Chapter 9].
+Input:
+• Matrix A = (a )n ∈ Rm×n and vector x ∈ Rn.
+• Error threshold ε.
+Algorithm:
+1) Set k = 0.
+2) Set the initial solution x0 = 0.
+3) Set the initial residual r0 = y−Ax0 = y.
+4) Set the initial support S0 = suppx0 = ∅.
+6) Set k = k+1.
+7) Choose i such that min (cid:107)ca −rk−1(cid:107) ≤ min (cid:107)ca −rk−1(cid:107)
+0 c i0 2 c i 2
+for all i.
+8) Set Sk = Sk−1∪{i }.
+9) Compute xk = argmin (cid:107)Ax−y(cid:107) subject to suppx = Sk.
+10) Compute rk = y−Axk.
+11) until (cid:107)rk(cid:107) < ε.
+Output:
+• Approximate solution xk.
+Figure 4: Orthogonal Matching Pursuit (OMP): Approximation of the solution of (P )
+5.3 Combinatorial Algorithms
+These methods apply group testing to highly structured samples of the original signal,
+but are far less used in compressed sensing as opposed to convex optimization and greedy
+algorithms. From the various types of algorithms, we mention the HHS pursuit [36] and a
+sub-linear Fourier transform [39].
+6 Applications
+We now turn to some applications of compressed sensing. Two of those we will discuss in
+more detail, namely data separation and recovery of missing data.
+6.1 Data Separation
+The data separation problem can be stated in the following way. Let x = x +x ∈ Rn.
+Assuming we are just given x, how can we extract x and x from it? At first glance, this
+seems to be impossible, since there are two unknowns for one datum.
+6.1.1 An Orthonormal Basis Approach
+The first approach to apply compressed sensing techniques consists in choosing appropriate
+orthonormal bases Φ and Φ for Rn such that the coefficient vectors ΦTx (i = 1,2) are
+sparse. This leads to the following underdetermined linear system of equations:
+(cid:20) (cid:21)
+Compressed sensing now suggests to solve
+(cid:13)(cid:20) (cid:21)(cid:13) (cid:20) (cid:21)
+m c1, i c n 2 (cid:13) (cid:13) (cid:13) c c 1 2 (cid:13) (cid:13) (cid:13) 1 subject to x = [Φ 1 |Φ 2 ] c c 1 2 . (3)
+If the sparse vector [ΦTx ,ΦTx ]T can be recovered, the data separation problem can be
+solved by computing
+1 1 1 1 2 2 2 2
+Obviously, separation can only be achieved provided that the components x and x are
+in some sense morphologically distinct. Notice that this property is indeed encoded in the
+problem if one requires incoherence of the matrix [Φ |Φ ].
+Infact,thistypeofproblemcanberegardedasthebirthofcompressedsensing,sincethe
+fundamental paper [21] by Donoho and Huo analyzed a particular data separation problem,
+namely the separation of sinusoids and spikes. In this setting, x consists of n samples of a
+continuum domain signal which is a superposition of sinusoids:
+(cid:32) n−1 (cid:33)
+1 (cid:88)
+Letting Φ be the Fourier basis, the coefficient vector
+(cid:16) (cid:17)
+e2πiωt/n ,
+is sparse. The vector x consists of n samples of a continuum domain signal which is a
+superposition of spikes, i.e., has few non-zero coefficients. Thus, letting Φ denote the
+Dirac basis (standard basis), the coefficient vector
+ΦTx = x = c
+is also sparse. Since the mutual coherence of the matrix [Φ |Φ ] can be computed to be
+√1 , Theorem 3.3 implies the following result.
+Theorem 6.1 ([21, 30]) Let x ,x and Φ ,Φ be defined as in the previous paragraph,
+and assume that (cid:107)ΦTx (cid:107) +(cid:107)ΦTx (cid:107) < 1(1+ n). Then
+1 1 0 2 2 0 2
+(cid:20) Φ Φ T 1 T 2 x x 1 2 (cid:21) = argmin c1,c2 (cid:13) (cid:13) (cid:13) (cid:13) (cid:20) c c 1 2 (cid:21)(cid:13) (cid:13) (cid:13) (cid:13) 1 subject to x = [Φ 1 |Φ 2 ] (cid:20) c c 1 2 (cid:21) .
+6.1.2 A Frame Approach
+Now assume that we cannot find sparsifying orthonormal bases but Parseval frames2 Φ
+and Φ – notice that this situation is much more likely due to the advantageous redundancy
+of a frame. In this case, the minimization problem we stated in (3) faces the following
+problem: We are merely interested in the separation x = x +x . However, for each such
+separation, duetotheredundancyoftheframestheminimizationproblemsearchesthrough
+infinitely many coefficients [c ,c ]T satisfying x = Φ c , i = 1,2. Thus it computes not only
+much more than necessary – in fact, it even computes the sparsest coefficient sequence of x
+with respect to the dictionary [Φ |Φ ] – but this also causes numerical instabilities if the
+redundancy of the frames is too high.
+To avoid this problem, we place the (cid:96) norm on the analysis, rather than the synthesis
+side as already mentioned in Subsection 1.5. Utilizing the fact that Φ and Φ are Parseval
+frames, i.e., that Φ ΦT = I (i = 1,2), we can write
+1 2 1 1 1 2 2 2
+This particular choice of coefficients – which are in frame theory language termed analysis
+coefficients – leads to the minimization problem
+min(cid:107)ΦTx˜ (cid:107) +(cid:107)ΦTx˜ (cid:107) subject to x = x˜ +x˜ . (4)
+1 1 1 2 2 1 1 2
+Interestingly, the associated recovery results employ structured sparsity, wherefore we will
+alsobrieflypresentthose. First,thenotionofrelativesparsity(cf. Definition2.3)isadapted
+to this situation.
+Definition 6.1 Let Φ and Φ be Parseval frames for Rn with indexing sets {1,...,N }
+and {1,...,N }, respectively, let Λ ⊂ {1,...,N }, i = 1,2, and let δ > 0. Then the vectors
+x and x are called δ-relatively sparse in Φ and Φ with respect to Λ and Λ , if
+1 2 1 2 1 2
+(cid:107)1 ΛcΦT
+≤ δ.
+Second, the notion of mutual coherence is adapted to structured sparsity as already
+discussed in Subsection 3.2.1. This leads to the following definition of cluster coherence.
+Definition 6.2 Let Φ = (ϕ )N1 and Φ = (ϕ )N2 be Parseval frames for Rn, respec-
+1 1i i=1 2 2j j=1
+tively, and let Λ ⊂ {1,...,N }. Then the cluster coherence µ (Λ ,Φ ;Φ ) of Φ and Φ
+1 1 c 1 1 2 1 2
+with respect to Λ is defined by
+c 1 1 2 1i 2j
+j=1,...,N2
+The performance of the minimization problem (4) can then be analyzed as follows. It
+should be emphasized that the clusters of significant coefficients Λ and Λ are a mere
+analysis tool; the algorithm does not take those into account. Further, notice that the
+choice of those sets is highly delicate in its impact on the separation estimate. For the proof
+of the result, we refer to [22].
+2Recall that Φ is a Parseval frame, if ΦΦT =I.
+Theorem 6.2 ([22]) Let x = x +x ∈ Rn, let Φ and Φ be Parseval frames for Rn with
+indexing sets {1,...,N } and {1,...,N }, respectively, and let Λ ⊂ {1,...,N }, i = 1,2.
+Further, suppose that x and x are δ-relatively sparse in Φ and Φ with respect to Λ and
+Λ , and let [x(cid:63),x(cid:63)]T be a solution of the minimization problem (4). Then
+(cid:107)x(cid:63)−x (cid:107) +(cid:107)x(cid:63)−x (cid:107) ≤ ,
+1 1 2 2 2 2 1−2µ
+c c 1 1 2 c 2 2 1
+Let us finally mention that data separation via compressed sensing has been applied, for
+instance, in imaging sciences for the separation of point- and curvelike objects, a problem
+appearing in several areas such as in astronomical imaging when separating stars from
+filaments and in neurobiological imaging when separating spines from dendrites. Figure 5
+illustratesanumericalresultfrom[48]usingwavelets(see[50])andshearlets(see[47,46])as
+sparsifyingframes. Atheoreticalfoundationforseparationofpoint-andcurvelikeobjectsby
+(cid:96) minimization is developed in [22]. When considering thresholding as separation method
+for such features, even stronger theoretical results could be proven in [45]. Moreover, a first
+analysis of separation of cartoon and texture – very commonly present in natural images –
+was performed in [44].
+Figure 5: Separation of a neurobiological image using wavelets and shearlets [48]
+For more details on data separation using compressed sensing techniques, we refer to
+[32, Chapter 11].
+6.2 Recovery of Missing Data
+The problem of recovery of missing data can be formulated as follows. Let x = x +x ∈
+W ⊕W⊥, where W is a subspace of Rn. We assume only x is known to us, and we aim
+to recover x. Again, this seems unfeasible unless we have additional information.
+6.2.1 An Orthonormal Basis Approach
+We now assume that – although x is not known to us – we at least know that it is sparsified
+by an orthonormal basis Φ, say. Letting P and P denote the orthogonal projections
+onto W and W⊥, respectively, we are led to solve the underdetermined problem
+P Φc = P x
+for the sparse solution c. As in the case of data separation, from a compressed sensing
+viewpoint it is suggestive to solve
+min(cid:107)c(cid:107) subject to P Φc = P x. (5)
+The original vector x can then be recovered via x = Φc. The solution of the inpainting
+problem – a terminology used for recovery of missing data in imaging science – was first
+considered in [31].
+Application of Theorem 3.3 provides a sufficient condition for missing data recovery to
+succeed.
+Theorem 6.3 ([19]) Let x ∈ Rn, let W be a subspace of Rn, and let Φ be an orthonormal
+basis for Rn. If (cid:107)ΦTx(cid:107) < 1(1+µ(P Φ)−1), then
+ΦTx = argmin (cid:107)c(cid:107) subject to P Φc = P x.
+6.2.2 A Frame Approach
+As before, we now assume that the sparsifying system Φ is a redundant Parseval frame.
+The adapted version to (5), which places the (cid:96) norm on the analysis side, reads
+min(cid:107)ΦTx˜(cid:107) subject to P x˜ = P x. (6)
+Employing relative sparsity and cluster coherence, an error analysis can be derived in a
+similar way as before. For the proof, the reader might want to consult [42].
+Theorem 6.4 ([42]) Let x ∈ Rn, let Φ be a Parseval frame for Rn with indexing set
+{1,...,N}, and let Λ ⊂ {1,...,N}. Further, suppose that x is δ-relatively sparse in Φ with
+respect to Λ, and let x(cid:63) be a solution of the minimization problem (6). Then
+(cid:107)x(cid:63)−x(cid:107) ≤ ,
+6.3 Further Applications
+Other applications of compressed sensing include coding and information theory, machine
+learning, hyperspectral imaging, geophysical data analysis, computational biology, remote
+sensing, radar analysis, robotics and control, A/D conversion, and many more. Since an
+elaborate discussion of all those topics would go beyond the scope of this survey paper, we
+refer the interested reader to dsp.rice.edu/cs.

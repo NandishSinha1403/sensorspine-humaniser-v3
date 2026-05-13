@@ -1,0 +1,1138 @@
+Planning for robotic exploration based on forward simulation
+Mikko Lauri, Risto Ritala
+Abstract—We address the problem of controlling a mobile describeamethodforefficientlydrawingtherequiredsamples.
+robot to explore a partially known environment. The robot’s We provide an empirical evaluation of our proposed approach
+objective is the maximization of the amount of information in simulated and real-world exploration experiments1.
+collected about the environment. We formulate the problem
+This article is organized as follows. Section II provides a
+as a partially observable Markov decision process (POMDP)
+with an information-theoretic objective function, and solve it surveyofrelatedworkanddiscussestherelationofourcontri-
+applying forward simulation algorithms with an open-loop ap- bution to the state-of-the-art. In Section III, we formulate ex-
+proximation. We present a new sample-based approximation for plorationasaPOMDP,anddiscusspossiblesolutionmethods.
+mutualinformationusefulinmobilerobotics.Theapproximation
+SectionIVreviewstwoforwardsimulationbasedmethodsfor
+can be seamlessly integrated with forward simulation planning
+non-myopic planning in POMDPs. Section V introduces the
+algorithms. We investigate the usefulness of POMDP based
+planning for exploration, and to alleviate some of its weak- sample-based approximation of mutual information suitable
+nesses propose a combination with frontier based exploration. for robotic exploration problems, and describes a method for
+Experimental results in simulated and real environments show efficientlydrawingtherequiredsamples.SectionVIdescribes
+that, depending on the environment, applying POMDP based
+theresultsofsimulationexperiments,andSectionVIIpresents
+planning for exploration can improve performance over frontier
+the software architecture for implementation of our approach
+exploration.
+andreportstheresultsofreal-worldexplorationtrials.Finally,
+Section VIII provides concluding remarks.
+I. INTRODUCTION
+Autonomous robotic agents performing tasks such as mon- II. RELATEDWORK
+itoring, surveillance or exploration must be able to plan their
+Mobilerobotstypicallycollectinformationonboththeirin-
+futureinformation-gatheringactions.Real-worldenvironments
+ternalstateandthestateoftheenvironmenttheyareinteracting
+are typically partially observable and stochastic, and planning
+with. In simultaneous localization and mapping (SLAM) (see
+in them requires reasoning over uncertain outcomes in the
+Durrant-Whyte and Bailey [8] for a review) the robot must
+presence of sensor noise. The true state of the system is
+jointly estimate both its pose (internal state) and the map of
+hidden, and knowledge about the state is represented by a
+theenvironmentbasedonitsactionsandobservations.Robots’
+belief state, a probability density function (pdf) over the true
+information-gathering actions consist of actions that affect
+state. The utility of actions is measured by an appropriate
+their pose, and hence the area covered by their sensors, and
+reward function, and the agent’s objective is to maximize the
+actions explicitly selecting between sensors or their operating
+sum of expected rewards over a specified horizon of time.
+modes. In the active SLAM problem [9], the robot’s actions
+Such planning problems are instances of partially observable
+are selected to obtain best estimates on the pose and the map.
+Markov decision processes [1], or POMDPs.
+Thus, the active SLAM problem is an exploration or sensor
+ThesolutionofaPOMDPisacontrolpolicy,i.e.amapping
+selection problem. The goal is to maximize information on
+from belief states to actions. To find policies for information-
+both the robot pose and the map.
+gatheringandexplorationtasks,severalauthorshaveproposed
+Techniques to control mobile robot exploration may be
+applying quantities such as entropy or mutual information as
+categorized e.g. by whether they apply heuristic rules or
+reward functions of the POMDP [2, 3, 4, 5, 6]. Although
+formal decision theory for selection of exploration targets.
+finding optimal policies for POMDPs is computationally hard
+Applyingheuristicrulesforguidingexplorationspansfrontier-
+(PSPACE-complete; [7]), they remain an attractive modelling
+based approaches [10], or some next-best-view approaches
+choiceduetotheabilitytosimultaneouslyhandleuncertainties
+such as [11]. Julia´ et al. [12] classify exploration methods
+in the robot’s action and sensing outcomes.
+according to the levels of multi-robot coordination and inte-
+In this article, we address the problem of finding con-
+gration with SLAM algorithms. They conclude that SLAM-
+trol policies for robotic exploration problems formulated as
+integrated exploration performs best with regard to quality
+POMDPs.Weapplyforwardsimulationalgorithmsforfinding
+of map information. Their results also agree with Amigoni
+a solution to an open loop approximation of a POMDP. This
+[13],AmigoniandCaglioti[14],whofounddecisiontheoretic
+approach allows general belief-dependent reward functions
+criteria combining both utility of exploration and its cost (e.g.
+and with suitable choice of algorithm can avoid discretization
+timeordistance)tobepreferableifbothextentoftheexplored
+ofthecontinuousplanningspace.Wederiveasampling-based
+areaandexplorationtimewereoptimized.Inthefollowing,we
+approximation for mutual information that can be applied
+reviewinmoredetailsomesingle-robotexplorationtechniques
+in conjunction with forward simulation based planning, and
+thatemploydecisiontheoreticcriteriatoguidetheexploration
+process.
+M. Lauri and R. Ritala are with Department of Automation Science and
+Engineering, Tampere University of Technology, P.O. Box 692, FI-33101,
+2v47420.2051:viXra
+Information on the location of the robot and environment a) Contribution: We present a new approximation for
+features, or landmarks, may be modelled by a multivari- mutual information that is useful in mobile robotics explo-
+ate Gaussian distribution. The SLAM problem can then be ration problems. The approximation can be easily integrated
+solved for example by applying the Extended Kalman Filter. with forward simulation planning methods, and avoids com-
+Exploration with such feature-based maps was studied by puting full SLAM filter updates during the planning phase. In
+Sim and Roy [15] who describe an A-optimal exploration contrast to e.g. [19, 20, 21], we do not assume a Gaussian
+method, i.e. they minimize the trace of the state covariance belief state. We propose and empirically evaluate in simu-
+matrix. They discretize the location of the robot to a grid and latedandreal-worlddomainsaexplorationmethodcombining
+plan an informative trajectory in open loop as a sequence of strengths of decision-theoretic POMDP based exploration and
+discretepositionsviaabreadth-firstsearch.Asimilarobjective classical frontier based exploration. In all cases, we concen-
+functionwasusedby[16],adoptingamodelpredictivecontrol trate on non-myopic planning instead of the greedy one-step
+(MPC) approach for optimization over multiple time steps. maximization of utility.
+Discretization of the action space was also applied by [17],
+who applied reinforcement learning to learn parameterized III. EXPLORATIONASAPOMDP
+robottrajectoriesforexploration.Asomewhatcomplementary
+Consider a robot exploring a partially observable environ-
+approach was adopted in [18], where a set of candidate
+ment. Let s∈S denote the hidden state of the system, com-
+explorationtargetswereevaluatedbasedonanutilityfunction
+prising the state of the robot and the state of the environment.
+designed to balance exploration of unknown areas and seeing
+At each decision epoch in the set T = {0,1,...,H − 1},
+known landmarks to help maintain good localization informa- H ∈ N ∪ {∞}, where H is the horizon of the problem,
+tion. However, an explicit information-theoretic quantification
+the robot selects a control action u ∈ U. Consequently, the
+of the information gain was avoided.
+state at the next decision epoch is determined by a transition
+Martinez-Cantin et al. [19] relaxed assumptions made in according to a Markovian state transition model T(s,s,u),
+earlier work, such as discretization of the action space and giving the conditional probability of transitioning to s ∈ S
+themyopicoptimizationhorizon.TheyappliedaMonteCarlo from s ∈ S when action u ∈ U is executed. After the state
+search algorithm in policy space with a Gaussian process ap- transition, the robot obtains information regarding the state
+proximationoftheobjectivefunction.Thepoliciestoevaluate in the form of an observation. The observation is modelled
+wereselectedbyminimizingtheaveragemeansquareerrorof by a probabilistic model O(z ,s,u) giving the conditional
+(cid:48) (cid:48)
+the state estimate consisting of robot and landmark locations. probability of perceiving observation z ∈ Z in state s ∈ S
+(cid:48) (cid:48)
+A belief space planning approach investigated by [20, 21] after action u ∈ U was executed. As the robot’s knowledge
+addressedmanyofthelimitationsofearlierstudies.Aplanner of the true system state is incomplete, it is represented by a
+architecture consisting of an estimation layer and a decision belief state b ∈ B, a probability density function (pdf) over
+layer combined with a model predictive control strategy for the state space S. The set B, containing all pdfs over S, is
+non-myopicplanningwasapplied,assumingaGaussianbelief called the belief space.
+overrobotandlandmarkposes.Discretizationwasavoidedby As the robot executes control actions and perceives obser-
+applying a gradient descent method for computing optimal vations, its belief state is tracked by Bayesian filtering. Given
+actions. Possible future measurements were treated as random a belief state b∈B and an action u∈U, the predicted belief
+variables, relaxing the assumption of maximum likelihood state bu is computed by
+measurements. Exploration was considered in the sense that (cid:90)
+the objective function included an A-optimality criterion for (cid:48) (cid:48)
+state covariance. s
+Another body of work in exploration employs metric map Given an observation z , the posterior belief b is obtained in
+(cid:48) (cid:48)
+representations such as occupancy grids [22]. Bourgault et al. the update step by applying Bayes’ rule:
+[23] combined occupancy grid mapping with feature-based O(z ,s,u)bu(s)
+SLAMandusedmutualinformationastherewardfunction.A b (cid:48) (s (cid:48) ):=τ(b,u,z (cid:48) )(s (cid:48) )= (cid:48) (cid:48) (cid:48) , (2)
+discretizedactionspacewasappliedwithmyopicoptimization. (cid:48)
+where the function τ : B × U × Z → B is referred to
+Rao-Blackwellizedparticlefiltering(RBPF)isoftenapplied
+as the belief update function. The normalization term in
+instate-of-the-artSLAMfiltersforoccupancygridmaps[24].
+the denominator is the prior probability of observing z :
+Each particle represents a map and a robot trajectory hy- η(z |b,u)= (cid:82) O(z ,s,u)bu(s)ds. (cid:48)
+pothesis. Stachniss et al. [2] studied myopic exploration in (cid:48) (cid:48) (cid:48) (cid:48) (cid:48)
+RBPF SLAM by discretizing the action space to a set of For each acti∈onS, the robot receives an instantaneous reward
+possible waypoints and then evaluating the approximate ex- given by the reward function ρ : B ×U → R. Throughout
+pected information gain when traveling to the waypoints by the remainder of the paper, we will assume that the reward
+sampling. This work was later expanded upon [25, 9] by function is bounded, i.e., there exist ρ ,ρ ∈ R such that
+considering alternative measures of uncertainty of the SLAM ∀b,u : ρ ≤ ρ(b,u) ≤ ρ . The reward at decision epoch
+solution. These approaches consider both exploration of new t ∈ T is discounted by a factor γt, typically γ ∈ [0,1) [26].
+areas and maintaining the consistency of the particle filter The robot is said to act optimally when the expected sum
+approximation. of discounted instantaneous rewards over all decision epochs
+in T is maximized. The elements thus defined constitute Traditionally, reward functions in POMDPs are state and
+a discounted reward partially observable Markov decision action dependent, and thus linear in the belief state [1]. For
+process (POMDP). ρ(b,u) linear in the belief state, the optimal finite-horizon
+value function can be represented by a piece-wise linear and
+convex (PWLC) function [30]. Several of the most efficient
+A. Reward functions for exploration
+currently known approximate algorithms for POMDPs lever-
+Suitable reward functions for exploration encourage reduc- agethePWLCrepresentationtofindsolutions[31,32,33,34].
+ing uncertainty in the belief states. Such reward functions However, a reward function defined as an uncertainty func-
+should yield a high reward for beliefs that have the majority tion or information gain (Definition 1) is nonlinear in the be-
+of their probability mass concentrated on a small subset of lief. Araya et al. [35] approximated a reward function convex
+states. Vice versa, beliefs that correspond to uncertain state in the belief state by a piece-wise linear function and were
+information should yield a low reward. Uncertainty functions able to apply standard POMDP algorithms to approximate the
+and information gain provide useful characterizations that can optimalpolicy.OnlinePOMDPalgorithms[36]thatrepeatedly
+be applied to define such reward functions. find an optimal action only for the current belief state during
+task execution and do not rely on an explicit closed form
+Definition1(Uncertaintyfunctionandinformationgain[27]).
+An uncertainty function is a concave function f : B → R+. representation of the value function are also applicable to
+POMDPs with nonlinear rewards. Several online algorithms
+The information gain I related to an uncertainty function f
+are based on a finite depth tree search over reachable belief
+is the expected reduction in the uncertainty function:
+states. The number of reachable belief states after k decisions
+I (b,u)=f(bu)−E[f(τ(b,u,z ))], (3) is (|U||Z|)k, which quickly makes the search intractable for
+f (cid:48)
+problems with large action and observation spaces. If either
+taking the expectation under η(z (cid:48) |b,u). U or Z are uncountable, the basic tree search method is not
+For example, I (b,u) or −f(bu) may then be applied as applicable.
+a reward function. A common choice for the uncertainty In mixed-observability problems, a part of the state is
+function f is the Shannon entropy, for which the correspond- fully observable and evolves deterministically. In such mixed-
+ing information gain is the mutual information [28]. Mutual observabilitydomainswithamutualinformationrewardfunc-
+information has been applied as a reward function in several tion, Atanasov et al. [5] showed that if the observation model
+worksonroboticinformationgathering,seee.g.[2,3,4,5,6]. is linear-Gaussian w.r.t. the target state, the optimal policy for
+maximizing mutual information is open-loop, and if possible
+actionsareconstrainedbythefullyobservablepartofthestate,
+B. Optimal policies
+Lauri and Ritala [6] showed that under certain conditions the
+An optimal solution to a finite-horizon POMDP is a se- problem can be relaxed into a multi-armed bandit problem.
+quence of policies (π ,π ,...,π ), where π :B →U maps
+belief states to control actions, such that acting according to
+C. Open-loop solution to a POMDP
+π at every decision epoch t maximizes the expected sum
+of discounted rewards over the remaining decision epochs2. Instead of resorting to the aforementioned approaches for
+An optimal solution is characterized by the value iteration POMDPs with nonlinear rewards, we consider an open loop
+procedure for t = 1,2,...,H indicating the number of approximation that ignores the effect of information provided
+decision epochs remaining, starting with Q (b,u)≡ρ(b,u): by future observations, instead choosing actions only on the
+basis of currently available information. By this approach, we
+Q (b,u)=ρ(b,u)+γ η(z |b,u)V (τ(b,u,z ))dz , are able to handle continuous action and observation spaces,
+t (cid:48) t∗1 (cid:48) (cid:48)
+− although at a loss in optimality of the solution.
+∈Z (4) Denote the current belief state by b 0 . Given an action
+sequenceu ,thepredictedpdfofthemeasurementsz
+V (b)= supQ (b,u), (5) 0:H 1 1:H
+t∗ t given the infor−mation in the current belief state is
+π t∗ (b)=argsupQ t (b,u). (6) (cid:90)
+∈U 1:H 0 0:H 1 0 0
+The value function V t∗ (b) gives the expected sum of dis- S |H+1| (7)
+counted rewards attainable by acting optimally for t deci- H 1
+sion epochs starting at belief state b, and Q t (b,u) gives the
+O(z k+1 ,s k+1 ,u k )T(s k+1 ,s k ,u k )ds 0:H .
+expected sum of discounted rewards when action u is first k=0
+executed and then for the remaining (t−1) decision epochs
+The open loop objective function over the corresponding
+anoptimalpolicyisfollowed.Foraninfinitehorizonproblem,
+decision epochs is
+value iteration converges to a unique fixed point V , and the
+corresponding optimal policy is stationary [29]. J H (b 0 ,u 0:H 1 )=
+− (cid:34) (cid:35)
+2Note that by this formulation, at decision epoch 0, π∗ is followed, at ρ(b ,u )+E
+H (cid:88)− 1
+H 0 0 k 1 k 1 k k
+decisionepoch1,π∗ ,andsoon. − −
+where the expectation is taken w.r.t. p(z | b ,u ),
+1:H 0 0:H 1
+and belief states follow the recursion b =τ(b ,u , − z ).
+The crucial difference compared to th k e value k −i 1 tera k ti−o 1 n a k nd Selection Expansion Simulation Backpropagation
+policies in Eqns. (4)-(6) is that the sequence of actions is
+fixed beforehand.Thus,anoptimalopenloopsolutionu
+is a sequence of H actions that maximizes the expect−ed
+sum of discounted rewards when information provided by
+observations during the subsequent decision epochs is not
+Treepolicy
+exploited to select any of the subsequent actions: Rollout
+u = argsup J (b ,u ). (9)
+∗0:H 1 H 0 0:H 1
+We denote the optimal open loop value as J H∗ (b 0 ) ≡ Figure 1: Overview of POMCP simulation episodes. The tree
+J H (b 0 ,u ∗0:H 1 ). policy stage consists of a selection and expansion phase, and
+A recedin−g horizon control strategy is adopted as follows. the rollout stage consists of a simulation and backpropagation
+First, Eq. (9) is solved, u ∗0 is executed and an observation z 1 phase. (Figure adapted from [41])
+is perceived. The belief state is revised to τ(b ,u ,z ), and
+the process is repeated. In a sense, feedback is reintroduced
+by computing the optimal open loop action sequence again at ispossibletoapplysearchalgorithmstofindthesolution.The
+everydecisionepoch,applyingupdatedinformation.Thiscon- search space is U | H | , the space of action sequences with H
+trol strategy is also referred to as open-loop feedback control actions.AstheobjectivefunctionJ maynotbedifferentiable
+(OLFC), and we denote the expected value of following this with respect to the action sequence, gradient methods are
+OLFC policy for H decision epochs as Jˆ (b ). not generally applicable. We review an algorithm for both a
+It is interesting to consider how much worse is the value finite(SubsectionIV-A)andanuncountable(SubsectionIV-B)
+Jˆ (b ) of the OLFC policy compared to the value V (b ) action space, leading to finite or uncountable search spaces,
+of an optimal closed loop policy. If the reward function is respectively.
+bounded, then the loss of OLFC compared to an optimal
+policy is bounded. To see this, consider that the worst and A. Partially observable Monte Carlo planning
+best possible policies attain a reward of ρ and ρ ,
+min max The partially observable Monte Carlo planning algorithm
+respectively, on every decision epoch. Taking into account
+(POMCP) of [40] is a variant of Monte Carlo Tree Search
+the discounting of rewards, we have that the difference in
+(MCTS) [41] to solve POMDPs with finite action and obser-
+value of any two policies over H decision epochs is at
+vationspaces.POMCPrunsasequenceofforwardsimulations
+most (cid:80)− γk(ρ −ρ ). It should be noted that in practice called episodes on the problem, and collects the rewards
+k=0 obtainedinthesimulationandusesthemtoevaluatealternative
+an optimal policy rarely obtains the maximum reward on
+strategies by constructing a search tree over the possible
+every decision epoch, nor does an open loop policy obtain
+policies. An exploration parameter e determines the balance
+the minimum reward on every decision epoch, such that the
+between exploitation and exploration behaviour during the
+suboptimality is often less in practice than as indicated by the
+search.
+bound.
+WehaveadaptedPOMCPforsolvingtheopenloopcontrol
+The OLFC policy always performs at least as well as
+problem of Eq. (9). A search tree over action sequences is
+executing an optimal pure open-loop action sequence u ,
+∗0:H 1 iteratively constructed, starting from a tree containing just the
+as shown by the following theorem. −
+root node corresponding to the current belief state b. The
+Theorem1(Performanceofopen-loopfeedbackcontrol[37]). overall objective is to estimate the values of possible open
+For any b∈B, loop action sequences, in order to be able to select an action
+Jˆ (b)≥J (b). (10) to execute in the current belief state that leads to the most
+favourable outcome over the next H decisions.
+The suboptimality of following the OLFC policy may be
+Each node in the search tree corresponds to a particular
+further analyzed by noting that in certain special cases an
+action sequence, and we will refer to a node by an action
+optimalpolicyiseffectivelyanopenlooppolicy,see[38]fora
+sequenceu .Therootnodecorrespondstothecurrentbelief
+discussionofsuchcases.Furthermore,anapproximationofan
+statebwhennoactionshaveyetbeentaken,andisreferredto
+upper bound for the optimal closed loop value may be found
+by an empty set. For each node u , a value estimate and a
+e.g. applying hindsight optimization, see [39].
+countaremaintained.Thevalueestimate V(u )isthemean
+sum of discounted rewards recorded over all simulations that
+IV. FORWARDSIMULATIONFOROPENLOOPCONTROL
+continuefromu untilthefinaldecisionepochH.Thecount
+Solving the open loop control problem of Eq. (9) corre- N(u )isthenumberoftimesanodehasbeenvisitedduring
+sponds to finding an optimal policy to a POMDP with no the search.
+observations, which itself is an NP-complete problem [7]. Figure 1 gives an overview of a simulation episode, and
+Since the optimal solution is a sequence of actions u , it shows how the search tree is iteratively constructed. Every
+episode consists of a tree policy stage and a rollout stage. In Algorithm 1 POMCP [40] for open-loop control
+thenexttwoparagraphs,wegiveaninformaloverviewofboth Input: The POMDP model, exploration parameter e, opti-
+phases. After that, we describe the algorithm in more detail, mization horizon H, current belief state b
+filling in the missing details. 1: function POMCP(b 0 )
+During the tree policy stage, the current belief state b 2: while stopping conditions not fulfilled do
+is propagated applying the belief update equation τ with 3: SIMULATE(b 0 ,∅,0)
+each action u determined by the search tree nodes visited 4: N(∅)←N(∅)+1
+and each observation z (cid:48) determined by sampling from the 5: end while
+prior distribution η(z (cid:48) | b,u). For example, at the root node 6: return argmax u V(u)
+correspondingtob,thevalueestimatesandcountsofthechild 7: end function
+nodes are applied to choose one child node corresponding to
+an action u. An observation is sampled from η(z (cid:48) | b,u), the 8: function SIMULATE(b,u 0:d ,d)
+belief state is updated to b = τ(b,u,z (cid:48) ), and the tree policy 9: if d=H −1 then return 0
+continuestoanewnodeu.Similarly,atanynodeu 0:k achild 10: else if ISLEAF(u 0:d ) then
+node u 0:k+1 = {u 0:k ,u} is chosen according to the values 11: Add {u 0:d ,u} to tree ∀u∈U
+and counts of the child nodes, the belief state is updated, and 12: return ROLLOUT(b,d)
+the tree policy stage continues at node u 0:k+1 . An example of 13: end if
+a trajectory of nodes traversed during the tree policy stage is 14: u ← argmaxV({u 1:d ,u (cid:48) }) +
+indicated by the arrows in the leftmost part of Figure 1. (cid:112) u(cid:48)
+Oncealeafnodethatdoesnothaveanychildrenisencoun- 0:d 0:d (cid:48)
+tered,thetreepolicycannotbecontinued.Thetreeisexpanded 15: Sample z (cid:48) ∼η(z (cid:48) |b,u)
+by adding new child nodes as appropriate, an example of 16: r ←ρ(b,u)+γ· SIMULATE(τ(b,u,z (cid:48) ),{u 0:d ,u},d+
+expanding the tree with a single node is shown in the second
+from left part of Figure 1, under the “Expansion” indicator. 17: N({u 0:d ,u})←N({u 0:d ,u})+1
+Thesearchthenmovestotherolloutstage.Intherolloutstage, 1 1 8 9 : : V re ( t { u u rn 0:d r ,u})←V({u 0:d ,u})+ r − N V ( { ( u { 0 u : 0 d : , d u , } u ) } )
+a simulation until decision epoch H is performed, updating
+20: end function
+beliefandrecordingrewardsalongtheway,seethethirdfrom
+left part of Figure 1. In the final backpropagation phase of
+21: function ROLLOUT(b,d)
+the rollout stage, shown on the rightmost part of Figure 1, the
+22: if d=H −1 then return 0
+total reward recorded is applied to update the values of each
+node visited during the simulation episode. Once a simulation
+episode is completed, a new one is again started at the root of 24: Sample u∼π rollout (b)
+the search tree, now expanded with new nodes. 25: Sample z (cid:48) ∼η(z (cid:48) |b,u)
+Algorithm 1 presents the version of POMCP that we have 26: return ρ(b,u)+γ· ROLLOUT(τ(b,u,z (cid:48) ),d+1)
+27: end if
+adapted to solve the open loop control problem of Eq. (9).
+28: end function
+The algorithm takes as parameters the POMDP model, an
+exploration parameter e, an optimization horizon H, and the
+current belief state b. The while loop (Line 2) is executed
+until a specified stopping criterion, e.g. the maximum number are updated with the reward information gained during the
+of simulation episodes N , has been reached. Each iteration episode in the backpropagation phase (Lines 17-18).
+of the while loop corresponds to one simulation episode. If an action sequence is encountered that is a leaf node of
+If the condition on Line 10 is false, the current search thecurrentsearchtree,arolloutstageisentered(Line10).The
+tree is applied to guide the action selection in the tree policy search tree is expanded to include possible successor actions
+stage. The action to execute is determined by a selection rule (Line 11). By calling the function ROLLOUT, a sample of the
+maximizing an upper confidence bound [42, 43] as shown reward until end of the optimization horizon is obtained. This
+on Line 143. The first term in the bound is the current isachievedbysimulatingagivenrolloutpolicy(Line24)until
+estimate of the expected value of the action, and the second theendoftheoptimizationhorizon.Atypicalchoiceofrollout
+term is an exploration bonus dependent on the exploration policyistosampleanactionuniformlyatrandomfromU [40].
+parameter e. The parameter e is typically selected such that it Once the while loop of the main function terminates, an
+is on a similar scale as typical rewards in the problem. The action recommendation uˆ←argmax V(u) is returned (Line
+exploration bonus encourages trying actions that have rarely 6). The value estimates of POMCP converge asymptotically
+beentried,promptingexploratorybehavior.Aftersamplingan to the optimal open loop value [40].
+observationz ,thetreepolicystageiscontinuedbyarecursive
+call to the function SIMULATE (Line 16). Finally, the counts
+and values of all action sequences visited during the episode
+B. Sequential Monte Carlo planning
+3If N({u 0:d ,u(cid:48)}) = 0 for any u(cid:48) ∈ U, the action is instead sampled
+uniformlyatrandomfrom{u(cid:48)∈U |N({u
+,u(cid:48)})=0}. Kantas et al. [44] present a sequential Monte Carlo (SMC)
+method to maximizing functions of the form Algorithm 2 Sequential Monte Carlo optimization, adapted
+from [44].
+J H (φ)= G(y,φ)p(y |φ)dy, (11) Input: The POMDP model, number of iterations l max , in-
+creasing integer sequence {ν }lmax, sampling kernels q ,
+Y optimization horizon H, resampling threshold M .
+which is seen to be equivalent to Eq. (8) by setting y =z , t
+φ={b ,u }, and choosing G as a function that enc 1 o : m H - 1: function SMC(b 0 )
+passes 0 the 0 a : p H p−ro 1 priate summations4. 2: for l=1,...,l max do
+3: for i=1,...,M do
+The key idea of the SMC optimization method of [44] is
+t w o he c r o e ns p t ( ru φ c ) t is a a s n eq a u r e b n it c r e ary of p d ri i o s r tri t b h u a t t io is ns no λ n ν ze ∝ ro p at (φ th )J e H m ( a φ x ) i ν - 5 4 : : f u o 0 ( r i : ) H j−= 1,l 1 ∼ ,.. q . l ( , · ν | l u d 0 o :H − 1,l − 1 )
+mizers of Eq. (11). This approach is related to the Bayesian 6: z 1 (i :H ) ,j ∼p(z 1:H |b 0 ,u( 0 i : ) H 1,l )
+7: end for −
+interpretationofsimulatedannealingandmaximumlikelihood
+estimation,see[45].Asν →∞,λ (φ)becomesconcentrated l
+on the set of maximizers of J . In
+practice, a set of particles w(i) (cid:81)
+νl (cid:16)
+H l 1 0 0,l
+is evaluated via the objective function and, based on the − j=1
+evaluation result, particles are either discarded or carried + (cid:80)− γkρ(τ(b(i) ,u(i) ,z(i)),u(i))
+k 1 k 1,l k,j k,l
+forward to the next evaluation round. Eventually the particle k=1 − −
+9: end for
+set converges to represent an action sequence maximizing
+10: for i=1,...,M do
+Eq. (11).
+The SMC method is presented in Algorithm 2. The al- 11: w(i) ←w(i)/ (cid:80) w(j)
+gorithm iterates over l = 1,...,l , where the number j=1
+max 12: end for
+o ru f n i - t t e im ra e tio r n e s qu l i m re a m x en is ts c . h T o h s e en al a g c o c r o it r h d m ing m t a o in t t h a e ins ac a cu s r e a t cy of a M nd 13: if 1/ (cid:80) M (w l (i))2 <M t then
+particles. At iteration l, each particle indexed by i with 14: Resample; w(i) ←1/M ∀i
+an associated weight w(i) represents a sequence of actions l
+l 15: end if
+u 0 (i : ) H 1,l and a set of ν l observation sequences conditional 16: end for
+on th − e action sequence, denoted z 1 (i :H ) ,j , j = 1,...,ν l . The 17: end function
+integers {ν } must form a strictly increasing sequence.
+The algorithm≥has been shown to converge to the optimal
+solution for logarithmic sequences, although in practice faster
+increasing linear or geometric sequences are used [45, 44].
+Thesequence{ν } isanalogoustothetemperaturecooling
+schedule in simulat≥ed annealing.
+A control sequence is sampled for each particle from a
+kernel q (Line 4). For l = 1, the initial control sequences
+are sampled from a prior distribution that is nonzero at the
+maximizersof(11).Ingeneral,thechoiceofq dependsonthe Figure 2: Convergence of the SMC algorithm in a robotic
+problem specifics. The selection of the kernel determines how exploration task. Subfigures 2a through 2c indicate increasing
+newcontrolsequencesamplesdependontheearlierones,and iterationslofthealgorithm.Therobotlocationandoutlineare
+ithasacentralroleindetermininghowefficientthealgorithm indicatedbyathinblackcircle.Localtrajectoriesshownbythe
+is. For further discussion on kernel selection, we direct the blue lines are superimposed on a greyscale image indicating
+reader to [46]. current map information. The map shows occupied cells in
+Aftercontrolsequenceshavebeensampled,theyareapplied black, free cells in white, and unknown cells in grey. The
+to generate ν replicas of possible state-observation sequences local trajectories are sequentially evaluated based on their
+whenexecutingthecontrolsequence(Lines5-7).Theweights informativeness, and eventually converge towards the most
+of the particles are updated by approximating the objective informative local trajectory.
+function applying the state and observation samples contained
+ineachparticle(Line8).Inthisstep,thebeliefstatesforgiven
+j,l,i follow the recursion b(i) =τ(b ,u(i) ,z(i)).
+At the end of each itera k tion, res k a − m 1 plin k g− 1 i , s l p k e , r j formed if rithm2iseasilyparallelized,aseachparticlecanbeprocessed
+independently.
+the effective sample size [47] falls below the threshold value
+M (Line 14). After step l = l , the maximizer estimate Figure 2 shows an example of applying Algorithm 2 to
+is extracted as u(im) , where i = argmaxw(i). Algo- a robotic exploration problem. The figure shows for three
+iterations of the algorithms how possible trajectories for the
+robot corresponding to the particles are evaluated, weighted
+4For this method, G must be finite and strictly positive, which can be
+andresampled,convergingtowardsthemostinformativelocal
+achievedbyaddingafinitepositiveconstantwithoutaffectingtheargument
+maximizingtheobjectivefunction. trajectory.
+V. MUTUALINFORMATIONINMOBILEROBOTICS The first term of Eq. (15) is the MI of X and Z:
+In this section, we present a new approximation for mutual (cid:90) (cid:90) p(x |b,u,z )
+I(X;Z |b,u)= p(x,z |b,u)log (cid:48) (cid:48) dxdz .
+information (MI) that is especially useful in mobile robotics (cid:48) (cid:48) p(x |b,u) (cid:48) (cid:48)
+domains. As the approximation is sample-based, it is straight-
+forward to apply it together with forward simulation based
+The second term of Eq. (15) is the conditional MI of M and
+planning. The approximation is derived in Subsection V-A,
+Z, given X. By the definition of conditional MI [28],
+and in Subsection V-B we present a method for efficiently
+(cid:20) (cid:21)
+drawing observation samples in the case occupancy grids are I(M;Z |X,b,u)=E log p(m (cid:48) ,z (cid:48) |x (cid:48) ,b,u) ,
+used as a map representation. Z,X,M p(m |x,b,u)p(z |x,b,u)
+(cid:48) (cid:48) (cid:48) (cid:48)
+where the expectation is taken w.r.t. p(z ,x,m | b,u). By
+A. Approximation of mutual information (cid:48) (cid:48) (cid:48)
+Assumption 1, p(m |x,b,u)=p(m |b,u), and by the law
+(cid:48) (cid:48) (cid:48)
+The state s ∈ S in a robotic exploration problem is of conditional probability we have
+decomposed into the robot’s internal state x ∈ X and the (cid:90) (cid:90)
+environment state or map m ∈ M, i.e. S = X × M. I(M;Z |X,b,u)= p(x,z |b,u)
+(cid:48) (cid:48)
+The internal state represents the pose of the robot, and the
+environmentstaterepresentsallrelevantfeaturesoftheworld.  Z X 
+We make the following assumption asserting that the robot is  (cid:90) p(m (cid:48) |x (cid:48) ,z (cid:48) ,b,u)log p(m (cid:48) |x (cid:48) ,z (cid:48) ,b,u) dm (cid:48)dx (cid:48) dz (cid:48)
+unable to affect the environment state through its actions. p(m |b,u)
+Assumption 1. The robot’s internal state and environment M (18)
+state evolve independently, i.e.
+We have thus shown that both terms on the right hand side of
+T(s,s,u)=T (x,x,u)T (m,m), (12) Eq. (15), namely, Eqns. (16) and (18), are expectations under
+(cid:48) x (cid:48) m (cid:48)
+the same joint pdf p(x,z | b,u). Drawing N samples from
+(cid:48) (cid:48)
+whereT x :X×X×U →R+andT m :M×M→R+arethe this pdf and defining I N as above, by the lemma of Monte
+robot and environment state transition models, respectively. Carlo integration [48, Ch. 3.2] I converges to I(X,M;Z |
+b,u) almost surely.
+We remark that this assumption does not imply that the
+internal and environment state are independent. To apply the approximation presented in Theorem 2, we
+Suppose information gain (Definition 1) with Shannon en- draw samples from p(x,z |b,u) by the following three-step
+(cid:48) (cid:48)
+tropy as the uncertainty function is applied as the reward in method for i=1,2,...,N:
+an exploration POMDP. This leads to I f (b,u) equal to the 1) Sample from the current belief state s(i) =
+mutual information, which can be approximated as follows. (x(i),m(i))∼b,
+Theorem 2. Denote by b ∈ B the current belief state, by 2) Propagate the sample through the factored state tran-
+u ∈ U the current action, and let X, M, and Z denote sition model of Assumption 1, yielding new samples
+the random variables depicting the robot state, environment x (cid:48) (i) ∼T x (x (cid:48) ,x(i),u) and m (cid:48) (i) ∼T m (m (cid:48) ,m(i)).
+state, and observation at the next decision epoch. Consider 3) Thesamplefromthepreviousstepisdistributedaccord-
+the mutual information of the state (X,M) and observation ing to the predictive pdf bu =p(x (cid:48) ,m (cid:48) |b,u). Recalling
+Z, defined s (cid:48) =(x (cid:48) ,m (cid:48) ), we have by marginalizing over M
+I(X,M;Z |b,u)= p(x,z |b,u)= O(z ,s,u)bu(s)dm, (19)
+(cid:48) (cid:48) (cid:48) (cid:48) (cid:48) (cid:48)
+(cid:90) (cid:90) p(x,m |b,u)
+p(x,m |b,u)log (cid:48) (cid:48) dxdm.
+(cid:48) (cid:48) p(x |b,u)p(m |b,u) (cid:48) (cid:48) M
+(cid:48) (cid:48) and we may thus sample z(i) ∼O(z ,s(i),u) to obtain
+(cid:48) (cid:48) (cid:48)
+M X (13) the desired samples.
+Theorem 2 is applicable with three restrictions. First, we
+IfAssumption1holdsandif{x(i),z(i)}N ∼p(x,z |b,u),
+(cid:48) (cid:48) i=1 (cid:48) (cid:48) must be able to draw samples from the state transition and
+where N is the number of samples, then the approximation
+observationmodelseitherdirectlyore.g.applyingimportance
+1 (cid:88) N p(x (cid:48) (i) |b,u,z (cid:48) ) sampling. Secondly, evaluating the first sum term in Eq. (14)
+N N p(x(i) |b,u) requiresustobeabletoevaluatethepredictiveprobabilityand
+i=1 (cid:48) theposteriorprobabilityofarobotstatex(i) givenanactionu
+(cid:35) (cid:48)
++ (cid:90) p(m |b,u,z(i),x(i))log p(m (cid:48) |b,u,z (cid:48) (i),x (cid:48) (i)) dm and a measurement z (cid:48) (i). The predictive pdf can be evaluated
+(cid:48) (cid:48) (cid:48) (cid:48)
+p(m |b,u) applying the state transition model. It is not generally easy
+M (14) to find the posterior p(x (cid:48) (i) | b,u,z (cid:48) (i)), but in some cases it
+can be approximated by a unimodal distribution. As argued
+converges almost surely to I(X,M;Z |b,u) as N →∞. by [24], such a case arises e.g. for robots equipped with
+accuraterangesensorssuchaslaserrangefinders(LRFs).LRF
+Proof. By the chain rule for MI [28],
+datacanbeleveragedviascanmatchingtoobtainlocalization
+I(X,M;Z |b,u)=I(X;Z |b,u)+I(M;Z |X,b,u). (15) estimates that are significantly more precise than estimates
+based only on robot’s state transition models. Consequently,
+the measurement likelihood is strongly peaked and the pos-
+terior pdf of the robot state given the observation may be
+approximatedbyaunimodaldistribution,e.g.aGaussianwith
+a small covariance. Third and finally, evaluating the integral
+term in the sum of Eq. (14) requires us to be able to compute
+posterior map pdfs given a pose and an observation. This
+correspondstotheproblemofmappingwithknownposes[22].
+We must also be able to evaluate the integral expression over
+the map state. The difficulty of this depends on the map
+representation,butissimplee.g.foroccupancygridmapsdue
+Figure 3: Occupancy grids and observed areas. The robot’s
+to the independence assumption of the grid cells: the integral
+poseismarkedbyablackcircle,andthedashedsectordepicts
+term reduces to a sum over cells.
+sensor range. The cells with a grey background denote the
+The overall effect of the approximation is that we avoid
+subset of the occupancy grid that is potentially sensed either
+computing the full state posterior pdf and solving the implied
+at a single pose (left side) or a trajectory depicted by dashed
+SLAM problem when evaluating the expected information
+lines between robot poses (right side).
+gain of a control action. Note that this does not preclude
+executing a SLAM algorithm for the real process indepen-
+dently of the task of finding an optimal open loop action
+an optimization horizon H and the control actions u , a
+sequence. The current belief state b = p(x,m) provided by sequence z(i) of observation samples is constructed. In − the
+the SLAM algorithm is applied as initial information for 1:H
+case of a laser range finder, raytracing may be applied to
+finding the optimal open loop solution. Sometimes the real
+draw observation samples. Raytracing simulates a laser beam
+process SLAM particle filter may be susceptible to losing
+originating from the robot’s pose x, tracking which cells the
+consistency [25, 9], and applying the proposed approximation
+beam travels through. When the ray intersects a cell c, the
+may lead to a failure state as this possibility is not considered
+occupancy information p is applied to determine whether the
+while planning trajectories. In such cases, either the SLAM c
+cellisfreeandthebeampassesthrough,orthecellisoccupied
+algorithm must be improved or an alternative approximation
+and the beam hits an obstacle in the cell. In the former case,
+for MI applied. (c,0)isinsertedtoz(i),andinthelattercase(c,1)isinserted
+to z(i) and the raytracing is terminated.
+B. Observation sampling in occupancy grid maps As the same cell may be observed at multiple decision
+epochs and the observations should be consistent, i.e. they
+To apply the forward simulation based planning algorithms
+are generated from the same true underlying map, a persistent
+presented in Section IV together with the approximation of
+mapsamplemp keepingtrackoftheoccupancystatesofcells
+MIpresentedabove,efficientmethodsfordrawingobservation
+intersected by the simulated laser beams is maintained. The
+samples given a sequence of control actions are required. In
+persistent map sample is also a collection of pairs (c,o) of
+this section, we introduce such a sampling method for occu-
+a cell c and its sampled occupancy o ∈ {0,1} in the map.
+pancy grid maps [22], a map representation widely applied in
+Whenever a cell c is encountered during ray tracing, it is first
+mobile robotics.
+checked whether mp contains it already.
+An occupancy grid map defines a partition of a space into
+equally-sizedcellsc.WeassumethatthemapMiscomposed An observation sampling algorithm implementing these
+features is presented in Algorithm 3. A sample of the current
+of a finite number of such cells. Each cell is in one of two
+hiddenstates,eitherfree(0)oroccupied(1).Ascelloccupancy posex( 0 i) isdrawnfromp(x 0 )obtainedbymarginalizingfrom
+is often not known exactly, an occupancy probability P(c = the current belief state b 0 = p(x 0 ,m 0 ) (Line 3). For each
+1) := p ∈ [0,1] models the information regarding the state decision epoch 0 ≤ t ≤ H − 1, a pose sample x(i) is
+of the cell. drawn (Line 5) from the robot’s dynamic model. Raytracing
+The occupancy information is revised through sensor ob- with the persistent map sample mp is applied to sample z(i)
+servations. Depending on the robot’s sensors and its pose x, (Line6)fromtheobservationmodel.Inthiscase,thesampling
+it is possible that only a subset M˜(x) ⊂ M of the map is is implemented in the function RAYTRACE.
+sensed by a robot at x. Figure 3 shows an example of such Foreachlaserbeamincidenceangleandeachcellalongthe
+a scenario. We note that even several measurements over a beam,theoccupancystateofthecellisfirstdetermined.Ifthe
+trajectorytraversedbytherobotmayonlyprovideinformation cellchasalreadybeenencounteredduringthesamplingofany
+regarding a subset of the whole map area. As the cells of z(i), k <t, its occupancy state is retained from the persistent
+an occupancy grid map are independent, this suggests that an map sample, and otherwise its occupancy state is sampled
+efficientmethodforsamplingobservationsmaybeconstructed according to p (Lines 13-18). Finally, the actual observed
+byconsideringonlythesubsetofpotentiallysensedmapcells. occupancy j is sampled according to the sensor observation
+We represent observations z as collections of pairs of the model (Line 19), and the resulting observation is added to the
+form (c,j), where c denotes the cell and j ∈{0,1} is the ob- observation sample. The value j = 1 indicates that the beam
+served occupancy for the cell: free (0) or occupied (1). Given hit an obstacle, and the raytrace for this incidence angle is
+terminated (Line 22).
+Algorithm 3 Observation sampling for a laser range finder
+(LRF).
+Input: The POMDP model, optimization horizon H.
+1: function SAMPLE(b 0 ) 6
+2: mp ←∅ ]m
+3: Sample x( 0 i) ∼p(x 0 ) [ y 8
+4: for t=0,...H −1 do 10
+:
+:
+|x( t i),u t ) 12
+7: end for 14
+8: return z(i) 1 2 3 4 5 6 7 8 9 10
+9: end function x[m]
+Figure4:Atestmapforasingledecision.Therobot’sstarting
+10: function RAYTRACE(x) locationisindicatedbythecirclemarker,andthreetrajectories
+11: for all incidence angles α of the LRF do are labeled by the corresponding actions a , a and a .
+12: for all cells c along a beam starting at x in
+direction α do
+13: if (c,·)∈/ mp then of the proposed POMDP based planning approach in three
+14: Sample o∼p c domains:amaze,anoffice,andanoutdoorenvironment,each
+15: mp ←mp∪{(c,o)} having different scale and other properties. These simulations
+16: else were implemented in MATLAB. Based on the results, we
+17: o←{o|(c,o)∈mp} propose a further improvement of the POMDP approach, and
+18: end if compare the improved method with frontier-based exploration
+19: Sample j ∼p(z (cid:48) |o,x) in Subsection VI-C.
+21: if j =1 then
+A. An illustrative example
+23: end if We first consider the effect of prior information and opti-
+24: end for mization horizon for making a single decision in a small toy
+25: end for domain as shown in Figure 4. The white and black cells in
+26: return z the map are unoccupied and occupied cells, respectively. The
+27: end function robot was equipped with a simulated laser range finder with
+a maximum range of 2 metres for sensing the environment
+As map occupancies are sampled only as required (when a state, and had three possible action choices to select between
+simulated LRF ray enters a cell), computational savings are as indicated by the trajectories overlaid in the figure. Each
+accrued compared to the naive approach of always sampling action was designed specifically to have a varying effect on
+occupancy values for every cell before raytracing. After the the achievable mutual information over a horizon of several
+observationsamplesz 1 (i :H ) havebeenobtained,thecorrespond- decisions. Action a 2 , corresponding to moving straight ahead,
+ingvaluesofMIcanbecomputedapplyingtheapproximation initiallydoesnotprovidemuchinformationabouttheenviron-
+of Theorem 2. For integration with the SMC method (Algo- ment as the view of the range finder is partially blocked by
+rithm 2), the sampling algorithm (Algorithm 3) is executed thecorridorleadingtowardsthetopofthefigure.Despitethis,
+independentlyforthecontrolactionsequenceofeachparticle. executing a 2 eventually leads the robot to the large open area
+For integration with the POMCP method (Algorithm 1), the in the top part of the environment. In contrast, actions a 1 and
+action u t on Line 5 of Algorithm 3 is obtained either from a 3 yield greater immediate information gain, but ultimately
+the tree policy or from the rollout policy. lead to dead-ends at the left and right bottom parts of the
+map. The boundary of the area was assumed to be known to
+VI. SIMULATEDEXPLORATIONEXPERIMENTS the robot, i.e., the robot can detect when an action would take
+We studied the POMDP based planning in a set of explo- it outside the boundary of the environment.
+ration experiments in three simulated domains. In particular, We note that in a real application also intermediate choices
+the effect of prior information and the optimization horizon with a curvature between that of a and a , or a and a ,
+H were examined. The proposed planning approaches were would be available for the robot. However, for the purpose
+compared to myopic (one-step greedy) planning, which is of this example, we did not consider them. In the subsequent
+the special case of the proposed approach with H = 1 (see experiments on larger maps, the SMC method considers the
+e.g. [2, 15, 17]), and frontier-based exploration [10]. full uncountable action space.
+WebeginbyconsideringanillustrativetoyexampleinSub- Aspriorinformation,therobotrecordedasingleobservation
+section VI-A. In Subsection VI-B, we study the performance with the laser range finder from the initial location, and
+updated the map occupancy probabilities accordingly. The
+robot’s initial location was selected so that this observation 0
+did not reveal the presence of the occupied cells in the map. 1
+Additionally, two cases were considered: one with no addi- 2
+tional prior information, and another one with an informative
+priorthatindicatedtheoccupiedareasintheenvironment(the
+white cells in Figure 4), but leaving occupancy probabilities ]m 4
+elsewhere as they were. y5
+Table I: Values of actions in the small map as function of
+the optimization horizon H and for a non-informative and
+informative prior, shown with the true optimal action (bottom 8
+row).
+0 2 4 6 8 10
+Prior Action H=1 H=2 H=3 H=4
+a1 102.4 173.6 235.7 212.4
+Uniform a2 101.8 167.1 248.8 325.4
+a3 106.5 177.3 235.0 223.0 0
+a1 81.8 145.9 189.7 200.5
+Informative a2 78.9 157.0 231.0 298.5
+a3 97.2 129.4 172.5 140.8
+Opt.action a3 a2 a2 a2
+We applied the POMCP algorithm (Algorithm 1) to plan y
+a single decision. Table I shows the value estimate of each
+action for either case of prior information as a function of the 50
+optimization horizon H. The action with the greatest value is
+indicated by a bold font. Also the optimal action, as found 60
+by an exhaustive search over all possible action sequences
+0 10 20 30 40
+while assuming perfect sensing, is shown for reference. As H x[m]
+increases, action a is chosen in the case of no additional
+(b) Office
+prior for H ≥ 3 and in case of the informative prior for
+H ≥ 2. In case of no additional prior information, a 2 is 0
+eventually preferred as the other actions eventually lead (after
+two decision epochs in the planning phase) to a dead-end 50
+where the robot cannot progress any further and thus cannot
+collect more information. In the case of an informative prior, 100
+however, a is preferred already for H = 2: as the occupied
+cells are indicated, the robot is able to avoid the dead-ends [150
+blocked by the occupied cells near the bottom corners of the
+map. We also note that the difference in the values between
+the recommended and second-best action tend to be greater
+for the informative prior, indicating that the algorithm is able
+to more confidently distinguish between the actions.
+0 50 100 150 200 250 300
+B. Performance of POMDP based planning
+(c) Outdoor
+We next examine the effect of prior information and the
+Figure 5: Environments examined in the simulation experi-
+optimization horizon in domains larger than the toy example
+ments.
+presented above. Subsection VI-B1 outlines the experimental
+setup, and Subsection VI-B2 presents the results.
+1) Experimental setup: Three environments as illustrated
+repository5. The x and y coordinates of the robot’s starting
+in Figure 5 were examined: a maze (Figure 5a), office-like
+location in each environment were as follows. In the maze
+(Figure 5b), and an open outdoor environment (Figure 5c).
+environment, (x,y) = (7.9,8.6); in the office environment,
+White and black cells are unoccupied and occupied, respec-
+(38.5,58.0); and in the outdoor environment, (90.0,106.0).
+tively, and gray cells indicate undefined or unobserved cells.
+The simulated robot is able to turn in place, and it is
+The sizes of the environments varied from approximately 10-
+by-10 meters (maze) to 250-by-250 meters (outdoor). The
+5RoboticsDataSetRepositoryRadish[49].WeacknowledgeCyrillStach-
+office and outdoor maps were obtained from an online data niss(andGiorgioGrisetti)forprovidingtheoffice(outdoor)environmentdata.
+controlled by applying a linear and angular velocity. For
+the maze and office environments, the robot was assigned
+a maximum linear velocity of 1 meter per second, and for
+Non-informativeprior Informativeprior
+the outdoor environment 3 meters per second. The angular 800
+velocitywasconstrainedtobebetween-0.5and0.5radiansper H=1
+second.Therobotwasequippedwithalaserrangefinderwith
+amaximumrangeof4meters(mazeandofficeenvironments), d H=7
+or15meters(outdoorenvironment).Timewasdiscretizedinto
+1 second intervals per decision epoch, and robot trajectories r ev400
+were simulated applying the velocity motion model from [50, ita
+Ch. 5.3]. m300
+ForplanningwithPOMCP(Algorithm1),thecontrolspace C
+was discretized uniformly to 9 linear velocity and 7 angular
+velocity values, resulting in a total of 63 control actions. The
+exploration bonus e was set to 50 for the maze and office 0
+5 15 25 35 45 55 65 75 5 15 25 35 45 55 65 75
+environments and 100 for the outdoor environment. A total of Decisionepoch Decisionepoch
+N =3000 simulation episodes were executed when planning
+s (a) Maze
+each action.
+Non-informativeprior Informativeprior
+For planning with SMC (Algorithm 2), the control space
+does not need to be discretized, but the kernels for sampling H=1
+control signals must be specified. It is more likely that the 6000 H=3
+robot obtains more information the greater the amount of
+unexplored cells covered by its sensors. Thus, to increase ra
+the likelihood of observing more unexplored cells, the initial e r4000
+imum velocity. Angular velocities were sampled uniformly u C2000
+at random. The number of particles was M = 100, and a
+threshold value of M = M/4 was set to trigger resampling. 1000
+For iterations l > 1, we applied a Gaussian kernel with
+varianceproportionalto(1/l2)timesthefullrangeofpossible 5 15 25 35 45 55 65 75 85 95 5 15 25 35 45 55 65 75 85 95
+Decisionepoch Decisionepoch
+linear and angular velocity values. Control actions violating
+the aforementioned maximum and minimum values for the (b) Office
+velocities were rejected. A cooling schedule ν =2l+5 was Non-informativeprior Informativeprior
+applied, with l =7.
+During the simulations, control actions were checked by H=3
+examining their corresponding trajectories. If the trajectory H=5
+entered cells with occupancy probability greater than 0.2, the d ra20000 H=7
+control action was rejected. The robot was also not allowed e
+to move outside the map area or enter unknown areas (grey ev15000
+cells in Figure 5).
+Forpriorinformation,anon-informativeandaninformative u10000
+prior were considered. A non-informative prior corresponds
+to the case where the map area is initially unknown to 5000
+the robot, with the exception of information provided by a
+single observation recorded at the robot’s starting location. 5 15 25 35 45 55 65 75 85 95 5 15 25 35 45 55 65 75 85 95
+The informative prior was designed such that in the maze Decisionepoch Decisionepoch
+environmentitcorrespondstotellingtherobotthelocationsof (c) Outdoor
+allthemazewalls(asindicatedbytheblackcellsinFigure5a)
+Figure 6: Cumulative reward in the maze, office, and outdoor
+by assigning them occupancy probability of 0.99, and in the
+environments as a function of optimization horizon H apply-
+office and outdoor environments indicating the unknown area
+ing POMCP (Algorithm 1). The lines with the markers show
+(the gray cells in Figures 5b and 5c) by again assigning them
+the means over 5 simulation runs, while the horizontal bars
+an occupancy probability of 0.99. For each type of prior and
+indicate the 95% confidence intervals. In each subfigure, the
+each environment, the experiment was repeated five times.
+left panels show results for a non-informative prior and right
+2) Results: Figure 6 shows comparisons of the cumulative
+panels for an informative prior.
+mutual information reward collected as a function of the
+decision epoch when the POMCP algorithm was applied, in
+eachoftheenvironmentsstudiedandforoptimizationhorizons
+POMCP. From the data we determined that for POMCP the
+Non-informativeprior Informativeprior
+6000 robot decided to move from its initial position at (38.5,58.0)
+towards the large open area around coordinates (25,50) (see
+H=5 Figure 5b for the map with coordinate axes) in 1 out of 5
+d H=7 cases for H = 5, and in all of the five cases for H = 7.
+w In contrast, for SMC, the robot instead moves towards the
+ev3000 corridor around coordinates (45,50) in 4 out of 5 cases for
+H =5,andin3outof5casesforH =7.Movingtotheopen
+m u2000 area results in a much greater information gain over a long
+sequenceofdecisions,explainingthereasonforthedifference
+1000 in favour of POMCP for H =7. We do not believe this to be
+an indication of the superiority of the POMCP approach, but
+0 rather a byproduct of a statistical evaluation of the algorithms
+5 15 25 35 45 55 65 75 85 95 5 15 25 35 45 55 65 75 85 95
+Decisionepoch Decisionepoch combinedwiththestochasticnatureofthesolutionalgorithms
+themselves.
+Figure 7: Cumulative reward in the office environment ap-
+Overall, the results of the experiments indicate that non-
+plying SMC (Algorithm 2). The lines with the markers show
+myopic planning (H > 1) is useful when the available prior
+the means over 5 simulation runs, while the horizontal bars
+information can be leveraged to find more informative local
+indicate the 95% confidence intervals. The left panel shows
+trajectories. This is the case in particular for the maze envi-
+results for a non-informative prior, and the left panel for an
+ronment with an informative prior (Figure 6a), and the office
+informative prior.
+environment with an informative prior (Figures 6b and 7).
+Theinformationtherobothasaboutthemapaffectswhether
+increasing the optimization horizon is useful. In the maze
+H =1, 3, 5, and 7. The lines indicate the mean values, while
+environment with a non-informative prior, the robot typically
+the horizontal bars indicate the 95% confidence intervals of
+has information about the map only in its immediate vicinity
+the mean values. For the non-informative prior, increasing the
+as its view is blocked by nearby maze walls. Thus, most local
+optimizationhorizondidnotconsistentlyresultinanincreased
+trajectories,shortorlong,leadtherobotoutsidethisarea,and
+cumulative reward in any of the environments. This is due
+increasing the optimization horizon is not useful if the prior
+to the fact that in this case the map samples (and hence
+information about these areas is not accurate (Figure 6a). The
+the corresponding observation samples) are drawn assuming
+officeenvironmentismoreopen,allowingtherobottoobserve
+a uniform prior on the map cells’ occupancy, which poorly
+the map in a larger area around it. The information gained in
+reflects the true configuration of the environment.
+this way leads to improvements in exploration performance
+In contrast, for the informative prior, statistically signifi- when increasing the optimization horizon, even in the case of
+cantly greater cumulative rewards were obtained in the maze anotherwisenon-informativeprior.Oncethelocaltrajectories
+and office environments when increasing H, as indicated by considered are such that they bring the robot outside the area
+Figures 6aand 6b.A similareffect washowever notobserved aboutwhichithasaccurateinformation,performancedoesnot
+intheoutdoorenvironment(Figure6c).Inthemazeandoffice improve anymore: for instance, in the left panel of Figure 6b,
+environments, there are dead-ends, i.e. locations where the this happens for H > 3. One further case where increasing
+robot has to travel through already-explored areas to reach the optimization horizon is not useful if the environment is
+new, unexplored areas. Choosing to traverse towards a dead- suchthatalllocaltrajectoriesareroughlyequallyinformative.
+end may seem informative in the short term, but yields poor This is the case in the outdoor environment, which consists
+information gainlater. Dead-ends maybe avoided ifsufficient primarily of open areas (Figure 6c).
+prior information is available and can be exploited, i.e. the
+optimization horizon is great enough to indicate the presence
+C. Combining POMDP based and frontier based exploration
+ofadead-end.Turningacornerinthemazemayseverelylimit
+thetrajectory optionsavailable atsubsequent decisionepochs. The proposed POMDP approach is capable of handling
+In contrast, the outdoor environment is primarily open, and uncertainty in robot and environment states in a principled
+committingtoacertaintrajectoryusuallydoesnotimposesuch manner, allowing quantifiable trade-offs between uncertainty
+limitations. The experimental results suggest that the effect of reduction and the cost of control actions. However, the opti-
+priorinformationonexplorationperformanceislesserinsuch mizationhorizonhastobeboundedtomaintaincomputational
+an open environment. feasibility. Thus only local reward information can be consid-
+Similar results were observed for the SMC algorithm, as ered, leading to susceptibility to local minima.
+shown for the office environment in Figure 7. Here, the lines A frontier-based exploration method, see e.g. [10], detects
+indicate the mean values, while the horizontal bars indicate frontiers between free and unknown areas in the current map.
+the 95% confidence intervals of the mean values. Comparing One of the frontiers is selected as the exploration target,
+therightpanelofthefiguretotherightpanelofFigure6b,we based on, e.g. the distance from the robot’s current position
+note that for the informative prior the effect of increasing the to the frontier, or the size of the frontier. The robot is then
+horizon H for SMC does not seem to be as significant as for commandedtomovetowardstheselectedtarget.Thus,frontier
+exploration can exploit global knowledge of frontiers towards z t p(x t ,m t )
+unexplored areas over the whole map. SLAM Planner
+POMDP based exploration can fail when local information
+available within the optimization horizon is not sufficient to uˆ t:t+H 1
+findanactionwithgoodexplorationperformance,forexample
+if no unexplored area is reachable within the optimization Environment Controller
+horizon. To reduce the effect of these types of failures, we
+implemented an exploration method that combines POMDP Figure 8: A software implementation of the planner. The
+based and frontier based exploration. The method applies cloud-shaped block depicts the environment the robot is
+POMDP based planning and executes the actions thus found interacting with. The rectangular blocks indicate software
+until it reaches a situation where either 1) all local action modules, and arrows indicate propagation of signals between
+sequences are below a given informativeness threshold, as the modules, labelled by the mathematical symbol of the
+measured by the expected total MI for them, or 2) all valid signal.
+localactionsequencescorrespondtotrajectorieswithalength
+less than a given threshold value, indicating a possible dead-
+end. When either of the conditions triggers, a frontier explo- new area, or move less than 0.5 meters, it would trigger the
+ration method is queried once for a frontier to be assigned as frontier exploration method once instead of continuing with
+thenexttargetfortherobot.Whenthisfrontierisreached,the POMDP based exploration.
+POMDP planning phase is again resumed. A conceptual overview of our software implementation is
+We will argue that combining POMDP based and frontier shown in Figure 8. The robot is interacting with the envi-
+basedexplorationinthiswaypresentsastrongeralternativeto ronment, shown on the bottom left hand side of the figure.
+applying either approach alone. To support this argument, we The outputs from the environment, i.e., observations z , are
+executed a series of experiments comparing such an approach processed by the SLAM algorithm to revise the belief state
+to only applying frontier exploration. The software used in b =p(x ,m ). Based on the current belief state, the planner
+this subsection was implemented in C++, and is available at module shown on the top right of the figure computes an
+1) Experimental setup: We chose to conduct the exper-
+moduleshownonthebottomrightofthefigur−edecideswhich
+iments in the office environment (Figure 5b), as based on control action u to finally apply.
+SubsectionVI-B2increasingtheoptimizationhorizonH there The simulation was implemented in the Stage robot simu-
+improves performance both in the case of non-informative lator [51], integrated with the Robot Operating System (ROS)
+andinformativeprior.Weimplementedthemethodcombining framework [52] where the exploration algorithms were imple-
+POMDP based and frontier based exploration applying the mented. The SLAM module we applied (see Figure 8) was
+SMCalgorithmandthebasicfrontierexplorationalgorithmas the RBPF SLAM algorithm based on [24]. As the frontier ex-
+presented e.g. in [10]. The SMC method was chosen since it ploration method, we applied an open source implementation
+without need to manually define a fixed set of primitive We remark that there exist multi-robot frontier-exploration
+control actions from which the trajectories are constructed. techniques that make use of prior information, e.g., in the
+This method was then compared to only applying the basic form of semantic information about types of areas in the
+frontier exploration method. map [53, 54]. Suitable applications for these methods include
+Eachoftheexplorationexperimentswasrepeatedfivetimes. for example search and rescue, where semantic information
+Each repetition was terminated either at a timeout of 400 about the types of rooms, e.g., office or lobby, can help
+seconds, or if a failure happened that either caused the robot guide the robots to promising search areas. However, in the
+togetstuck,ortheplannersoftwaretofailtoproducearesult. experimentshere,nosuchsemanticinformationwasavailable.
+AsinSubsectionVI-B1,theinitialinformationprovidedtothe 2) Results: Overall, in the 40 exploration runs applying
+robotconsistedofasingleobservationrecordedatthestarting the proposed method (5 runs for each of the 4 horizons,
+location, in addition to possible prior information. with 2 cases for prior information), we observed 10 failures
+For the SMC algorithm, we set the number of particles to with the experiment terminating before the timeout of 400
+M = 20, and the resampling threshold to M = M/4. A seconds. There were 8 cases of planner failure, either due to
+cooling schedule ν =2l+5 was applied, with l =4. The being unable to detect a frontier after trying POMDP based
+simulated robot and the kernels applied for sampling control exploration, or due to inability to find a feasible path towards
+actions were as described in Subsection VI-B1. We applied the requested exploration target. There were 2 cases in which
+maps with a resolution of 0.05 meters per cell, and set the the robot got stuck in the simulator after a collision. Among
+thresholdfortriggeringfrontierexplorationatatotaltrajectory all failure cases, the earliest time of occurrence was at 195
+length of 0.5 meters or expected MI of less than 50 bits. The seconds, while the average time of failure occurrence was at
+50 bit MI threshold corresponds to 50 completely unknown 273 seconds. In the 5 runs with the pure frontier exploration
+cells(occupancyprobability0.5)becomingcompletelyknown method, there was 1 failure at 197 seconds due to inability to
+(occupancy probability 0 or 1), so, roughly speaking, if the find any frontiers.
+robot expected to explore less than 0.125 square meters of Sincefrontierexplorationdoesnotconsidermutualinforma-
+increasesmonotonicallyasafunctionofH,andtheconfidence
+Non-informativeprior
+200 intervals are smaller than for the non-informative prior.
+H =1 We note that with the exception of the myopic case H =1,
+H =3 the proposed method does not perform significantly worse
+160 H =5 than pure frontier exploration during any time interval. It
+2] H =7 is interesting to note that although the area explored at the
+m Frontier end of the experiment is not significantly greater for the
+d e 120 proposed method than for pure frontier exploration, there are
+o lp time intervals where the difference is significant in favour of
+x e 80 the proposed method. Such intervals can be seen for example
+a e from75secondstoabout200secondsforthenon-informative
+A prior, H =5, and from 75 seconds to about 175 seconds for
+40 the informative prior, H =7.
+When we examined the trajectories the robot chose in
+each of these cases more closely, we discovered that this
+0 difference is primarily due to a different choice of initial
+0 50 100 150 200 250 300 350 400
+exploration target. Recall that the robot started at coordinates
+(38.5,58.0) (see Figure 5b). The proposed method, especially
+(a) Non-informative prior withaninformativeprior,favoursmovingtowardsthecorridor
+Informativeprior at coordinates (40,50), as moving instead to the room at
+200 coordinates (40,60) is noted to quickly lead to a dead-end
+H =1 providing no further information gain. This is however not
+H =3 considered by frontier exploration, which favoured moving
+160 H =5 first to the frontier in the room, and then returning to explore
+2] other areas once the dead-end was discovered.
+m Frontier
+[ Afurtherexampleoftheusefulnessofpriorinformationcan
+e be seen in Figure 2. The prior information indicates the outer
+lp edges of the environment, shown in the figure by the black
+e 80 lines bordering the unknown area. Initially, the trajectories
+e sampledaredistributedevenlyleadingtowardsthecorridoron
+the left hand side of Figure 2a and the area on the right hand
+40 side of the figure. Availability of prior information however
+indicatesthatasmallerunknownareawillbevisiblewhenthe
+robotmovestothelefthandsidecorridor,comparedtomoving
+to the potentially large open area on the right hand side. As
+0 50 100 150 200 250 300 350 400
+Time[s] the total MI related to either trajectory choice is evaluated,
+the SMC algorithm eventually discards trajectories towards
+(b) Informative prior
+the corridor and converges on a trajectory bringing the robot
+Figure 9: Comparison of POMDP based exploration (with towards the open area instead, as seen in Figure 2c. In cases
+optimization horizon H) combined with frontier based explo- with a non-informative prior, both trajectory options result in
+rationwithpurefrontierexplorationintheofficeenvironment. roughly equal expected MI.
+The lines with the markers show the mean area explored over Since the proposed method combines POMDP based and
+5 simulation runs, while the horizontal bars indicate the 95% frontier based exploration, it is illustrative to consider how
+confidence intervals. Figure 9a shows the results for a non- often either of the exploration techniques is applied. Table II
+informative prior, and Figure 9b for an informative prior. indicates the average number of times the proposed method
+applied either POMDP based or frontier based exploration to
+select the next target where the robot should move to explore
+tioninselectingexplorationtargets,wepresentthecomparison the environment. In the majority of the cases, POMDP based
+results in terms of the total area explored as a function of exploration is preferred. As expected, shorter optimization
+the time spent exploring. Figure 9 shows the mean area horizons H lead the robot more frequently to situations
+explored and its 95% confidence interval over each of the where no informative local trajectories can be found, and
+five experiments, for each of the methods applied. The results subsequently frontier exploration is applied more frequently.
+shown take into account that not every experiment ran until We also note that applying the informative prior seems to
+the timeout of 400 seconds. resultinlesscallstofrontierexploration,indicatingfurtherthe
+There seems not to be a significant difference in the area usefulnessofpriorinformationforPOMDPbasedexploration.
+explored between the cases of non-informative or informative Overall,thereisaslightlydecreasingtrendinthetotalnumber
+prior.However,wecanseethattheconsistencyoftheresultsis of calls to either method as a function of H, since the robot
+betterincaseoftheinformativeprior:themeanareaexplored tendstotraversealongertrajectorybeforeconsideringthenext
+exploration target for longer optimization horizons.
+TableII:Theaveragenumberoffunctioncallsintheproposed
+method over five experiments to either the POMDP based or
+the frontier based exploration method. Results are shown as
+a function of the optimization horizons H, and for both the -10
+case of non-informative and informative prior information. H=5
+H POMDP Frontier Frontier
+1 28.2 10.0
+Non-informativeprior
+.
+.
+.
+.
+7 23.2 3.4
+1 25.2 5.0
+3 25.2 3.4
+Informativeprior 5 19.6 2.4 15
+7 18.6 1.8
+-20 -10 0 10 20
+Basedontheexperimentalresults,ourproposedmethodcan
+outperformfrontierbasedexplorationintermsofareaexplored
+in the initial part of exploration when the environment is still
+largelyunknown.Wenotethisise.g.,duetotheabilityofthe (a)
+proposed method to avoid dead-ends. Complete exploration
+of an environment is the goal in many applications, meaning
+that also dead-ends should eventually be explored. We note
+that although the proposed method combining POMDP based
+and frontier based exploration will eventually achieve this,
+the strategy it applies may not be optimal: considering the
+objective of complete exploration, it might be worthwhile to
+explore nearby dead-ends immediately rather than returning
+to them later after exploring other parts of the environment.
+When this strategy can be improved upon depends at least on
+theavailabilityofpriorinformation,andremainstobestudied
+morecarefully.Inconclusion,webelievetheproposedmethod
+is preferable in applications where quickly exploring the local
+environment for a high information gain is required, and
+completeness of exploration in the short term is not crucial.
+VII. REAL-WORLDEXPLORATION
+To verify the feasibility of applying our proposed planning
+approachinarealapplication,inthissectionwepresentresults
+on exploration tasks in a real environment. The experimental
+setupisdescribedinSubsectionVII-A,andresultsarereported
+in Subsection VII-B.
+A. Experimental setup
+Figure 10: (a): A partial map of the campus library envi-
+The experiments were executed at a university campus ronment. Occupied, free, and unknown areas are indicated
+library.Apartialmapoftheenvironmentwiththerobot’sstart- by black, white, and gray cells, respectively. The robot’s
+inglocationindicatedisshowninFigure10a.Theenvironment starting location is indicated by a filled black circle marker.
+featuresopenareasandnarrowcorridorsbetweenbookshelves. Overlaidonthemapareexamplesoftypicaltrajectoriestaken
+In all experiments, the robot started at the location indicated applying the proposed exploration method or frontier based
+by the black circle marker in the figure. A view of the exploration. The map shown corresponds to the data collected
+environmentshowingtherobotatitsstartinglocationisshown while traversing the trajectory for H =7. The unknown areas
+in Figure 10b. The photograph was taken such that it shows throughwhichtheothertrajectoriestravelwereobservedtobe
+the environment towards the negative values of the x-axis in freeinthecorrespondingexperiments,butnotshownhere.(b):
+the map of Figure 10a. The robot had no prior information A view of the environment from the robot’s starting location.
+about the environment beyond a single observation recorded
+at the starting location.
+Table III: The minimum, average and maximum planning
+approach instead of frontier exploration. We observed the
+timesfortheSMCalgorithmasafunctionoftheoptimization
+proposed approach with H = 7 to result in a significantly
+horizon H.
+greater total area explored than frontier exploration after 200
+seconds.
+Planningtime[s]
+To understand why this is the case, it is useful to study
+Min Avg Max
+the trajectories traversed by the robot applying each of the
+5 2.60 4.24 6.14
+exploration methods. Figure 10a shows typical examples of
+7 2.03 5.21 7.61
+trajectories for each of the methods. Frontier exploration,
+indicatedbytheblackdashedline,consistentlychosetomove
+The experiments were carried out with a robot such as towards the negative x axis from the starting location. In this
+described in Subsection VI-B1. The robot’s velocities were direction, there was a row of bookshelves aligned as shown
+equal to those of the simulated robot of Section VI-B1. The in Figure 10b. As indicated by the curves in the initial part
+robotwasequippedwithalaserrangefinderwithamaximum of the trajectory, frontier exploration would find the nearest
+range of 4 meters. The robot can also be seen in Figure 10b. frontier behind the corner of the closest bookshelf to the
+The software setup and algorithm parameters were as de- robot. The robot would then move to it, and repeat in a
+scribed in Subsection VI-C1. The robot’s on-board computer, similar manner until reaching the end of the row of shelves.
+equipped with an Intel i7-4500U multicore processor, 4GB Frontierexplorationdoesnotattempttoquantifytheamountof
+of RAM and running a Linux operating system, was applied information that may be gained by such a strategy, but rather
+to run all of the required software. We applied the proposed deterministically moves the robot towards the closest frontier
+exploration method combining POMDP based and frontier found.
+basedexploration,withthesoftwareimplementationdescribed In contrast, we observed the proposed method to adopt a
+in Subsection VI-C, and a frontier based exploration method. different strategy. Since the narrow corridors between book-
+Optimization horizons H = 5 and H = 7 were applied in shelves can often be observed before it is necessary to move
+the POMDP based exploration method. With each method, into them, this information may be applied to select more
+the experiment was repeated 5 times, and each experiment informative trajectories. The robot would generally prefer to
+ran until a timeout of 400 seconds or until a failure caused avoid narrow corridors, as the proximity of the walls made it
+termination of the experiment. unlikelythatmovingtherewouldprovideasmuchinformation
+as moving towards a potentially open area. Corridors were
+B. Results typically only preferred when there was no alternative, such
+asshowninthetrajectoryforH =7indicatedbythecyanline
+For the proposed method, we observed 4 failures with
+in the top right part of Figure 10a. Trajectories with H = 5
+H = 5 occurring at 240, 255, 265, and 376 seconds, and
+weresimilar,asindicatedbythebluelineinFigure10aandthe
+1 failure with H = 7 at 390 seconds. With frontier explo-
+results in Figure 11. Based on similar results in the previous
+ration, we observed 2 failures at 355 and 380 seconds. The
+experiments, we thus believe that increasing the optimization
+failures were due to the robot colliding with an undetected
+horizon further would not result in better performance in this
+obstacle and getting stuck, or the planner failing to find an
+environment.
+exploration target. Failures to find an exploration target most
+oftenhappenedatanarrowcorridor,wheretherobot’ssensors We remark that the results could be different if the robot’s
+erroneously indicated that there was no possible path without startingpositionweretobechanged,asthelocationtoexplore
+a collision to exit the corridor. firstwouldbedifferent.Fortheproposedmethod,thisisdueto
+The minimum, average and maximum planning times re- adifferentsetoffeasiblelocaltrajectoriesconsidered.Forpure
+quired for the SMC algorithm are reported as a function of frontierexploration,thefirstlocationtoexploredependsonthe
+the optimization horizon H in Table III. Longer trajectories map information obtained from sensor readings at the starting
+andlargeropenareastendtoincreasetheamountofmapcells position. If the starting position is changed such that the map
+for which an occupancy value must be sampled to obtain an information remains roughly the same, the same exploration
+estimateoftheMI,thusincreasingtherequiredplanningtime. location would likely be selected.
+Theshortestplanningtimeswereobservedwhentherobotwas Overall, the experiments show that in the environment
+near a wall or in a narrow corridor. During the planning time, studied, combining non-myopic POMDP based planning with
+the robot remained in place. frontier exploration improves performance over pure frontier
+A summary of the experimental results is presented in exploration.Althoughfrontierexplorationcanapplyallglobal
+Figure 11, showing the mean area explored and its 95% information to select the next exploration target, it performs
+confidence interval as a function of time, for each of the the selection in a heuristic manner, ignoring the expected
+explorationmethodsconsidered.Fortheproposedmethodwith information gain. POMDP based methods can evaluate the
+H = 5, results are only shown up to around 265 seconds, as information available locally within the optimization horizon
+onlytwooftheexperimentsranforalongertime.Inallcases, to select exploration targets that lead to quantifiably greater
+theconfidenceintervalsdrawntakeintoaccountthenumberof expected information gain. The weakness of the method,
+active experiments remaining. The results suggest that in this susceptibilitytolocalminimaduetothefinitehorizon,canbe
+environment,itisbeneficialtoapplytheproposedexploration alleviatedbycombiningitwithtraditionalfrontierexploration.
+the consistency of the real process SLAM filter cannot be
+Campuslibrary
+ignored [25, 9], actions that lead to such a failure state may
+320 H =5 be selected.
+H =7 Morepriorinformationabouttheenvironmentwasnotedto
+280 Frontier improve exploration performance. In future work, a database
+2] 240 of typical map features for different types of environments,
+for instance, office, outdoor, etc. could be maintained, and
+d e 200 map samples drawn from the database instead, see e.g. [55].
+a e 120 the assumption of spatial independence between occupancy
+A grid cells could be applied, for instance higher order Markov
+80 random fields [56].
+ACKNOWLEDGMENTS
+0 50 100 150 200 250 300 350 400 We thank Mr. Joonas Melin and Mr. Eero Heina¨nen for
+Time[s] their support in executing the experimental work. This work
+was partly supported by the TUT Graduate School and TUT
+Figure11:Areaexploredinthecampuslibraryenvironmentas
+Strategic funding for robotics and intelligent machines.
+afunctionoftime.Resultsareshownfortheproposedmethod
+with optimization horizon H = 5 or H = 7, and for frontier
+exploration. The lines with the markers show the mean area

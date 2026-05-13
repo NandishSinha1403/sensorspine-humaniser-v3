@@ -1,0 +1,713 @@
+Noname manuscript No.
+(will be inserted by the editor)
+Computer Vision Accelerators for Mobile Systems based on
+OpenCL GPGPU Co-Processing
+Guohui Wang · Yingen Xiong · Jay Yun · Joseph R. Cavallaro
+Received:/Accepted:
+Abstract In this paper, we present an OpenCL-based wireless communication and digital imaging technolo-
+heterogeneous implementation of a computer vision al- gies. On one hand, as mobile processors have become
+gorithm – image inpainting-based object removal algo- more and more powerful and versatile during the past
+rithm – on mobile devices. To take advantage of the several years, we are witnessing a rapid growth in the
+computation power of the mobile processor, the algo- demand for the computer vision applications running
+rithmworkflowispartitionedbetweentheCPUandthe on mobile devices, such as image editing, augmented
+GPUbasedontheprofilingresultsonmobiledevices,so reality, object recognition and so on [3, 6, 11, 20, 21,
+that the computationally-intensive kernels are acceler- 25,30,31].Ontheotherhand,withtherecentadvances
+ated by the mobile GPGPU (general-purpose comput- in the fields of computer vision and augmented reality,
+ing using graphics processing units). By exploring the the emerging algorithms have become more complex
+implementation trade-offs and utilizing the proposed andcomputationally-intensive.Therefore,thelongpro-
+optimization strategies at different levels including al- cessing time due to the high computational complexity
+gorithmoptimization,parallelismoptimization,andmem- prevents these computer vision algorithms from being
+ory access optimization, we significantly speed up the practically used in mobile applications.
+algorithmwiththeCPU-GPUheterogeneousimplemen- To address this problem, researchers have been ex-
+tation, while preserving the quality of the output im- ploring general-purpose computing using graphics pro-
+ages.Experimentalresultsshowthatheterogeneouscom- cessing units (GPGPUs) as accelerators to speed up
+putingbasedonGPGPUco-processingcansignificantly the image processing and computer vision algorithms
+speed up the computer vision algorithms and makes thankstotheheterogeneousarchitectureofthemodern
+them practical on real-world mobile devices. mobileprocessors[1,2,5,8,9,12,23,24,28].Ondesk-
+top computers or supercomputers, numerous program-
+Keywords MobileSoC·Computervision·CPU-GPU
+mingmodelshavebeenextensivelystudiedandutilized
+partitioning · Co-processing · OpenCL
+tofacilitatetheparallelGPGPUprogramming,suchas
+theComputeUnifiedDeviceArchitecture(CUDA)[18]
+andtheOpenComputingLanguage(OpenCL)[13,15].
+1 Introduction
+As a comparison, due to the lack of parallel program-
+ming models in the mobile domain, the OpenGL ES
+Mobiledeviceshaveevolvedrapidlyandbecomeubiqui-
+(EmbeddedSystem)programmingmodelwascommonly
+tousoverthepastdecade,givingrisetonewapplication
+used to harness the computing power of the mobile
+demandsthroughtheconvergenceofmobilecomputing,
+GPU[14].However,theinherentlimitationsoftheOpenGL
+ES lead to poor flexibility and scalability, as well as
+G.WangandJ.R.Cavallaro
+limited parallel performance, due to the fact that the
+DepartmentofElectricalandComputingEngineering
+RiceUniversity,Houston,Texas-77005, USA OpenGL ES was original designed for 3D graphics ren-
+E-mail:wgh@rice.edu, cavallar@rice.edu dering. Recently, emerging programming models such
+Y.Xiongand J.Yun as the OpenCL embedded profile [13] and the Render-
+QualcommTechnologiesInc., SanDiego,California,USA Script [7] have been supported by the state-of-the-art
+1v8324.3041:viXra
+Turbo decoder
+2 Guohui Wangetal.
+Work group Work group
+Mobile SoC
+Private ... Private Private ... Private
+memory memory memory memory
+Image signal
+GPU Multi-core Multi-core Image signal
+CPU GPU processor . . .
+Work ... Work Work ... Work
+item item item item
+Local memory Local memory
+Other System memory/
+Other System memory/
+accelerators Global memory Sensors
+accelerators Global memory Global memory
+Fig. 2 OpenCL programming model and hierarchical mem-
+Fig. 1 Architectureofatypical mobileplatform.
+oryarchitecture.
+mobile processors, making the mobile GPGPU feasible
+preferabletoseekthegeneral-purposecomputingpower
+for real-world mobile devices for the first time [21, 26,
+insidethemobileprocessor.ThemobileGPUsaresuit-
+27].
+ablecandidatestoacceleratecomputationallyintensive
+Inthispaper,wetaketheexemplar-basedimagein-
+tasks due to their highly parallel architecture.
+paintingalgorithmforobjectremovalasacasestudyto
+The lack of good parallel programming models be-
+explorethecapabilityofthemobileGPGPUtoacceler-
+comes an obstacle to perform general-purpose comput-
+ate computer vision algorithms using OpenCL. The re-
+ing on the mobile GPUs. As a compromise, researchers
+mainder of this paper is organized as follows. Section 2
+have been using the OpenGL ES programming model
+introduces the architecture of the modern mobile SoCs
+for GPGPU to achieve performance improvement and
+and the OpenCL programming model for the mobile
+energyefficiencyonmobiledevicesduringthepastdecade.
+GPGPU. Section 3 briefly explains the exemplar-based
+Forinstance,Singhaletal.implementedandoptimized
+inpaintingalgorithmforobjectremoval.Weanalyzethe
+an image processing toolkit on handheld GPUs [24].
+algorithm workflow and propose a method to map the
+Nah et al. proposed an OpenGL ES-based implemen-
+algorithm between mobile CPU and GPU in Section 4.
+tation of ray tracing, called MobiRT, and studied the
+To adapt the complex algorithm to the limited hard-
+CPU-GPU hybrid architecture [16]. Ensor et al. pre-
+ware resources on mobile processors, we further study
+sented GPU-based image analysis on mobile devices,
+implementation trade-offs and optimization strategies
+in which the Canny edge detection algorithm was im-
+to reduce the processing time in Section 5. Section 6
+plemented using the OpenGL ES [5]. Researchers have
+showsexperimentalresultsonapracticalmobiledevice,
+also attempted to accelerate feature detection and ex-
+which indicates that our optimized GPU implementa-
+tractionusingthemobileGPUs [1,8,23,31].Recently,
+tionshowssignificantspeedup,enablingfastinteractive
+performance characterization and energy efficiency for
+objectremovalapplicationsinapracticalmobiledevice.
+mobile CPU-GPU heterogeneous computing have been
+Section 7 concludes the paper.
+studied [2, 28].
+Thanks to the unified programmable shader archi-
+2 GPGPU on Mobile Devices tecture and the emerging parallel programming frame-
+works such as OpenCL, the new generation of mobile
+As is shown in Fig. 1, a modern mobile SoC (system- GPUs have gained real general-purpose parallel com-
+on-chip) chipset typically consists of a multi-core mo- puting capability. OpenCL is a programming frame-
+bile CPU, a mobile GPU with multiple programmable workdesignedforheterogeneouscomputingacrossvar-
+shaders, and an image signal processor (ISP) [10, 19, ious platforms [13]. Fig. 2 shows the programming and
+22].Unliketheirdesktopcounterparts,themobileCPU the hierarchical memory architecture of OpenCL. In
+and GPU share the same system memory via a sys- OpenCL, a host processor (typically a CPU) manages
+tem bus. The mobile platforms also contain a variety theOpenCLcontextandisabletooffloadparalleltasks
+of sensors and accelerators. Modern mobile platforms to several compute devices (for instance, GPUs). The
+tend to employ heterogeneous architectures, which in- paralleljobscanbedividedintoworkgroups,andeach
+tegrate several application-specific co-processors to en- ofthemconsistsofmanyworkitemswhicharethebasic
+able the computationally intensive algorithms such as processingunitstoexecuteakernelinparallel.OpenCL
+facedetectionandsoon.However,thespacelimitation definesahierarchicalmemorymodelcontainingalarge
+and the power constraints of the mobile devices limit off-chipglobalmemorybutwithlonglatencyofseveral
+the number of integrated hardware co-processors. It is hundredclockcycles,andasmallbutfaston-chiplocal
+JSignProcessSyst(2014) 3
+Source image with target Update priority for all Find the patch to be filled
+object region Ω pixels on the border based on the max priority
+Final result with the hole Fill the current object Find the best patch with
+filled patch minimum SSD values
+Fig. 3 Majorstepsofthe exemplar-basedimageinpainting algorithm forobjectremoval.
+processortoacceleratecomputervisionalgorithms.The
+object removal algorithm involves raw image pixel ma-
+nipulation,iterativeimageprocessingtechnique,sumof
+squareddifference(SSD)computationandsoon,which
+are typical operations for many computer vision algo-
+Original image Mask image Result image
+rithms. Therefore, the case study of the object removal
+Fig. 4 An example of the object removal algorithm. The implementationcanrepresentaclassofcomputervision
+maskimageindicatestheobjecttoberemovedfromtheorig-
+algorithms,suchasimagestitching,objectrecognition,
+inalimage.
+motion estimation, texture analysis and synthesis, and
+so on. Therefore, by studying and evaluating the per-
+memorywhichcanbesharedbyworkitemsinthesame formance of the exemplar-based object removal algo-
+work group. To efficiently and fully utilize the limited rithm on mobile devices with CPU-GPU partitioning,
+computationresourcesonamobileprocessortoachieve thefeasibilityandadvantagesofusingthemobileGPU
+high performance, partitioning the tasks between CPU as a co-processor can be demonstrated. Furthermore,
+and GPU, exploring the algorithmic parallelism, and theoptimizationtechniquesproposedinthispapercan
+optimizingthememoryaccessneedtobecarefullycon- possiblybeappliedtoothercomputervisionalgorithms
+sidered.Fewpriorworkshavestudiedthemethodology withsimilaroperationpatternsoralgorithmworkflows.
+ofusingOpenCLtoprogrammobileGPUsandachieve
+Object removal is one of the most important image
+speedup. Leskela et al. demonstrated a prototype of
+editing functions. As is shown in Fig. 4, the key idea
+OpenCLEmbeddedProfileemulatedbyOpenGLESon
+of object removal is to fill in the hole that is left be-
+mobile devices and showed advantages in performance
+hind after removing an unwanted object, to generate
+andenergyefficiency[12].Inourpreviouswork,wehave
+a visually plausible result image. The exemplar-based
+explored the mobile GPGPU capability of mobile pro-
+inpainting algorithm for object removal can preserve
+cessors to accelerate computer vision algorithms such
+bothstructuralandtexturalinformationbyreplicating
+as an image editing algorithm (object removal), and
+patches in a best-first order, which can generate good
+feature extraction based on SIFT (scale-invariant fea-
+image quality for object removal applications [4, 29].
+turetransform)[26,27].Performanceimprovementand
+In the meanwhile, this algorithm can achieve compu-
+energy consumption reduction have been observed.
+tational efficiency thanks to the block-based sampling
+processing, which is especially attractive for a parallel
+implementation.
+3 Overview of Exemplar-based Object Removal
+Algorithm The major steps of the exemplar-based inpainting
+algorithm for object removal proposed by Criminisi et
+In this paper, we take the exemplar-based inpainting al. is depicted in Fig. 3 [4]. Assume we have a source
+algorithm for object removal as a case study to show image S with a target region Ω to be filled in after an
+the methodology of using the mobile GPU as a co- object is removed (the empty region). The left image
+4 Guohui Wangetal.
+Table 1 Specificationoftheexperimentalsetup. in which d(Ψ q ,Ψ p ) is defined as follows:
+Mobile SoC Snapdragon 8974 (cid:88)
+CPU Krait 400 Quad-core q p p q
+Maxclockfrequency 2.15GHz p∈Ψp∩Φ,q∈Ψq∩Φ
+Computeunits 4
+Assume that the size of the original image is M ×N,
+Local memory 32KB/computeunit
+and the size of the patch is P ×P. The complexity of
+GPU Adreno 330
+findBestPatch can be estimated as O(MNP2). Based
+Maxclockfrequency 400MHz
+Computeunits 4 on our profiling (will be shown in Section 4), findBest-
+Local memory 8KB/computeunit Patch compute kernel occupies the most computations
+Operatingsystem Android4.2.2 in the whole object removal algorithm.
+Developmenttoolset AndroidNDKr9 Oncethebestmatchingpatchisfound,wecopythe
+Instructionset ARM-v7a
+pixel values of Ψ into Ψ . The aforementioned search
+and copy process is repeated until the whole target re-
+region is denoted as Φ (Φ = S − Ω). The border of gion Ω is filled up. More details of the algorithm can
+the object region is denoted as δΩ. The image patches be found in reference [4].
+are filled into the object region Ω one by one based on
+priorityvaluesC(p).GivenanimagepatchΨ centered
+4 Algorithm Workflow Analysis and CPU-GPU
+at pixel p for p∈δΩ, the priority value C(p) is defined
+Partitioning
+as the product of two terms:
+In this section, we analyze the workflow of the object
+P(p)=R(p)·D(p), (1) removal algorithms and describe the algorithm parti-
+tioning between the CPU and GPU to fully utilize the
+in which R(p) is the confidence term indicating the
+resources of the mobile SoC chipset.
+amount of reliable information surrounding the pixel
+p, and D(p) is the data term representing the strength
+of texture and structural information along the edge of 4.1 Experimental Setup
+the object region δΩ in each iteration. R(p) and D(p)
+are defined as follows: Theprofilingandexperimentsareperformedonadevel-
+opmentplatformconsistingofaQualcommSnapdragon
+C(q) 8974 chipset [22], which supports OpenCL Embedded
+Profile for both CPU and GPU. The details of the ex-
+perimental setup are listed in Table 1.
+where|Ψ |istheareaofΨ ,α isanormalizationfactor 4.2 Algorithm Mapping
+(for a typical grey-level image, α = 255), and n is a
+unit vector orthogonal to δΩ in the point p. Fig.5showsaworkflowdiagramoftheexemplar-based
+Accordingtothepriorityvaluesforallpatchesacross inpaintingalgorithmforobjectremoval.Thealgorithm
+the border δΩ of the target region, we select a candi- canbepartitionedintothreestages:initializationstage,
+date patch with the maximum priority value. Then, we iterative computation stage, and the finalization stage.
+searchtheimageregionΦandfindapatchΨ thatbest The blocks with the slashed lines are core functions in-
+matchesthepatchΨ (wecallthisstepfindBestPatch). side the iterative stage and represent most of the com-
+The goal of findBestPatch is to find the best match- putational workload. We can map the core functions
+ing patch Ψ from candidate patches Ψ in the source intoOpenCLkernelstoexploitthe2-dimensionalpixel-
+imageregionΦ,tomatchanobjectpatchΨ intheob- levelandblock-levelparallelismsinthealgorithms.The
+ject region Ω based on a certain distance metric. The CPU handles the OpenCL context initialization, mem-
+sum of squared differences (SSD) is typically used as a ory objects management, and kernel launching. By an-
+distance metric to measure the similarity between the alyzing the algorithm, we partition the core functions
+patches [4]. We denote the color value of a pixel x by into eight OpenCL kernels based on the properties of
+I = (R ,G ,B ). For an object patch Ψ , the best thecomputations,asisshowninTable2.IneachOpenCL
+patch Ψ is chosen by computing: kernel, the fact that no dependency exists among im-
+ageblocksallowsustonaturallypartitionthetasksinto
+q˜ p q work groups. To represent color pixel values in RGBA
+JSignProcessSyst(2014) 5
+Indicate objects which
+need to be filled
+C functions OpenCL kernels Compute priority with
+the confidence map
+Indicate objects which Identify the Extract initial borders of
+need to be filled filling borders objects, and set the initial Find a patch with
+confidence map C(p)
+maximum priority
+Any unfilled No Generate the
+Extract initial borders of border ? result image Identify the filling Find the best patch
+objects, and set the initial
+Yes borders
+confidence map C(p)
+Compute priority Copy the color values and
+Find a patch with
+with the gradients from the patch
+confidence map maximum priority Any unfilled Yes to the filling patch
+border ?
+Update the Copy color values Find the No Update confidence
+confidence and gradients to best patch map C(p)
+map C(p) the filling patch Generate the result image
+Initialization Iterative computations Finalization
+Fig. 5 Algorithm workflow of the exemplar-based object removal algorithm. Please note that one OpenCL block might be
+mappedtooneormultipleOpenCL kernelsdependingonthecomputationandmemory dataaccesspatterns.
+Indicate objects which α · h
+Table 2 Breakdown of execution time for OpenCL kernel need to be filled
+functionsrunningonlyonCPU. w
+α · w α· w
+Exec Extract in(i2tiαa+l 1b)o ·r hders of h
+Kernelfunctions % time[s] objects, and set the initial
+ConvertRGBimagetogray-scaleimage 0.08 0.09% confidence map C(p) Object Update the Copy color values
+Updateborderoftheareatobefilled 0.60 0.69% confidence and gradients to α · h Marksourcepixelstobeused 0.66 0.76% SearchI adreenatify the map C(p) the filling patch
+Updatepixelprioritiesinthefillingarea 0.45 0.52% filling borders
+Updatepixelconfidenceinthefillingarea 0.36 0.41% (2α+1) · w
+Find the best matching patch 84.4 97.0%
+UpdateRGBandgrayscaleimage 0.46 0.53%
+ofthefillingpatch
+TotalTime 87.0 100% Compute priority
+Any unfilled Find a patch with Find the best
+border ? maximum priority patch
+confidence map
+(red green blue alpha) format, we use efficient vector
+data structures such as cl uchar4 to take advantage of
+built-in vector functions of OpenCL.
+To better optimize the OpenCL-based implemen-
+tation, we first measure the timing performance of the
+OpenCLkernels.Table2showsabreakdownofprocess-
+ing time when running the program on a single core of
+the CPU on our test device. The OpenCL kernel func-
+tionusedtofindthebestmatchingpatchwiththecur-
+rent patch (denoted as findBestPatch) occupies most
+of the processing time (97%), so optimizing the find-
+BestPatch kernelbecomesthekeytoimprovingperfor-
+mance.
+5 Algorithm Optimizations and
+Implementation Trade-offs
+5.1 OpenCL Implementation of findBestPatch Kernel
+The algorithm mapping of findBestPatch kernel used
+for the OpenCL implementation is shown in Fig. 6. To
+Work Work group group
+ca lS ize.x
+work groups
+work groups
+Work group
+...
+Work group
+...
+...
+... ...
+Fig. 6 AlgorithmmappingoffindBestPatch kernelfunction
+usingOpenCL.
+performafullsearchforthebestpatchΨ tomatchthe
+current filling patch Ψ in the findBestPatch OpenCL
+kernel, we spawn M ×N work items, with each com-
+puting an SSD value between two P ×P patches. We
+partitiontheseM×N workitemsintoworkgroupsac-
+cordingtothecomputecapabilityoftheGPU.Thesize
+of 2-dimensional work groups can be expressed as
+((cid:100)M/localSize.x(cid:101),(cid:100)N/localSize.y(cid:101)). (5)
+In our implementation, each work group contains
+8×8workitems(localSize.x=8,localSize.y=8).There-
+fore, each work group of work items perform SSD com-
+putations for 64 patch candidates. The parallel imple-
+mentationoftheSSDcomputationinthefindBestPatch
+kernel function is detailed in Algorithm 1.
+6 Guohui Wangetal.
+Table 3 Descriptionofimagesinthetestdataset.Theseimagesareselectedtorepresentdifferenttypesofimagescenesand
+differentshapesofobjects toberemoved.
+Image Image type Image size Object type Object size
+WalkingMan Complexscene 512×384 Blob 78×126
+River Complexscene,texture 480×639 Smallblob 59×93
+DivingMan Texture 576×384 Big/randomshape 155×186
+Hill Complexscene 1024×550 Longstrip 1024×10
+Fig. 7 The best patch mapping found by a full search and the result images. The 1st row: original images. The 2nd row:
+maskscoveringtheunwantedobjects.The3rdrow:bestpatchmapping;thesmallsquaresindicatethebestpatchesfoundby
+thefindBestPatch()function.The 4th row:resultimages.
+5.2 Experimental Dataset
+α · w α· w
+To demonstrate the best patch matching behavior of Object
+the object removal algorithm, we employ several differ-
+ent test images to cover different scenarios, which are Search area
+shown in the first row of Fig. 7. The characteristics of
+these test images are summarized in Table 3. We chose
+images with different background scenes and textures, Fig. 8 Diagramofreducedsearchareawithsearchfactorα.
+with variable image sizes and object sizes, and with
+different object shapes, so that by performing experi-
+ments on these images, we can better understand the
+implementation trade-offs related to the performance
+improvement.
+JSignProcessSyst(2014) 7
+Algorithm 1 Compute SSD values between all can-
+didate image patches and the image patch to be filled
+using an OpenCL kernel function. B =max(0,o −( +α)w),
+1. Input:
+(a) PositionofobjectpatchΨ p :(px, py); B right =min(N,o x +( 2 +α)w),
+(b) Patchsize P;
+2. Output:SSDarrayssdArray; B =max(0,o −( +α)h),
+3. Begin OpenCL kernel: top x 2
+4. GetglobalIDforthe currentworkitem:(i,j); 1
+5. floatsum=0.0; bottom x 2
+6. int src ,src ;//sourcepixel position
+7. int tgt ,tgt ;//targetpixel position Bydefiningthesearchfactorαthisway,wecaneas-
+8. int winsize=P/2; ilyadjustthesearcharea.Moreover,thismethodallows
+9. for(inth=−winsize;h(cid:54)winsize; h++)
+the search area to grow along four directions with an
+10. for(intw=−winsize;w(cid:54)winsize;w++)
+equal chance, so as to increase the possibility of find-
+11. src =i+w; src =j+h;
+12. tgt =px+w; tgt =py+h; ing a better patch. Since there are no useful pixels in
+13. if((src x ,src y )or(tgt x , tgt y )isoutof image) the object area for patch matching, only the candidate
+14. continue;
+patches not in the object region will be compared with
+15. end if
+the object patch. So the actual size of the search area
+16. if(pixel(tgt , tgt )isinside sourceregionΦ)
+17. Readpixel (tgt , tgt )dataintotgtData; (SA) can be expressed as:
+18. Readpixel (src , src )dataintosrcData;
+19. sum+=(tgtData−srcData)2;
+20. end if
+21. end for
+23. Store sumintossdArray;
+24. End OpenCL kernel The complexity of findBestPatch can be estimated by
+O(((2α + 1)2 − 1)whP2). Thus, when we reduce the
+search area (reducing α), the complexity to search the
+best patch reduces significantly.
+Fig.9demonstratestheeffectofreducingthesearch
+factor α. After reducing the search factor, the best
+matching patches are limited to a small region around
+5.3 Reducing Search Space the object region. Even when the search factor is re-
+duced significantly to only α = 0.05, we still get visu-
+ally plausible results. Due to its importance, choosing
+apropersearchfactorαiscriticalforpracticalapplica-
+We have done experiments to verify the locations of tionstoachievegoodperformanceandefficiency.Based
+thebestpatchesfoundbyafullsearchacrossthewhole on our experiments, for a regular object region, choos-
+imagearea.ForthetestimagesshowninFig.7,mostof ing parameter α in the range of 0.05 ≤ α < 0.5 nor-
+the best patches are found in a region surrounding the mally leads to good implementation trade-offs. If the
+object area. The reason is that adjacent areas usually algorithm is to be applied to a certain type of images,
+have similar structures and textures in natural images. trainings on datasets can be performed to determine a
+Toreducethesearchingtime,wecanutilizethisspatial proper search factor α.
+locality by limiting the search space. To better model In addition to time reduction, reducing the search
+thisoptimizingstrategyinascalablemanner,wedefine area can also reduce the possible false matching. As a
+a search factor α. Assume the width and height of the comparisonmetric,SSDcanroughlyrepresentthesim-
+object area are w and h respectively. The new search ilarity of two patches, but it cannot accurately reflect
+area is formed by expanding the object area by αh to the structural and color information embedded in the
+theupanddowndirections,andαwtotheleftandright patches. Therefore, the patches with the highest dis-
+directions,asisshowninFig.8.Thesearchareafactor tance scores (SSD in this algorithm) may not be the
+αhasarangeof0≤α<max(M/h, N/w).Assumethe best patches to fill in the hole and to generate visually
+object region is centered at coordinate (o o ). Fig. 8 plausibleresultsduetothelimitationofSSDmetric,es-
+shows a typical case in which the whole search area peciallyforcomplexsceneswithdifferentcolorinforma-
+is inside the image area. For more general cases, the tion and structures. The algorithm sometimes can lead
+boundary of the new search area becomes: to false matching, in which the reported “best” patch
+8 Guohui Wangetal.
+Fig. 9 Theeffectofreducingthesearcharea. Thesearcharea factor αisdefinedas inFig.8.
+Patch size 9×9 Patch size 11×11 Patch size 13×13 Patch size 15×15 Patch size 17×17
+Use Adobe PDF printer, high quality
+JSignProcessSyst(2014) 9
+Object area
+Search area
+(2α+1) · w
+Overlap area
+Fig.10 Therelationshipamongsearcharea,objectareaand
+theoverlapareaforthe bestpatchsearching.
+Full 3 2 1 0.5 0.2 0.1 0.05
+dezilamroN
+Patch 13x13, w/o local mem
+Patch 17x17, w/o local mem
+Patch 13x13, w/ local mem
+Patch 17x17, w/ local mem
+Search factor α
+Full 3 2 1 0.5 0.2 0.1 0.05
+gnissecorP
+complexity of the SSD computation (O(P2)) becomes
+higher for the patch matching, which tends to increase
+theprocessingtime.Therefore,itisnotstraightforward
+to determine the impact of increasing patch size P to
+the overall complexity and performance.
+We use Fig. 10 to help us analyze the overall com-
+putation complexity. First of all, we assume the search
+factor α is defined as in the previous section. We also
+define the search area as SA as in (7).
+Secondly,becausethepatchsizeisP,anycandidate
+patchwithin(P−1)pixelsrangesurroundingtheobject
+area Ω will partially overlap with the object area. We
+define this overlapping area as OA, whose area can be
+calculated as:
+If the candidate patch lies outside the overlapping
+area1, the complexity of the SSD computation can be
+estimatedasO(P2).Whenthecandidatepatchandthe
+objectareaoverlaps2,weonlyusethepixelsI inthein- q
+tersectionofthecandidatepatchΨ andsourceimageΦ
+(I ∈Ψ ∩Φ)toperformthecomputation.Wecanesti-
+mate the computation complexity as O(kP2), in which
+k is a constant value, representing the average ratio of
+theoverlappingarea.Foratypicalrectanglesearcharea
+Fig. 11 Impactofincreasedpatchsize13×13and17×17.
+and object area, k can be approximately estimated as
+“WalkingMan” test image. The processing time for 13×13
+0.5. Therefore, the overall computation complexity can
+and 17×17 patches is normalized by the time of the 9×
+9 patch. (The 9×9 patch size is suggested by the original be calculated as in (9).
+algorithmproposedby m wC/ e o m lro o c r i y aml inisi et al.[4 P P] a a) t t. c c h h 9 13 x9 x , 1 w 3, / w o / lo o c l a o l c m al e m m em
+Patch 17x17, w/o local mem
+Patch 9x9, w/ local mem Experimental results show that the processing time
+Patch 13x13, w/ local mem
+Patch 17x17, w/ local mem can be reduced by increasing patch size while reduc-
+with a high correlation score may have very distinctive
+ing the search area. From Fig. 10, an intuitive expla-
+textural or color information compared to the object
+nation is that when we reduce the search area, more
+patch. Underw/ lsocual ch circumstances, the artificial effects
+memory candidate patches overlap with the object region. In
+introducedbythefalsematchingwilldegradethequal-
+thisscenario,thebiggerthepatchesare,themoreover-
+ity of the result images significantly. Fortunately, spa-
+lap there will be. As a result, the amount of required
+tial locality can be observed in most of the natural im-
+computations becomes smaller. Thus, as we increase
+ages,therefore,thevisuallyplausiblematchingpatches
+Search factor α
+the patch size and reduce the search area, the process-
+(intermsofcolorandtexturesimilarity)tendtoreside
+ing time decreases. Equation (9) shows that for bigger
+in the surrounding area of the candidate patch with
+search factor α, the term (2α+1)2dominates the com-
+high chances. By reducing the search area to a certain
+plexity. In this case, the complexity change caused by
+degree, we can reduce the possibility of false matching
+the increased patch size is negligible. However, when α
+and therefore generate visually plausible result images.
+5.00 becomes smaller, the search area decreases. When the
+search area SA becomes comparable to or even smaller
+than the object area Ω, the term (2α+1)2 becomes
+5.4 Optimizing Patch Size
+less dominant. Therefore, for smaller search factor α,
+Theobjectremovalalgorithmisaniterativealgorithm, increasing the patch size P can reduce the computa-
+in which one object patch is processed in each itera- tion complexity. Experimental results shown in Fig. 11
+tion. We need roughly wh/P2 iterations to finish the verifytheaboveanalysis.InFig.11,theprocessingtime
+whole process. That said, if we increase patch size P,
+1 In this case, the candidate patch is in the area of (SA−
+fewer iterationsare neededto fill theobjectarea which OA).
+may lead to shorter processing time. Meanwhile, the 2 Inthiscase, thecandidatepatchisintheareaof OA.
+10 Guohui Wangetal.
+Fig. 12 Theexperimentalresultsforincreasedpatch size.(α=0.05inthisexperiment.)
+JSignProcessSyst(2014) 11
+overall q q
+ localSize.y =   w O ork [ g ( ro ( up 2 s α+1)2−1)w2h2·( SA−α · Oh A +k OA )]
+g W ro o u rk p g W ro o u rk p (α2 · wα+1)2whα−· w(2(P −1)+w)(2(P −1)+h)
+ M  g W ro o u rk p g W ro o u rk p Object
+work groups ((2α+1)2−1)wh Search area
+...
+...
+... ...
+P Table 4 Local memoryusagefor“WalkingMan”image.
+Patch size Data Local memory
+Sourcedata 1024bytes
+9×9 Patchdata 324bytes
+P (p+8−1=16) Patchpixellabel 324bytes
+Total 1672 bytes
+Sourcedata 1600bytes
+13×13 Patchdata 676bytes
+(p+8−1=20) Patchpixellabel 676bytes
+A work group (8×8 work items) P+8-1 Total 2952 bytes
+Sourcedata 2304bytes
+17×17 Patchdata 1156bytes
+(p+8−1=24) Patchpixellabel 1156bytes
+Total 4616 bytes
+5.5 Memory Optimization
+SimilartodesktopGPUs,mobileGPUsalsosufferfrom
+Fig. 13 A detailed diagram showing how 8×8 work items
+long latency of the off-chip global memory. The local
+in a work group compute SSD values in parallel. Most of
+memory on the mobile GPU provides fast memory ac-
+the pixels iUnSEth Aeddoabseh eAdcrboobxata troe parcicnets stehde mfiguultrieple times by
+parallelworkitems. cesses and can be shared by work items in the same
+work group. As mentioned before, a work group con-
+tains 8 × 8 work items, each of which computes an
+SSD value between an object patch and a candidate
+patch. As shown in Fig. 13, the n-th work item works
+on the n-th patch. Most of the pixels in adjacent can-
+didatepatchesoverlap.Forinstance,patch1andpatch
+for patch sizes of 13×13 and 17×17 is normalized by 2 share most of the image pixels and only one col-
+the processing time of the 9×9 patch to show the per- umn of pixels in each patch are different. Similarly, all
+formancespeedupachievedbyincreasingthepatchsize. adjacent candidate patches processed by 8 × 8 work
+Experimental results show that, for bigger search areas items have many overlapped pixels, each of which is
+(α ≥ 1), patch size does not affect the performance. accessedmultipletimesbyseveraldifferentworkitems.
+However, as the search area keeps decreasing (α < 1), Theseunnecessarymemoryaccessestotheglobalmem-
+bigger patch size leads to more significant time reduc- orycanleadtolonglatencyandincreasetheprocessing
+tion. The experimental results in Fig. 11 also indicate time. We can also tell from Fig. 13 that for a P ×P
+thatincreasingthepatchsizeworksfortheexperiments patch, (P + 8 − 1) × (P + 8 − 1) pixels are actually
+with(orwithout)thememoryoptimizationdiscussedin sharedamongworkitems.Thus,wecanloadthesepix-
+Section 5.5. In addition, Fig. 12 shows that by increas- elsintotheon-chiplocalmemorytoallowdatasharing
+ing the patch size, we can generate visually plausible and avoid unnecessary accesses to the global memory.
+result images without degrading the image quality. In our OpenCL implementation, (P +8−1)2 ·sizeof
+Full 3 2 1 0.5 0.2 0.1 0.05
+12 Guohui Wangetal.
+dezilamroN
+Patch 13x13, w/o local mem
+Patch 17x17, w/o local mem
+Patch 13x13, w/ local mem
+Patch 17x17, w/ local mem
+Search factor α
+Full 3 2 1 0.5 0.2 0.1 0.05
+gnissecorP
+w/o local Patch 9x9, w/o local mem
+memory Patch 13x13, w/o local mem
+Patch 17x17, w/o local mem
+Patch 9x9, w/ local mem
+Patch 13x13, w/ local mem
+Patch 17x17, w/ local mem
+Search factor α
+Fig. 14 Performance comparison between using the local
+memoryandwithoutusingthelocalmemory.Theresultsfor
+the “WalkingMan” are shown. The experiments performed
+onothertestimages generatesimilarresults. Fig.15 AninteractiveobjectremovaldemoonAndroidwith
+theOpenCLacceleration.(a)originalimage;(b)amaskindi-
+catingtheobjectarea;(c)intermediateresult;(d)finalresult
+5.00 imageafteriterativeediting.
+(cl uchar4) source image data, P2·sizeof (cl uchar4)
+patch image data and P2 ·sizeof (cl int) patch pixel
+label data can be loaded into the local memory. same work group. We observe on average a 30% reduc-
+Table 4 lists the local memory usage for different tion in processing time after using the local memory.
+patch sizes for the “WalkingMan” test image. The re-
+quired local memory for all the patch sizes listed in
+Table 4 can be fit into the 8KB local memory of the 6 Experimental Results
+Adreno GPU. In addition, if we carefully design the
+methodtoloaddatafromtheglobalmemorytothelo- We implemented the exemplar-based inpainting algo-
+calmemorybydatastriping,wecancoalescetheglobal rithm for object removal on a test platform based on
+memory access to further reduce latency. The parallel theSnapdragonchipsetusingOpenCLandtheAndroid
+dataloadingfromtheglobalmemorytothelocalmem- NDK [7, 13]. We applied the proposed optimization
+ory is shown in Algorithm 2, in which the coalesced techniques discussed in Section 5. To demonstrate the
+global memory access is achieved. efficiency and practicality of the proposed implemen-
+ExperimentalresultsinFig.14demonstratetheper- tation, we developed an interactive OpenCL Android
+formanceimprovementbyutilizingthelocalmemoryto demo on the test platform. Fig. 15 shows screen-shots
+enable the data sharing between work items inside the oftheimplementedAndroiddemoapplication,inwhich
+an end user can draw a customized mask by touching
+the touchscreen to cover an unwanted object and then
+Algorithm 2 Parallel data loading from global mem- remove it by pressing a button. The demo allows itera-
+ory to local memory in findBestPatch kernel function. tive editing, so that the user can keep editing an image
+1. Getglobal IDofthecurrentworkitem: (gid.x,gid.y); until a satisfying result is obtained.
+2. GetlocalIDofthe currentworkitem:(lid.x,lid.y);
+From Table 5 to Table 8, we show the processing
+3. local id=lid.y∗lsize.x+lid.x;
+time of the OpenCL-based implementations, including
+4. Getlocalworkgroupsize:(lsize.x, lsize.y);
+5. group size=lsize.x∗lsize.y; the CPU-only results (utilizing multi-core CPU on the
+6. Calculatelocalmemorysize: local mem size; chip) and CPU-GPU heterogeneous implementations.
+7. while(local index<local mem size)
+We can notice that the OpenCL implementations with
+8. Calculateglobalmemoryaddress;
+proposed optimizations significantly improve the pro-
+9. if(local index<P ∗P)
+10. Calculatepatchdataaddress; cessing performance compared to the serial version im-
+11. LoadpatchPixelLabel into localmemory; plementation.TheCPU-GPUheterogeneousimplemen-
+12. LoadpatchData intolocalmemory;
+tations further improve the performance compared to
+13. end if
+the CPU-only implementations.
+14. LoadsrcDataintolocalmemory;
+15. local index+=group size; Table 5 shows experimental results for the “Walk-
+16. end while ingMan” image, in which the image size is 512×384,
+17. barrier(CLK LOCAL MEM FENCE);
+and the size of the object area 76×128. The mask is
+18. StartSSDcomputationfromhere.(SimilartoAlgorithm
+manually drawn to cover the walking person. With the
+1,justreadneeded datafromlocal memory.)
+default parameter configuration (9×9 patch size, full
+JSignProcessSyst(2014) 13
+Table 5 Total processingtime for “WalkingMan”image,withOpenCLkernelsrunningontheGPU.
+CPU-only HeterogeneousCPU+GPU
+Search factorα Search area w/olocalmemory(s) w/localmemory(s)
+Patchsize Patchsize Patchsize
+9×9 13×13 17×17 9×9 13×13 17×17 9×9 13×13 17×17
+fullsearch 512×384 23.26 22.48 23.68 20.37 19.66 19.15 12.18 11.59 11.12
+2 382×384 18.08 16.97 18.30 16.32 14.93 14.52 9.31 8.82 8.42
+1 234×311 13.37 9.91 9.74 8.17 7.80 7.61 5.34 4.69 4.94
+0.5 156×248 11.27 9.80 8.20 5.29 4.24 3.95 3.93 2.93 2.43
+0.2 109×176 7.13 5.20 3.79 2.95 2.25 1.90 2.26 1.59 1.33
+0.05 86×139 6.02 4.73 3.85 2.12 1.65 1.45 2.04 1.52 1.25
+Table 6 Total processingtime for “River”image.With OpenCLkernelsrunningontheGPU.
+CPU-only HeterogeneousCPU+GPU
+Search factorα Search area Timew/olocalmemory(s) Timew/localmemory(s)
+Patchsize Patchsize Patchsize
+9×9 13×13 17×17 9×9 13×13 17×17 9×9 13×13 17×17
+fullsearch 480×639 25.94 25.01 27.41 18.28 16.19 16.01 14.77 13.80 13.35
+2 295×465 12.23 12.15 12.68 8.52 7.93 7.95 6.71 6.94 6.59
+1 177×279 7.76 6.98 5.34 5.09 3.13 3.11 4.15 2.74 2.60
+0.5 118×186 4.80 3.91 3.82 2.81 2.06 1.42 2.34 1.87 1.5
+0.2 83×130 3.21 1.66 1.57 1.93 1.18 1.05 1.84 1.34 1.06
+0.05 65×102 2.29 1.72 1.91 1.39 1.15 1.01 1.66 1.16 1.00
+Table 7 Total processingtime for “Dive”image.With OpenCLkernelsrunningontheGPU.
+CPU-only HeterogeneousCPU+GPU
+Search factorα Search area Timew/olocalmemory(s) Timew/localmemory(s)
+Patchsize Patchsize Patchsize
+9×9 13×13 17×17 9×9 13×13 17×17 9×9 13×13 17×17
+fullsearch 576×384 64.48 62.86 61.47 44.83 40.45 36.65 44.62 34.97 31.08
+2 576×384 65.11 64.83 63.55 44.73 40.29 36.61 44.67 35.00 31.11
+1 465×384 52.17 54.31 54.99 34.22 33.26 19.33 28.62 28.65 27.81
+0.5 310×369 54.36 37.07 36.82 21.78 22.73 8.24 19.98 23.04 16.68
+0.2 217×260 40.92 29.64 27.69 15.14 9.45 5.66 14.01 10.40 7.40
+0.05 171×205 35.44 22.22 20.171 13.74 7.90 5.40 14.21 7.84 5.31
+search), the serial version of the implementation run- parameter configuration (full search, 9×9 patch, with-
+ningononeCPUcoreuses87secondstofinishthepro- out using the local memory). The subjective quality of
+cessing (shown in Table 2), which is a long processing resultant images does not degrade according to experi-
+time for a practical mobile application. The fact that mental results shown in Fig. 9 and Fig. 12. According
+iterative editing is required under many circumstances to the research conducted by Niida et al., users of mo-
+makes the serial implementation far from being prac- bile applications can tolerate several seconds average
+tical. Table 5 shows experimental results for OpenCL- processing time for mobile services before they start to
+based parallel solutions. With the default parameter feel frustrated [17]. By accelerating the object removal
+configuration,themulti-coreCPU-onlyversionreduces algorithm using heterogeneous CPU-GPU partitioning
+the processing time to 23.26 seconds, and the hetero- on mobile devices, we successfully reduce the run time,
+geneousCPU-GPUimplementationfurtherreducesthe whichmakesthesetypesofcomputervisionalgorithms
+processingtimeto20.37seconds(76.6%timereduction feasible in practical mobile applications.
+compared to 87 seconds processing time for the serial
+We can draw similar conclusions from the timing
+implementation).
+results for other test images shown in Table 6, 7 and
+With all the proposed optimization techniques ap- 8.Todemonstratetheeffectivenessofourproposedop-
+plied,weobservesignificantperformancespeedup.With timization schemes, the speedup gained from the pro-
+search factor α = 0.05, patch size 17×17, and local posedoptimizationstrategiesareconcludedinTable9.
+memoryenabled,theprocessingtimeisreducedtoonly We observe speedups from 8.44X to 28.3X with all our
+1.25seconds,whichindicatesa93.9%reductioninpro- proposed optimizations applied to the heterogeneous
+cessing time compared to 20.37 seconds for the default OpenCL implementations.
+14 Guohui Wangetal.
+Table 8 Total processingtime for “Hill”image.WithOpenCLkernels runningontheGPU.
+CPU-only HeterogeneousCPU+GPU
+Searchfactorα Searcharea Timew/olocalmemory(s) Timew/localmemory(s)
+Patchsize Patchsize Patchsize
+9×9 13×13 17×17 9×9 13×13 17×17 9×9 13×13 17×17
+fullsearch 1024×550 153.36 217.15 208.62 248.55 329.53 313.33 94.61 103.18 90.30
+2 1024×50 21.07 15.86 12.14 20.77 21.49 20.88 18.9 11.54 12.22
+1 1024×30 14.46 14.00 12.73 16.80 11.41 12.73 14.7 13.61 9.31
+0.5 1024×20 12.88 14.15 12.09 15.61 12.09 12.67 15.9 11.28 8.91
+0.2 1024×14 13.33 14.00 11.77 15.50 14.22 12.84 16.2 11.54 9.37
+0.05 1024×12 11.52 15.46 11.18 15.60 17.11 13.38 15.9 13.34 8.79
+Table 9 Speedup for OpenCL-based heterogeneous imple- Acknowledgment
+mentationswiththeproposedalgorithmicandmemoryopti-
+mizations. This work was supported in part by Qualcomm, and
+Processing time (s) by the US National Science Foundation under grants
+w/oopt. w/opt.
+Image Fullsearch α=0.05 Speedup CNS-1265332, ECCS-1232274, and EECS-0925942.
+Patchsize9×9 Patchsize17×17
+WalkingMan 20.37 1.25 16.3X
+River 18.28 1.00 18.3X

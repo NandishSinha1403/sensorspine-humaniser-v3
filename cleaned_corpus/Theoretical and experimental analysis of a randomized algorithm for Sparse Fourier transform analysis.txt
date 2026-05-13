@@ -1,0 +1,1001 @@
+1v2011140/htam:viXra
+THEORETICAL AND EXPERIMENTAL ANALYSIS OF A RANDOMIZED
+ALGORITHM FOR SPARSE FOURIER TRANSFORM ANALYSIS
+JING ZOU†, ANNA GILBERT ‡, MARTIN STRAUSS §, AND INGRID DAUBECHIES ¶
+Abstract. Weanalyzeafamilyofsublinearalgorithmsthatfindanear-optimalB-termSparseRepresentation
+R for a given discrete signal S of length N, in time and space poly(B,log(N),log(δ),ǫ−1). These representations
+are expansions with respect to a particular basis or a familyof bases; examples are wavelet bases, wavelet packets
+or Fourier bases. We shall use the acronym RAℓSTA (Randomized Algorithm for Sparse Transform Analysis) for
+thisfamilyofalgorithms. WehererestrictourselvestotheFouriercaseandthus RAℓSFA(Randomized Algorithm
+for Sparse Fourier Analysis), where the poly(log(N)) time of RAℓSFA should be compared with the superlinear
+Ω(NlogN) time requirement of the Fast Fourier Transform (FFT). However, a straightforward implementation of
+theoriginalRAℓSFA,aspresentedinthetheoreticalpaper [5],turnsouttobeveryslowinpractice.
+Our main result is a greatly improved and practical RAℓSFA implementation. We introduce several new ideas
+andtechniques tospeedupthealgorithm;testsonnumericalexamplesshowthatourimplementationisaboutfour
+thousand times faster than the original RAℓSFA. Both rigorous and heuristic arguments for parameter choices are
+presented. Our empirically improved RAℓSFA constructs, with probability at least 1−δ, a near-optimal B-term
+representation R in time poly(B)log(N)log(δ)/ǫ2 such that kS −Rk2 ≤ (1+ǫ)kS −Roptk2. Furthermore, the
+improvedRAℓSFAalreadybeatsFFTfornotunreasonablylargeN. Weextendthealgorithmtohigherdimensional
+casesboththeoreticallyandnumerically. ThecrossoverpointliesatN ≃25,000inonedimension,andatN ≃460
+fordataonaN×N gridintwodimensionsforsmallB signalswherethereisnonoise.
+Key words. RAℓSFA,SparseFourierRepresentation, FastFourierTransform,SublinearAlgorithm,Random-
+izedAlgorithm
+AMS subject classifications. 65T50,68W20, 42A10
+1. Introduction. WeshallbeconcernedwithdiscretesignalsS =(S(0),...,S(N 1)) CN
+andtheirFouriertransformsSˆ=(Sˆ(0),...,Sˆ(N
+2πiωt/N.
+IntermsoftheFourierbasisfunctionsφ ω (t)= √ 1 N e2πiωt/N,Scanbewrittenas P S = N ω= − 0 1Sˆ(ω)φ ω (t);
+this is the (discrete) Fourier representation of S.
+In many situations, a few large Fourier coefficients already capture the major time-invariant
+wave-like information of the signal and very small Fourier coefficients can thus be discarded. The
+problem of finding the (hopefully few) largest Fourier coefficients of a signal that describe most
+of the signal trends, is a fundamental task in Fourier Analysis. Techniques to solve this problem
+are very useful in data compression, feature extraction, finding approximating periods and other
+data mining tasks [5], as well as in situations where multiple scales exist in the domain (as in e.g.
+materials science), and the solutions have sparse modes in the frequency domain.
+Let S be a signal that is known to have a sparse B-term Fourier representation with B N,
+i.e.
+andletus assumethat itis possibleto evaluate S,atarbitraryt, atcostO(1) foreveryevaluation.
+To identify the parameters a ,...,a ,ω ,...,ω , one can use the Fast Fourier Transform
+(FFT).StartingfromtheN point-evaluationsS(0),...,S(N 1),theFFTcomputesalltheFourier
+coefficients; one can then take the largest B coefficients and the corresponding modes. The time
+cost for this procedure is Ω(NlogN); this can become very expensive if N is huge. (Note that all
+logarithms in this paper are with base 2, unless stated otherwise.) The problem becomes worse in
+higherdimensions. IfoneusesgridsofsizeN ineachofddimensions,thetotalnumber ofpointsis
+∗ThisworkwassupportedbyNSFDMS-0245566, NSFDMS-0219233, AT&TResearchandDIMACS.
+† Program in Applied and Computational Mathematics, Princeton University, Princeton, NJ 08544
+jzou@princeton.edu.
+‡ DepartmentofMathematics,UniversityofMichigan,annacg@umich.edu.
+§ DepartmentsofMathematics andElectricalEngineeringandComputerScience,UniversityofMichigan,mart-
+injs@eecs.umich.edu.
+¶ Program inApplied and Computational Mathematics and Department of Mathematics, Princeton University,
+Princeton,NJ08544, ingrid@math.princeton.edu.
+2 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+Nd and the FFT procedure takes Ω(dNdlogN) time. It follows that identifying a sparse number
+ofmodesandamplitudesisexpensiveforevenfairlymodestN. Ourgoalinthis paperistodiscuss
+much faster algorithms that can identify the coefficients a ,...,a and the modes ω ,...,ω in
+equation (1.1). These algorithms will not use all the samples S(0),...,S(N 1), but only a very
+sparse subset of them.
+Infact, we need notrestrictourselvesto signalsthatare exactlyequalto aB-term representa-
+tion. Letus denotethe optimal B-termFourierrepresentationofa signalS byRB (S); weassume
+that k S k 2 ≤ M k S − R o B ptk 2, where k·k 2 denotes the standard ℓ2 norm, k S k 2 2 = N l= − 0 1 | S(t) | 2 =
+N ω= − 0 1 | Sˆ(ω) | 2. We are then interested in identifying (or finding a close approximat P ionto) R o B pt (S)
+viaafastalgorithm. Thepapers[5][8][1][6]providesuchalgorithms;allcomputea(near-)optimal
+B- term Fourier representationR in time and space poly(B,log(1/δ), logN,logM,1/ǫ), such that
+S R 2 (1+ǫ) S RB (S) 2, with success probability at least 1 δ. The algorithms in these
+k − k2 ≤ k − opt k2 −
+papers share the property that they need only some random subsets of the input rather than all
+the data; they differ in many details: the different papers assume different conditions on N, (for
+example, N is assumed to be a power of 2 or a small prime number in [8], a prime in [5]); the
+algorithms also use different schemes to locate the significant modes. (Here we say a mode ω is
+significant if for some pre-set η, Sˆ(ω)2 η S 2.) Mansour and Sahar [9] implemented a similar
+algorithm for Fourier analysis on | the s | et ≥Zn, k wh k ere our algorithm is for Fourier analysis on Z .
+For a wide range of applications, the speed potential suggested by the sublinear complexity
+of these algorithms is of great importance. In this paper, we concentrate on the approach given
+in [5]. There are several problems existed in the paper [5]. First, it is a theoretical rather than
+a practical analysis in the sense that it does not discuss parameter settings. Moreover, it gives
+few hints about the order of the polynomial in B and logN. More importantly, a straightforward
+implementation of RAℓSFA following the set-up of [5] turns out to be too slow to be practical. In
+addition, the extension to higher dimensions is not discussed, where the pay-off of RAℓSFA versus
+FFT is expected to be large.
+OurmainresultinthispaperisanimprovedversionofRAℓSFAthataddressestheseproblems.
+We give theoretical and heuristic arguments for the setting of parameters; we introduce some new
+ideas and make improvements that significantly speed up (by a factor of about 4000 ) our original
+RAℓSFAimplementation. OurnewversioncanbeatFFTwhenN isaround30,000andB issmall.
+In addition, original RAℓSFA was implemented only to work provably if N is prime. In fact, it
+appears to work for any N. In another paper [6], we actually prove that some of the technique in
+this paper work.
+A Motivating Example. RAℓSFA is an exciting replacement for FFT to solve multiscale
+models. Typically, one wants to simulate a multiscale model in several dimensions with both
+a microscopic and a macroscopic description. The solution to the model has rapidly oscillating
+coefficients with period proportional to a small parameter ǫ [2]. In a traditional (pseudo-)spectral
+method, one computes the spatial derivatives by FFT and Inverse FFT at each time iteration;
+consequently the time to find the Fourier representation of a signal is the determining factor in
+the overalltime of simulation. As is often the case in multiscale problems, only a small number of
+frequencies contribute to the energy of the solution at any given time step. That is, the solution
+andinitial condition have sparseFourier representation. We expect that RAℓSFA will significantly
+speed up the calculation for large N. In fact, a preliminary study has shown [11] that using only
+those significant frequencies to approximate intermediate solutions does not substantially degrade
+the quality of the approximate solution to the multiscale problem. By using only the significant
+frequencies and RAℓSFA instead of all frequencies and FFT, we replace a superlinear algorithm
+by a poly-log (polynomial in the logarithm) algorithm. This decrease of the running time makes
+it possible to handle a larger number of grid points in high dimensions, and thus increases the
+resolution of the Partial Differential Equations simulation.
+Notation and Terminology Let S = (S(0),...,S(N 1)) be a signal indexed by t, where
+t = 0,...,N 1. The index t is regarded as an integer modulo N. We denote by φ (t) the
+ωth Fourier b − asis function 1 e2πiωt/N. The ωth Fourier coefficient of S is Sˆ(ω) = A,φ =
+1 S(t)e 2πiωt/N. (Note that A,B = A(t)B(t), where B(t) is the complex conjugate of
+√N t − h i t
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 3
+B(t).) The vector Sˆ is the spectrum of S. For any two frequencies ω , ω , where ω =ω , we say
+that Sˆ(ω 1 ) is bigger than Sˆ(ω 2 ) if | Sˆ(ω 1 ) | > | Sˆ(ω 2 ) | . The squarednorm k S k 2 2 = N t= − 0 1 | S(t) | 2 of S
+is alsocalledthe energyofS;we shallreferto Sˆ(ω)2 asthe energyofthe FouriercoefficientSˆ(ω).
+Similarly, the energy of a set of Fourier coefficients is the sum of the squares of their magnitudes.
+We shall use only the ℓ2-norm in this paper; for convenience, we therefore drop the subscript from
+now on, and denote F 2 by F 2 for any signal F.
+We denote the convolution by F G, (F G)(t) = F(s)G(t s). It follows that F G =
+√NFˆGˆ. We denote by χ the signalthatequals1 ona setT andzeroelsewhere. The index to χ
+may be either time or frequency; this is made clear fromcontext. For more backgroundon Fourier
+analysis, see [14]. The support supp(F) of a vector F is the set of t for which F(t)=0.
+RAℓSFA is a randomized algorithm. By this, we do not mean the signal is randomly chosen
+from some kind of distribution, with our timing and memory requirement estimates holding with
+respecttothis distribution; onthe contrary,the signal,oncegiventous,is fixed. The randomness
+lies in the algorithm. After random sampling, certain operations are repeated many times, on
+different subsets of samples, and averages and medians of the results are computed. We set in
+advanceadesiredprobabilityofsuccess1 δ,whereδ >0canbe arbitrarilysmall. Thentheclaim
+is that for all arbitrary input S, the algorithm succeeds with probability 1 δ, i.e. gives a B-term
+estimate R such that S R 2 (1+ǫ) S RB 2. For given ǫ, δ, numerical experiments show
+k − k ≤ k − optk
+that the algorithm takes O(B2logN) time and space.
+OrganizationThepaperisorganizedasfollows. InSection2,wepresenttheoriginalRAℓSFA.
+Section3showsthetestbedandnumericalexperimentsaboutthecomparisonofimprovedRAℓSFA,
+originalRAℓSFAandFFT.InSection4,weintroduceallthenewtechniquesandideasofimproved
+RAℓSFA and its extension to multi-dimensions.
+2. Set-up of Original RAℓSFA. Given a signal S of length N, we denote by RB (S) its
+optimal approximation (in L2) using only B frequencies; it is simply a truncated version of the
+Fourier representation of S, retaining only the B largest coefficients. The following theorem is the
+main result of [5].
+Theorem 2.1. Let an accuracy factor ǫ, a failure probability δ, and a sparsity target B
+N,B < N be given. Then for an arbitrary signal S of length N, RAℓSFA will find, at a cost i ∈ n
+time and space of order poly(B,log(N),1,log(1)) and with probability exceeding 1 δ, a B term
+approximation R to S, so that S R 2 (1+ǫ) S RB (S) 2.
+k − k ≤ k − opt k2
+It is especially striking that the near-optimal representation R can be built in sublinear time
+i.e. poly(logN) instead of the O(NlogN) time requirement of FFT. RAℓSFA’s speed will surpass
+FFT as long as the length of the signal is sufficiently large. In particular, if S = RB (S) (that is,
+Sˆ(ω) vanishes for all but B values of ω), then S R 2 = 0, i.e. RAℓSFA constructs S without
+any error, at least in theory; in practice this means the error is limited by accuracy issues.
+The main procedure is a Greedy Pursuit with the following steps:
+Algorithm 2.2. RAℓSFA based on [5]
+Given sampling access to signal S, carry out the following steps:
+1. Initialize the representation signal R to 0.
+2. Test whether S R 2 appears to be less than some user threshold, ι R 2. If yes, return
+the representation signal R and the whole algorithm ends; else go to step 3.
+3. Locate Fourier Modes ω for the signal S R.
+4. Estimate Fourier Coefficients at ω: (S R)(ω).
+5. Update the representation signal R R+(S R)(ω)φ (t), go to 2.
+The test at stage 2, which is not in [5], can allow us to end early. For example, the criteria
+S R 2 ι R 2 can be used for small energy, where ι is a small number chosen heuristically.
+k − k ≤ k k
+Something similar appeared in Mansour’s paper [8].
+Ourfirstimplementation ofRAℓSFA followedthe (theoretical)analysisin[5]ascloselyas pos-
+sible;weshallcallthis“originalRAℓSFA”.Becauseitwasslowerthanwehadhoped,weoptimized
+andimprovedseveralstagesofnumericalimplementation,leadingto“(improved)RAℓSFA”,which
+we shall simply call RAℓSFA throughout the whole paper.
+4 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+3. Testbed and Numerical Results of RAℓSFA. In this section, we present striking nu-
+merical results of RAℓSFA. We begin in Section 3.1 with comparing the running time of original
+RAℓSFA, RAℓSFA and FFT for some one dimensional test examples. In Section 3.2, the perfor-
+mances of two dimensional RAℓSFA for some test signals are shown. All the experiments are run
+onanAMD Athlon(TM) XP1900+machine withCache size 256KB,total memory 512MB, Linux
+kernel version 2.4.20-20.9and compiler gcc version 3.2.2.
+The test signal is typical of certain future applications. It is smooth and a superposition of
+only B modes in the frequency domain with B N. We also try these signals with a small added
+noise. The results are very similar.
+The parameter choices in the algorithm are quite tricky. The theoretical bounds given in [5]
+do not work well in practice; instead much smaller parameters and heuristic settings work more
+efficiently.
+The randomness of the algorithm implies that the performance differs each time for the same
+group of parameters. Hence, we give the average data, bar and quartile graph based on 100 runs
+as well as the fastest data among these experiments. The popular benchmark software FFTW is
+used to determine the timing of the Fast Fourier Transform on the same data.
+3.1. Numerical Results in one dimension.
+3.1.1. Experiments for Two-mode Signals. We begin with the results for a signal con-
+sisting of two modes (no noise). We chose the test signal to be of the form S = c φ +c φ .
+Different choices of c , c , ω and ω were checked; these influenced the whole execution time only
+veryslightly. Thesechoicesincludedcaseswhereω andω wereclose;note thatthis is the “hard”
+case for most estimation algorithms. For RAℓSFA, which contains random scrambling operations
+(that are later described), the distance between the modes does not matter if N is prime. If N
+is not prime, then gcd(ω ω ,N) cannot decrease by the scrambling operation, so that different
+(ω ,ω )pairsmay(intheory)leadtodifferentperformances;inpractice,this doesn’tseemto mat-
+ter. Wesetthe parametersasfollows: B =2(i.e. we wantto recoverbothmodes), accuracyfactor
+ǫ=10 6, failure probability δ =0.01.
+Length Time of Time of
+N Original RAℓSTA RAℓSTA
+103 45.80 0.011
+104 68.74 0.026
+105 91.63 0.026
+106 115.07 0.027
+107 149.20 0.034
+Time Comparison betweenoriginal RAℓSFA and RAℓSFA (time inseconds)
+Table 3.1 compares the time to recover a two-mode signal for the original RAℓSFA and this
+paper’sRAℓSFA.ThefirstcolumnN is the lengthofthe signal. Thesecondandthirdcolumns are
+the executiontime (inseconds). Forvaryingsignallengths N,RAℓSFA is substantiallyfasterthan
+theoriginalalgorithm,roughlybyafactorexceeding3800. Figure3.2showsvividlytherelationship
+between the logarithm of empirical execution time and the logarithm of the length.
+Because the goal of this paper is to check the possibility to replace FFT with RAℓSFA for
+sparse and long signals, two kinds of running time for each algorithm are provided. One is the
+total running time and another is the running time excluding the sampling time. As we know,
+FFT takes Ω(N) to compute all signal values. On the other hand, our algorithm doesn’t need all
+the sample values. All our conclusions are based on the time excluding the sampling. However,we
+still put the running time in including sampling time because of the existence of various forms of
+data in practice. For example, in pseudospectral applications, the data need to be computed from
+a B-superposition, which may take O(B) per sample. It is possible to sample more quickly, which
+is addressed in [6]. On the other hand, if the data is already stored in a file or a disk, we simply
+get them without any computation.
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 5
+Time Comparison between Original RAlSFA and RAlSFA (B=2)
+03 104 105 106 107
+Signal Length
+Original RAlSFA
+Fig. 3.2. Time Comparison betweenOriginal RAℓSFA and RAℓSFA
+Table 3.3and Figure3.4 providea comparisonof the running times of FFT and RAℓSFA for a
+two-mode signal. In this example, we give two estimates for the running time for each algorithm:
+the totalrunningtime aswellasthe time excludingsample valuecomputation. The samplingtime
+is different for the two algorithms because FFT precomputes all the sample values; by contrast,
+RAℓSFArandomlysamplesthe signal,andthus computes onlywhatmaybe asmallportionofthe
+wholesignal. Inthe beginning whenN is small,FFT isalmostinstantaneous. As the signallength
+N increases,its time growsdrastically. The benchmark FFTW softwarefails to process more than
+108 data because it runs out of the memory space. The numbers with brackets are extrapolations
+according to the rule of Ω(Nlog(N)). On the contrary, RAℓSFA takes longer time in smaller N
+cases; however the time cost remains almost constant regardless of the signal length. As shown
+in Figure 3.4, RAℓSFA beats FFT impressively when N > 25,000 for two-mode signals, all the
+more convincingly when N is larger: for example, it takes FFT around 1248 seconds (estimated)
+to handle 109 data, while RAℓSFA needs only 0.045 second. Figure 3.2 also shows the linear
+relationship between the time cost and the logarithm of signal length N.
+Length Time of Time of Time of RAℓSFA Time of FFTW
+N RAℓSFA FFTW (excluding sampling) (excluding sampling)
+(seconds) (seconds) (seconds) (seconds)
+103 0.011 0 0.011 0
+104 0.026 0 0.026 0
+105 0.026 0.08 0.026 0.05
+106 0.027 0.78 0.027 0.50
+107 0.034 10.70 0.034 8.09
+108 0.039 (137) 0.039 (114.87)
+109 0.045 (1548) 0.045 (1207.77)
+Time Comparison between RAℓSFA and FFT (B=2) based on 100 runs
+Ascanbe expectedfromarandomizedalgorithm,RAℓSFAhasadifferentperformanceineach
+run. Figure 3.5 illustrates the spread of the execution time for 100 runs.
+3.1.2. ExperimentsforThirteen-modeSignals. Weranthesamecomparisonforanother
+testexample,namelyapure13-modesuperpositionsignalS(t)= 13 c φ withB =13,ǫ=10 6
+i=1 i ωi −
+andδ =0.01(thesearethesamevaluesforǫandδ asin3.1.1). Again,RAℓSFAbeatsFFTwhenN
+is large;see Table 3.6 andFigure 3.7. The correspondingcrossoverpoint for RAℓSFA to beat FFT
+isN 300,000. Forexample,to process109 data,twentyminutes(estimated)areneededfor FFT
+while less than 1 second is needed for RAℓSFA. Figure 3.7 shows the empirical linear relationship
+between time and logN.
+We also tried the 2 and 13-mode signals after adding a small white noise (SNR 0.001, i.e.
+ν 2 =0.001 S 2, where ν is the noise); the results were virtually unchanged. In summary, these
+experiments support the theoreticalconclusionthat RAℓSFA beats FFT after some N for a sparse
+6 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+Time Comparison between RAlSFA and FFTW, excluding sampling time
+03 4 5 6 7 8 9
+lg(Signal Length)
+Running Time of RALSFA vs. FFT(B=2)
+03 4 5 6 7 8 9
+lg(Signal Length)
+Average Time of RASTA
+Fig. 3.4. Time Comparison betweenRAℓSFA and FFT (B=2). Left: running time excluding the precomputa-
+tionof sample values; right: total running time including the precomputation of the sample values
+02 3 4 5 6 7 8 9 10
+lg(Length of Signal)
+Error Bar Graph of Running Time versus lg(Length of Signal)
+fitting line
+3 4 5 6 7 8 9
+Box Plot of Time versus lg(Length of Signal)
+lg(Length of Signal)
+Fig. 3.5. Comparing the total running times of 2-mode RAℓSFA for 100 different runs of the randomized
+algorithm. Left: mean and variance as a function of N; right: median, quartiles and total spread of the runs as a
+functionof N, B=2
+Length Time of Time of Time of RAℓSFA Time of FFTW
+N RAℓSFA (seconds) FFTW (seconds) (exclude sampling) (exclude sampling)
+103 1.69 0.00 0.14 0
+104 2.69 0.02 0.17 0
+105 2.62 0.25 0.19 0.05
+106 2.88 2.55 0.28 0.50
+107 3.72 28.32 0.54 8.09
+108 3.51 (315) 0.45 (114.87)
+109 4.21 (3208) 0.48 (1207.77)
+Time Comparison between RAℓSFA and FFT when B=13
+Time Comparison between RALSFA and FFT, excluding sampling time
+03 4 5 6 7 8 9
+lg(length)
+Time Comparison between RALSFA and FFT over lg(length) (B=13)
+03 4 5 6 7 8 9
+lg(length)
+Fig. 3.7. Time Comparison between RAℓSFA and FFT when B = 13. Left: running time excluding the
+precomputation of sample values; right: total running time including the precomputation of the sample values
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 7
+12 3 4 5 6 7 8 9 10
+lg(Length of Signal)
+Error Bar Graph of Running Time versus lg(Length of Signal)
+fitting line
+3 4 5 6 7 8 9
+Box Plot of Time versus lg(Length of Signal)
+lg(Length of Signal)
+Fig.3.8. Comparingtherunningtimesof13-modeRAℓSFAfor100differentrunsoftherandomizedalgorithm.
+Left: mean and variance as a function of N; right: median, quartile and total spread of the runs as a function of
+signal; whatever the sparsity, i.e. whatever the value of B, there always exists some crossoverN.
+3.1.3. Experiments with Different Number of Modes. The crossover points for N are
+different for signals with different B; the number of modes has an important influence on the
+runningtime. Toinvestigatethis,weexperimentedwithfixedN (wetookN =106)butvaryingB.
+In all cases, we take S to be a superposition of exactly B modes, i.e. S(t) = B c φ for some
+B. Table 3.9 and Figure 3.10 compare the running time for different B using FFT and RAℓSFA.
+At first, RAℓSFA takes less time because N is so large. The execution time for FFT can be taken
+toincludethetimeforevaluationofallthesamples(whichincreaseslinearlyinB)ornot(inwhich
+case the execution time is constant to B). In both cases, FFT overtakes RAℓSFA as B increases;
+the execution time of FFT is constant or linear in the number of modes B (depending on whether
+the evaluation of samples is included), while that of RAℓSFA is polynomial of higher order. For
+N =106, FFT is faster than RAℓSFA when B 7. By regression techniques on the experimental
+data, one empirically finds that the order of B in RAℓSFA is greater than quadratic. This is the
+main disadvantage of both the original and our improved implementations of RAℓSFA. (Although
+this nonlinearity in B was expected by the authors of [5], the observation that it played such an
+important role even for modest B was the motivation for Gilbert, Muthukrishnan and Strauss to
+construct in [6] a different version of RAℓSFA that is linear in B for all N.) Hence, RAℓSFA is
+most useful for a long signal with a small number of modes. Fortunately, the number of modes B
+is very small in Multiscale models, one of the typical application for RAℓSFA.
+Number of modes Time of Time of Time of RAℓSFA Time of FFTW
+B RAℓSFA FFTW (exclude sampling ) (exclude sampling)
+2 0.03 0.78 0.03 0.50
+4 0.12 1.08 0.11 0.49
+6 0.32 1.40 0.29 0.50
+8 0.80 1.76 0.78 0.53
+10 1.40 2.05 1.36 0.51
+13 2.88 2.57 2.86 0.55
+15 4.26 2.89 4.21 0.57
+Time Comparison between RAℓSFA and FFT for Different B when N =106
+3.2. Numerical Results in Two Dimensions. The number of grid points depends expo-
+nentially on the dimension. To achieve reasonable accuracy, a minimum N is required in each
+dimension;however,whend>1,FFT hasgreatdifficulty inhandlingthe correspondingNd points
+for even modest N. RAℓSFA shows its great advantage most often in multi-dimensions and we
+expect it to solve problem where FFT fails.
+8 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+Time comparison between RALSFA and FFT for different B, excluding sampling time
+02 4 6 8 10 12 14 16
+Number of Modes B
+)dnoces(emiT
+Time comparison between RALSFA and FFT for different B (N=106)
+02 4 6 8 10 12 14 16
+Number of Modes B
+)dnoces(emiT
+Fig. 3.10. Time Comparison between RAℓSFA and FFT for Different B. Left: running time excluding the
+precomputation of sample values; right: total running time including the precomputation of the sample values
+3.2.1. Experiments for Two-mode Signals in Two Dimensions . We take the signal
+S = c φ φ +c φ φ , where B = 2,ǫ = 10 6,δ = 0.01, c and c are two constants
+1 ωx,1 ωy,1 2 ωx,2 ωy,2 − 1 2
+and N is the number of points in each dimension, and where ω = ω and ω = ω . As
+Table 3.11 shows, two dimensional RAℓSFA surpasses two dimensional FFT when N 460. In
+particular, when N =5000, FFT takes 19 seconds and RAℓSFA only less than 0.1 second. Figure
+3.12 presents this tendency clearly. For a 2-mode signal, the crossover point for N is 25,000 for
+d=1, and460 for d=2; if we conjecture that the crossoverN for 2-mode in d dimensions is given
+by c nd, then this leads us to guess that the crossover N for d=3 may be close to 84.
+Length Time of Time of Time of RAℓSFA Time of FFTW
+N RAℓSFA FFTW (exclude sampling) (exclude sampling)
+100 0.124 0.01 0.024 0.01
+200 0.137 0.02 0.027 0.01
+300 0.146 0.05 0.029 0.01
+400 0.146 0.08 0.027 0.02
+500 0.134 0.13 0.026 0.03
+600 0.147 0.20 0.031 0.06
+5000 0.178 29.09 0.037 22.85
+Time Comparison betweenTwo Dimensional RAℓSFA and FFT (B=2)
+Time Comparison between RALSFA and FFT, excluding sampling time
+0.01100 150 200 250 300 350 400 450 500 550 600
+Length in Each Dimension
+Time Comparison between RALSFA and FFT over Length (B=2)
+1000 150 200 250 300 350 400 450 500 550 600
+Length in Each Dimension
+Fig. 3.12. Time Comparison between Two Dimensional RAℓSFA and FFT (B = 2)in 2 dimensions. Left:
+runningtimeexcludingtheprecomputationofsamplevalues;right: totalrunningtimeincludingtheprecomputation
+of the sample values
+3.2.2. Experiments for Thirteen-mode Signals in Two Dimensions . A test example
+forB =13followsthe samepattern. When N 1100,RAℓSFAsurpassesFFT.Similarly,wewant
+to find out the crossoverpoint in three dimensions. For a 13-mode signal, the crossoverpoints are
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 9
+0.090 100 200 300 400 500 600 700
+Signal Length
+Error Bar Graph of Running Time of RALSFA (B=2)
+100 200 300 400 500 600
+Box Plot of Time versus Signal Length
+Signal Length
+Fig. 3.13. Comparing the total running times of 2-mode 2-dimensional RAℓSFA for 100 different runs of the
+randomizedalgorithm. Left: meanandvarianceasafunctionofN (thenumberofpointsineachdimension);right:
+median, quantiles and total spread of the runs as a function of N, B=2, d=2
+300,000 and 1100 respectively in one and two dimensions. Note that 1100<2(300,000)2. By the
+samemethodasinthe 2-modecase,wecanconjecturethatthe crossoverpointinthree dimensions
+should be close to 133.
+Length Time of Time of Time of RAℓSFA FFTW
+N RAℓSFA FFTW exclude sampling exclude sampling
+1000 17.16 3.58 0.26 0.19
+2000 20.29 5.63 1.39 2.28
+3000 20.09 13.45 1.45 6.12
+4000 28.34 24.99 1.36 11.86
+5000 18.79 42.91 1.69 22.85
+10000 21.56 (320) 1.59 (415)
+Table 3.14
+Time Comparison between Two Dimensional RAℓSFA and FFT (B=13)
+Time Comparison between RALSFA and FFT, excluding sampling
+10000 1500 2000 2500 3000 3500 4000
+Signal Length in Each Dimension
+Time Comparison between RALSFA and FFT(B=13) in 2D
+Average Time of RALSFA FFT 25
+10000 1500 2000 2500 3000 3500 4000 4500 5000
+Signal Length in Each Dimension
+Average Time of RALSFA
+Fig. 3.15. Time Comparison between Two Dimensional RAℓSFA and FFT (B = 13) in 2 dimensions. Left:
+runningtimeexcludingtheprecomputationofsamplevalues;right: totalrunningtimeincludingtheprecomputation
+of the sample values.
+3.2.3. Experiments for Signals with Different Number of Modes B . As in one di-
+mension, the number of modes B is the bottleneck for applying RAℓSFA freely to signals that are
+notso sparse. Suppose the signalis ofthe formS(t)= B c φ ,with N =2000. Table 3.17and
+Figure 3.18 illustrate the relationship between running time and the number of modes B. Time
+increases depends polynomially on the number of terms B. When N = 2000, the crossover point
+for FFT to surpass RAℓSFA is at B =16. This implies the influence of B on the execution time is
+far from negligible.
+10 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+15000 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500
+Signal Length
+Error Bar Graph of running time of RALSFA (B=13)
+1000 2000 3000 4000 5000
+Box Plot of Time versus Signal Length
+Signal Length
+Fig.3.16. Comparing thetotalrunning timesof13-mode 2-dimensional RAℓSFAfor100 differentrunsof the
+randomizedalgorithm. Left: meanandvarianceasafunctionofN (thenumberofpointsineachdimension);right:
+median, quantilesand total spread of the runs as a functionof N, B=13, d=2
+Number of modes Time of Time of Time of RAℓSFA Time of FFTW
+B RAℓSFA FFTW (exclude sampling ) (exclude sampling)
+2 0.16 3.48 0.04 2.27
+4 0.47 4.80 0.09 2.28
+6 1.27 6.25 0.45 2.29
+8 3.35 7.66 0.50 2.29
+10 7.10 9.12 1.39 2.30
+13 20.08 11.99 1.09 2.31
+15 43.52 13.54 1.94 2.32
+18 105.85 15.68 2.90 2.31
+Time Comparison betweenRAℓSFA and FFT forsignals withdifferent B in2 dimensions when N =2000
+4. Theoretical Analysis and Techniques of RAℓSFA. We hope the numerical results
+have whetted the reader’s appetite for a more detailed explanation of the algorithm. As pointed
+out aboveandillustrated by the numericalresults, the originalRAℓSFA wasinefficient in practice.
+Moreover, as is often the case with theoretical bounds, the threshold values for the parameters
+picked in [5] proved to be significantly too conservative. Finally, the algorithm as sketched in [5],
+was restricted to one dimension only.
+Before explaining the structure of RAℓSFA as implemented by us, we review the basic idea of
+the algorithm. Given a signal consisting of several frequency modes with different amplitudes, we
+could split it into several pieces that have fewer modes. If one such piece had only a single mode,
+thenthismodewouldbefairlyeasytoidentify,andthentoapproximatelyfinditsamplitude. Ifthe
+piece were not uni-modal, we could, by repeating the splitting, eventually get uni-modular pieces.
+In order to compute the amplitudes, we need to “estimate coefficients.” To verify the location of
+the modes in the frequency domain and concentrate on the most significant part of the energy, we
+use“grouptesting.” Anestimationthatrecursoverandoveragaininthistestingisthe“evaluation
+of norms.” The first splitting of the signal is done in the “isolation” step.
+The different steps are carried out on many different variants of the signals, each obtained by
+a random translation and dilation in the frequency domain (corresponding to a modulation and
+the inverse dilationin the time domain). Because the signalis sparsein the frequency domain, the
+different modes are highly likely to be well separated after these random operations, facilitating
+isolation of individual modes.
+We now address the problems mentioned in the beginning at this section; we introduce new
+ideas and give the corresponding theoretical analysis. We first explain how to set parameters that
+are either not mentioned or loose in [5]. In Section 4.1, we show the theoretical basis to choose
+parameters for estimating coefficients, and introduce some techniques to speed up the algorithm.
+In Section 4.2, we set the parameters for norm estimation. Section 4.3 presents the heuristic rules
+to pick the filter width for the isolation procedure. This is one of the key factors determining the
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 11
+Time Comparison for Different Number of Modes (N=2000), excluding sampling
+02 4 6 8 10 12 14 16 18
+Number of Modes
+Time Comparison for Different Number of Modes (N=2000)
+Average Time of RALSFA
+02 4 6 8 10 12 14
+Number of Modes
+Average Time of RALSFA
+Fig. 3.18. Time Comparison between RAℓSFA and FFT for signals with different B in 2 dimensions when
+N =2000. Left: running time excluding the precomputation of sample values; right: total running time including
+the precomputation of the sample values.
+speed. A new filter is proposed for Group Testing in Section 4.4, which works more efficiently.
+Section 4.5 summarizes the total scheme of RAℓSFA. Finally, we discuss the extension to higher
+dimensions in Section 4.6.
+4.1. Estimate Individual Fourier Coefficients. The originalRAℓSFA only shows the va-
+lidity of estimating coefficients without mentioning parameter settings. Here we introduce a new
+technique to achieve better and faster estimation; in the process, we give another proof of Lemma
+2 in [5] that contains explicit parameter choices.
+Algorithm 4.1. Estimate Individual Fourier Coefficients
+1. Randomly sample from signal S with indices t : S(t ), i = 1,...,2log(1/δ), j =
+0,...,8/ǫ2 .
+2. Take the empirical mean of the S(t ),φ (t ) , j =0,...,8/ǫ2, store as mean(i).
+3. Take the median y =median(mean(i)), i=1,...,2log(1/δ).
+4. Return y.
+Lemma 4.2. Every application of Algorithm 4.1 constructs a realization of a random variable
+Z, that estimates the Fourier coefficient Sˆ(ω), good up to tolerance ǫ2 S 2 with high probability
+1 δ, i.e.
+Prob Z Sˆ(ω)2 ǫ2 S 2 δ. (4.1)
+(cid:16) (cid:17)
+Proof. Define a random vector V as follows:
+V =(0,0, ,NS(t),0, ,0)=Nδ S(t). (4.2)
+where t is chosen uniformly and randomly from l: l=1, ,N . Then the expectation of V is
+Let X be the random variable X = V,φ
+2πiωt/N. We have
+(cid:16) (cid:17) X t (cid:12) (cid:12) (cid:12) (cid:12)
+Define another randomvector W as the averageof L (cid:12) (cid:12)independent realiza (cid:12) (cid:12)tionof V, with L=8ǫ
+2.
+Let a random variable
+Y = W,φ . (4.6)
+12 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+Then E[Y] = Sˆ(ω) and var[Y] = var[X]/L = ǫ2 S 2/8, so that Prob Y Sˆ(ω)2 ǫ2 S 2
+k k | − | ≥ k k ≤
+1/8. (cid:16) (cid:17)
+Set Z = median Y, where K = 2log(1/δ). If Z Sˆ(ω)2 ǫ2 S 2, then for at least half of the
+Ys, we have
+P Z Sˆ(ω)2 ǫ2 S 2
+| − | ≥ k k2 ≤ j 8
+(cid:16) (cid:17)
+j=XK/2(cid:18) (cid:19)(cid:18) (cid:19)
+8 K/22K =2 K/2 δ. (4.8)
+Sowithprobability1 δ,Z isagoodestimateoftheFourierCoefficientSˆ(ω),gooduptotolerance
+ǫ2 S 2.
+Several observations and new techniques can speed up the coefficient estimation even further.
+One observation is that fewer samples are already able to give an estimation with desirable
+accuracy and probability. Theoretically, we need 16ǫ 2 log(δ) samples in total to obtain good
+approximations of the coefficients. Implementation shows that choosing smaller parameters, for
+example, 10 samples to take means and 5 samples to take medians still get reasonable results
+ǫ=10 4 for three iterations.
+An additional difference with the sampling described in [5] is that one can replace individual
+random samples by samples on short arithmetic progressions with random initial points. This
+techniquebecameoneofseveralcomponentsintheRAℓSFAversionof[6]thatadaptedtheoriginal
+algorithminordertoobtainlinearityinB. Foradescriptionofthearithmeticprogressionsampling,
+we refer to [6]. Surprisingly, this change not only improves the speed, but also gives a closer
+approximation than simply random sampling, using the same number of samples.
+Another idea is a coarse-to-fine multi-step estimation of the coefficients. There are several
+reasons for not estimating coefficients immediately with high accuracy. Increasing the accuracy
+means a corresponding quadratic increase of the number of samples, because of the relationship
+O( logδ ǫ 2) between the number of samples and accuracy ǫ. Yet, the errors in the estimation of
+othercoefficientsinfluencehowwelleachindividualcoefficientisestimated. Consequentlyitiswise
+to update the representation immediately before the next estimation and repeat the estimation
+procedure several times. Repeated rough estimation can be more efficient than a single accurate
+estimation, as we now show. First we need the following lemma make this more explicit.
+Lemma 4.3. Given a signal S, let ω ,...,ω be q different frequencies, and define β: =
+S 2 q Sˆ(ω )2 / S 2. Estimate the coefficients Sˆ(ω ) where i = 1,...,q by the following
+k k2− i=1| i | k k2 i
+ihterative algorithm: apiply algorithm 4.1 with precision ǫˆ and probability of failure δ; Keep the
+parameters fixed throughout the iterative procedure, and let Zn, i=1,...,q, be the estimate (at the
+n- iteration) of the ω i -th Fourier coefficient of S − k n = − 1 1 q j=1 Z j kφ ωj . The total estimate R n after
+the n-th iteration is thus R = n q Zkφ . Then
+n k=1 j=1 j ωj P P
+| j − n j | ≤ 1 qǫˆ2 k k k k
+with probability exceeding (1 δ)nq.
+Proof. (This is essentially a simplified version of proof for Lemma 10 in [5])
+By Lemma 4.2,
+| i i − i | ≤ k − n − 1 k
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 13
+with probability exceeding 1 δ. It follows that
+Sˆ(ω ) Zk 2 qǫˆ2 S R 2, (4.11)
+| i − i| ≤ k − n − 1 k
+ωX1,...,ωq}
+k k − | | k − − k k k k − − k
+with probability exceeding (1 δˆ)q.
+Consider now the sequence (a ), defined by a =β S 2+qǫˆ2a , where a = S 2. It is easy to
+n k k k k k k 1 (qǫˆ2) k k
+It then follows by induction that S R 2 a , with probability exceeding (1 δˆ)nq, for all n;
+we have thus
+S R 2 β S 2 − +(qǫˆ2)n S 2 β S 2 +(qǫˆ2)n S 2, (4.14)
+k − n k ≤ k k 1 (qǫˆ2) k k ≤ k k 1 (qǫˆ2) k k
+or equivalently,
+| j − n j | k − n k − k k ≤ k k 1 qǫˆ2 k k
+with probability exceeding (1 δ)qn.
+1 qǫˆ2 − −
+thenaone-stepprocedurewithparametersǫ,δ willachievethesameprecisionasann-stepiterative
+procedurewithparametersǫˆ,δˆ. The one-stepprocedurewilluseCqǫ 2 log(δ) samplingsteps; the
+iterative procedure will use Cnqǫˆ 2 log(δˆ). If follows that the n-step iterative procedure will be
+moreefficient,i.e. obtainsthesameaccuracywiththesameprobabilitywhilesamplingfewertimes,
+under the constraints (4.16). If β = 0, then this condition reduces to (under the assumption that
+δˆ, δ and ǫˆ, ǫ are small, so that qǫˆ2 qǫˆ2, (1 δˆ)n 1 nδˆ)
+whichiscertainlysatisfiedifǫˆissufficientlysmallandnsufficientlylarge. Ifβ =0,mattersaremore
+complicated;ifβ istoolarge,(e.g. ifβ >n−0 1,wheren
+istheminimumvalue 6 ofnforwhich(4.18)
+holds), then there are no choices of n, ǫˆ, δˆthat will satisfy (4.16) and (4.17). For sufficiently small
+β, we do gain by taking the iterative procedure. Its advantage is even more obvious in practice.
+For a signal of type S = φ +φ with N = 1000, q = B = 2, β = 10 2, δ = 2 7, ǫ = 4 10 4,
+and with n = 3, we use 450,000 samplings for the one-step procedure, versus 150 samples for the
+iterative procedure.
+14 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+4.2. Estimate Norms. The basic principle to locate the label of the significant frequency is
+toestimate theenergyofthe newsignalsobtainedfromisolationandgrouptestingsteps. Thenew
+signals are supported on only a small number of taps in the time domain and have 98% of their
+energies concentrated on one mode. The original analysis in [5] only gave its theoretical goodness.
+Here we find the empirical parameters, i.e. the number of samples for norm estimation.
+Here is a new scheme for estimating norms, which uses much fewer samples than the original
+one and still achieves good estimation.
+Algorithm 4.4. Estimate Norms
+1. Take r independent random samples from the new signal S: S(i ),...,S(i ), where r is a
+multiple of 5.
+2. Return N 60-th percentile of S(i )2,..., S(i )2.
+The following lemma presents the theoretical analysis of this algorithm.
+Lemma 4.5. If a signal S is 98% pure and if r > 6.25ln(1/δ), the output of Algorithm 4.5
+gives an estimation of its energy which exceeds S 2/4 with probability exceeding 1 δ.
+Proof. We shall sample r times for the signal S. Let T = t: N S(t)2 < S 2/4 , with Tc as
+its complement. By the Minkowski inequality,
+S(t) TC 2 S(t)2 (N T )2 S . (4.19)
+Similarly, we have (cid:12) (cid:12) (cid:12) tX∈ TC (cid:12) (cid:12) (cid:12) (cid:12) (cid:12) (cid:12) (cid:12) tX∈ TC
+(cid:12) (cid:12)
+S(t) T S(t)2 T 2 S 2. (4.20)
+(cid:12) (cid:12) X t ∈ T (cid:12) (cid:12) X t ∈ T
+On the other hand, we kno (cid:12) (cid:12)w that t (cid:12) (cid:12)he signal is 98% pure, i.e. Sˆ(ω
+)2 0.98 S 2 for some ω
+.
+Without loss of generality, suppose most of the energy concentrates at the frequency 0; then
+S(t) = Sˆ(0)2 0.98 S 2. (4.21)
+(cid:12)√N (cid:12) | | ≥ k k
+(cid:12) X t=1 (cid:12)
+(cid:12) (cid:12)
+So (cid:12) (cid:12)
+(cid:12) (cid:12)
+(cid:12) (cid:12) (cid:12) − (cid:12)≥ k k−(cid:12) (cid:12)
+(cid:12) (cid:12) (cid:12) (cid:12) tX∈ TC (cid:12) (cid:12) (cid:12) (cid:12) (cid:12) (cid:12) (cid:12) (cid:12) X t=1 X t ∈ T (cid:12) (cid:12) (cid:12) (cid:12) √0.98N S T (cid:12) (cid:12) (cid:12) (cid:12) X t ∈ 1 T S (cid:12) (cid:12) (cid:12) (cid:12). (4.22)
+Finally, we get
+(N T )2 S √0.98N | | S , (4.23)
+(cid:18) (cid:19)
+N T √0.98N | | . (4.24)
+(cid:18) (cid:19)
+Let α= | T |; the above inequality becomes
+α2+0.04α 0.08 0. (4.25)
+Thus 0 α 0.264. That is, T 0.264N.
+Define now a random variable X = N χ (i) ; it will be useful to estimate
+(cid:16) (cid:17)
+E(X )= | | 0.264, (4.26)
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 15
+and the expectation of the random variable ezXT,
+Suppose now we sample the signal S r times, and take the 60-th percentile of the numbers
+N S(t )2,...,N S(t )2. By Chernoff’s standard argument, we have for z >0
+Prob 60-thpercentile< S 2 =Prob(0.6r of the samples t belong to T)
+(cid:18) (cid:19)
+0.6rzE(ez r j=1XT,j)= (1 α)e
+0.6z+αe0.4z r
+(cid:2) (cid:3)
+Take z =ln(1.25(1 α)/α), then
+(1 α)e 0.6z +αe0.4z =1.96α0.6(1 α)0.4 (4.28)
+Therighthandsideof(4.28)is increasinginαonthe interval[0,0.264];since α 0.264,weobtain
+an upper bound by substituting 0.264 for α:
+(1 α)e 0.6z+αe0.4z r = 1.96α0.6(1 α)0.4 r e 0.248r (4.29)
+So for r 4.02ln(1/(cid:2)δ), we have (cid:3) (cid:2) (cid:3)
+Prob(Output of this algorithm S 2/4)=Prob(60-th percentile of N S(t)2 S 2/4) δ.
+In practice, we may even use Cln(1/δ) samples, with C <4.02 to estimate the energy for the
+signals (as in the group testing later). This is sometimes a little far away from the true value, as
+stated in [5], yet it gives a rough idea of where the significant mode might be. When we desire
+more accuracy, a larger constant C is chosen. In the statement of the algorithm, we choose r to
+be a multiple of 5, so that the 60-th percentile would be well-defined. In practice, it works equally
+well to take r that are not multiples of 5 and to round down, taking the 3r/5 -th sample in an
+increasingly ordered set of samples.
+4.3. Isolation. Isolation processes a signal S and returns a new signal with significant fre-
+quencyω, with 98%ofthe energyconcentratedonthis mode. Afrequency ω is called“significant”
+for S , if Sˆ(ω) > η S 2, where η is a threshold, fixed by the implementation, which may be
+fairly small. More precisely, the isolation step returns a series of signals F ,F ,...,F , such that
+Fˆ (ω)2 0.98 F 2 for some j.
+The discussion in [5] proposes a B-tap box-car filter in the time domain, which corresponds
+to a Dirichlet filter with width N in the frequency domain. The whole frequency region would be
+coveredby random permutations of this filter.
+Notation: as in [14], we define a box-car filter H as H (t)= √N χ , where k N.
+k k 2k+1 [ − k,k] ∈
+Figure 4.1 shows a Box-car filter in the frequency domain. The following results are standard:
+Lemma 4.6.
+1. For all k,
+2. For all k and all ω, Hˆ (ω) 1.
+3. For all k and all ω s | uch tha | t ≤ ω N , we have Hˆ (ω) 2/π.
+4. For all k, Hˆ 2 =N/(2k+1).
+5. Notation: H (t) = e2πijt/(2k+1)H (t) in the time domain, which is equivalent to a shift
+of Hˆ (ω) by N/(2k+1) in the frequency domain.
+16 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+fr1e0quency domain of Box−car filter
+Fig. 4.1. Magnitude of Box Car filterin the frequency domain
+6. Notation: Define R F(t) by R F(t)=e2πiθt/NF(t/σ), R \ S =Sˆ(σω+θ)., where R
+is a dilation and shift operator in the frequency domain.
+The isolation procedure in [5] randomly permutes the signal S and then convolves it wdith
+a shifted version of H to get a series of new signals F = H R S, j = 0,...,2k. This
+k,j j k,j θ,σ
+scheme does not work well in practice. In the new version of the isolation steps, each F =
+H R S corresponds to different randomly generated dilation and modulation factors, with
+j = 0,...,log(1/δ). The following lemma is similar to Lemma 8 in [5] for the new isolation step,
+with more explicit values of the parameters.
+Lemma 4.7. [5] Let a signal S and a number η be given, and create log(1/δ) new signals:
+F ,...,F with F =H R S, where j =0,...,log(1/δ). If k 12.25(1 η)π2/η , then
+0 log(1/δ) j k
+for each ω such that Sˆ(ω)2 >η S 2, there exists some j such that with high probability 1 δ, the
+new signal F is 98% pure.
+Proof. Suppose σ j− 1(ω
+θ j ) falls into the pass region of the H k filter, i.e. that σ j− 1(ω
+N We know that
+2(2k+1) (cid:12) (cid:12)
+(cid:12) (cid:12)
+(cid:12) (cid:12)
+(cid:12) (cid:0) (cid:1)(cid:12)
+so that (cid:12) (cid:12)
+(cid:12) (cid:12) (cid:12) (cid:12)
+(cid:12) (cid:0) (cid:1)(cid:12) (cid:12) (cid:12)
+2 is greater than(cid:12)the average(cid:12)value(cid:12) of Hˆ k , we have
+P N 1 ≤ N 2k+1
+Moreover, Sˆ(ω )2 (1 η) S 2. In particular, Sˆ(ω )2 (1 η) S 2 if ω =ω. We then
+1 1 (1 η) S 2
+Define X to be the random variable
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 17
+For this random variable, we have
+2 ≥ 1/49 ! =Prob
+− . (4.37)
+Since k 12.25(1 η)π2/η, the right hand side of (4.37) is 1/2, meaning that the signal F is
+98%pure with probability 1/2. The successprobability,i.e. the probabilityofobtaining at least
+oneF thatis98%pure,canbeboostedfrom 1 toprobability1 δbyrepeatingO(log(1/δ))times,
+i.e. generating O(log(1/δ)) signals.
+The above lemma gives a lower bound for the filter width. Obviously, the larger the width
+in the time domain, the higher the probability that the frequency will be successfully isolated.
+However,a largerwidth leads to moreevaluationsof the function andthereforemore time for each
+isolation step. One needs to balance carefully between the computational time for each iteration
+step and the total number of iterations.
+Based on several numerical experiments, we found that a very narrow filter is preferable and
+gives good performance; for instance, the filter with three-tap width, i.e. k = 1 works best for a
+signalwith 2 modes. For the choice k =4, the algorithmends after fewer iterations; however,each
+iterationtakesmuchmoretime. Thechoiceofa9-tapwidthfiltermakesthecodefourtimesslower
+in total.
+The filter width is mostly determined by the number of modes in the signal, not by the length
+of the signal. Through experimentation, we found that when the number of modes is less than 8,
+the 3-tap width filter works very well; as the number of modes increases, larger width filters are
+better.
+4.4. Group Testing. After the isolationreturns severalsignals, at least one of which is 98%
+purewithhighprobability,grouptestingaimsatfindingthemostsignificantmodeforeach. Original
+RAℓSFA uses a procedure called Most Significant Bit (MSB) to approach the mode recursively.
+First, we reformulate the basic Group Testing Scheme in [5] explicitly. It is a recursive proce-
+dure.
+Algorithm 4.8. Group Testing
+Input the signal F to F , l =0
+In the lth iteration, l=0,..., logN +1
+1. If l logN +1, then return 0.
+2. Find the most significant bit m by the procedure MSB.
+3. Modulate the signal F by m, dilate it by 2. Store it in F .
+4. Call the Group testing again with the new signal F , store its result in g.
+5. Ifg <N/2,thenreturnmod( g/2+m+0.5 ,N);elsereturnmod( (N g)/2+m+0.5 ,N)
+⌊ ⌋ ⌊− − ⌋
+The Most Significant Bit (MSB) procedure finds the location of the most important part of a
+dilatedand shifted signal F . Its scheme, only implicitly mentioned in the proofof Lemma 5 in [5],
+is as follows:
+Algorithm 4.9. Most Significant Bit [5]
+Input the signal F , set filter width parameter 2k+1.
+1. Construct a series of new signals G = √Ne2πijt/16 F , j =0,...,15
+2. Estimate the energy e for each signal G .
+3. for i=0,...,16
+if e >e for all j i(mod16) 4, then return i as the most significant bit.
+TheintuitionoftheoriginalRAℓSFAis togetmorethanO(1)bits atatime throughthe MSB
+procedure. IneachMSB step, it usesthe filter Gˆ (ω)=1+cos(2πω/N 2πk/16)to subdivide the
+whole region into 16 subregions. By comparing the energies of all these new signals (see step 3 of
+Algorithm4.11),itexcludeshalfofthe subregionsintheevaluationofthe mostsignificantbit; this
+MSBisthetopbitofthebinarylabelofthesubintervalcontainingthefrequencyatwhichthepure
+signal is concentrated. It follows that each group test needs 16logN energy estimation and in the
+18 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+worst case 72logN comparison operations. One method to improve the MSB is to rule out more
+intervals. This reduces the total number of recursive iterations of Group Testing. Moreover, the
+original MSB chooses the lowest index of the interval with energy greater than the energies of its
+opposite 9 intervals; with this method it is possible to miss a more significant interval with larger
+energy. In addition, numericalexperiments showthe filter is not practical; it runs veryslowly and
+can not find the frequency efficiently.
+InthenewMSBprocedure,weimprovethealgorithmfromthefollowingaspects. Weintroduce
+a different idea to exclude more intervals. First find the signal with the maximum energy. Then
+compare the energies of other signals with this maximum energy. If the energies of some intervals
+are much smaller than the maximum energy, it is acceptable to throw away the intervals with
+relatively small energies. How to set the criteria to measure “smallness” is very tricky. Lemma
+4.6 says the norm estimation for a 98% pure signal G is between G 2/4 and G 2. Suppose the
+estimation for the energies of two new signals are e and e , whereas the real energies are r and
+r , with r > r . We have r /4 e r and r /2 e r . If e < e /4, then this implies
+2 1 2 1 1 1 2 2 2 2 1
+r < r and we can thus conclude that the energy of signal 1 is greater than that of signal 2, and
+exclude the interval 2.
+We also use another filter in the new MSB; we introduce a Box-car filter, which works much
+better. The next lemma concerns the filter-width used in the new version of MSB.
+Lemma 4.10. Given a signal F with 98% purity, suppose G (t) = F e2πij/(2k+1)tH (t). If
+k > 10, then the MSB procedure can find the most significant bit of the signal F that is 98% pure
+with high probability.
+Proof. Apply 2k+1 shifted Box-carfilters H with width N/(2k+1) in the frequency domain
+to the signal F that is 98% pure,and get a series of the new signals G , i=0,...,2k.
+Suppose the ω falls into the pass region of G (t). For MSB to give the correct result, we need
+G 2 > G 2 for all j =j. The energy of G is
+G 2 Fˆ(ω)2 0.98 F 2 (4.38)
+(cid:18) (cid:19) (cid:18) (cid:19)
+As explained in the proof of the above lemma, the expectation of energy attenuation by G is no
+more than is 1/(2k+1). Suppose a random variable
+k k − 2 ≤ ≤ 2 6
+(cid:26) (cid:12) (cid:27)
+The original norm estimation(cid:12) for k G j k would be greater than k G 2 jk. For this random variable,
+Prob X > G 2 (4.40)
+4k j k ≤ G 2 ≤ 0.98/π2
+(cid:18) (cid:19) k j k
+So k > 10, the right hand side of (4.40) is 2/3. Again this success probability can be boosted
+from 2/3 to probability 1 δ by repeating O(log(1/δ)) times, i.e. generating O(log(1/δ)) signals.
+The following are the new Group testing procedures:
+Algorithm 4.11. Group Testing
+Input the signal F to F , iterative step i = 0, the length N of the signal, the accumulation factor
+In the ith iteration,
+1. If q N, then return 0.
+2. Find the most significant bit v and the number of significant intervals c by the procedure
+MSB.
+3. Update i=i+1, modulate the signal F by (v+0.5)N/(2k+1) and dilate it by a factor of
+(2k+1)/c. Store it in F .
+4. Call the Group testing again with the new signal F , store its result in g.
+5. Update the accumulation factor q =q (2k+1)/c.
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 19
+6. If g >N/2, then g =g N.
+The new MSB procedure is as follows.
+Algorithm 4.12. MSB (Most Significant Bit)
+Input: signal F with length N, a threshold 0<η <1.
+1. Get a series of new signals G (t) = F(t)⋆(e2πijt/(2k+1)H ), j = 0,...,2k. That is, each
+signalG concentratesonthepassregion[(j 1/2)N/(2k+1),(j+1/2)N/(2k+1)]:=pass .
+2. Estimate the energies e of G , j =0,...,2k.
+3. Let l be the index for the signal with the maximum energy.
+4. Compare the energies of all other signals with the lth signal. If e < ηe , label it as an
+interval with small energy.
+5. Take the center v of the longest consecutive small energy intervals, suppose there are c
+intervals altogether.
+6. The center of the large energy intervals is v = 2k+1 v , the number of intervals with
+large energy is c=2k+1 c .
+7. If c>(2k+1)/2, then do the original MSB [5] to get v and set c=2;
+8. Output the dilation factor c and the most significant bit v.
+Lemma 4.13. Given a signal F with 98% purity, suppose G (t) = F e2πij/(2k+1)tH (t).
+If k > 10, then Algorithm 4.12 can find the significant frequency ω of the signal F with high
+probability.
+Proof. Suppose the filter width of H is 23, i.e. k =11. Observe that, for some j, 0 j 23,
+ω pass . Without loss of generality, assume j = 0. Now consider the signal F G . Since
+ω pass , the pure frequency Gˆ (ω)ψ satisfies
+| | ≥ k k ≥ k k ≥ k k
+It follows that, if we use Lemma 4.5 to estimate G 2, the estimate will be at least
+0.25 G 2 0.25Gˆ (ω)2 0.1 F 2 (4.42)
+k k ≥ | | ≥ k k
+On the other hand, now consider G . Note that
+Also, G 2 Gˆ (ω)2 0.02 F 2.
+2 F 2 = (0.132+0.02) F 2 = 0.0369 F 2. It follows that if we
+k k ≤ | | k k k k k k
+use Lemma 4.5 to estimate G 2, the result will be at most (0.0369) F 2 0.1 F 2, which is a
+k k k k ≤ k k
+lowerbound for the estimate G 2. Similarly, for all 2 j 21, if we use Lemma 4.5 to estimate
+G 2, the result will be less than the estimate of G 2.
+Ingeneral,ifthepassregionisatsomej ,wecancompare G 2with G 2forall j j 2.
+If there is some j for which the estimation of G 2 is apparently larger than G 2, then we
+conclude ω / pass ; otherwise, possibly ω pass . By the above argument, we can eliminate 20
+consecutive pass regions out of the 23, leaving a cyclic interval of length at most 3N/23.
+In the recursive steps, let P denote a cyclic interval with size at most 3N/23 that includes all
+the possibilities for ω. Let v denote its center. Then generate a new signal F (t)=e 2πivt/NF(t);
+this is a shift of the spectrum of F by v. Thus the frequency ω v is the biggest frequency of
+F (t)., which is in the range of (3N/46+1) to +(3N/46+1). We will now seek ω v.
+Since we rule out a fraction of 20/23 length of the whole region, we may dilate the remainder
+by 23/3 = 7, which can be accomplished in the time domain by dilating F by 1/7. Thus the
+interval of length just less than 3N/23 known to contain ω v is dilated to the alternate positions
+in an interval of length just less than N. We then rule out again 20/23 of this dilated frequency
+domain, leaving a remainder of length at most 3/23 length. Then we undo the dilation, getting an
+intervalof length just less than 32N/232, centeredat some v , which is the secondmost significant
+bit of ω in a number base 7. We would repeat the similar process to get the other bits of ω. By
+getting a series of v ,...,v , we can recover the ω.
+20 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+Similarly, we can prove that Algorithm 4.12 can find the significant frequency when k > 11.
+In fact, a narrower filter works fine and makes the algorithm faster in practice. Heuristically,
+we find that the optimal number of taps for small B cases is 3. Suppose the MSB filter width is 3
+andeachMSBrulesout2intervalsoutof3,thenthetotalnumberofrecursivegrouptestislog N.
+Then the computational complexity is 3log N norm estimations and 2log N comparisons.
+WefindthattheoutputofgrouptestinginboththeoriginalandthepresentversionofRAℓSFA
+mightdiffer fromthe true mode byoneplace. We suspectthatthe reasonisthatallthe floatoper-
+ationsandthe conversionto integersintroduceandaccumulatesome errorinto the finalfrequency.
+As a solution, the coefficients of nearby neighbors are also estimated roughly.
+4.5. Total Scheme. The flow chart of the total scheme of RAℓSFA is given as follows.
+Algorithm 4.14. Total Scheme
+1. Initialize the representation signal R to 0. Set the maximum number of iterations T =
+2. Test whether S R appears to be less than some user threshold, iota. If yes, return the
+representation signal R and the whole algorithm ends; else go to step 3..
+3. LocateFourier Modes ω for thesignal S Rby the newisolation and grouptest procedures.
+4. Estimate Fourier Coefficients at ω: (S R)(ω).
+5. Update the representation signal R R+(S R)(ω)φ (t).
+6. Estimate the Fourier coefficients in all significant modes for by the multi-step procedure.
+7. If the total number of iterations is less than T, go to 2; else return the representation R.
+4.6. Extension to a HigherDimensionalSignal. TheoriginalRAℓSFAdiscussesonlythe
+one dimensional case. As explained earlier, it is of particular interest to extend RAℓSFA to higher
+dimensional cases because there its advantage over FFT is more pronounced.
+In d dimensions, the Fourier basis function is
+d 2ei2πω1x1/N+...+i2πωdxd/N =N
+the representation of a signal is
+S(x ,...,x )= c φ . (4.45)
+1 d i ωi,1,...,ωi,d
+Suppose the dimension of the signal is d, denote ~x=(x ,x ,...,x ), ~ω =(ω ,...,ω ).
+The total scheme remains much the same as in one dimension:
+Algorithm 4.15. Total Scheme in d dimensions
+1. Initialize the representation signal R to 0. Set the maximum number of iterations T =
+2. Test whether S R appears to be less than some user threshold, iota. If yes, return the
+representation signal R and the whole algorithm ends; else go to step 3.
+3. Locate Fourier Modes ω for the signal S R by the procedure Algorithm 4.17.
+4. Estimate Fourier Coefficients at ~ω: (S R)(~ω).
+5. Update the representation signal R R+(S R)(~ω)φ (~x).
+6. Estimate the Fourier coefficients in all significant modes for by the multi-step procedure.
+7. If the total number of iterations is less than T, go to 2; else return the representation R.
+Themostimportantmodificationwithrespecttotheonedimensionalcaseliesintheprocedure
+to carry out step 3 of Algorithm 4.16. We adapt the technique for frequency identification to fit
+the high dimensional case; it is given by the following procedure.
+Algorithm 4.16. Locate the Fourier mode in d dimensions
+1. Random permutations in d dimension.
+2. Isolate in one (arbitrarily picked) dimension i to get a new signal F(t)=S H (t).
+3. For each dimension i, find the ith component ω of the significant frequency by Group
+Testing for the signal F in the ith dimension.
+Theoretical andExperimentalAnalysisofaRandomizedAlgorithmforSparseFourierAnalysis 21
+4. Finally, estimate the Fourier coefficients in the frequency ~ω = (ω ,...,ω ). Keep the
+frequency d-tuple if its Fourier coefficient is large. −
+Note that the computational complexity of the above algorithm is quadratic in the number of
+dimensions. Thepermutationinvolvesad dmatrix1. Thegrouptestprocedureineachdimension
+processesthe same isolationsignal. If a filter with B taps is usedfor the isolation,then it captures
+atleastonesignificantfrequencyinthepassregionwithprobability1/B. Thebasicideabehindthis
+procedure is that, because of the sparseness of the Fourier representation, cutting the frequency
+domain into slices of width 1/B in 1 dimension, leaving the other dimensions untouched, leads
+to, with positive probability, a separation of the important modes into different slices. After this
+essentially1-dimensionalisolation,weonlyneedtoidentifythecoordinatesoftheisolatedfrequency
+mode.
+Ifwejustrepeatedthe1-dimensionaltechniqueineachdimension, thatis,carriedoutisolation
+in each of the d dimensions sequentially, the time cost would be exponential in the dimension d.
+We discuss now in some detail the steps 1, 2, 3 of Algorithm 4.17.
+4.6.1. RandomPermutations. InonedimensionalRAℓSFA,theisolationpartincludesran-
+dom permutations and the constructionof signals with one frequency per-dominant. However,the
+situationismorecomplicatedinhigherdimensions,whichiswhyweseparatedoutthepermutation
+step in the algorithm.
+Recall that in one dimension, the signal is dilated and modulated randomly in order to sep-
+arate possibly neighboring frequencies. In higher dimensions, different modes can have identical
+coordinates in some of the dimensions; they would continue to coincide in these dimensions if we
+just applied “diagonal”dilations, i.e. if we carriedout dilation and modulation sequentially in the
+differentdimensions. To separatesuch modes, we need to use randommatrices. We transformany
+point (x ,x ,...,x ) into (y ,...,y ) given by
+y a a ... a x b
+1 11 12 1d 1 1
+. . . . . . .
+. = . . . . . + . (4.46)
+ .   . . . .  .   . 
+y a a ... a x b
+ d   d1 d2 dd  d   d 
+where A = (a ) is a random and invertible matrix, the a and the b are chosen randomly,
+uniformly andindependently, andthe arithmetic is modulo N. For example,if d=2,N =7,a =
+1,a = 3,a = 5,a = 2,b = 0,b = 5, the point (1,2) gets mapped to (0,0), (1,3) to (3,2),
+12 21 22 1 2
+and(0,3)to(2,4): eventhoughpoints(1,2)and(1,3)havethe samefirstcoordinate,theirimages
+don’tshareacoordinate;the samehappens withpoints(1,3)and(0,3). Foreachdimensioni,the
+ith components of frequencies are mapped by pairwise independent permutations. Even adjacent
+points that differ in only one coordinate are destined to be separate with high probability after
+these random permutations.
+4.6.2. Isolation. After the random permutations, the high dimensional version of isolation
+can construct a sequence F ,F ,... of signals, such that , for some j, Fˆ(ω ′ )2 0.98 F 2.
+Algorithm 4.17. High Dimensional Isolation
+Choose an arbitrary dimension i.
+1. Filter on the dimension i and leave all other dimensions alone, get the signal
+F =S⋆H , (4.47)
+where H = √N χ filters on the dimension i; the other dimensions are not affected.
+k 2k+1 [ k,k]
+2. Output new signals−F to be used in the Group Testing.
+1Note that generalizing to d dimensions our 1-dimensional practice of checking not only the central frequency
+found,butalsonearbyneighbors,wouldmakethisalgorithmexponential ind,whichisacceptableforsmalld. This
+isprobablyatechnicalratherthaninherentflaw,whichwesuspectmightdisappearwithadifferentimplementation.
+Theimplementationsin[5]and[8]donotsufferfromthisproblem.
+22 J.ZOU,A.GILBERT,M.STRAUSS,I.DAUBECHIES
+4.6.3. Group Testing for Each Dimension. After the randompermutation and isolation,
+we expect a d-dimensional signal with most of its energy concentratedon one mode. The isolation
+step effectively separates the d-dimensional frequency domain in a number of d-dimensional slices.
+Group testing has to subdivide these slices.
+One naive method is to apply d dimensional filters in group testing, concentrating on d-
+dimensional cubic subregions in group testing that cover the whole area. However, this leads
+to more complexity. If the number of taps of this filter in one dimension is 2k + 1, we obtain
+(2k+1)d subregions. Estimating the energies of all subregions slows down the total running time.
+Consequently we instead locate eachcomponentof the significantfrequency label separately. That
+is, we only use a filter to focus on one dimension and leave other dimensions alone. The energy
+of 2k + 1 regions are computed in every dimension. Hence, we need to estimate the norm of
+d(2k+1) intervals in total. This makes GroupTesting linear in the number of dimensions, instead
+of exponential as in the naive method.
+Here is the procedure in Group Test:
+Algorithm 4.18. High Dimensional Group Test
+For i =1,...,d
+1. Construct signals G˜(
+i′) = F(t)
+), j = 1,...,2l+1, where H
+filters on
+ith dimension and leave all other dimensions alone;
+2. Estimate and compare the energy of each
+j =1,...,2l+1, use the similar procedure
+in one dimensional group testing procedure. Find the candidates ω .
+Thereadermaywonderhowsamplingworksoutforthisd-dimensionalalgorithm. InAlgorithm
+4.18, we will need to sample
+(which is the convolution of the (permuted version of) signal S
+with 2 filters) to estimate its energy; because filtering is done only in the i-th dimension, we shall
+sample G˜( j i′)(x 1 ,...,x i′ 1 ,x i′,x i′+1 ,...,x d ) for different x i′, but keeping the other x j fixed, where
+j =i. F itself comes fromthe Isolationstep, in whichwe filter indirectioni, for whichS needs to
+be sampled, in this dimension only. Together, for choices i in Algorithm 4.17 and i in Algorithm
+4.18, this implies we have (2k+1) (2l+1) different samples of (the permuted version of) S, in
+which all but the ith and ith coordinates of the samples ~x are identical.
+5. Conclusion. We provide both theoretical and experimental evidence to support the ad-
+vantage of the implementation of RAℓSFA proposed here over the original one sketched in [5].
+Moreover,weextendRAℓSFAtohighdimensionalcases. Forfunctionswithfew,dominantFourier
+modes, RAℓSFA beats FFT very strikingly as N increases. We expect that RAℓSFA will be useful
+as a substitute for FFT in potential applications that require processing such sparse signals or
+computing B-term approximations.
+Acknowledgments. For discussions that were a great help, we would like to thank Bjorn
+Engquist, Weinan E, Olof Runborg, and Josko Plazonic.

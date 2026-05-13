@@ -1,0 +1,578 @@
+HATP: An HTN Planner for Robotics
+Raphae¨lLallement1,2 and LavindradeSilva1 and RachidAlami1
+1CNRS,LAAS,
+7avenueduColonelRoche,
+F-31400Toulouse,France
+2UnivdeToulouse,INSA,LAAS,
+F-31400Toulouse,France
+Abstract ularly suited for use in robotics. HATP is based on SHOP
+(Nau et al. 1999), but unlike this planner and other HTN
+HierarchicalTaskNetwork(HTN)planningisapopularap-
+planners such as Nonlin (Tate 1976), SHOP2 (Nau et al.
+proachthatcutsdownontheclassicalplanningsearchspace
+2003) and UMCP (Erol, Hendler, and Nau 1994), HATP by relying on a given hierarchical library of domain con-
+offers a user-friendly domain representation language in-
+trolknowledge. Thisprovidesanintuitivemethodologyfor
+spired by popular programming languages, making it eas-
+specifyinghigh-levelinstructionsonhowrobotsandagents
+ier for roboticists, and indeed computer scientists alike, to shouldperformtasks,whilealsogivingtheplannerenough
+become quickly acquainted with the syntax and semantics.
+flexibility to choose the lower-level steps and their order-
+WegiveinsightsintoaformalmappingfromthisHATPlan-
+ing.InthispaperwepresenttheHATP(HierarchicalAgent-
+guage into an equivalent classical representation, but leave
+basedTaskPlanner)planningframeworkwhichextendsthe
+thedetailedtreatmentforaseparatepaper.
+traditionalHTNplanningdomainrepresentationandseman-
+ticsbymakingthemmoresuitableforroboticists,andtreat- An important feature of HATP is that it treats agents as
+ingagentsas“firstclass”entitiesinthelanguage. Thefor- “first-classentities”inthedomainrepresentationlanguage.
+mer is achieved by allowing “social rules” to be defined It can therefore distinguish between the different agents in
+whichspecifywhatbehaviourisacceptable/unacceptableby thedomainaswellasbetweenagentsandtheotherentities
+the agents/robots in the domain, and interleaving planning suchastablesandchairs. Thisfacilitatesapost-processing
+with geometric reasoning in order to validate online–with step in HATP that splits the final solution (sequence of ac-
+respect to a detailed geometric 3D world–the human/robot tions) into multiple synchronised solution streams, one per
+actionscurrentlybeingpursuedbyHATP.1 agent,sothatthestreamsmaybeexecutedinparallelbythe
+respectiveagentsbysynchronisingwhennecessary.
+Introduction TheplanningalgorithmofHATPhasalsobeenextended
+in various ways. First, it incorporates a simple mechanism
+Real-world robotics domains and problems offer natural
+totakeintoaccountthe(user-defined)costofexecutingac-
+testbeds for HTN (Hierarchical Task Network) planning.
+tions,sothatinsteadofreturningthefirstarbitrarysolution
+Theintuitivehierarchicalrepresentationusedbysuchplan-
+found, it keeps searching until an optimal (least-cost) one
+nersallowstheoftenavailableexpertknowledgeaboutado- is found.2 Second, HATP has been extended to be more
+main to be included with relative ease to guide the search
+suitable for Human-Robot Interaction (HRI); in particular,
+process. This guidance might be abstract steps detailing
+“social rules” can be included by the user to define what
+how a task, such as cleaning a table full of different types
+the acceptable (and unacceptable) behaviours of the agents
+ofobjects,shouldbeperformedbytherobot,withsufficient
+are. Two examples are: what sequences of steps should be
+flexibilityoverthemoredetailedstepsandstates—e.g. the
+avoidedinfinalsolutions,andalimitontheamountoftimea
+finallocationsofobjectsontheshelf. Inpractice,theinclu-
+personshouldspendwaiting(anddoingnothing). Therules
+sionofsuchsearchcontrolknowledgemakesHTNplanning
+arethenusedtofilterouttheprimitivesolutionsfoundthat
+faster than classical planning, which is particularly impor-
+donotmeettheconstraints.
+tantwhendealingwithrobotsastheyneedtoberesponsive
+Finally, there is much ongoing work on interleaving
+to environmental changesinvolving other robots, and more
+HATP with geometric planning algorithms, so as to vali-
+importantly,humans.
+dateonlinetheactionsbeingpursuedbyHATP,byconsult-
+InthispaperwedescribetheHATP(HierarchicalAgent-
+ing its geometric counterpart. This results in motion plan-
+basedTaskPlanner)HTNplannerandshowhowitispartic-
+ning being performed by the geometric planner to check
+if the HATP action being planned is actually feasible in
+1ThisworkhasbeenconductedwithintheEUARCASproject
+ISTunderContractICT287617.Wethanktheanonymousreview- 2Thenotionofoptimalityhereis“local”: HATPfindsanopti-
+ersfortheirfeedback. ThesecondauthorhasnowmovedtoThe malsolutiononlyfromthesetofHATPsolutionsobtainedusing
+UniversityofNottingham,Nottingham,UK. thegivenmethods.
+2v5435.5041:viXra
+PlanningandRobotics(PlanRob) ICAPS-Workshop,Portsmouth,USA,2014
+the real world, modelled in great detail via the Move3D alternative method instance to one that was previously ap-
+(Sime´on, Laumond, and Lamiraux 2001) simulation envi- plied to d only if that method instance did not eventually
+ronment. This integration takes an important step towards allowacomplete(andsuccessful)decompositionofthetop-
+interfacing HATP’s AI planning algorithms and techniques levelgoaltask(s).
+with the planning algorithms and techniques more com-
+monly used by roboticists. In this paper we summarise all FeaturesofHATP
+of these extensions to HATP, and explicate how they make
+InthissectionwepresentourownencodinginHATPofthe
+HATPparticularlysuitedfortheRoboticscommunity.
+Dock-Worker Robots domain (Nau, Ghallab, and Traverso
+HTNPlanning 2004). In this domain, there is a robot (R1) that can move
+andcarrycontainers,andtwocrane-agents(K1andK2)that
+WhileclassicalplannerssuchasSTRIPSfocusonachieving
+canliftandputdowncontainers. Furthermore,therearetwo
+somegoalstate,HierarchicalTaskNetwork(HTN)planners
+locations (L1 and L2), each containing two piles (P11 and
+focusonsolvingabstracttasks. WehavefoundHTNplan-
+P12atL1,andP21andP22atL2)thatcanholdcontainers.
+ningtobeparticularlyusefulforroboticsapplications,asit
+The goalis toplace thetwo containersC1 andC2 on piles
+allows—the often available—instructions from the domain
+P21andP22,respectively.
+expert to be included in the domain as an intuitive hierar-
+chy. Thishelpsguidethesearch,makingitfasteringeneral
+than classical planning approaches, and thereby also more
+practical for real robots that need to be responsive to envi-
+ronmentalchanges.
+The Hierarchical Agent-based Task Planner (HATP) is
+P11 P12 P21 P22
+based on the popular “totally-ordered” HTN planning ap-
+proach, whichunlike“partially-ordered”HTNplanningal-
+lows calls to external functions—a necessity in our work.
+This is also highlighted as a feature in the SHOP (Nau et
+Figure 1: A planning problem in the Dock-Worker Robot
+al.1999)planner,onwhichHATPisbased. Therestofthis
+domain: robotR1hastocarrythecontainerC1fromP11to
+sectionfocussesontotally-orderedHTNplanning.
+P21,andthecontainerC2fromP12toP22.
+We define an HTN planning problem as the 3-tuple
+(cid:104)d,s ,D(cid:105), where d, the “goal” to achieve, is a sequence
+of primitive or abstract tasks, s is the initial state, and D
+0 Worldstaterepresentation
+is an HTN planning domain. An operator is as in classi-
+calplanning,andactionsaregroundinstancesofoperators. Inadditiontohavingthestandardadvantagesoftotal-order
+Wegenerallyusethetermsoperatorandactioninterchange- HTN planning, HATP also provides an intuitive object-
+ably in this paper. An HTN planning domain is the pair oriented-like syntax for representing and manipulating the
+D = (cid:104)A,M(cid:105) where A is a finite set of operators, and M worldstate. Thisallowsroboticistsandcomputerscientists
+isafinitesetofHTNmethods. Amethodisa4-tuplecon- aliketoquicklygetacquaintedwiththesyntaxandstartde-
+sisting of: the name of the method, the abstract task that it velopingHATPdomains.
+needs to solve, a precondition specifying when the method The HATP world specification is defined as a collection
+is applicable, and a body realising the “decomposition” of ofentities,whichrepresenttheagenttypesandobjecttypes
+thetaskassociatedwiththemethodintomorespecificsub- intheworld. Thisdistinctionbetweenagentsandotherob-
+tasks. Specifically,themethod-bodyisasequenceofprimi- jectsisimportant. Agentsaretreatedasfirstclassentitiesin
+tiveand/orabstracttasks. the language of HATP; moreover, different types of agents
+TheHTNplanningprocessworksbyselectingapplicable maybedefinedbysimplyinstantiatingthedefaultAgenten-
+methods from M and applying them to abstract tasks in d tity. This distinction also facilitates a post-processing step
+inadepth-firstmanner. Ineachiteration,thiswilltypically in HATP, which splits the final solution into separate sub-
+resultin d becominga “moreprimitive” sequenceof tasks. solutionstobeexecutedbytherespectiveagents.
+The process continues until d has only primitive tasks left, Anentityhasasetofattributes,whereanattributeeither
+which map to action names. At any stage during planning represents a data value, or a relation between the entity
+if no applicable method can be found for an abstract task, andotherentities. Forexample,arobot-agentmayhavean
+theplanneressentially“backtracks”andtriesanalternative attribute carry of type Container indicating that the robot
+methodforanabstracttaskrefinedearlier. cancarryobjectsoftypeContainer. HATPsupportssome
+In more detail, the main steps of the HTN planning pro- ofthestandarddatatypesfoundinprogramminglanguages,
+cessarethefollowing: ineachiterationallgroundinstances such as integers and strings, and also allows defining sets
+are found of the methods available to decompose a chosen of objects, which are manipulated using the standard set
+taskfromtasknetworkd;onesuchmethodinstanceischo- operations. An example of an HATP world specification is
+senarbitrarilythatisapplicable(whosepreconditionholds) showninlisting1.
+inthecurrentstateoftheworld;andtheinstanceisapplied
+todbybasicallyreplacingthechosentaskwiththesubtasks
+inthemethod’sbody. Theplannerbacktrackstochoosean
+PlanningandRobotics(PlanRob) ICAPS-Workshop,Portsmouth,USA,2014
+K2.type=‘‘CRANE’’;
+defineentityTypeCrane,Location,Pile,Container; K2.attached=L2;
+defineentityAttributesAgent{ L1.adjacent<<=L2;
+//AnagentcanbeoftypeRobotorCrane L1.occupied=true;
+staticatomstringtype; L2.adjacent<<=L1;
+L2.occupied=false;
+//Forcranes
+staticatomLocationattached; P11.attached=L1;
+P11.contains<<=C1;
+//Forrobots P11.top=C1;
+dynamicatomLocationat; P12.attached=L1;
+dynamicatomContainercarry; P12.contains<<=C2;
+dynamicatomboolloading; P12.top=C2;
+} P21.attached=L2;
+P22.attached=L2;
+defineentityAttributesLocation{
+staticsetLocationadjacent; C1.in=L1;
+dynamicatombooloccupied; C1.on=NULL;
+} C2.in=L1;
+C2.on=NULL;
+defineentityAttributesPile{
+staticatomLocationattached; Listing2:AnHATPinitialstatefortheDock-WorkerRobot
+dynamicsetContainercontains; domain. Afterinstantiatingtheentitytypes, theirattributes
+dynamicatomContainertop; areassignedinitialvalues.Notethatsymbol“<<=”isused
+toaddtheelementonitsRHStothesetonitsLHS.
+defineentityAttributesContainer{
+dynamicatomLocationin;
+Domainrepresentation
+dynamicatomContaineron;
+} AsinstandardHTNplanning,anHATPdomainconsistsofa
+Listing1:HATPentitiesfortheDock-WorkerRobotdomain setofmethodsandasetofoperators. Thesearewrittensim-
+in figure 1. There are five entity types: Agent (default en- ilarlytotraditionalHTNdomainswiththeexceptionwhere
+tity),Crane,Location,PileandContainer. Theinitialvalue theHATPlanguageofferssomeuser-friendlyconstructsfor
+assignedtoastaticattributecannotchangeduringplanning, defining preconditions of methods and operators, bodies of
+whereas a dynamic attribute can be assigned different val- methodsandeffectsofoperators. Inparticular,variablesare
+uesoverthecourseofplanning. Anattributeclassifiedasan definedinHATPmethods,andtheirbindingscontrolled,via
+atom can only have one value, whereas one classified as a thefollowingconstructs;examplesoftheirusecanbefound
+setcanhaveasetofvalues. Thetypeofanattributecanbe inlisting3.
+anyoftheprimitivetypesallowedaswellasanentity.
+• SELECT binds the given variable in the usual way. In
+essence,theconstructamountstoa“backtrackpoint”that
+The HATP initial world state is then an instantiation of
+allowsallvaluesoftheassociatedvariable—andthereby
+thedefinedentities,alongwithvalueassignmentstotheirat-
+allgroundinstancesofthemethod—tobeconsidered.
+tributes.AnexampleofanHATPinitialworldstateisshown
+in listing2. Notice thatattributes ofentities generally map • SELECTORDERED binds the variable in some given
+to predicate symbols in standard “classical” initial states, order, governed by a user-supplied ordering relation.
+and the entities and values to the parameters of the predi- Moreover, thevariablecanbeboundinascendingorde-
+cate. Forexample, K1.attached = L1couldmaptopredi- scendingorderwithrespecttotherelation.
+cateattached(K1,L1)inaclassicalinitialstate,R1.loading
+• SELECTONCE binds the variable only once—the re-
+= false to ¬loading(R1), and R1.carry = NULL could be
+mainingbindingsaredisregarded. Thisoffersareduction
+representedintheclassicalinitialstatebynotincludingany
+inthebranchingfactorattheexpenseofcompleteness,as
+positiveliteralinitthathaspredicatesymbolcarry,withR1
+someoftheignoredbindingsmayalsoyieldHATPsolu-
+asitsfirstparameter.
+tions.
+R1,K1,K2=newAgent; WhilethelastconstructmayresultinthelossofHATPso-
+L1,L2=newLocation;
+lutions,thisheuristicisusefulindomainswhereifasolution
+P11,P12,P21,P22=newPile;
+pursuedbytakingonebindingofthevariable—andapplying
+C1,C2=newContainer;
+the resulting ground instance of the HATP method—turns
+R1.type=‘‘ROBOT’’; outtonotwork,thennootherbindingforthatvariablewill
+R1.at=L1; workeither.Forexample,imagineaslightlydifferentDock-
+R1.carry=NULL; WorkerRobotdomain/problemthathasmultiplerobots,and
+R1.loading=false;
+where taking the shortest path during navigation is not im-
+portant. This means that if one robot cannot navigate from
+K1.type=‘‘CRANE’’;
+K1.attached=L1; onelocationtoanother,thennoneoftheotherswillbeable
+PlanningandRobotics(PlanRob) ICAPS-Workshop,Portsmouth,USA,2014
+toeither. Therefore,thereisnoneedtoconsiderallpossible andFORALLinbothpreconditionsofmethodsandopera-
+robot-agent bindings as done in listing 3: a single binding tors,aswellasintheeffectsofoperators. Examplesofhow
+willbesufficient. theseconstructsmaybeusedareshowninlistings3and4.
+methodTransport(ContainerC,PileTarget){ actionMove(
+//donothingifcontainerisintargetpile AgentR,LocationFrom,LocationTo,LocationFinalDest){
+empty{C.in==Target;}; preconditions{
+preconditions{ To>>From.adjacent;
+//containernotalreadyintargetlocation R.at==From;
+EXIST(PileSource2,{C.in==Source2;}, To.occupied==false;
+{Source2.attached!=Target.attached;}); };
+}; effects{
+subtasks{ R.at=To;
+S=SELECT(Pile,{C.in==S;}); From.occupied=false;
+R=SELECTORDERED(Agent,{R.type==‘‘ROBOT’’;}, To.occupied=true;
+distance(R.at,S.attached),<); R.path<<=To;
+K1=SELECT(Agent, IF{From!>>R.path;}{R.path<<=From;}
+{K1.type==‘‘CRANE’’;K1.at==S.attached;}); IF{To.isForbiddenBy==R;}{To.isForbiddenBy=NULL;}
+K2=SELECT(Agent, IF{To==FinalDest;}{
+{K2.type==‘‘CRANE’’;K2.at==Target.attached;}); FORALL(LocationLocP,
+1:GetReady(R,C,S); {LocP>>R.path;},{R.path=>>LocP;});
+2:LoadRobot(K1,R,C)>1; }
+3:NavFromTo(R,S.attached,Target.attached)>2; };
+4:UnloadRobot(K2,R,C)>3; cost{costToMove(From,To)};
+5:Put(K2,C,Target)>4; }
+}; Listing 4: An HATP operator. The expression “A >>
+...
+B.attr”holdsifelementAisinthesetB.attr,andtheex-
+pression’snegationisspecifiedusing“A!>>B.attr”. Ex-
+Listing3:PartofanHATPmethodtomoveacontainerfrom pression “B.attr <<= A” adds element A to set B.attr,
+asourcepiletoatargetpileinadifferentlocation. Notethat and“B.attr =>>A”removesAfromB.attr.
+distance is a user-supplied ordering relation; “<” means
+thatthevariablebindingsshouldbeindescendingorder;and
+Planproduction
+“N : T > N ;”meansthattaskT (labelledN )mustpre-
+cedethetasklabelledN . HATP is able to find the least-cost primitive solution that
+solvesthegoaltask(s)athand,asdoneforexamplein(Nau
+Observe from listing 3 that, as expected, the subtasks et al. 2003). To this end, HATP keeps track of the least-
+within the method’s body are totally ordered. HATP, how- costly plancomputed sofar, aswell asthe totalcost of the
+ever,alsoallowspartiallyorderingsubtasks;thisisachieved current partial plan being pursued, and then avoids adding
+bynotspecifyingorderingconstraintsbetweensome(orall) any action to it that will definitely lead to a costlier partial
+of the tasks in the method’s body. For example, remov- plan. Indeed,intheworstcasethisrequireslookingthrough
+ing constraint “> 2” from the method in listing 3 would all HATP solutions for the given goal task(s). Moreover,
+then not require that the task with label 3 occur after the since the HATP search space is governed by the methods
+onewithlabel2. Notethatsuchpartialorderingoftasksis supplied,theremaybeotherlow-costsolutions(correspond-
+merelyaconvenience: itisanalternativetosupplyingmul- ing to methods not supplied) that HATP does not take into
+tipletotally-orderedmethodscorrespondingtoeverypossi- account.
+ble linearisation of the partially ordered subtasks. This is The cost of the partial plan is computed via “cost func-
+exactly what happens during planning: the set of partially tions”. Acostfunctionisauser-suppliedC++functionthat
+orderedsubtasksinamethod’sbodyishandledbytakingall islinkedtoanHATPoperatorasshownatthebottomoflist-
+possible linearisations of the set, essentially creating addi- ing4. Thefunctioncanperformanyarbitrarycalculationto
+tionalHATPmethodoptionstoconsiderfortheparenttask’s estimate the cost of executing the action; however, for ef-
+decomposition. Since partially ordering subtasks results in ficiency reasons the function should terminate quickly. An
+an exponential increase in the number of method options, exampleofsuchafunctionisonethatcomputesthecostof
+it should be used with appropriate care. Introducing “true” executinganactiontosenddatafromonerobottoanother.
+partially-orderedplanningintoHATPisleftasfuturework: Thismightinvolvecheckinghowmuchdataneedstobesent
+thealgorithmsarenotobviousaswewanttohavetheability andtherebyhowmuchtimeitwouldtaketodothetransfer.
+touseevaluablepredicatesinpreconditions,forwhichmain- By using cost functions associated with the sequence of
+taining the complete state of the world at each step of the primitiveactionspursuedsofar,HATPdeterminesthetotal
+planningprocessistheobvioussolution(Nauetal.1999). cost of the sequence, and avoids pursuing it further if by
+SomeotherusefulconstructssupportedbyHATPareEX- adding the next action the total cost would exceed the cost
+IST, IF, and FORALL. As in other HTN planners such as ofthelowest-costsolutionfoundsofar.
+SHOP, construct EXIST is used only in preconditions of Once HATP finds a solution—a sequence of primitive
+methods and operators; IF only in the effects of operators; actions—it then splits the solution into multiple “streams”,
+PlanningandRobotics(PlanRob) ICAPS-Workshop,Portsmouth,USA,2014
+oneperagentinthedomain,andaddscausallinksbetween the plan, as a problem with executing just one of those
+streams for synchronisation (Alami et al. 2011). To deter- actionscouldinvalidatetheentireplan.
+mine which actions in the final solution belong to which
+Undesirablesequences: Avoids plans that violate specific
+agents,theHATPlanguagereservesthefirstvariableofev-
+user-definedsequences.
+eryoperator’sname: itmustalwaysbindtothenameofthe
+agentresponsibleforeventuallyexecutingtheoperator. The Combining some of the above criteria could help yield
+secondandsubsequentvariablesofanoperator’snamemay the following interesting behaviours: (1) the human ends
+also be used as placeholders for agent names if necessary. up doing a lot of the tasks, but yet the overall effort (Alili,
+Suchanoperatorwouldthenbea“jointoperator”: onethat Alami,andMontreuil2009)takentodothemissignificantly
+needstobeexecutedinparallelbyalltherobots/agentsthat lower than what the robot puts to do a lower number of
+itrefersto. effort-intensive tasks; (2) avoiding, when possible, having
+thehumanwaitfortherobotseveraltimes,whichessentially
+Once the different streams are separated, they may then
+preventsthestreamsfromhavingtoomanycausallinksbe-
+beexecuted. Thestream(ifany)belongingtotheagentthat
+tweenthem. Thefilteringcriteriaareimplementedbylook-
+formulated the plan may be executed by the agent directly,
+ingthroughalltheplansproducedandfilteringouttheones
+whereasactionsinotherstreamsneedtobedelegatedtotheir
+that do not meet the requirements specified. In the future
+respective agents, and the environment monitored to deter-
+we intend to study algorithms that do such filtering online,
+mine if the actions were successfully executed. Figure 2
+ratherthanafterprimitivesolutionsarefound.
+shows a plan produced for the Dock-Worker Robots prob-
+lemdepictedinfigure1withdifferentstreamsbelongingto
+Interleavingwithgeometricreasoning
+thedifferentagentsinthedomain.
+Notethatinthecaseofjointoperators, alltheagentsin- While an HTN hierarchy allows one to intuitively reason
+volved need a “stronger” synchronisation than what causal about high-level tasks such as Transport in terms of more
+links entail. For instance in a robot-robot synchronisation specifictasks,andeventuallyintermsofbasicactions,these
+they may need to set some rendezvous points so as to ex- still “abstract out” the lowest possible level of detail by
+change information just before starting. This may also in- makingcertainassumptionsabouttheworld. Forexample,
+volvevisualservoing,bothinrobot-robotandhuman-robot HATP operator Move in listing 4 assumes that as long as
+jointoperators. location To is adjacent to location From, and To is not oc-
+cupied, that the robot at From will be able to navigate to
+HATPinanHRIcontext location To. Clearly, this may not always work for various
+reasons, suchastherebeinganobstacleinthepath, orcer-
+As highlighted by (Alili, Alami, and Montreuil 2009) one
+taingeometricalcharacteristicsoftherobotandtheconnect-
+challenge in robotics is to develop socially interactive and
+ing path making the move physically impossible. Combin-
+cooperative robots. The meaning of socially interactive
+ing HATP—and symbolic/task planning in general—with
+robots is defined in (Fong, Nourbakhsh, and Dautenhahn
+thegeometricplanningalgorithmsusedinroboticsisthere-
+2003)whichstatesthattheymust“operateaspartners,peers
+foreessentialtobeabletoobtainprimitivesolutionsthatare
+orassistants,whichmeansthattheyneedtoexhibitacertain
+viableintherealworld.
+degreeofadaptabilityandflexibilitytodrivetheinteraction
+Theworkin(deSilva,Pandey,andAlami2013;deSilva
+with a wide range of humans”. (Klein et al. 2004) imple-
+etal.2014;2013)proposesaninterfacebetweenHATPand
+mented that in what they called “ten challenges for human
+a geometric planner. This interface is mainly provided via
+robot teamwork”. We are convinced that task planners can
+“evaluable predicates”—predicates in HATP preconditions
+takecareofseveralofthesechallenges.Inthiscasetherobot
+thatareevaluatedbycallingassociatedexternalprocedures.
+shouldbeableto(Kleinetal.2004):(1)signalinwhattasks
+Such a predicate evaluating to true amounts to a geomet-
+itcan/wantstoparticipate;(2)actinapredictablewaytoen-
+ricsolutionexistingforthe“geometrictask”thatthepredi-
+surehumanunderstandingofwhatitisdoing;(3)publicise
+caterepresents,andevaluatingtofalseamountstothenon-
+its status and its intentions; (4) negotiate on tasks with its
+existenceofsuchasolution. Forexample,theprecondition
+humanpartnerinordertodeterminerolesanddecidehowto
+of an HATP action that gives an object to a person might
+perform the tasks; and (5) deal with social conventions, as
+haveanevaluablepredicatethatinvokesthegeometricplan-
+wellasitshumanpartner’sabilitiesandpreferences.
+nertocheckthefeasibilityofthetaskofgivingtheobjectto
+To address some of those challenges HATP includes
+theperson,andtostoretheresultinggeometrictrajectoryif
+mechanismstofilterplanssoastokeeponlythosesuitable
+any.Thisnotionofageometrictaskissomethingthatisboth
+for HRI. To this end, HATP allows the specification of the
+importantinordertohaveameaningfullinkbetweenthetwo
+followingfilteringcriteria.
+planningapproaches,andalsospecifictothetypeofgeomet-
+Wastedtime: Avoidsplanswhereanagent(s)mentionedin ric planner used. A geometric task essentially corresponds
+aplanspendsalotofitstimewaiting. to one or more motion planning goal-configurations, com-
+puted (automatically) by the geometric planner by taking
+Effortbalancing: Avoidsplanswhereeffortsarenotfairly
+intoaccountvariouscriteriasuchasthevisibilityandreach-
+distributedamongtheagentsmentionedinaplan.
+ability of objects from the perspectives of different robots
+Controlofintricacy: Avoidsplanswithtoomanyinterde- and humans in the domain. Aptly called Geometric Task
+pendencies between the actions of agents mentioned in Planner (GTP) (Pandey et al. 2012), this planner liberates
+PlanningandRobotics(PlanRob) ICAPS-Workshop,Portsmouth,USA,2014
+Take Take Load
+(K1 C1 P11 L1 ) Load (K1 C2 P12 L1 ) (K1 C2 R1 L1 )
+(K1 C1 R1 L1 )
+(R1 L2 L1 ) (R1 L1 L2 )
+(R1 L1 L2 )
+(K2 C1 R1 L2 ) Unload
+Put (K2 C2 R1 L2 ) Put
+(K2 C1 P21 L2 ) (K2 C2 P21 L2 )
+Figure 2: The HATP solution for the DWR problem. There are three streams corresponding to the actions belonging to the
+threeagents,orderedusingcausallinks(shownasarrows).Theyellowstreamrepresentstheactionsofthefirstcrane,thegreen
+theactionsoftheothercrane,andthebluetheactionsoftherobots.
+HATP from having to reason in terms of low-level details Theplanningandexecutionarchitecture
+such as grasps and orientations. Using this particular plan- Both HATP and the GTP are part of the larger LAAS
+ner for forming the link with HATP also makes the inter- robotics architecture (Fleury, Herrb, and Chatila 1997;
+face proposed different to other interfaces in the literature, Alamietal.2011). Thisarchitecturehasmanycomponents.
+suchas(Dornhegeetal.2009b;2009a;Karlssonetal.2012; It uses the Move3D (Sime´on, Laumond, and Lamiraux
+Lagriffouletal.2012). 2001)motionandmanipulationplannerforrepresentingthe
+robot’s version of the real world in 3D and for doing geo-
+metrictaskplanning. Throughvarioussensorstherobotcan
+The interface between HATP and the GTP is used to in-
+alsoupdateits3Dworldstateinreal-time.Tothisend,atag-
+terleavetheirplanningalgorithms. Inoneapproach, when-
+based stereo vision system is used for object identification
+evertheGTPisinvokedbyHATPwhiletestinganevaluable
+andlocalisation,andaKinect(Microsoft)sensorforlocalis-
+predicate, the non-existence of a GTP solution for the as-
+ingandtrackingthehuman. Theexecutioncontroller—the
+sociated geometric task (from the current geometric world
+ProceduralReasoningSystem(PRS)(Ingrandetal.1996)—
+state)doesnotleadtothepredicateevaluatingtofalse;in-
+is responsible for invoking HATP when a task needs to be
+stead,theGTPbacktrackstotryalternativesolutionsforthe
+planned,andalsoexecutingtheresultingprimitivesolution
+previouslyinvokedgeometrictasksinanefforttomakeaso-
+returned by HATP by invoking various actuators via the
+lutionpossibleforthemostrecentlyinvokedone. Sincethis
+interface provided by Genom (Fleury, Herrb, and Chatila
+may cause changes to intermediate geometric world states,
+1997) to the low-level controllers, which is also the frame-
+this approach comes with mechanisms to ensure that such
+work used to wrap them into individual well-defined mod-
+changesdonotaffectthesymbolicworldstateinawaythat
+ules.
+invalidatestheHATPplanbeingpursued. Suchmechanisms
+In the current architecture, PRS receives goals from the
+are, however, not necessary in the second approach to in-
+environment,whichitvalidatesbycheckingforthingssuch
+terleavedplanningthattheauthorspresent. Here,whenever
+aswhetherthegoalhasalreadybeenachieved. Ifthegoalis
+theGTPcannotfindasolutionforageometrictask,itdoes
+valid,itissentasatasktoHATP.IfHATP(possiblytogether
+not—as before—backtrack to find alternatives for previous
+withtheGTP)successfullyreturnsasolution,itisthenexe-
+geometrictasks,butinsteadimmediatelyreturnswith“fail-
+cutedbyPRS,bydirectlyexecutingtherobot’sactionsand
+ure”. If this leads to HATP backtracking, HATP then has
+indicating in the right order to other agents, via a dialogue
+the option to try, intuitively, a different “instance” of the
+module, what actions they need to execute. To execute an
+action that needs to be “undone” as a consequence of the
+action directly, PRS sends requests to the relevant Genom
+backtrack(inadditiontothestandardoptionoftryingdiffer-
+modules which may result in the robot or an arm moving,
+ent actions); this different “instance” is basically the same
+forexample. Indeed,theGenommodulesmayactuallyex-
+HATP action that needs to be undone, but this time with a
+ecutethetrajectoriesfoundandstoredbytheGTPifitwas
+differentgeometricsolutionattachedtoit.
+invokedbyHATPduringtheplanningprocess. PRSisalso
+abletoconfirmwhethertherobot’sactionsandthoseofthe
+other agents were successfully executed, by examining the
+AninterestingfeatureoftheGTPisitsabilitytoplannot
+currentstateofthe(symbolicandgeometric)world.
+justtherobots’tasks/actionsbutalsothehumans’,bytaking
+intoaccounttheirrespectivekinematicmodels. Thismakes
+Conclusionandfuturework
+way for the multiple robots/agents defined in an HATP do-
+main to have a clear association with those defined in the We have described in this paper the HATP HTN planner,
+GTP domain. For example, figure 3 shows a simplified li- which has been used extensively for practical robotics ap-
+brarydomain(deSilvaetal.2014)whereaPR2robotserves plications in the LAAS architecture (Alami et al. 1998)
+a human customer, consisting of both human and robot ac- over many years (Alili, Alami, and Montreuil 2009; Guit-
+tions. While the PR2-actions will be planned by the GTP ton,Warnier,andAlami2012;Warnieretal.2012;deSilva,
+fromtheperspectiveofthePR2(usingitskinematicmodel), Pandey,andAlami2013;deSilvaetal.2014). Wehavefo-
+thoseofthehuman,whichinvolvepayingandtakingabook, cussedondescribinghowHATPissuitedfornotjustHTN
+willbeplannedfromthehuman’sperspective. planning but also planning in the context of Human-Robot
+PlanningandRobotics(PlanRob) ICAPS-Workshop,Portsmouth,USA,2014
+9EF,D'"#:>,
+!
+G6E,):?!2?H#(+,3"57, -,
+G6E,!%3>?(,
+>H!"#,":I?#,
+! /, ! 0, ! 1, ! =,
+%!234, 5"4)6+, !"7%879::)8;*+, (<52."4)8;6;*+, !$
+!
+Figure3: Thisfiguredepictsasimplifiedversionofthelibrarydomainin(deSilvaetal.2014). Members(M)reservelibrary
+books(B)onlineandthencomeinpersontopickthemupfromthePR2(R). ThePR2managestheorderplacedforthebooks
+by recursively lending all the books ordered until there are no more books to lend—in which case it will stop the recursion
+by choosing method m —and then taking payment from the member. Books can either be made accessible on the table
+(makeBkAcc)viamethodm ,ordisplayedtothememberandthengiventohis/herhandviamethodsm andm . Actionsay
+involvesspeakingoutthetitle(T)ofthebook.
+Interaction, in a multi-agent setting consisting of multiple temin(deSilvaetal.2014). Ananalyticalevaluationwould
+humansandrobots. Thiswasbasedontwomainextensions alsobeusefultounderstandinwhatsituations/domainsone
+to HATP: the ability to handle user-supplied “social rules” combined backtracking approach should be favoured over
+thatspecifywhatisappropriatebehaviourfortheagentsin the other. Finally, modifying HATP to interleave planning
+thedomain; andinterleavingtheHATPplanningalgorithm withexecutiontomakeHATPmore“responsive”tochanges
+withgeometricplanningalgorithmsfromtheroboticscom- in the environment would make it even more suitable for
+munity. Wehavealsopresentedtheadvantagesoftheuser- real-worldroboticsapplications(deSilvaetal.2014).
+friendly syntax and semantics of HATP using our own en-
+codingoftheDockWorkerRobotdomaindescribedin(Nau, References
+Ghallab,andTraverso2004).
+Alami,R.;Chatila,R.;Fleury,S.;Ghallab,M.;andIngrand,
+There has also been some initial efforts toward extend- F.1998.Anarchitectureforautonomy.InInternatonalJour-
+ingHATPtosupportseparatelymodellingthebeliefsofthe nalofRoboticsResearch,SpecialIssueonIntegratedArchi-
+differentagentsinthedomain(Alamietal.2011). Thisal- tectures for Robot Control and Programming, volume 17,
+lowsreasoningaboutwhatthedifferentagentsknow,includ- 315–337.
+ingfindingconflictingbeliefs,andsynchronisingbeliefsby
+Alami, R.; Warnier, M.; Guitton, J.; Lemaignan, S.; and
+planningtonotifyagentswhenthereareinconsistenciesbe-
+Sisbot, E. A. 2011. When the robot considers the hu-
+tweentheirbeliefs. OtherinterestingworkonHATPthatis
+man... InProceedingsofthe15thInternationalSymposium
+currentlyunderwayisformalisingitsdomainrepresentation
+onRoboticsResearch.
+languagetoshowitsrelationwithmoretraditionalrepresen-
+tations such as that used by the SHOP planner (Nau et al. Alili,S.; Alami,R.; andMontreuil,V. 2009. ATaskPlan-
+1999). Indeed,thisinvolvesdevelopingamappingfromthe ner for an Autonomous Social Robot. In Distributed Au-
+syntax and notions of HATP to PDDL-like syntax and no- tonomousRoboticSystems8,335–344.SpringerBerlinHei-
+tions. delberg.
+deSilva,L.;Pandey,A.K.;Gharbi,M.;andAlami,R.2013.
+IntermsofthelinkbetweenHATPandtheGTP,itwould
+TowardscombiningHTNplanningandgeometrictaskplan-
+beinterestingtocomparethetwodifferentcombinedback-
+ning. In RSS Workshop on Combined Robot Motion Plan-
+tracking strategies. As the authors in (de Silva et al. 2014)
+ningandAIPlanningforPracticalApplications.
+havestated,thiswouldrequirecompletingtheimplementa-
+tionofthesystempresentedin(deSilva,Pandey,andAlami de Silva, L.; Gharbi, M.; Pandey, A. K.; and Alami, R.
+2013)sothatitmaybecomparedempiricallywiththesys- 2014. A new approach to combined symbolic-geometric
+PlanningandRobotics(PlanRob) ICAPS-Workshop,Portsmouth,USA,2014
+backtracking in the context of human-robot interaction. In Sime´on, T.; Laumond, J.-P.; and Lamiraux, F. 2001.
+ICRA,ToAppear. Move3D:agenericplatformforpathplanning. In4thInter-
+deSilva,L.;Pandey,A.K.;andAlami,R. 2013. Aninter- national Symposium on Assembly and Task Planning, 25–
+faceforinterleavedsymbolic-geometricplanningandback- 30.
+tracking. InIROS,232–239. Tate, A. 1976. Project Planning Using a Hierarchic Non-
+Dornhege,C.;Eyerich,P.;Keller,T.;Tru¨g,S.;Brenner,M.; linear Planner. In Department of AI Research Report No.
+and Nebel, B. 2009a. Semantic Attachments for Domain- 25,UniversityofEdinburgh.
+IndependentPlanningSystems. InICAPS,114–121. Warnier, M.; Guitton, J.; Lemaignan, S.; and Alami, R.
+Dornhege, C.; Gissler, M.; Teschner, M.; and Nebel, B. 2012. When the robot puts itself in your shoes. Managing
+2009b. Integrating Symbolic and Geometric Planning for andexploitinghumanandrobotbeliefs. InRO-MAN,948–
+Mobile Manipulation. In IEEE International Workshop on 954.
+Safety,SecurityandRescueRobotics,1–6.
+Erol, K.; Hendler, J.; and Nau, D. 1994. UMCP: A sound
+andcompleteprocedureforhierarchicaltask-networkplan-
+ning. InInternationalConf.onAIPlanningSystems, 249–
+254.
+Fleury,S.;Herrb,M.;andChatila,R. 1997. Genom:ATool
+for the Specification and the Implementation of Operating
+Modules in a Distributed Robot Architecture. In IROS-97,
+842–848.
+Fong, T.; Nourbakhsh, I. R.; and Dautenhahn, K. 2003.
+A survey of socially interactive robots. Robotics and Au-
+tonomousSystems42(3-4):143–166.
+Guitton,J.;Warnier,M.;andAlami,R. 2012. BeliefMan-
+agementforHRIPlanning. InWorkshoponBeliefchange,
+Non-monotonicreasoningandConflictresolution.
+Ingrand,F.F.; Chatila,R.; Alami,R.; andRobert,F. 1996.
+PRS: A High Level Supervision and Control Language for
+AutonomousMobileRobots. InICRA,43–49.
+Karlsson, L.; Bidot, J.; Lagriffoul, F.; Saffiotti, A.; Hillen-
+brand,U.;andSchmidt,F. 2012. Combiningtaskandpath
+planningforahumanoidtwo-armroboticsystem. InWork-
+shop on Combining Task and Motion Planning for Real-
+WorldApplications,114–122.
+Klein,G.;Woods,D.D.;Bradshaw,J.M.;Hoffman,R.R.;
+andFeltovich, P.J. 2004. TenChallengesforMakingAu-
+tomation a “Team Player” in Joint Human-Agent Activity.
+IEEEIntelligentSystems19(6):91–95.
+Lagriffoul, F.; Dimitrov, D.; Saffiotti, A.; and Karlsson, L.
+2012. Constraintpropagationonintervalboundsfordealing
+withgeometricbacktracking. InIROS,957–964.
+Nau, D.; Cao, Y.; Lotem, A.; and Mun˜oz-Avila, H. 1999.
+SHOP:Simplehierarchicalorderedplanner. InIJCAI,968–
+973.
+Nau, D.; Au, T.-C.; Ilghami, O.; Kuter, U.; Murdock, W.;
+andWu, D. 2003. SHOP2: AnHTNPlanningSystem. In
+JAIR,volume20,379–404.
+Nau, D.; Ghallab, M.; and Traverso, P. 2004. Automated
+Planning: Theory & Practice. San Francisco, CA, USA:
+MorganKaufmannPublishersInc.
+Pandey, A. K.; Saut, J.-P.; Sidobre, D.; and Alami, R.
+2012. Towardsplanninghuman-robotinteractivemanipula-
+tiontasks: Taskdependentandhumanorientedautonomous
+selectionofgraspandplacement.InIEEERASEMBSInter-
+nationalConferenceonBiomedicalRoboticsandBiomecha-
+tronics,1371–1376.

@@ -1,0 +1,586 @@
+Rethinking the Inception Architecture for Computer Vision
+ChristianSzegedy VincentVanhoucke SergeyIoffe JonathonShlens
+GoogleInc. vanhoucke@google.com sioffe@google.com shlens@google.com
+szegedy@google.com
+ZbigniewWojna
+UniversityCollegeLondon
+zbigniewwojna@gmail.com
+Abstract larlyhighperformanceinthe2014ILSVRC[16]classifica-
+tion challenge. One interesting observation was that gains
+Convolutional networks are at the core of most state- intheclassificationperformancetendtotransfertosignifi-
+of-the-art computer vision solutions for a wide variety of cantqualitygainsinawidevarietyofapplicationdomains.
+tasks. Since2014verydeepconvolutionalnetworksstarted This means that architectural improvements in deep con-
+to become mainstream, yielding substantial gains in vari- volutionalarchitecturecanbeutilizedforimprovingperfor-
+ous benchmarks. Although increased model size and com- manceformostothercomputervisiontasksthatareincreas-
+putationalcosttendtotranslatetoimmediatequalitygains inglyreliantonhighquality,learnedvisualfeatures. Also,
+formosttasks(aslongasenoughlabeleddataisprovided improvementsinthenetworkqualityresultedinnewappli-
+for training), computational efficiency and low parameter cation domains for convolutional networks in cases where
+countarestillenablingfactorsforvarioususecasessuchas AlexNetfeaturescouldnotcompetewithhandengineered,
+mobilevisionandbig-datascenarios. Hereweareexplor- craftedsolutions,e.g. proposalgenerationindetection[4].
+ingwaystoscaleupnetworksinwaysthataimatutilizing Although VGGNet [18] has the compelling feature of
+theaddedcomputationasefficientlyaspossiblebysuitably architectural simplicity, this comes at a high cost: evalu-
+factorized convolutions and aggressive regularization. We ating the network requires a lot of computation. On the
+benchmarkourmethodsontheILSVRC2012classification other hand, the Inception architecture of GoogLeNet [20]
+challengevalidationsetdemonstratesubstantialgainsover was also designed to perform well even under strict con-
+thestate oftheart: 21.2% top-1 and 5.6% top-5 errorfor straints on memory and computational budget. For exam-
+single frame evaluation using a network with a computa- ple,GoogleNetemployedonly5millionparameters,which
+tionalcostof5billionmultiply-addsperinferenceandwith represented a 12× reduction with respect to its predeces-
+usinglessthan25millionparameters. Withanensembleof sor AlexNet, which used 60 million parameters. Further-
+4 models and multi-crop evaluation, we report 3.5% top-5 more, VGGNet employed about 3x more parameters than
+errorand17.3%top-1error. AlexNet.
+ThecomputationalcostofInceptionisalsomuchlower
+thanVGGNetoritshigherperformingsuccessors[6]. This
+1.Introduction
+hasmadeitfeasibletoutilizeInceptionnetworksinbig-data
+Since the 2012 ImageNet competition [16] winning en- scenarios[17], [13], where huge amount of data needed to
+try by Krizhevsky et al [9], their network “AlexNet” has beprocessedatreasonablecostorscenarioswherememory
+been successfully applied to a larger variety of computer orcomputationalcapacityisinherentlylimited,forexample
+vision tasks, for example to object-detection [5], segmen- inmobilevisionsettings. Itiscertainlypossibletomitigate
+tation [12], human pose estimation [22], video classifica- partsoftheseissuesbyapplyingspecializedsolutionstotar-
+tion[8],objecttracking[23],andsuperresolution[3]. getmemoryuse[2],[15]orbyoptimizingtheexecutionof
+certainoperationsviacomputationaltricks[10]. However,
+These successes spurred a new line of research that fo-
+these methods add extra complexity. Furthermore, these
+cused on finding higher performing convolutional neural
+methods could be applied to optimize the Inception archi-
+networks. Startingin2014,thequalityofnetworkarchitec-
+tectureaswell,wideningtheefficiencygapagain.
+tures significantly improved by utilizing deeper and wider
+networks. VGGNet[18]andGoogLeNet[20]yieldedsimi- Still,thecomplexityoftheInceptionarchitecturemakes
+3v76500.2151:viXra
+itmoredifficulttomakechangestothenetwork. Ifthear- ity merely provides a rough estimate of information
+chitecture is scaled up naively, large parts of the computa- content.
+tional gains can be immediately lost. Also, [20] does not
+2. Higher dimensional representations are easier to pro-
+provide a clear description about the contributing factors
+cess locally within a network. Increasing the activa-
+thatleadtothevariousdesigndecisionsoftheGoogLeNet
+tions per tile in a convolutional network allows for
+architecture. Thismakesitmuchhardertoadaptittonew
+more disentangled features. The resulting networks
+use-cases while maintaining its efficiency. For example,
+willtrainfaster.
+if it is deemed necessary to increase the capacity of some
+Inception-style model, the simple transformation of just 3. Spatial aggregation can be done over lower dimen-
+doubling the number of all filter bank sizes will lead to a sional embeddings without much or any loss in rep-
+4x increase in both computational cost and number of pa- resentationalpower. Forexample,beforeperforminga
+rameters. Thismightproveprohibitiveorunreasonableina morespreadout(e.g. 3×3)convolution,onecanre-
+lotofpracticalscenarios, especiallyiftheassociatedgains ducethedimensionoftheinputrepresentationbefore
+are modest. In this paper, we start with describing a few the spatial aggregation without expecting serious ad-
+general principles and optimization ideas that that proved verse effects. We hypothesize that the reason for that
+tobeusefulforscalingupconvolutionnetworksinefficient is the strong correlation between adjacent unit results
+ways. AlthoughourprinciplesarenotlimitedtoInception- inmuchlesslossofinformationduringdimensionre-
+typenetworks,theyareeasiertoobserveinthatcontextas duction, if the outputs are used in a spatial aggrega-
+thegenericstructureoftheInceptionstylebuildingblocks tioncontext. Giventhatthesesignalsshouldbeeasily
+isflexibleenoughtoincorporatethoseconstraintsnaturally. compressible,thedimensionreductionevenpromotes
+This is enabled by the generous use of dimensional reduc- fasterlearning.
+tionandparallelstructuresoftheInceptionmoduleswhich
+4. Balancethewidthanddepthofthenetwork. Optimal
+allows for mitigating the impact of structural changes on
+performanceofthenetworkcanbereachedbybalanc-
+nearby components. Still, one needs to be cautious about
+ing the number of filters per stage and the depth of
+doingso,assomeguidingprinciplesshouldbeobservedto
+the network. Increasing both the width and the depth
+maintainhighqualityofthemodels.
+of the network can contribute to higher quality net-
+works. However, theoptimalimprovementforacon-
+2.GeneralDesignPrinciples
+stantamountofcomputationcanbereachedifbothare
+Here we will describe a few design principles based increasedinparallel.Thecomputationalbudgetshould
+on large-scale experimentation with various architectural thereforebedistributedinabalancedwaybetweenthe
+choiceswithconvolutionalnetworks. Atthispoint,theutil- depthandwidthofthenetwork.
+ity of the principles below are speculative and additional
+Although these principles might make sense, it is not
+future experimental evidence will be necessary to assess
+straightforward to use them to improve the quality of net-
+their accuracy and domain of validity. Still, grave devia-
+works out of box. The idea is to use them judiciously in
+tionsfromtheseprinciplestendedtoresultindeterioration
+ambiguoussituationsonly.
+in the quality of the networks and fixing situations where
+those deviations were detected resulted in improved archi- 3. Factorizing Convolutions with Large Filter
+tecturesingeneral. Size
+1. Avoidrepresentationalbottlenecks,especiallyearlyin Much of the original gains of the GoogLeNet net-
+the network. Feed-forward networks can be repre- work[20]arisefromaverygeneroususeofdimensionre-
+sented by an acyclic graph from the input layer(s) to duction. Thiscanbeviewedasaspecialcaseoffactorizing
+theclassifierorregressor.Thisdefinesacleardirection convolutions in a computationally efficient manner. Con-
+fortheinformationflow. Foranycutseparatingthein- sider for example the case of a 1×1 convolutional layer
+puts from the outputs, one can access the amount of followed by a 3×3 convolutional layer. In a vision net-
+informationpassingthoughthecut. Oneshouldavoid work, it is expected that the outputs of near-by activations
+bottleneckswithextremecompression. Ingeneralthe are highly correlated. Therefore, we can expect that their
+representationsizeshouldgentlydecreasefromthein- activationscanbereducedbeforeaggregationandthatthis
+putstotheoutputsbeforereachingthefinalrepresen- shouldresultinsimilarlyexpressivelocalrepresentations.
+tation used for the task at hand. Theoretically, infor- Hereweexploreotherwaysoffactorizingconvolutions
+mation content can not be assessed merely by the di- invarioussettings,especiallyinordertoincreasethecom-
+mensionalityoftherepresentationasitdiscardsimpor- putational efficiency of the solution. Since Inception net-
+tantfactorslikecorrelationstructure;thedimensional- works are fully convolutional, each weight corresponds to
+00 0.5 1 1.5 2 2.5 3 3.5 4
+Iteration x 106
+Figure1.Mini-networkreplacingthe5×5convolutions.
+onemultiplicationperactivation. Therefore,anyreduction
+incomputationalcostresultsinreducednumberofparam-
+eters. This means that with suitable factorization, we can
+end up with more disentangled parameters and therefore
+with faster training. Also, we can use the computational
+andmemorysavingstoincreasethefilter-banksizesofour
+network while maintaining our ability to train each model
+replicaonasinglecomputer.
+3.1.Factorizationintosmallerconvolutions
+Convolutions with larger spatial filters (e.g. 5 × 5 or
+7 × 7) tend to be disproportionally expensive in terms of
+computation. Forexample,a5×5convolutionwithnfil-
+ters over a grid with m filters is 25/9 = 2.78 times more
+computationally expensive than a 3 × 3 convolution with
+thesamenumberoffilters. Ofcourse,a5×5filtercancap-
+ture dependencies between signals between activations of
+unitsfurtherawayintheearlierlayers,soareductionofthe
+geometricsizeofthefilterscomesatalargecostofexpres-
+siveness. However,wecanaskwhethera5×5convolution
+could be replaced by a multi-layer network with less pa-
+rameters with the same input size and output depth. If we
+zoomintothecomputationgraphofthe5×5convolution,
+we see that each output looks like a small fully-connected
+networkslidingover5×5tilesoveritsinput(seeFigure1).
+Sinceweareconstructingavisionnetwork,itseemsnatural
+toexploittranslationinvarianceagainandreplacethefully
+connected component by a two layer convolutional archi-
+tecture: thefirstlayerisa3×3convolution,thesecondisa
+fullyconnectedlayerontopofthe3×3outputgridofthe
+first layer (see Figure 1). Sliding this small network over
+the input activation grid boils down to replacing the 5×5
+convolutionwithtwolayersof3×3convolution(compare
+Figure4with5).
+This setup clearly reduces the parameter count by shar-
+ing the weights between adjacent tiles. To analyze the ex-
+Factorization with Linear vs ReLU activation
+Figure2.OneofseveralcontrolexperimentsbetweentwoIncep-
+tion models, one of them uses factorization into linear + ReLU
+layers,theotherusestwoReLUlayers. After3.86millionopera-
+tions,theformersettlesat76.2%,whilethelatterreaches77.2%
+top-1Accuracyonthevalidationset.
+pectedcomputationalcostsavings,wewillmakeafewsim-
+plifying assumptions that apply for the typical situations:
+We can assume that n = αm, that is that we want to
+change the number of activations/unit by a constant alpha
+factor. Since the 5 × 5 convolution is aggregating, α is
+typically slightly larger than one (around 1.5 in the case
+of GoogLeNet). Having a two layer replacement for the
+5×5 layer, itseems reasonabletoreach thisexpansionin
+two steps: increasing the number of filters by α in both
+steps. Inordertosimplifyourestimatebychoosingα = 1
+(noexpansion),Ifwewouldnaivlyslideanetworkwithout
+reusingthecomputationbetweenneighboringgridtiles,we
+wouldincreasethecomputationalcost. slidingthisnetwork
+canberepresentedbytwo3×3convolutionallayerswhich
+reusestheactivationsbetweenadjacenttiles. Thisway,we
+endupwithanet 9+9×reductionofcomputation,resulting
+in a relative gain of 28% by this factorization. The exact
+samesavingholdsfortheparametercountaseachparame-
+terisusedexactlyonceinthecomputationoftheactivation
+of each unit. Still, this setup raises two general questions:
+Doesthisreplacementresultinanylossofexpressiveness?
+Ifourmaingoalistofactorizethelinearpartofthecompu-
+tation,woulditnotsuggesttokeeplinearactivationsinthe
+firstlayer?Wehaveranseveralcontrolexperiments(forex-
+ample see figure 2) and using linear activation was always
+inferiortousingrectifiedlinearunitsinallstagesofthefac-
+torization. We attribute this gain to the enhanced space of
+variationsthatthenetworkcanlearnespeciallyifwebatch-
+normalize [7] the output activations. One can see similar
+effects when using linear activations for the dimension re-
+ductioncomponents.
+3.2. Spatial Factorization into Asymmetric Convo-
+The above results suggest that convolutions with filters
+larger 3 × 3 a might not be generally useful as they can
+always be reduced into a sequence of 3×3 convolutional
+Filter Concat
+3x3 3x3 1x1
+1x1 1x1 Pool 1x1
+Figure 3. Mini-network replacing the 3 × 3 convolutions. The
+lowerlayerofthisnetworkconsistsofa3×1convolutionwith3
+outputunits.
+Figure5.Inceptionmoduleswhereeach5×5convolutionisre-
+placedbytwo3×3convolution, assuggestedbyprinciple3of
+Section2.
+Filter Concat
+tionfollowedbyan×1convolutionandthecomputational
+costsavingincreasesdramaticallyasngrows(seefigure6).
+Inpractice,wehavefoundthatemployingthisfactorization
+5x5 3x3 1x1 doesnotworkwellonearlylayers,butitgivesverygoodre-
+sultsonmediumgrid-sizes(Onm×mfeaturemaps,where
+mrangesbetween12and20). Onthatlevel,verygoodre-
+sultscanbeachievedbyusing1×7convolutionsfollowed
+1x1 1x1 Pool
+by7×1convolutions.
+4.UtilityofAuxiliaryClassifiers
+[20]hasintroducedthenotionofauxiliaryclassifiersto
+improvetheconvergenceofverydeepnetworks. Theorigi-
+Figure4.OriginalInceptionmoduleasdescribedin[20]. nalmotivationwastopushusefulgradientstothelowerlay-
+erstomakethemimmediatelyusefulandimprovethecon-
+vergence during training by combating the vanishing gra-
+layers. Still we can ask the question whether one should dient problem in very deep networks. Also Lee et al[11]
+factorizethemintosmaller,forexample2×2convolutions. arguesthatauxiliaryclassifierspromotemorestablelearn-
+However,itturnsoutthatonecandoevenbetterthan2×2 ing and better convergence. Interestingly, we found that
+byusingasymmetricconvolutions,e.g. n×1. Forexample auxiliaryclassifiersdidnotresultinimprovedconvergence
+usinga3×1convolutionfollowedbya1×3convolution early in the training: the training progression of network
+is equivalent to sliding a two layer network with the same withandwithoutsideheadlooksvirtuallyidenticalbefore
+receptivefieldasina3×3convolution(seefigure3). Still bothmodelsreachhighaccuracy. Neartheendoftraining,
+thetwo-layersolutionis33%cheaperforthesamenumber the network with the auxiliary branches starts to overtake
+ofoutputfilters,ifthenumberofinputandoutputfiltersis the accuracy of the network without any auxiliary branch
+equal. Bycomparison,factorizinga3×3convolutioninto andreachesaslightlyhigherplateau.
+a two 2×2 convolution represents only a 11% saving of Also [20] used two side-heads at different stages in the
+computation. network. Theremovalofthelowerauxiliarybranchdidnot
+In theory, we could go even further and argue that one haveanyadverseeffectonthefinalqualityofthenetwork.
+can replace any n × n convolution by a 1 × n convolu- Together with the earlier observation in the previous para-
+Filter Concat Filter Concat
+nx1 1x3 3x1
+3x3 1x3 3x1 1x1
+1x1 1x1 Pool 1x1
+1xn 1xn 1x1
+Figure7.Inceptionmoduleswithexpandedthefilterbankoutputs.
+Thisarchitectureisusedonthecoarsest(8×8)gridstopromote
+high dimensional representations, as suggested by principle 2 of
+1x1 1x1 Pool 1x1
+Section 2. We are using this solution only on the coarsest grid,
+since that is the place where producing high dimensional sparse
+representationisthemostcriticalastheratiooflocalprocessing
+(by1×1convolutions)isincreasedcomparedtothespatialag-
+Base gregation.
+Figure 6. Inception modules after the factorization of the n×n
+convolutions. Inourproposedarchitecture, wechosen = 7for
+the17×17grid.(Thefiltersizesarepickedusingprinciple3) ...
+.
+Fully connected
+graph, this means that original the hypothesis of [20] that 5x5x128
+thesebrancheshelpevolvingthelow-levelfeaturesismost 1x1 Convolution
+likelymisplaced. Instead,wearguethattheauxiliaryclas-
+sifiers act as regularizer. This is supported by the fact that
+5x5 Average pooling with stride 3
+themainclassifierofthenetworkperformsbetteriftheside
+branchisbatch-normalized[7]orhasadropoutlayer. This
+Figure8.Auxiliaryclassifierontopofthelast17×17layer.Batch
+also gives a weak supporting evidence for the conjecture
+normalization[7] of thelayers in the side headresults in a 0.4%
+thatbatchnormalizationactsasaregularizer.
+absolutegainintop-1accuracy.Theloweraxisshowsthenumber
+ofitertionsperformed,eachwithbatchsize32.
+5.EfficientGridSizeReduction
+Traditionally,convolutionalnetworksusedsomepooling
+operation to decrease the grid size of the feature maps. In
+order to avoid a representational bottleneck, before apply- reducingthecomputationalcostbyaquarter. However,this
+ing maximum or average pooling the activation dimension createsarepresentationalbottlenecksastheoveralldimen-
+of the network filters is expanded. For example, starting a sionality of the representation drops to (d)2k resulting in
+d×dgridwithkfilters,ifwewouldliketoarriveata d×d lessexpressivenetworks(seeFigure9).Insteadofdoingso,
+gridwith2kfilters,wefirstneedtocomputeastride-1con- we suggest another variant the reduces the computational
+volutionwith2kfiltersandthenapplyanadditionalpooling cost even further while removing the representational bot-
+step.Thismeansthattheoverallcomputationalcostisdom- tleneck. (see Figure 10). We can use two parallel stride 2
+inatedbytheexpensiveconvolutiononthelargergridusing blocks: P and C. P is a pooling layer (either average or
+2d2k2 operations. One possibility would be to switch to maximumpooling)theactivation,bothofthemarestride2
+poolingwithconvolutionandthereforeresultingin2(d)2k2 thefilterbanksofwhichareconcatenatedasinfigure10.
+patchsize/stride
+type inputsize
+17x17x640 17x17x640
+conv 3×3/2 299×299×3
+Inception Pooling conv 3×3/1 149×149×32
+convpadded 3×3/1 147×147×32
+17x17x320 35x35x640 pool 3×3/2 147×147×64
+conv 3×3/1 73×73×64
+Pooling Inception
+conv 3×3/2 71×71×80
+conv 3×3/1 35×35×192
+35x35x320 35x35x320
+3×Inception Asinfigure5 35×35×288
+5×Inception Asinfigure6 17×17×768
+Figure9.Twoalternativewaysofreducingthegridsize. Theso- 2×Inception Asinfigure7 8×8×1280
+lutionontheleftviolatestheprinciple1ofnotintroducinganrep- pool 8×8 8×8×2048
+resentationalbottleneckfromSection2. Theversionontheright linear logits 1×1×2048
+is3timesmoreexpensivecomputationally. softmax classifier 1×1×1000
+Table 1. The outline of the proposed network architecture. The
+outputsizeofeachmoduleistheinputsizeofthenextone. We
+Filter Concat
+areusingvariationsofreductiontechniquedepictedFigure10to
+reducethegridsizesbetweentheInceptionblockswheneverap-
+stride 2 17x17x640 plicable. Wehavemarkedtheconvolutionwith0-padding,which
+concat is used to maintain the grid size. 0-padding is also used inside
+3x3 3x3 17x17x320 17x17x320 thoseInceptionmodulesthatdonotreducethegridsize.Allother
+stride 1 stride 2 layersdonotusepadding.Thevariousfilterbanksizesarechosen
+toobserveprinciple4fromSection2.
+1x1 1x1 Pool 35x35x320
+However,wehaveobservedthatthequalityofthenetwork
+is relatively stable to variations as long as the principles
+Figure10.Inceptionmodulethatreducesthegrid-sizewhileex- from Section 2 are observed. Although our network is 42
+pandsthefilterbanks. Itisbothcheapandavoidstherepresenta- layers deep, our computation cost is only about 2.5 higher
+tionalbottleneckasissuggestedbyprinciple1. Thediagramon
+than that of GoogLeNet and it is still much more efficient
+therightrepresentsthesamesolutionbutfromtheperspectiveof
+thanVGGNet.
+gridsizesratherthantheoperations.
+7.ModelRegularizationviaLabelSmoothing
+6.Inception-v2
+Hereweproposeamechanismtoregularizetheclassifier
+layerbyestimatingthemarginalizedeffectoflabel-dropout
+Here we are connecting the dots from above and pro-
+duringtraining.
+poseanewarchitecturewithimprovedperformanceonthe
+For each training example x, our model computes the
+ILSVRC2012classificationbenchmark. Thelayoutofour
+probability of each label k ∈ {1...K}: p(k|x) =
+network is given in table 1. Note that we have factorized
+thetraditional7×7convolutionintothree3×3convolu- (cid:80)K
+p e ( x z p k) (zi) . Here, z i are the logits or unnormalized log-
+tions based on the same ideas as described in section 3.1. probabilities. Consider the ground-truth distribution over
+FortheInceptionpartofthenetwork,wehave3traditional labels q(k|x) for this training example, normalized so that
+inceptionmodulesatthe35×35with288filterseach. This q(k|x) = 1. For brevity, let us omit the dependence
+isreducedtoa17×17gridwith768filtersusingthegrid of p and q on example x. We define the loss for the ex-
+reduction technique described in section 5. This is is fol- ample as the cross entropy: (cid:96) = −
+lowedby5instancesofthefactorizedinceptionmodulesas Minimizing this is equivalent to maximizing the expected
+depictedinfigure5. Thisisreducedtoa8×8×1280grid log-likelihoodofalabel,wherethelabelisselectedaccord-
+withthegridreductiontechniquedepictedinfigure10. At ingtoitsground-truthdistributionq(k). Cross-entropyloss
+thecoarsest8×8level,wehavetwoInceptionmodulesas isdifferentiablewithrespecttothelogitsz andthuscanbe
+depictedinfigure6, withaconcatenatedoutputfilterbank usedforgradienttrainingofdeepmodels. Thegradienthas
+sizeof2048foreachtile. Thedetailedstructureofthenet- arathersimpleform: ∂(cid:96) =p(k)−q(k),whichisbounded
+work,includingthesizesoffilterbanksinsidetheInception between−1and1.
+modules, is given in the supplementary material, given in Consider the case of a single ground-truth label y, so
+the model.txt that is in the tar-file of this submission. that q(y) = 1 and q(k) = 0 for all k (cid:54)= y. In this case,
+minimizing the cross entropy is equivalent to maximizing The second loss penalizes the deviation of predicted label
+the log-likelihood of the correct label. For a particular ex- distributionpfromtheprioru,withtherelativeweight (cid:15) .
+1−(cid:15)
+ample x with label y, the log-likelihood is maximized for Note that this deviation could be equivalently captured by
+q(k) = δ , whereδ isDiracdelta, whichequals1for the KL divergence, since H(u,p) = D (u(cid:107)p)+H(u)
+k,y k,y KL
+k = y and 0 otherwise. This maximum is not achievable and H(u) is fixed. When u is the uniform distribution,
+for finite z but is approached if z (cid:29) z for all k (cid:54)= y H(u,p) is a measure of how dissimilar the predicted dis-
+– that is, if the logit corresponding to the ground-truth la- tributionpistouniform,whichcouldalsobemeasured(but
+bel is much great than all other logits. This, however, can notequivalently)bynegativeentropy−H(p);wehavenot
+cause two problems. First, it may result in over-fitting: if experimentedwiththisapproach.
+the model learns to assign full probability to the ground- In our ImageNet experiments with K = 1000 classes,
+truthlabelforeachtrainingexample,itisnotguaranteedto weusedu(k) = 1/1000and(cid:15) = 0.1. ForILSVRC2012,
+generalize. Second, it encourages the differences between wehavefoundaconsistentimprovementofabout0.2%ab-
+the largest logit and all others to become large, and this, solutebothfortop-1errorandthetop-5error(cf. Table3).
+combinedwiththeboundedgradient ∂(cid:96) ,reducestheabil-
+ityofthemodeltoadapt. Intuitively,thishappensbecause 8.TrainingMethodology
+themodelbecomestooconfidentaboutitspredictions.
+We propose a mechanism for encouraging the model to We have trained our networks with stochastic gradient
+belessconfident. Whilethismaynotbedesiredifthegoal utilizing the TensorFlow [1] distributed machine learning
+istomaximizethelog-likelihoodoftraininglabels,itdoes systemusing50replicasrunningeachonaNVidiaKepler
+regularize the model and makes it more adaptable. The GPUwithbatchsize32for100epochs. Ourearlierexperi-
+method is very simple. Consider a distribution over labels mentsusedmomentum[19]withadecayof0.9,whileour
+u(k),independentofthetrainingexamplex,andasmooth- best models were achieved using RMSProp [21] with de-
+ing parameter (cid:15). For a training example with ground-truth cay of 0.9 and (cid:15) = 1.0. We used a learning rate of 0.045,
+labely,wereplacethelabeldistributionq(k|x)=δ with decayedeverytwoepochusinganexponentialrateof0.94.
+In addition, gradient clipping [14] with threshold 2.0 was
+q(cid:48)(k|x)=(1−(cid:15))δ +(cid:15)u(k) found to be useful to stabilize the training. Model evalua-
+tionsareperformedusingarunningaverageoftheparame-
+whichisamixtureoftheoriginalground-truthdistribution terscomputedovertime.
+q(k|x) and the fixed distribution u(k), with weights 1−(cid:15)
+and (cid:15), respectively. This can be seen as the distribution of 9.PerformanceonLowerResolutionInput
+the label k obtained as follows: first, set it to the ground-
+truth label k = y; then, with probability (cid:15), replace k with Atypicaluse-caseofvisionnetworksisforthethepost-
+asampledrawnfromthedistributionu(k). Weproposeto classificationofdetection,forexampleintheMultibox[4]
+usethepriordistributionoverlabelsasu(k). Inourexper- context. Thisincludestheanalysisofarelativesmallpatch
+iments, we used the uniform distribution u(k) = 1/K, so oftheimagecontainingasingleobjectwithsomecontext.
+that The tasks is to decide whether the center part of the patch
+q(cid:48)(k)=(1−(cid:15))δ + . corresponds to some object and determine the class of the
+object if it does. The challenge is that objects tend to be
+Werefertothischangeinground-truthlabeldistributionas relativelysmallandlow-resolution.Thisraisesthequestion
+label-smoothingregularization,orLSR. ofhowtoproperlydealwithlowerresolutioninput.
+Note that LSR achieves the desired goal of preventing The common wisdom is that models employing higher
+thelargestlogitfrombecomingmuchlargerthanallothers. resolutionreceptivefieldstendtoresultinsignificantlyim-
+Indeed, if this were to happen, then a single q(k) would provedrecognitionperformance.Howeveritisimportantto
+approach1whileallotherswouldapproach0. Thiswould distinguishbetweentheeffectoftheincreasedresolutionof
+result in a large cross-entropy with q(cid:48)(k) because, unlike thefirstlayerreceptivefieldandtheeffectsoflargermodel
+q(k)=δ k,y ,allq(cid:48)(k)haveapositivelowerbound. capacitance and computation. If we just change the reso-
+Another interpretation of LSR can be obtained by con- lutionoftheinputwithoutfurtheradjustmenttothemodel,
+sideringthecrossentropy: thenweendupusingcomputationallymuchcheapermod-
+els to solve more difficult tasks. Of course, it is natural,
+(cid:88) thatthesesolutionslooseoutalreadybecauseofthereduced
+computational effort. In order to make an accurate assess-
+ment, the model needs to analyze vague hints in order to
+Thus,LSRisequivalenttoreplacingasinglecross-entropy be able to “hallucinate” the fine details. This is computa-
+lossH(q,p)withapairofsuchlossesH(q,p)andH(u,p). tionallycostly. Thequestionremainstherefore: howmuch
+ReceptiveFieldSize Top-1Accuracy(singleframe) Top-1 Top-5 Cost
+Error Error BnOps
+79×79 75.2%
+GoogLeNet[20] 29% 9.2% 1.5
+151×151 76.4%
+BN-GoogLeNet 26.8% - 1.5
+299×299 76.6%
+BN-Inception[7] 25.2% 7.8 2.0
+Inception-v2 23.4% - 3.8
+Table2.Comparisonofrecognitionperformancewhenthesizeof
+Inception-v2
+thereceptivefieldvaries,butthecomputationalcostisconstant.
+RMSProp 23.1% 6.3 3.8
+Inception-v2
+LabelSmoothing 22.8% 6.1 3.8
+does higher input resolution helps if the computational ef-
+Inception-v2
+fort is kept constant. One simple way to ensure constant Factorized7×7 21.6% 5.8 4.8
+effort is to reduce the strides of the first two layer in the Inception-v2
+21.2% 5.6% 4.8
+case of lower resolution input, or by simply removing the BN-auxiliary
+firstpoolinglayerofthenetwork.
+Table3.Singlecropexperimentalresultscomparingthecumula-
+Forthispurposewehaveperformedthefollowingthree
+tiveeffectsonthevariouscontributingfactors. Wecompareour
+experiments:
+numberswiththebestpublishedsingle-cropinferenceforIoffeat
+1. 299×299receptivefieldwithstride2andmaximum al [7]. For the “Inception-v2” lines, the changes are cumulative
+andeachsubsequentlineincludesthenewchangeinadditionto
+poolingafterthefirstlayer.
+thepreviousones. Thelastlineisreferringtoallthechangesis
+2. 151×151receptivefieldwithstride1andmaximum what we refer to as “Inception-v3” below. Unfortunately, He et
+poolingafterthefirstlayer. al [6] reports the only 10-crop evaluation results, but not single
+cropresults,whichisreportedintheTable4below.
+3. 79×79receptivefieldwithstride1andwithoutpool-
+ingafterthefirstlayer.
+Crops Top-5 Top-1
+All three networks have almost identical computational Evaluated Error Error
+GoogLeNet[20] 10 - 9.15%
+cost. Although the third network is slightly cheaper, the
+GoogLeNet[20] 144 - 7.89%
+costofthepoolinglayerismarginaland(within1%ofthe
+VGG[18] - 24.4% 6.8%
+total cost of the)network. In each case, the networks were
+BN-Inception[7] 144 22% 5.82%
+traineduntilconvergenceandtheirqualitywasmeasuredon
+PReLU[6] 10 24.27% 7.38%
+thevalidationsetoftheImageNetILSVRC2012classifica-
+PReLU[6] - 21.59% 5.71%
+tion benchmark. The results can be seen in table 2. Al-
+Inception-v3 12 19.47% 4.48%
+though the lower-resolution networks take longer to train,
+Inception-v3 144 18.77% 4.2%
+the quality of the final result is quite close to that of their
+higherresolutioncounterparts. Table 4. Single-model, multi-crop experimental results compar-
+However, if one would just naively reduce the network ingthecumulativeeffectsonthevariouscontributingfactors. We
+size according to the input resolution, then network would compareournumberswiththebestpublishedsingle-modelinfer-
+performmuchmorepoorly. Howeverthiswouldanunfair enceresultsontheILSVRC2012classificationbenchmark.
+comparisonaswewouldarecomparinga16timescheaper
+modelonamoredifficulttask.
+Also these results of table 2 suggest, one might con- the fully connected layer of the auxiliary classifier is also
+siderusingdedicatedhigh-costlowresolutionnetworksfor batch-normalized, not just the convolutions. We are refer-
+smallerobjectsintheR-CNN[5]context. ringtothemodelinlastrowofTable3asInception-v3and
+evaluateitsperformanceinthemulti-cropandensembleset-
+10.ExperimentalResultsandComparisons
+tings.
+Table3showstheexperimentalresultsabouttherecog- All our evaluations are done on the 48238 non-
+nitionperformanceofourproposedarchitecture(Inception- blacklisted examples on the ILSVRC-2012 validation set,
+v2)asdescribedinSection6. EachInception-v2lineshows assuggestedby [16]. Wehaveevaluatedallthe50000ex-
+the result of the cumulative changes including the high- amplesaswellandtheresultswereroughly0.1%worsein
+lighted new modification plus all the earlier ones. Label top-5 error and around 0.2% in top-1 error. In the upcom-
+Smoothing refers to method described in Section 7. Fac- ingversionofthispaper,wewillverifyourensembleresult
+torized 7 × 7 includes a change that factorizes the first onthetestset,butatthetimeofourlastevaluationofBN-
+7×7 convolutional layer into a sequence of 3×3 convo- Inceptioninspring[7]indicatesthatthetestandvalidation
+lutionallayers. BN-auxiliaryreferstotheversioninwhich seterrortendstocorrelateverywell.
+Models Crops Top-1 Top-5 R.Jozefowicz,L.Kaiser,M.Kudlur,J.Levenberg,D.Mane´,
+Evaluated Evaluated Error Error R. Monga, S. Moore, D. Murray, C. Olah, M. Schuster,
+VGGNet[18] 2 - 23.7% 6.8%
+J. Shlens, B. Steiner, I. Sutskever, K. Talwar, P. Tucker,
+GoogLeNet[20] 7 144 - 6.67% V.Vanhoucke,V.Vasudevan,F.Vie´gas,O.Vinyals,P.War-
+PReLU[6] - - - 4.94% den,M.Wattenberg,M.Wicke,Y.Yu,andX.Zheng.Tensor-
+BN-Inception[7] 6 144 20.1% 4.9% Flow: Large-scalemachinelearningonheterogeneoussys-
+Inception-v3 4 144 17.2% 3.58%∗ tems,2015. Softwareavailablefromtensorflow.org.
+[2] W. Chen, J. T. Wilson, S. Tyree, K. Q. Weinberger, and
+Table 5. Ensemble evaluation results comparing multi-model,
+Y. Chen. Compressing neural networks with the hashing
+multi-cropreportedresults. Ournumbersarecomparedwiththe trick. InProceedingsofThe32ndInternationalConference
+best published ensemble inference results on the ILSVRC 2012 onMachineLearning,2015.
+classification benchmark. ∗All results, but the top-5 ensemble
+[3] C.Dong, C.C.Loy, K.He, andX.Tang. Learningadeep
+result reported are on the validation set. The ensemble yielded
+convolutionalnetworkforimagesuper-resolution. InCom-
+3.46%top-5erroronthevalidationset.
+puterVision–ECCV2014,pages184–199.Springer,2014.
+[4] D.Erhan,C.Szegedy,A.Toshev,andD.Anguelov.Scalable
+object detection using deep neural networks. In Computer
+11.Conclusions
+VisionandPatternRecognition(CVPR),2014IEEEConfer-
+enceon,pages2155–2162.IEEE,2014.
+We have provided several design principles to scale up
+[5] R.Girshick,J.Donahue,T.Darrell,andJ.Malik. Richfea-
+convolutional networks and studied them in the context of
+ture hierarchies for accurate object detection and semantic
+the Inception architecture. This guidance can lead to high
+segmentation. In Proceedings of the IEEE Conference on
+performance vision networks that have a relatively mod-
+ComputerVisionandPatternRecognition(CVPR),2014.
+estcomputationcostcomparedtosimpler,moremonolithic
+[6] K. He, X. Zhang, S. Ren, and J. Sun. Delving deep into
+architectures. Our highest quality version of Inception-v3 rectifiers:Surpassinghuman-levelperformanceonimagenet
+reaches21.2%,top-1and5.6%top-5errorforsinglecrop classification. arXivpreprintarXiv:1502.01852,2015.
+evaluationontheILSVR2012classification,settinganew [7] S.IoffeandC.Szegedy. Batchnormalization: Accelerating
+state of the art. This is achieved with relatively modest deepnetworktrainingbyreducinginternalcovariateshift.In
+(2.5×)increaseincomputationalcostcomparedtothenet- Proceedings of The 32nd International Conference on Ma-
+work described in Ioffe et al [7]. Still our solution uses chineLearning,pages448–456,2015.
+muchlesscomputationthanthebestpublishedresultsbased [8] A.Karpathy,G.Toderici,S.Shetty,T.Leung,R.Sukthankar,
+and L. Fei-Fei. Large-scale video classification with con-
+on denser networks: our model outperforms the results of
+volutional neural networks. In Computer Vision and Pat-
+Heetal[6]–cuttingthetop-5(top-1)errorby25%(14%)
+ternRecognition(CVPR),2014IEEEConferenceon,pages
+relative,respectively–whilebeingsixtimescheapercom-
+1725–1732.IEEE,2014.
+putationally and using at least five times less parameters
+[9] A. Krizhevsky, I. Sutskever, and G. E. Hinton. Imagenet
+(estimated). Our ensemble of four Inception-v3 models
+classification with deep convolutional neural networks. In
+reaches3.5%withmulti-cropevaluationreaches3.5%top- Advances in neural information processing systems, pages
+5errorwhichrepresentsanover25%reductiontothebest 1097–1105,2012.
+publishedresultsandisalmosthalfoftheerrorofILSVRC [10] A.Lavin.Fastalgorithmsforconvolutionalneuralnetworks.
+2014wininingGoogLeNetensemble. arXivpreprintarXiv:1509.09308,2015.
+Wehavealsodemonstratedthathighqualityresultscan [11] C.-Y.Lee,S.Xie,P.Gallagher,Z.Zhang,andZ.Tu.Deeply-
+bereachedwithreceptivefieldresolutionaslowas79×79. supervisednets. arXivpreprintarXiv:1409.5185,2014.
+Thismightprovetobehelpfulinsystemsfordetectingrel- [12] J.Long, E.Shelhamer, andT.Darrell. Fullyconvolutional
+networksforsemanticsegmentation. InProceedingsofthe
+ativelysmallobjects. Wehavestudiedhowfactorizingcon-
+IEEEConferenceonComputerVisionandPatternRecogni-
+volutionsandaggressivedimensionreductionsinsideneural
+tion,pages3431–3440,2015.
+networkcanresultinnetworkswithrelativelylowcomputa-
+[13] Y. Movshovitz-Attias, Q. Yu, M. C. Stumpe, V. Shet,
+tionalcostwhilemaintaininghighquality.Thecombination
+S.Arnoud, andL.Yatziv. Ontologicalsupervisionforfine
+oflowerparametercountandadditionalregularizationwith
+grainedclassificationofstreetviewstorefronts. InProceed-
+batch-normalized auxiliary classifiers and label-smoothing ingsoftheIEEEConferenceonComputerVisionandPattern
+allowsfortraininghighqualitynetworksonrelativelymod- Recognition,pages1693–1702,2015.
+estsizedtrainingsets. [14] R. Pascanu, T. Mikolov, and Y. Bengio. On the diffi-
+culty of training recurrent neural networks. arXiv preprint
+References arXiv:1211.5063,2012.
+[15] D. C. Psichogios and L. H. Ungar. Svd-net: an algorithm
+[1] M. Abadi, A. Agarwal, P. Barham, E. Brevdo, Z. Chen, thatautomaticallyselectsnetworkstructure. IEEEtransac-
+C.Citro,G.S.Corrado,A.Davis,J.Dean,M.Devin,S.Ghe- tions on neural networks/a publication of the IEEE Neural
+mawat,I.Goodfellow,A.Harp,G.Irving,M.Isard,Y.Jia, NetworksCouncil,5(3):513–515,1993.
+[16] O. Russakovsky, J. Deng, H. Su, J. Krause, S. Satheesh,
+S. Ma, Z. Huang, A. Karpathy, A. Khosla, M. Bernstein,
+et al. Imagenet large scale visual recognition challenge.
+2014.
+[17] F.Schroff,D.Kalenichenko,andJ.Philbin. Facenet:Auni-
+fied embedding for face recognition and clustering. arXiv
+preprintarXiv:1503.03832,2015.
+[18] K. Simonyan and A. Zisserman. Very deep convolutional
+networksforlarge-scaleimagerecognition. arXivpreprint
+arXiv:1409.1556,2014.
+[19] I. Sutskever, J. Martens, G. Dahl, and G. Hinton. On the
+importanceofinitializationandmomentumindeeplearning.
+InProceedingsofthe30thInternationalConferenceonMa-
+chine Learning (ICML-13), volume 28, pages 1139–1147.
+JMLRWorkshopandConferenceProceedings,May2013.
+[20] C. Szegedy, W. Liu, Y. Jia, P. Sermanet, S. Reed,
+D.Anguelov, D.Erhan, V.Vanhoucke, andA.Rabinovich.
+Goingdeeperwithconvolutions.InProceedingsoftheIEEE
+Conference on Computer Vision and Pattern Recognition,
+pages1–9,2015.
+[21] T. Tieleman and G. Hinton. Divide the gradient by a run-
+ningaverageofitsrecentmagnitude. COURSERA:Neural
+NetworksforMachineLearning,4,2012. Accessed: 2015-
+11-05.
+[22] A.ToshevandC.Szegedy. Deeppose: Humanposeestima-
+tionviadeepneuralnetworks. InComputerVisionandPat-
+ternRecognition(CVPR),2014IEEEConferenceon,pages
+1653–1660.IEEE,2014.
+[23] N.WangandD.-Y.Yeung. Learningadeepcompactimage
+representation for visual tracking. In Advances in Neural
+InformationProcessingSystems,pages809–817,2013.

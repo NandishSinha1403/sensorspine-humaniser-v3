@@ -1,0 +1,525 @@
+Prioritized Motion-Force Control of
+Constrained Fully-Actuated Robots:
+“Task Space Inverse Dynamics”
+Andrea Del Prete1,2, Francesco Nori2, Giorgio Metta2 and Lorenzo Natale2
+1 — CNRS, LAAS, 7 avenue du colonel Roche, Univ de Toulouse,
+F-31400 Toulouse, France
+2 — Istituto Italiano di Tecnologia, Via Morego 30, Genova, Italy
+We present a new framework for prioritized multi-task motion/force control
+of fully-actuated robots. This work is established on a careful review and
+comparison of the state of the art. Some control frameworks are not opti-
+mal, that is they do not find the optimal solution for the secondary tasks.
+Other frameworks are optimal, but they tackle the control problem at kine-
+matic level, hence they neglect the robot dynamics and they do not allow for
+force control. Still other frameworks are optimal and consider force control,
+but they are computationally less efficient than ours. Our final claim is that,
+for fully-actuated robots, computing the operational-space inverse dynam-
+ics is equivalent to computing the inverse kinematics (at acceleration level)
+and then the joint-space inverse dynamics. Thanks to this fact, our control
+framework can efficiently compute the optimal solution by decoupling kine-
+matics and dynamics of the robot. We take into account: motion and force
+control, soft and rigid contacts, free and constrained robots. Tests in simula-
+tion validate our control framework, comparing it with other state-of-the-art
+equivalent frameworks and showing remarkable improvements in optimality
+and efficiency.
+Keywords: prioritized control, hierarchical control, inverse dynamics, force
+control, operational space, task space
+Preprint submitted to Robotics and Autonomous Systems June 22, 2021
+1v3683.0141:viXra
+1. Introduction
+Several frameworks for multi-task control of rigid robots exist in the lit-
+erature. Most frameworks presented in the ’80s and ’90s [1, 2, 3, 4] work
+at kinematic level, computing the desired joint velocities or accelerations.
+These approaches are not suited to robots that interact with the environ-
+ment, because they do not allow for force control or impedance control. This
+motivated a more recent trend of torque control strategies [5, 6, 7, 8], which
+considerthedynamicsoftherobot, computingthedesiredjointtorques. This
+approach can also improve tracking, because it compensates for the dynamic
+coupling between the joints of the multi-body system.
+Peters et al. [9] showed that we can derive several of these well-known
+torque control laws under a Unifying Framework (UF), as solutions of con-
+strained minimization problems. However, it is still unclear how these frame-
+works differ from each other and what their pros and cons are. This paper
+has a twofold aim: first, to provide a fair comparison of the state-of-the-art
+torque control frameworks; second, to present a new framework which out-
+performsthecurrentstateoftheart. Ourevaluationisbasedonfourcriteria:
+soundness, optimality, capabilities and efficiency. We carry out an analytical
+analysis of the frameworks and we test them in simulation to confirm the
+theoretical results.
+Section2definesthebasictrackingcontrolproblemandpresentsthemain
+contribution of the paper through a simple example. Section 3 summarizes
+therelatedworksanddefinesthenotionofsoundness, optimality, capabilities
+and efficiency. Section 4 and 5 describe the Unifying Framework (UF) [9] and
+the Whole-Body Control Framework (WBCF) [5], which are the frameworks
+that we chose for comparison, because they well represent the state of the
+art. Section 6 motivates the need for our new control framework Task Space
+Inverse Dynamics (TSID), which we then present in Section 7. For each
+framework we first discuss the solution for a single motion-control task, then
+we extend it to the multi-task case, and finally we introduce force control.
+Section 8 tests the three frameworks (TSID, UF, WBCF) in simulation on
+the same multi-task scenario, comparing their performances in terms of opti-
+mality and efficiency. The results prove that our control framework is sound,
+optimal and computationally more efficient than the other frameworks.
+2. Key Idea
+2.1. Notation and Problem Definition
+We indicate with Sn the set of symmetric positive-definite n×n matrices.
+We want to design position tracking control laws for a rigid manipulator with
+n Degrees of Freedom (DoFs). The equation of motion of a manipulator in
+free space may be written as [10]:
+where q ∈ Rn are the generalized coordinates (e.g. joint angles), τ ∈ Rn are
+the generalized forces (e.g. joint torques), M(q) ∈ Sn is the joint-space mass
+matrix, and h(q,q˙) ∈ Rn contains all the nonlinear terms such as Coriolis,
+centrifugal and gravity forces. A position tracking task for the robot is
+described as a time-varying constraint f(q) = x (t), where x (t) ∈ Rm is
+the reference task trajectory and f : Rn → Rm is a generic function of the
+generalized coordinates (e.g. the forward kinematics). Since we assume that
+the control inputs are the generalized forces τ, instantaneously we can only
+affect the generalized accelerations q¨. To express the task in terms of q¨ we
+differentiate the constraint twice with respect to time:
+where J(q) = ∂ f(q) ∈ Rm×n is the task Jacobian. In the following, depen-
+dency upon t, q and q˙ is no longer denoted to simplify notation. Since we
+use the second derivative of the constraint, in real situations a drift is likely
+to occur. To prevent deviations from the desired trajectory and to ensure
+disturbance rejection, we design a proportional-derivative feedback control
+law:
+where x¨∗ ∈ Rm is the desired task acceleration, whereas K ∈ Sm and
+K ∈ Sm are the derivative and proportional gain matrices, respectively.
+2.2. A Simple Example
+Following the approach taken in Peters et al. [9], we can derive task-space
+controllawsassolutionsofaconstrainedQuadraticProgram(QP).Tobetter
+convey the idea, in this example we take a simplified form of the dynamics
+and kinematics:
+By resolving the constraints we can transform this QP into:
+To solve this QP we can use the pseudoinverse [1] (for the sake of simplicity
+here we neglect null-space terms):
+Alternatively we can use a weighted pseudoinverse [11]:
+where W ∈ Sn is an arbitrary weight matrix. The key idea that we are going
+to exploit is that a careful choice of W can lead to a more efficient solution.
+In particular, if we set W = M2 we get:
+This expression has a lower computational cost than (2), mainly because it
+does not contain the inverse of the mass matrix M. In general the choice
+of W affects which value we select among the infinite solutions [11], so one
+could argue that a particular W leads to a solution that is somehow better
+than others [12]. However, in case of multi-task control we do not solve only
+one QP, but a sequence of QPs, which must have a unique solution (see
+Section 6.1 for details). In this case W does not affect which solution we
+select (because there is only one), so we claim that the choice of W should
+be aimed only at simplifying the computational cost of the solution.
+3. Related Works
+This section provides an overview of the related works. Table 1 lists the
+main features of the control frameworks that we considered in our analysis.
+We assess a control framework in terms of soundness, optimality, capabilities
+and efficiency. Table 1 also specifies the motor commands computed by
+each framework (column “Output”), which can be either joint torques τ,
+velocities q˙ or accelerations q¨. A framework is sound if the control action
+of any task does not affect the performance of any higher priority tasks.
+A framework is optimal if its control action minimizes the error of each
+Table 1: Control frameworks.
+Force Under
+Framework Optimal Efficient Inequality Output
+Control actuated
+Task Space Inverse × × × τ
+Dynamics (TSID)
+Peters et al. [9] (UF) × × τ
+Sentis and Khatib [5] × × (×) τ
+Mistry and Righetti [8] × × τ
+Saab et al. [7](SoT) × × × × τ
+DeLasaandHertzmann[6] × × × τ
+Smits et al. [14] (iTaSC) × × × q˙
+Chiaverini [3] × q˙
+Siciliano and Slotine [2] × × q˙
+Baerlocher and Boulic [4] × × q˙
+Nakamura et al. [1] × q˙/q¨
+task, under the constraint of being sound. The capabilities of a framework
+concern the types of tasks and systems that it allows to control. Finally, a
+framework is efficient if its computational complexity is minimal, considered
+its capabilities (typically, the more capabilities, the higher the computational
+complexity). In this context, efficiency is strictly related to the number of
+computed (pseudo)inverses, matrix multiplications and the computation of
+the mass matrix M.
+All the control frameworks that we analyzed are sound. In terms of capa-
+bilities, Table1reportswhetheraframeworkallowsforforcecontrol, whether
+it can control underactuated systems and whether it handles inequality con-
+straints. Since we are interested in controlling robots that interact with the
+environmentwefocusonframeworksthatallowforforcecontrol. Inequalities
+allow the user to define a task in terms of upper/lower bounds (e.g. joint
+limit avoidance, balance, visibility, and collision avoidance). However, this
+feature comes at a price: the algorithm can no longer compute the solution
+using pseudoinverses, but it requires a QP solver. Escande et al. [15] reached
+a computation time of 1 ms on an inverse-kinematics problem — at the price
+of seldom suboptimal solutions. However, they did not consider the inverse-
+dynamics problem (as we do in this work), which has more than twice the
+number of variables and, consequently, is more computationally demanding.
+In another recent work Herzog et al. [16] succeeded in controlling their robot
+at 1 KHz using an inverse-dynamics formulation. Nonetheless they used a
+fast CPU (3.4 GHz) and the robot had only 14 DoFs; in case of more DoFs
+or slower CPU their method may still be too slow. For these reasons our
+control framework does not include inequality constraints, even if we believe
+that our results could be easily generalized to handle inequalities.
+The possibility to control systems that are underactuated is crucial for
+real-world applications, however, for the sake of conciseness, this work deals
+only with fully-actuated systems. Another paper will present our results for
+underactuatedrobots. BesidestheworkscitedinTable1, anotherinteresting
+approachforunderactuatedrobotsispresentedin[17]. Theauthorsselectthe
+contact forces based on the desired rate of change of the centroidal momen-
+tum, then they find desired joint accelerations that are consistent with these
+contact forces and finally they compute the joint torques using a hybrid-
+dynamics algorithm. Stephens and Atkeson [18] took a similar approach,
+with the main difference that they found joint accelerations and torques at
+the same time, resulting in a less efficient computation.
+This work is motivated by the fact that no control framework that allows
+for force control is both optimal and efficient. Between the five frameworks
+that allow for force control, we select two as representative of the state of
+the art and we describe them in the next sections. Our first choice is the
+Unifying Framework (UF) [9], because it is the only one that allows for force
+control while being efficient. Our second choice is the Whole-Body Control
+Framework (WBCF) [5], because it represents the category of “optimal but
+not efficient” frameworks (i.e. the frameworks [7] and [6]). Even though the
+WBCF was extended to floating-base systems, here we consider the formu-
+lation for fully-actuated robots presented in [5] and implemented in [19].
+4. Unifying Framework (UF)
+The Unifying Framework (UF) [9] formulates the control problem as a
+constrained minimization:
+For the typical case m < n, this problem has infinite solutions [11]:
+where τ ∈ Rn is an arbitrary vector, V ∈ Sn is an arbitrary matrix and
+)† = VAT(AVAT)† isthepseudoinverseofthematrixA,weighted
+by V. If A is full rank, then we can also write A†V = VAT(AVAT)−1. Choos-
+ingaparticularpair(V,τ )wegetthesolutionthatminimizes||V−1(τ−τ )||2
+[20]. Setting τ = 0 and varying V, we get different well-known control laws,
+reported in Table 2; the second row reports the Operational Space control
+Table 2: Control laws for different values of weight matrix V
+V minimize Control law, τ∗
+law of Khatib [21], which selects the torques that could be generated by a
+hypothetical force applied at the control point. Without loss of generality,
+given that M ∈ Sn, we can set V = M2W, where W ∈ Sn is another
+arbitrary matrix, so that (4) simplifies to:
+where NW = I −J†WJ is a weighted (nonorthogonal) null-space projector.
+4.1. Hierarchical Extension
+The Unifying Framework can manage an arbitrary number of tasks N,
+each characterized by a desired acceleration x¨∗ and a Jacobian J . To ensure
+the correct management of task conflicts, the tasks need prioritization: the
+higher the number i of the task, the higher its priority.
+i i+1 p(i) i i i i
+NW = NW −(J NW )†WJ NW ,
+where NW is a projector into the null space of all the tasks {j|j > i},
+computed with the recursive formula proposed in [4]. The algorithm starts
+by computing q¨ (using q¨ = 0 and NW = I) and it proceeds backwards
+N N+1 p(N)
+up to q¨ . If the state of the robot is completely controlled, which is usually
+the case (see Section 6.1), then this formulation simplifies to:
+i i+1 p(i) i i i
+The accelerations of each task q¨ are projected into the null space of the
+higher priority tasks; this guarantees that the framework is sound. However,
+this approach is not optimal, because each task is solved independently, and
+then projected into the null space of the higher priority tasks. This does not
+ensure the minimization of the error of each task (see [4, 3] for a thorough
+explanation).
+4.2. Hybrid Control
+The Unifying Framework allows for hybrid position/force control by set-
+ting the joint space control torques to:
+where J (q) ∈ Rk×n is the contact Jacobian, f∗ ∈ Rk are the desired contact
+forces and k ∈ R is the number of independent directions in which the robot
+applies force. Substituting τ into the desired control torques (5) we get:
+where the applied forces act in the null space of the tracking task.
+5. Whole-Body Control Framework (WBCF)
+In this section we describe the WBCF presented by Sentis and Khatib [5].
+This framework is based on the Operational Space Formulation [21], which
+we can derive by setting W = M−1 in (5):
+(cid:124) (cid:123)(cid:122) (cid:125)
+where J† M−1 = M−1JTΛ is the dynamically-consistent Jacobian pseudoin-
+verse and Λ is the task-space mass matrix.
+5.1. Hierarchical Extension
+While in case of a single task the WBCF and the UF are equivalent, their
+hierarchical extensions differ substantially:
+J = J (I − (cid:88) J † M−1J )
+This prioritization strategy is different with respect to (6): the WBCF min-
+imizes the error of each task under the constraint of not conflicting with any
+higher priority tasks, namely it is optimal. However, this formulation is com-
+putationally less efficient than (6) because i) it contains the term M−1 and
+ii) it requires more matrix multiplications.
+5.2. Hybrid Control
+The WBCF allows for hybrid position/force control by setting:
+p(i) f i p(i) m i i i p(j) p(j)
+where the selection matrices Ω and Ω split the control space into force and
+motion components, respectively.
+6. The Need for a New Control Framework
+TheWBCFissound andoptimal, butitisnotefficient becauseitrequires
+the computation of the operational space inertia matrices Λ’s. The simplest
+way to compute them is using the formula Λ = (JM−1JT)†, which has a
+complexity of O(n3): the computation of M — with Recursive Newton-
+Euler Algorithm (RNEA) or Composite-Rigid-Body algorithm [10] — has
+a complexity of O(n2) for serial robots and O(nd) for multi-branch robots
+(where d is the tree depth). More efficient algorithms [22] can compute Λ
+with a complexity of O(nm2 +m3), where m is the dimension of the task.
+On the other hand the UF is sound and efficient (if we choose V = M2,
+i.e. W = I): thesolutiontakestheformτ∗ = Mq¨ +h,whichwecancalculate
+without explicitly computing M, through the O(n) RNEA. Nonetheless, the
+UF is not optimal: even if a task does not conflict with any higher priority
+tasks, it may not be performed correctly.
+The derivation of our framework, TSID, follows the same principles un-
+derlying the UF, but with a different hierarchical extension. We minimize
+the error of each task under the constraint of not affecting any higher prior-
+ity task. At each minimization step, we carefully select the weight matrices
+used in the pseudoinverses, so as to simplify the resulting control laws. This
+leads to an efficient formulation, while preserving the optimality property.
+We start considering position tracking control only, then we introduce force
+control tasks.
+6.1. Weight Matrix and Joint Space Stabilization
+The weight matrix V (or equivalently W) introduced in the resolution
+of (3) can play two different roles. In case there is no secondary task (i.e.
+τ = 0), V determines the quantity that we minimize (e.g. ||τ||2, ||q¨||2,
+||M−1τ||2). In case there is a secondary task, V specifies the metric that is
+used to measure the distance between τ and τ .
+Using the null space of a task to minimize some measure of effort is ap-
+pealing, mainly because it is rooted in the study of human motion [23]. This
+approach may be feasible in simulation, but unfortunately in reality it leads
+tosingularconfigurationsandhittingofjointlimits[9]. Thesubspaceofjoint
+accelerations that does not affect the task is not controlled, so its behavior is
+determinedbydisturbancesanderrorsinthemodelofthemanipulator. Even
+in simulation, if the robot has nonzero joint velocities when the controller
+starts, failing to use a secondary task may result in joint space instability.
+The reason for this behavior is obvious: the effort of stabilizing in joint space
+is not task relevant and it would increase the cost [9].
+Peters et al. [9] suggest to add a joint space motor command for stabiliza-
+tion. A common approach is to design the postural task to attract the robot
+towards a desired posture q . We compute the desired joint accelerations as
+q¨∗ = K (q − q) − K q˙, where K ∈ Sn and K ∈ Sn are the proportional
+p p p d p + d +
+and damping gain matrices. In the following we always include the postural
+task to minimize ||q¨−q¨∗||2, under the constraint of not affecting any other
+task. This ensures stabilization of the manipulator in joint space.
+7. Original Contribution - Task Space Inverse Dynamics (TSID)
+In this section we derive the TSID control framework, which is the main
+contribution of the paper. The TSID is sound, optimal, efficient — as con-
+firmedbythesimulationtests—andallowsforbothmotionandforcecontrol.
+7.1. Framework Derivation
+Consider a general scenario in which the robot has to perform N position
+tracking tasks T ...T and a postural task T (with desired joint accelera-
+tions q¨∗) to stabilize any left redundancy. Taking inspiration from the UF
+and from [6] we formulate the control problem as a sequence of constrained
+minimization, starting from the highest-priority task N and moving down to
+the lowest-priority task 0 (i.e. the postural task):
+N N τ∈Rn N
+i i τ∈Rn i j j
+where g (τ) = ||J q¨+ J ˙ q˙ − x¨∗||2 is the cost associated to the task T . The
+solution of (8) is given by:
+τ∗ =Mq¨ +h
+i i+1 p(i) i p(i) i i i i+1
+where J = I and x¨∗ = q¨∗. The computation is initialized setting q¨ = 0
+and N = I. Once again, selecting the weight matrix W we can vary
+the form of the control law. Interestingly enough though, the solution τ∗
+is independent of W. This is because the only role of W is to weight the
+quantity that is minimized in the null space of all the tasks, but here the
+postural task ensures that there is no null space left (because any control
+action affects the postural task). It is then reasonable to choose W so as to
+simplify the computation. If we set W = I then all the null-space projec-
+tors N become orthogonal, so they are equal to their pseudoinverses (i.e.
+N† = N ). This simplifies the formulation (9) to:
+i i+1 i p(i) i i i i+1
+In this form, kinematics and dynamics are completely decoupled: first we
+solve the multi-task prioritization at kinematic level computing q¨ , then we
+compute the torques to get the desired joint accelerations. This formula-
+tion does not require the computation of a pseudoinverse for the postural
+task, because it exploits the property of orthogonal projectors of being equal
+to their pseudoinverses. Moreover, it can be efficiently computed with the
+RNEA, without explicitly calculating M.
+7.2. Force Control
+This subsection extends TSID to force control. If the manipulator is in
+contact with the environment, its equations of motion become:
+where J (q) = ∂xc ∈ Rk×n is the contact Jacobian (or constraint Jacobian),
+x ∈ Rk is the robot contact point and f ∈ Rk are the contact forces (or con-
+straint forces). To control the contact forces we need a model of the contact
+dynamics. Themostcommonchoicesarethelinear-spring contact model[24]
+and the rigid contact model. The first model assumes that the environment
+at the contact point behaves like a linear spring, i.e. k (x −x ) = f, where
+k is the contact stiffness and x ∈ Rk is the environment contact point.
+Assuming k is known, force is a known function of position, so we can easily
+translate this kind of force control problems into position control problems.
+More interesting is instead the rigid contact model, mainly because it
+introduces constraints into the problem formulation. When the manipulator
+is in rigid contact with the environment, its motion is subject to k nonlinear
+constraints. In general we can consider these constraints as nonlinear func-
+tion of the generalized coordinates, their derivatives and time: c(q,q˙,t) = 0
+1. To include these constraints into the control problem we express them at
+acceleration level2 as: J (q)q¨= b(q,q˙,t). We write then the problem as:
+1The constraints may be time-varying, hence we can model contacts with curved sur-
+faces, as long as c is sufficiently smooth.
+2In case of nonholonomic constraints we differentiate them once, whereas in case of
+holonomic constraints we differentiate them twice. For instance, in case of time-invariant
+rigid contacts we have: b(q,q˙)=−J˙ (q,q˙)q˙.
+where f∗ ∈ Rk are the desired contact forces. We can express the infinite
+solutions of the problem (12) as:
+where q¨ ∈ Rn is an arbitrary vector. It is trivial to show that (13) is
+a solution of (12) because it respects the constraints and it results in the
+minimum cost (i.e. 0). This control law is one of our main contributions,
+because it allows to implement force control without computing M, while
+characterizing the redundancy of the task through q¨ .
+7.3. Integration of Force Control in Hierarchical Framework
+We extend the multi-task formulation (10) to include force control tasks.
+The rigid force control task, if any, has to take the highest priority because it
+isaphysicalconstraintthatcannotbeviolatedbydefinition. Weassumethat
+the robot has to perform N −1 position control tasks. On top of that there
+is a rigid force control task N (for the sake of simplicity, here we assume
+holonomic constraints, i.e. b(q,q˙,t) = −J ˙ q˙), with reference force f∗ and
+Jacobian J = J :
+1 p(0) p c
+i i+1 i p(i) i i i i+1
+where x¨∗ = x¨ = 0, q¨ = 0, and N = I. Even after the extension to
+N c N+1 p(N)
+force control, kinematics and dynamics are still decoupled, so the computa-
+tional complexity has not increased and τ∗ can be efficiently computed with
+the RNEA.
+8.1. Simulation Environment
+We tested our control framework — Task Space Inverse Dynamics —
+againsttheUnifyingFramework(UF)[9]andtheWhole-BodyControlFrame-
+work (WBCF) [5], on a customized version of the Compliant huManoid (Co-
+Man) simulator [25]. The robot has 23 DoFs: 4 in each arm, 3 in the torso
+and 6 in each leg. We adapted the simulator to make the robot rigid and
+fully-actuated (we fixed the robot base and we removed the joint passive
+compliance). Direct and inverse dynamics, both in simulation and control,
+were efficiently computed using C language functions, generated with the
+Robotran [26] symbolic engine. Contact forces were simulated using linear
+spring-damper models (stiffness 2·105N/m and damping 103Ns/m, as pro-
+posed in [25]) with realistic friction. To integrate the equations of motion
+we used the Simulink variable step integrator ode23t, with relative and ab-
+solute tolerance of 10−3 and 10−6, respectively. The tests were executed on
+a computer with a 2.83 GHz CPU and 4 GB of RAM. The computation
+times are computed as averages over the whole test (i.e. some thousands of
+executions).
+8.2. Trajectory Generation
+To generate reference position-velocity-acceleration trajectories we used
+the approach presented in [27], which provides approximately minimum-jerk
+trajectories. The trajectory generator is a 3rd order dynamical system that
+takes as input the desired trajectory x (t) and outputs the three position-
+velocity-acceleration reference trajectories x (t),x˙ (t),x¨ (t). The reference
+position trajectory follows the desired position trajectory with a velocity
+that depends on the parameter “trajectory time” (always set to 1.0s in our
+tests). We set all proportional gains K = 10s−2, and all derivative gains
+K = 5s−1.
+8.3. Damped Pseudoinverses
+The controllers used damped pseudoinverses [3] to ensure stability near
+singularities. Based on our experience on a real robot, we set the damping
+factor λ = 0.02, which ensures a maximum gain of the pseudoinverses of
+(2λ)−1 = 25. To avoid interferences between tasks, null-space projection
+matriceswerecomputedwithoutanydamping, butsettingtozeroallsingular
+values below the threshold σ = 2.5·10−8. The values λ and σ must be
+chosen so that: σ (σ2 +λ2)−1 < z, where z is a small positive value (e.g.
+we chose z (cid:39) 10−4). This ensures coherence between damped pseudoinverses
+and null-space projectors, so that any direction of the control space is not
+used by more tasks at the same time. The use of damped pseudoinverses
+modifies the minimization problem (8), adding a regularization term λ||τ||2
+to the cost functions. Away from singularities this term has negligible effects,
+but close to singularities it keeps ||τ∗|| bounded, at the expenses of the task
+errors. If λ = 0, we know that WBCF and TSID give the same results.
+However, with λ (cid:54)= 0, since the regularization term is affected by the weight
+matrix W, we expect to see some differences between WBCF and TSID when
+close to singularities.
+8.4. Test 1 - Feasible Task Hierarchy
+Trajectory
+Figure 1: CoMan [25] executing Test 1. Task F controls the force exerted by
+the right hand against the wall. Task T moves the left hand along the circular
+reference trajectory depicted as a red circumference. Task T moves the neck base
+back and forth along the x axis.
+In this test the robot performs four tasks:
+F: 3 DoFs, apply a normal force of 20 N on the wall with the right hand
+T : 3 DoFs, track a circular trajectory with the left hand
+T : 1 DoF (x coordinate), track a sinusoidal reference with the neck base
+T : 23 DoFs, maintain the initial joint posture
+The first three tasks are always compatible, so the robot should be able to
+perform them with negligible errors. Table 3 reports the root-mean-square
+error (RMSE) for each task and the mean computation time of the control
+loop. We compute the RMSE as 1 (cid:80)T ||x(t)−x (t)||2, where N is the
+Nt t=0 r t
+number of samples used in the summation. The criteria proposed in Section
+3 (in particular see Table 1) are strictly connected to the data of Table 3:
+the error of the primary task F concerns the soundness, the errors of the
+nonprimary tasks (T , T , T ) concern the optimality, and the computation
+time concerns the efficiency. As expected, the UF performs poorly on the
+Table 3: Test 1. Root-mean-square error of the four tasks and average computa-
+tion time of the controller.
+Related to Soundness Optimality Efficiency
+Controller F-RMSE T -RMSE T -RMSE T -RMSE Computation
+TSID 0.1 0.4 0.1 7.1 0.24
+WBCF 0.1 0.4 0.1 7.1 0.64
+UF 0.1 36.8 30.1 6.6 0.25
+nonprimary tasks, because it is not optimal. Both WBCF and TSID achieve
+good tracking on all tasks, but the computation time of WBCF is ∼ 2.6×
+the computation time of our framework.
+8.5. Test 2 - Unfeasible Task Hierarchy
+In this test the robot performs the same four tasks of the previous test,
+with the only difference that task T controls the 3D Cartesian position of
+the neck base (rather than the x coordinate only). This makes impossible
+Table 4: Test 2. Root-mean-square error of the four tasks and average computa-
+tion time of the controller.
+Related Soundness Optimality Efficiency
+Controller F-RMSE T -RMSE T -RMSE T -RMSE Computation
+TSID 0.0 0.1 21.5 5.5 0.25
+WBCF 0.0 0.3 21.5 5.5 0.67
+UF 0.0 23.8 62.4 5.1 0.26
+to achieve all tasks at the same time (the desired neck trajectory is not
+reachable), so we expect a significant error for task T , while the tasks F and
+T should have negligible errors. Table 4 shows that, as before, UF performs
+poorly on the nonprimary tasks, whereas WBCF has higher computation
+time than the other two frameworks. The small difference between TSID
+and WBCF in the RMSE of task T is due to the behavior of the damped
+pseudoinverses when close to the singularity due to the conflict between task
+T and the tasks F and T . While this effect is clear from a numerical
+standpoint(seeSection8.3), thereseemsnottobeabest choicefortheweight
+to use for damping; indeed we observed that, when close to singularities,
+sometimes WBCF performs slightly worse than TSID, but other times it
+performs slightly better.
+9. Conclusions
+We presented and validated a new theoretical control framework, called
+Task Space Inverse Dynamics, for prioritized motion and force control of
+fully-actuated robots. To the best of our knowledge, this framework out-
+performs every other control framework with equal capabilities. Its main
+features are:
+1. optimality: it minimizes the error of each task under the constraint of
+not affecting any higher priority task
+2. capabilities: it allows for position/velocity/acceleration control and
+soft/rigid contact force control
+3. efficiency: it computes the desired joint torques in O(n) using the
+Recursive Newton-Euler Algorithm because it needs neither the joint-
+space mass matrix M, nor the task-space mass matrices Λ’s
+Wecomparedthepresentedcontrolframeworkwithothertwostate-of-the-art
+control frameworks (UF and WBCF), both analytically and through simu-
+lation tests. We decided to carry out this comparison in simulation to avoid
+that model inaccuracies could interfere with the controllers in unpredictable
+ways. The results confirm that our framework outperforms the other two
+frameworks, either in terms of optimality or efficiency.
+Moreover this work proves that, for fully-actuated robots, it is not nec-
+essary to take into account the dynamics when resolving the multi-task mo-
+tion/force control problem. In other words, the WBCF is equivalent to a
+second-order inverse kinematics — which computes the desired joint accel-
+erations — followed by an inverse dynamics — which computes the desired
+joint torques.
+9.1. Discussion and Future Work
+The presented framework suffers from three main limitations, which we
+should address in practical applications.
+1. Itdoesnotallowforinequalityconstraints[7,14],whichareparticularly
+important for modeling joint limits and motor torque bounds.
+2. It does not deal with planning and it guarantees only instantaneous
+(local) optimality, so a task may lead the robot into a configuration
+in which a higher priority task becomes singular, hence unfeasible. To
+tacklethisissuethecostfunctionshouldincludenotonlyinstantaneous
+errors, but the summation of errors over a certain time horizon (i.e.
+model predictive control, MPC [28, 29]).
+3. We only considered fully-actuated robots, while many mechanical sys-
+tems are underactuated (e.g. floating-base, underwater, elastic robots).
+While these limitations could make this contribution seem negligible, we ar-
+guetheopposite. Theframeworksthattacklethelimitations1and2typically
+work by iteratively solving simplified control problems such as the ones we
+discussed (i.e. nonlinear functions are linearized around the current solution,
+whereas inequality constraints are converted into equality constraints using
+active-set methods). This implies that more advanced frameworks could ex-
+ploit the presented results to improve their efficiency — which often is the
+bottleneck preventing their applications on real robots [29]. Regarding the
+limitation 3, for the sake of conciseness this work has dealt only with fully-
+actuated mechanical systems. A future paper will present an extension of
+this framework for floating-base robots, which relies on the same principles
+and techniques that we used here. Finally, we are now in the process of
+testing TSID on a real humanoid robot.
+Acknowledgement
+This paper was supported by the FP7 EU projects CoDyCo (No. 600716
+ICT 2011.2.1 Cognitive Systems and Robotics), and Koroibot (No. 611909
+ICT-2013.2.1 Cognitive Systems and Robotics).
