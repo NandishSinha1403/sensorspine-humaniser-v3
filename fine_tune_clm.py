@@ -84,9 +84,11 @@ def train():
         MODEL_ID,
         quantization_config=bnb_config,
         device_map="auto",
-        dtype=torch.float16, # Fixed deprecated torch_dtype
+        dtype=torch.float16, 
         trust_remote_code=True,
     )
+    model.config.use_cache = False # Disable for training
+    model.config.pretraining_tp = 1
     model = prepare_model_for_kbit_training(model)
 
     # 5. LoRA Config
@@ -112,7 +114,8 @@ def train():
         logging_steps=10,
         num_train_epochs=3,
         save_steps=100,
-        fp16=True,
+        fp16=True,  # Enable standard float16
+        bf16=False, # Explicitly disable bfloat16 for T4
         push_to_hub=False,
         report_to="none",
         optim="paged_adamw_8bit",

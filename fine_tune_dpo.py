@@ -121,6 +121,8 @@ def train_dpo():
         device_map="auto",
         dtype=torch.float16,
     )
+    model.config.use_cache = False
+    model.config.pretraining_tp = 1
     
     if os.path.exists(ADAPTER_PATH):
         print(f"Loading Phase 3 adapter from {ADAPTER_PATH}...")
@@ -154,6 +156,7 @@ def train_dpo():
         logging_steps=1,
         save_steps=50,
         fp16=True,
+        bf16=False, # Explicitly disable bfloat16 for T4
         report_to="none",
         beta=0.1, # DPO temperature
         max_prompt_length=512,
