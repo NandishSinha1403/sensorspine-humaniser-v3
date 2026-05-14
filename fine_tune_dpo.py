@@ -133,6 +133,12 @@ def generate_and_save_dpo_dataset(model, tokenizer, judge, num_samples=500): # F
     print(f"Dataset successfully saved to {DPO_DATASET_PATH}")
 
 def train_dpo():
+    # Fix #14: Standard DDP initialization for multi-GPU coordination
+    if "RANK" in os.environ and not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(backend="nccl")
+    
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    
     # 1. Load Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
     
