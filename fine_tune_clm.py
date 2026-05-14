@@ -89,10 +89,11 @@ def train():
     )
 
     # 4. Load Model
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         quantization_config=bnb_config,
-        device_map="auto",
+        device_map={"": local_rank},
         dtype=torch.float16, # Fix #3: Replaced torch_dtype with dtype per warning
         trust_remote_code=True,
     )
@@ -128,6 +129,7 @@ def train():
         bf16=False,                 # Fix #1: T4 lacks native BF16 hardware support
         gradient_checkpointing=True, # Fix #8: Memory safety for 7B model on 16GB VRAM
         max_grad_norm=1.0,           # Fix #10: Explicitly documenting gradient clip threshold
+        ddp_find_unused_parameters=False, # Required for DDP compatibility
         push_to_hub=False,
         report_to="none",
         optim="paged_adamw_8bit",

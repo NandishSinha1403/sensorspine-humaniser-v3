@@ -115,10 +115,11 @@ def train_dpo():
 
     # 3. Load Base Model + Phase 3 Adapter
     print("Loading base model...")
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL_ID,
         quantization_config=bnb_config,
-        device_map="auto",
+        device_map={"": local_rank},
         torch_dtype=torch.float16,
     )
     model.config.use_cache = False
@@ -162,6 +163,7 @@ def train_dpo():
         max_prompt_length=512,
         max_length=1024,
         remove_unused_columns=False,
+        ddp_find_unused_parameters=False, # Required for DDP compatibility
     )
 
     # 7. DPO Trainer
