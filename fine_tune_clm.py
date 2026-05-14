@@ -45,7 +45,8 @@ from trl import SFTTrainer, SFTConfig
 MODEL_ID = "Qwen/Qwen2-7B-Instruct"
 CLEANED_CORPUS_DIR = "./cleaned_corpus"
 OUTPUT_DIR = "./qwen2-7b-pre-ai-clm"
-BLOCK_SIZE = 1024  # Fix #6: SFTConfig max_length will now correctly use this
+# Fix #2: Reduced from 1024 to 512 to significantly reduce peak memory allocation for shift_logits
+BLOCK_SIZE = 512  
 
 class DivergenceMonitorCallback(TrainerCallback):
     """
@@ -85,6 +86,9 @@ def load_cleaned_corpus():
     return Dataset.from_dict({"text": all_text})
 
 def train():
+    # Fix #3: Enable expandable segments to reduce memory fragmentation on T4 (as recommended in OOM log)
+    os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
+
     # 1. Load Dataset
     dataset = load_cleaned_corpus()
     if dataset is None: return
@@ -136,26 +140,28 @@ def train():
         output_dir=OUTPUT_DIR,
         dataset_text_field="text",
         max_length=BLOCK_SIZE,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=4,
+        per_device_train_batch_size=1, # Fix #1: Reduced from 2 to 1 to save activation memory on T4
+        gradient_accumulation_steps=8, # Fix #1: Doubled from 4 to 8 to preserve effective batch size of 8
         
         # Stability Fixes:
-        learning_rate=5e-5,          # Reduced from 2e-4 to prevent overshooting minima on a pre-trained model.
-        num_train_epochs=1,          # Reduced from 3 to 1 to prevent memorization/overfitting on the 790-file corpus.
-        warmup_ratio=0.05,           # Added 5% warmup to slowly scale LR, preventing early instability spikes.
-        lr_scheduler_type="cosine",  # Switched to cosine decay for a smoother, more stable descent than linear.
-        max_grad_norm=0.3,           # Tightened from 1.0 to 0.3 to aggressively clip exploding gradients before they corrupt weights.
+        learning_rate=5e-5,          
+        num_train_epochs=1,          
+        warmup_steps=5,              # Fix #5: Converted from deprecated ratio (5% of ~99 steps)
+        lr_scheduler_type="cosine",  
+        max_grad_norm=0.3,           
         
         # Checkpointing Fixes:
-        save_steps=50,               # Increased frequency (was 100) to ensure we have safe fallback points before divergence.
-        save_total_limit=3,          # Limits disk usage to the 3 most recent checkpoints to prevent filling Kaggle's storage.
+        save_steps=50,               
+        save_total_limit=3,          
         
         # Hardware & Logging:
         logging_steps=10,
         fp16=False,                 
         bf16=False,                 
         gradient_checkpointing=True, 
-        ddp_find_unused_parameters=False, # Required for DDP compatibility
+        # Fix #4: Use non-reentrant implementation for lower peak memory usage
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        ddp_find_unused_parameters=False, 
         push_to_hub=False,
         report_to="none",
         optim="paged_adamw_8bit",
