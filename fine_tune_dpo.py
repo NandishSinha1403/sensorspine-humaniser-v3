@@ -1,20 +1,12 @@
 import os
+os.environ["WANDB_DISABLED"] = "true" # Fix #12: Disable W&B at env level before any imports
+os.environ["WANDB_MODE"] = "disabled"
+
 import sys
-import types # Fix #1: Fixed typo from typesx to types
-import json # Fix #9: Required for saving/loading dataset to disk
-import torch
-from datasets import Dataset
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    # Fix #8: Removed unused TrainingArguments
-)
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, PeftModel
-from trl import DPOTrainer, DPOConfig
-from engine.diagnostic_judge import DiagnosticJudge
+import types 
 
 # --- HARD MOCK WANDB ---
+# Fix #12: Move mock definition and call to the absolute top to intercept TRL's lazy loader
 def mock_wandb():
     m = types.ModuleType("wandb")
     m.__version__ = "9.9.9"
@@ -31,8 +23,22 @@ def mock_wandb():
     m.__spec__ = importlib.machinery.ModuleSpec("wandb", None)
     sys.modules["wandb"] = m
 
+# Fix #12: Force clear any cached broken wandb reference
+sys.modules.pop("wandb", None)
 mock_wandb()
 # -----------------------
+
+import json # Fix #9: Required for saving/loading dataset to disk
+import torch
+from datasets import Dataset
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, PeftModel
+from trl import DPOTrainer, DPOConfig
+from engine.diagnostic_judge import DiagnosticJudge
 
 # Configuration
 BASE_MODEL_ID = "Qwen/Qwen2-7B-Instruct"
