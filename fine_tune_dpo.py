@@ -175,12 +175,17 @@ def train_dpo():
         # Fix #3: Explicitly apply peft_config to the base model in the fallback branch
         model = get_peft_model(model, peft_config)
 
-    # Fix #9: Load from disk; only generate if file is missing
-    if not os.path.exists(DPO_DATASET_PATH):
-        judge = DiagnosticJudge(device="cpu") # CPU to save VRAM for model
-        judge.load_model()
-        # Fix #4: Explicitly pass 500 samples to ensure the audit fix is applied
-        generate_and_save_dpo_dataset(model, tokenizer, judge, num_samples=500)
+    # Fix #13: Handle DDP race condition. Only Rank 0 generates data, others wait.
+    if local_rank == 0:
+        if not os.path.exists(DPO_DATASET_PATH):
+            judge = DiagnosticJudge(device="cpu") # CPU to save VRAM for model
+            judge.load_model()
+            # Fix #4: Explicitly pass 500 samples to ensure the audit fix is applied
+            generate_and_save_dpo_dataset(model, tokenizer, judge, num_samples=500)
+    
+    # Ensure all processes wait until Rank 0 has finished saving the dataset
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier()
     
     print(f"Loading DPO dataset from {DPO_DATASET_PATH}...")
     with open(DPO_DATASET_PATH, "r", encoding="utf-8") as f:
