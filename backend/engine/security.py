@@ -6,8 +6,9 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-# Secret key to sign JWT tokens - SHOULD BE IN ENV VAR IN PRODUCTION
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "scholarai_v3_super_secret_key_change_me")
+# Secret key to sign JWT tokens - MANDATORY ENV VAR IN PRODUCTION
+# Fallback is for development ONLY
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "scholarai_v3_DEVELOPMENT_ONLY_KEY_CHANGE_ME_NOW")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 day
 
@@ -18,7 +19,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

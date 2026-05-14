@@ -12,18 +12,6 @@ class AMRHandler:
     def _initialize_models(self):
         """Lazy loading of models to save memory initially."""
         if not self.parser:
-            # Senior Architect Audit: Root Cause Fix for CVE-2025-32434
-            # transformers.modeling_utils holds a bound reference to check_torch_load_is_safe.
-            # We must overwrite it directly in modeling_utils to bypass the version block.
-            try:
-                import transformers.modeling_utils
-                import transformers.utils.import_utils
-                bypass = lambda *args, **kwargs: True
-                transformers.modeling_utils.check_torch_load_is_safe = bypass
-                transformers.utils.import_utils.check_torch_load_is_safe = bypass
-            except ImportError:
-                pass
-
             try:
                 # Check for manually downloaded models in the 'models' directory
                 stog_path = "models/model_stog"
