@@ -70,6 +70,12 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
+    
+    # Pre-tokenize with truncation to avoid indexing errors
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], truncation=True, max_length=BLOCK_SIZE)
+    
+    dataset = dataset.map(tokenize_function, batched=True, remove_columns=["text"])
 
     # 3. Quantization Config for T4/Kaggle
     bnb_config = BitsAndBytesConfig(
@@ -106,7 +112,6 @@ def train():
     # 6. SFTConfig (The modern way to pass arguments to SFTTrainer)
     sft_config = SFTConfig(
         output_dir=OUTPUT_DIR,
-        dataset_text_field="text",
         max_length=BLOCK_SIZE,
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
