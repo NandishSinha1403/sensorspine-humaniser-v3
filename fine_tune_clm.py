@@ -84,7 +84,7 @@ def train():
         MODEL_ID,
         quantization_config=bnb_config,
         device_map="auto",
-        dtype=torch.float16, 
+        torch_dtype=torch.float16, 
         trust_remote_code=True,
     )
     model.config.use_cache = False # Disable for training

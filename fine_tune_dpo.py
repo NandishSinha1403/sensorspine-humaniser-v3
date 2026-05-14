@@ -119,7 +119,7 @@ def train_dpo():
         BASE_MODEL_ID,
         quantization_config=bnb_config,
         device_map="auto",
-        dtype=torch.float16,
+        torch_dtype=torch.float16,
     )
     model.config.use_cache = False
     model.config.pretraining_tp = 1
