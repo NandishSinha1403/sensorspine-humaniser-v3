@@ -26,10 +26,10 @@ class DiagnosticJudge:
         self.model.eval()
 
     def score_human_confidence(self, text):
-        \"\"\"
+        """
         Returns a score between 0 and 1.
         Higher = more confident it's human.
-        \"\"\"
+        """
         if not self.model or not self.tokenizer:
             self.load_model()
             
