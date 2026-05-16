@@ -4,16 +4,6 @@ os.environ["WANDB_MODE"] = "disabled"
 
 import sys
 import types 
-import json
-import torch
-from datasets import Dataset
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-)
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, PeftModel
-from engine.diagnostic_judge import DiagnosticJudge
 
 # --- HARD MOCK WANDB ---
 def mock_wandb():
@@ -35,6 +25,17 @@ def mock_wandb():
 sys.modules.pop("wandb", None)
 mock_wandb()
 # -----------------------
+
+import json
+import torch
+from datasets import Dataset
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, PeftModel
+from engine.diagnostic_judge import DiagnosticJudge
 
 # Configuration
 BASE_MODEL_ID = "Qwen/Qwen2-7B-Instruct"
