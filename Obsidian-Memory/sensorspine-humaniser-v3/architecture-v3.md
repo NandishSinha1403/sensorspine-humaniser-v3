@@ -29,6 +29,13 @@ ScholarAI v3 SOTA is a distributed AI-humanization service. Following the May 11
 - **Model:** `cross-encoder/nli-deberta-v3-small` (Safetensors).
 - **Placement:** Runs on **CPU** to preserve GPU VRAM for the Qwen2 model.
 
+### E. Deep Humanization Training (Phase 3 Evolution)
+- **Corpus:** 1M+ tokens of pre-AI (2000-2015) prestigious academic prose.
+- **Base Model:** `Qwen/Qwen2-7B-Instruct` (Quantized).
+- **Stage 1 (CLM):** Adapts the model's innate token prediction to human academic syntax.
+- **Stage 2 (DPO):** Uses the Diagnostic Judge to penalize AI-like statistical traits in a preference-learning loop.
+- **Decoupled Architecture:** To prevent DDP barrier timeouts (600s), dataset generation was moved to a standalone single-GPU script (`generate_dpo_data.py`). Multi-GPU training only commences after the dataset is verified on disk.
+
 ## 3. Infrastructure & Deployment
 - **Target:** Google Colab T4 (15GB VRAM).
 - **Environment:** CUDA 12.1 with pinned `numpy<2.1` and `pillow<12.0` to satisfy implicit multimodal dependency requirements in the `transformers` loader.

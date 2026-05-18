@@ -14,11 +14,17 @@
 - [x] **DeBERTa Judge:** Migrated to Safetensors and CPU placement.
 - [x] **Frontend Bridge:** Implemented `ngrok-skip-browser-warning` across frontend and backend.
 
-## Phase 3: Scaling & Production (1-3 Months)
-- [ ] **Multi-User Auth:** Replace mock JWT with real DB authentication.
+## Phase 3: Deep Humanization Training (Complete)
+- [x] **Pre-AI Corpus Acquisition:** 500/500 prestigious research papers (2000-2015) downloaded. Expanded topics to 50+ domains for maximum generalization.
+- [x] **Data Preprocessing:** 500/500 papers surgically cleaned and ready for training.
+- [x] **Phase 3 CLM Fine-Tuning:** Executed `fine_tune_clm.py` on the complete 500-paper corpus to shift model distribution.
+- [x] **Phase 4 Detector Penalization:** Executed `fine_tune_dpo.py` using DeBERTa judge for active AI-trait penalization.
+- [x] **Persistence Fix:** Decoupled DPO generation from DDP training to prevent sync timeouts on Kaggle T4 x2.
+
+## Phase 4: Scaling & Production (Current)
 - [ ] **GPU Load Balancing:** Scaling to multiple T4 workers.
 - [ ] **Feedback Loop:** Implementing real-time human evaluation of judge accuracy.
 - [ ] **Mobile Interface:** Responsive Next.js UI for mobile demos.
 
 ---
-*Last Updated: 2026-05-11 (Pitch Prep Session)*
+*Last Updated: 2026-05-18*

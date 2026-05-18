@@ -14,6 +14,9 @@ Text is first converted into an **Abstract Meaning Representation (AMR)** graph.
 ### 3. Integrated Graph Burstiness
 Fission (splitting) and Fusion (merging) of sentences are performed at the **Semantic Graph level** before regeneration. This ensures extreme variance in sentence length (burstiness) while maintaining perfect grammatical integrity.
 
+### 4. Innate Style Emulation (Pre-AI Grounding)
+The model is fine-tuned via CLM on a curated corpus of prestigious research papers from the **2000-2015 era**. This grounds the model's baseline token prediction in a purely human statistical distribution, allowing it to bypass modern AI detectors (Turnitin, GPTZero) by mimicking the structural and lexical patterns of the pre-LLM academic world.
+
 ---
 ## Hardware-Aware Implementation (v3.1)
 Due to MacBook M2 (8GB RAM) limitations, the architecture has been split:

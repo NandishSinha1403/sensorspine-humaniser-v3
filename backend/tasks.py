@@ -1,4 +1,10 @@
 import os
+# Senior Architect: Enforce single-GPU allocation to prevent NCCL barrier timeouts 
+# when Celery workers are launched outside of a torchrun context.
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Prevent deadlocks in the transformers library during multiprocessing
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import re
 import random
 from celery import Celery

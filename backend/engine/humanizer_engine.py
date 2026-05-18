@@ -1,11 +1,30 @@
 import torch
+import os
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import PeftModel
 
 class HumanizerEngine:
     def __init__(self, generator_id="Qwen/Qwen2-7B-Instruct"):
         self.generator_id = generator_id
         self.generator = None
         self.tokenizer = None
+        self.adapter_id = "qwen2-7b-pre-ai-dpo"
+
+    def _resolve_adapter_path(self):
+        """
+        Senior Architect: Resolve adapter path relative to repo root.
+        Handles execution from / or /backend/ or /backend/engine/.
+        """
+        candidates = [
+            self.adapter_id,                                # Root execution
+            f"../{self.adapter_id}",                        # /backend/ execution
+            f"../../{self.adapter_id}",                     # /backend/engine/ execution
+            os.path.join(os.getcwd(), self.adapter_id)
+        ]
+        for path in candidates:
+            if os.path.exists(path) and os.path.isdir(path):
+                return path
+        return None
 
     def load_models(self):
         # Quantization config for T4 (15GB VRAM) 
@@ -20,18 +39,27 @@ class HumanizerEngine:
         # Senior Architect: Use SDPA for maximum stability on T4 GPUs
         attn_impl = "sdpa"
         print(f"Loading generator: {self.generator_id} using {attn_impl}")
-        self.generator = AutoModelForCausalLM.from_pretrained(
+        
+        # Load Base Model
+        base_model = AutoModelForCausalLM.from_pretrained(
             self.generator_id,
             quantization_config=bnb_config,
             device_map="auto",
-            torch_dtype=torch.float16,
+            dtype=torch.float16,
             attn_implementation=attn_impl,
             trust_remote_code=True
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.generator_id,
-            trust_remote_code=True
-        )
+
+        # Apply DPO Adapter if present
+        adapter_path = self._resolve_adapter_path()
+        if adapter_path:
+            print(f"Engine: Phase 4 DPO Adapter found at {adapter_path}. Injecting SOTA weights...")
+            self.generator = PeftModel.from_pretrained(base_model, adapter_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(adapter_path, trust_remote_code=True)
+        else:
+            print("Engine: Warning: No DPO Adapter found. Falling back to Base Model inference.")
+            self.generator = base_model
+            self.tokenizer = AutoTokenizer.from_pretrained(self.generator_id, trust_remote_code=True)
         
     def generate_humanized(self, prompt, intensity=0.5):
         if not self.generator:

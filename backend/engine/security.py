@@ -1,4 +1,6 @@
 import os
+import secrets
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -6,9 +8,24 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-# Secret key to sign JWT tokens - MANDATORY ENV VAR IN PRODUCTION
-# Fallback is for development ONLY
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "scholarai_v3_DEVELOPMENT_ONLY_KEY_CHANGE_ME_NOW")
+# Configure logging for security events
+logger = logging.getLogger("security")
+
+# Senior Architect: Hardcoded secrets are a critical vulnerability.
+# We prioritize JWT_SECRET_KEY from the environment. 
+# If absent, we generate a secure ephemeral key to prevent boot failure in dev, 
+# but log a severe warning as this invalidates tokens across restarts.
+_ENV_SECRET = os.environ.get("JWT_SECRET_KEY")
+if _ENV_SECRET:
+    SECRET_KEY = _ENV_SECRET
+    logger.info("Security: Using JWT_SECRET_KEY from environment.")
+else:
+    SECRET_KEY = secrets.token_urlsafe(32)
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    print("SECURITY WARNING: JWT_SECRET_KEY not set. Generating ephemeral key.")
+    print("Tokens will NOT persist across server restarts.")
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 day
 
