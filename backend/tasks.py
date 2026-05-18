@@ -82,15 +82,15 @@ def process_humanization(text, intensity):
         for attempt in range(2):
             print(f"Worker: Starting LLM Refinement Stage (Attempt {attempt+1})...")
             
-            # Use the advanced Turnitin-optimized Academic Authority prompt
-            prompt = f"""Rewrite the following text to completely evade Turnitin and GPTZero AI detection. You MUST write like a highly opinionated, slightly idiosyncratic human academic researcher from 2012 publishing in a peer-reviewed journal.
+            # Use the advanced Turnitin-optimized Dry Empirical prompt
+            prompt = f"""Rewrite the following text to evade AI detection. You MUST write like a dry, empirical, data-driven scientist reporting clinical facts. 
 
 CRITICAL HEURISTIC INSTRUCTIONS:
-1. Extreme Burstiness: Your sentence lengths must be wildly asymmetric. Mix a punchy 4-word declarative sentence immediately next to a sprawling, highly complex 40-word analytical sentence loaded with subclauses and em-dashes. NEVER write three sentences of the same length in a row.
-2. High Perplexity & Friction: Do not use smooth, frictionless transitions (e.g., 'Furthermore', 'Moreover'). Use cognitive friction. Show your reasoning process with phrases like 'Interestingly, this contrasts with...', 'The data here is somewhat nuanced...', or 'While some debate remains...'.
-3. Break Formulaic Structures: Never use the standard AI formula of 'Claim -> Statistic -> Conclusion'. Start paragraphs unexpectedly. Lead with a counterpoint, a rhetorical question, or a tangential but relevant observation before hitting the main point.
-4. Anchor All Statistics: If the text contains numbers or statistics, DO NOT state them confidently as absolute facts. You MUST anchor them with hedging and academic attribution (e.g., 'Recent studies suggest rates hovering near X', 'Data indicates approximately Y').
-5. Authorial Voice: Inject a subtle authorial perspective. Use domain-specific, slightly unusual vocabulary to spike the perplexity score. Be precise but occasionally conversational. 
+1. ZERO Metaphors or Ornate Language: NEVER use flowery adjectives, metaphors, or dramatic phrasing (e.g., absolutely no words like 'enigmatic', 'tapestry', 'dance', 'beacon'). Use plain, clinical, literal terminology.
+2. Clinical Imperfection & Asymmetry: Do not try to sound "smart" or "creative". Focus on the data. Mix very short, blunt factual statements with longer, purely functional clauses. It is okay if the flow feels slightly disjointed or dense, as is common in highly technical empirical reports.
+3. Abrupt Transitions: Forbid performative, smooth transitions like 'Contrastingly, one cannot overlook', 'Furthermore', or 'Moreover'. Use blunt, functional connectors ('However,', 'Results showed', 'In clinical practice,').
+4. Factual Anchoring without Fluff: State statistics plainly or attribute them to general clinical observation (e.g., 'Data indicates complication rates are ~1%'). Do not bury numbers in elaborate sentences.
+5. Absolute Objectivity: Remove all traces of narrative, storytelling, or rhetorical questions. 
 
 Retain all core facts and metrics. Do NOT alter or paraphrase the following technical jargon: {acronym_list}
 

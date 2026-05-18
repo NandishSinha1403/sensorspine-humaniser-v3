@@ -78,11 +78,14 @@ class HumanizerEngine:
         
         # Clamp intensity to valid range 0.0 - 1.0
         intensity = max(0.0, min(1.0, intensity))
-        
-        # Recalibrated formulas for stable evasion (preventing distribution collapse)
-        gen_temperature = 0.8 + (intensity * 0.4)          # Range: 0.8 -> 1.2
-        gen_top_p = 0.90 + (intensity * 0.05)              # Range: 0.90 -> 0.95
-        gen_repetition_penalty = 1.05 + (intensity * 0.1)  # Range: 1.05 -> 1.15
+
+        # Algorithmic Evasion: Force the model out of the "safe" predictable token paths.
+        # High temperature + strict top_k forces the model to select lower-probability tokens,
+        # dramatically spiking the perplexity score measured by GPTZero/Turnitin.
+        gen_temperature = 1.3 + (intensity * 0.4)          # Range: 1.3 -> 1.7
+        gen_top_p = 0.85 - (intensity * 0.1)               # Range: 0.85 -> 0.75
+        gen_top_k = 40                                     # Strictly cut off the top predictable words
+        gen_repetition_penalty = 1.15 + (intensity * 0.1)  # Range: 1.15 -> 1.25
 
         outputs = self.generator.generate(
             **formatted_inputs,
@@ -90,6 +93,7 @@ class HumanizerEngine:
             do_sample=True,
             temperature=gen_temperature,
             top_p=gen_top_p,
+            top_k=gen_top_k,
             repetition_penalty=gen_repetition_penalty,
             use_cache=True
         )
