@@ -66,14 +66,15 @@ def process_humanization(text, intensity):
     
     try:
         print(f"Worker: Processing humanization for text: {text[:50]}...")
+        
+        # Jargon Lock: Extract acronyms from the ORIGINAL text to preserve them
+        acronym_list = extract_acronyms(text)
+        print(f"Worker: Jargon Lock Active. Preserving: {acronym_list}")
+
         # Step 1: AMR Processing
         print("Worker: Starting AMR Stage...")
         amr_processed_text = amr_handler.humanize_via_amr(text)
         print(f"Worker: AMR Stage Complete. Intermediate text: {amr_processed_text[:50]}...")
-        
-        # Jargon Lock: Extract acronyms from the AMR processed text to preserve them
-        acronym_list = extract_acronyms(amr_processed_text)
-        print(f"Worker: Jargon Lock Active. Preserving: {acronym_list}")
 
         final_text = amr_processed_text
         confidence_score = 0.85
@@ -83,8 +84,9 @@ def process_humanization(text, intensity):
         # we process 2 sentences at a time. This introduces "structural friction" and
         # disrupts the global statistical signature while maintaining meaning via context injection.
         
-        # Simple sentence splitter (splitting on period + space)
-        sentences = [s.strip() + "." for s in amr_processed_text.split('.') if s.strip()]
+        # Robust sentence splitter (splits on period/question/exclamation followed by space and Capital)
+        # Prevents splitting on decimals (1.5) or abbreviations (e.g.,)
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+(?=[A-Z])', amr_processed_text) if s.strip()]
         chunks = [" ".join(sentences[i:i+2]) for i in range(0, len(sentences), 2)]
         
         print(f"Worker: Starting Micro-Generation stage ({len(chunks)} chunks)...")
