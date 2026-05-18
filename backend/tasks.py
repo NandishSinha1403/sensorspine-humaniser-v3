@@ -82,15 +82,17 @@ def process_humanization(text, intensity):
         for attempt in range(2):
             print(f"Worker: Starting LLM Refinement Stage (Attempt {attempt+1})...")
             
-            # Use the advanced QuillBot-style simplification prompt
-            prompt = f"""Rewrite the following technical text to read naturally and simply, as a human researcher would write it. 
+            # Use the advanced Turnitin-optimized Academic Authority prompt
+            prompt = f"""Rewrite the following text to completely evade Turnitin and GPTZero AI detection. You MUST write like a highly opinionated, slightly idiosyncratic human academic researcher from 2012 publishing in a peer-reviewed journal.
 
-CRITICAL INSTRUCTIONS:
-1. Lexical Simplification: Do NOT use a thesaurus. Avoid flowery, overly formal, or rare words (e.g., avoid "circumvent", "paradigm shift", "per annum", "demonstrate remarkable effectiveness"). Use simple, boring, everyday English equivalents (e.g., "avoid", "paradigm change", "per year", "are very successful").
-2. Structural Decompression: Do NOT write long, breathless, multi-clause run-on sentences. LLMs string together endless clauses using participles ("categorized as...", "hovering at..."). You must chop long thoughts into shorter, distinct sentences with hard periods.
-3. De-Jargonizing Noun Phrases: Unpack dense, clinical "noun chunks" into conversational prepositional phrases (e.g., change "infection incidence" to "the infection rate", or "given procedural complexity" to "depending on the complexity of the procedure").
+CRITICAL HEURISTIC INSTRUCTIONS:
+1. Extreme Burstiness: Your sentence lengths must be wildly asymmetric. Mix a punchy 4-word declarative sentence immediately next to a sprawling, highly complex 40-word analytical sentence loaded with subclauses and em-dashes. NEVER write three sentences of the same length in a row.
+2. High Perplexity & Friction: Do not use smooth, frictionless transitions (e.g., 'Furthermore', 'Moreover'). Use cognitive friction. Show your reasoning process with phrases like 'Interestingly, this contrasts with...', 'The data here is somewhat nuanced...', or 'While some debate remains...'.
+3. Break Formulaic Structures: Never use the standard AI formula of 'Claim -> Statistic -> Conclusion'. Start paragraphs unexpectedly. Lead with a counterpoint, a rhetorical question, or a tangential but relevant observation before hitting the main point.
+4. Anchor All Statistics: If the text contains numbers or statistics, DO NOT state them confidently as absolute facts. You MUST anchor them with hedging and academic attribution (e.g., 'Recent studies suggest rates hovering near X', 'Data indicates approximately Y').
+5. Authorial Voice: Inject a subtle authorial perspective. Use domain-specific, slightly unusual vocabulary to spike the perplexity score. Be precise but occasionally conversational. 
 
-Retain all original facts, metrics, and technical jargon intact. Do NOT alter or paraphrase the following core technical terms: {acronym_list}
+Retain all core facts and metrics. Do NOT alter or paraphrase the following technical jargon: {acronym_list}
 
 Text: {final_text if attempt > 0 else amr_processed_text}"""
 

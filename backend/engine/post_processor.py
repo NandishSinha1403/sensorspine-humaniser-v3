@@ -97,9 +97,12 @@ class AdversarialPostProcessor:
         
     @classmethod
     def apply_all(cls, text: str) -> str:
-        """Run the full adversarial post-processing pipeline."""
-        text = cls.pass_phrase_replacement(text)
-        text = cls.pass_de_jargonization(text)
+        """Run the adversarial post-processing pipeline (Structural & Token disruption only)."""
+        # DISABLED: These ruin perplexity by making the text artificially simple, triggering Turnitin.
+        # text = cls.pass_phrase_replacement(text)
+        # text = cls.pass_de_jargonization(text)
+        
+        # Keep structural and token-level disruption
         text = cls.pass_zwj_jitter(text)
         text = cls.pass_adversarial_punctuation(text)
         text = cls.pass_invisible_padding(text)

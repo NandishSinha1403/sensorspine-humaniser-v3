@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
 import os
+import logging
+import traceback
 from tasks import celery_app, process_humanization
 from celery.result import AsyncResult
 from engine.security import verify_token, create_access_token
@@ -15,6 +17,8 @@ limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="ScholarAI v3 SOTA Backend (Async & Secure)")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+logger = logging.getLogger("api")
 
 # CORS - In production, this should be restricted to your frontend domain
 app.add_middleware(
@@ -61,7 +65,8 @@ async def humanize(request: Request, body: HumanizeRequest, user_id: str = Depen
         task = process_humanization.delay(body.text, body.intensity)
         return {"task_id": task.id, "status": "pending", "user": user_id}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to enqueue task: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error while scheduling task.")
 
 @app.get("/status/{task_id}")
 @limiter.limit("60/minute") # Higher limit for status checks
