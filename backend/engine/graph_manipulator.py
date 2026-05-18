@@ -92,9 +92,69 @@ class GraphManipulator:
             # though this loses the second half of the information.
             return g1_str
 
-    def fission(self, graph):
+    def fission(self, graph_str):
         """
-        Structural fission: Currently a placeholder.
-        Future: Identify conjunctions and split into separate graphs.
+        Structural fission: Splits a complex AMR graph into multiple logical sub-graphs.
+        Trigger: If the root is an 'and' (c / and), split its :op children into independent sentences.
+        This mechanically forces "Burstiness" by breaking run-on syntactic DNA.
         """
-        return [graph]
+        try:
+            # 1. Decode the AMR string
+            graph = penman.decode(graph_str)
+            root_var = graph.top
+            
+            # 2. Check if the root instance is 'and'
+            root_instance = None
+            for src, role, tgt in graph.triples:
+                if src == root_var and role == ':instance':
+                    root_instance = tgt
+                    break
+            
+            if root_instance != 'and':
+                return [graph_str]
+            
+            # 3. Identify operand variables (:op1, :op2, etc.)
+            ops = []
+            for src, role, tgt in graph.triples:
+                if src == root_var and role.startswith(':op'):
+                    ops.append(tgt)
+            
+            if not ops:
+                return [graph_str]
+            
+            # 4. Extract subgraphs for each operand
+            # Note: We use a simple BFS to collect all triples reachable from the op root.
+            split_graphs = []
+            for op_root in ops:
+                visited = set()
+                queue = [op_root]
+                sub_triples = []
+                
+                # Maintain a set of all variables in the original graph for reference
+                all_vars = graph.variables()
+                
+                while queue:
+                    curr = queue.pop(0)
+                    if curr in visited:
+                        continue
+                    visited.add(curr)
+                    
+                    for src, role, tgt in graph.triples:
+                        # Only follow edges belonging to this branch (src is current)
+                        if src == curr:
+                            sub_triples.append((src, role, tgt))
+                            # Follow target if it's a known variable (not a literal/number)
+                            if tgt in all_vars:
+                                queue.append(tgt)
+                
+                if sub_triples:
+                    # Create the new sub-graph rooted at op_root
+                    sub_graph = penman.Graph(sub_triples, top=op_root)
+                    split_graphs.append(penman.encode(sub_graph))
+            
+            return split_graphs if split_graphs else [graph_str]
+            
+        except Exception as e:
+            print(f"CRITICAL WARNING: Structural AMR Fission failed: {e}")
+            # Safety: Return original graph to avoid data loss
+            return [graph_str]

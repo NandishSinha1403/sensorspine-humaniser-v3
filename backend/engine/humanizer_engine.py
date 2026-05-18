@@ -79,13 +79,13 @@ class HumanizerEngine:
         # Clamp intensity to valid range 0.0 - 1.0
         intensity = max(0.0, min(1.0, intensity))
 
-        # Algorithmic Evasion: Force the model out of the "safe" predictable token paths.
-        # High temperature + strict top_k forces the model to select lower-probability tokens,
-        # dramatically spiking the perplexity score measured by GPTZero/Turnitin.
-        gen_temperature = 1.3 + (intensity * 0.4)          # Range: 1.3 -> 1.7
-        gen_top_p = 0.85 - (intensity * 0.1)               # Range: 0.85 -> 0.75
-        gen_top_k = 40                                     # Strictly cut off the top predictable words
-        gen_repetition_penalty = 1.15 + (intensity * 0.1)  # Range: 1.15 -> 1.25
+        # Algorithmic Evasion: Recalibrated for Coherence
+        # Extreme parameters caused structural collapse. We return to a stable "nucleus" 
+        # sampling approach with a mild repetition penalty to maintain grammatical integrity
+        # while still allowing the DPO fine-tune to guide token selection.
+        gen_temperature = 0.95 + (intensity * 0.2)         # Range: 0.95 -> 1.15
+        gen_top_p = 0.95                                   # Standard nucleus sampling
+        gen_repetition_penalty = 1.05 + (intensity * 0.03) # Range: 1.05 -> 1.08
 
         outputs = self.generator.generate(
             **formatted_inputs,
@@ -93,7 +93,6 @@ class HumanizerEngine:
             do_sample=True,
             temperature=gen_temperature,
             top_p=gen_top_p,
-            top_k=gen_top_k,
             repetition_penalty=gen_repetition_penalty,
             use_cache=True
         )

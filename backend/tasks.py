@@ -78,36 +78,48 @@ def process_humanization(text, intensity):
         final_text = amr_processed_text
         confidence_score = 0.85
         
-        # Step 2: Recursive Refinement
-        for attempt in range(2):
-            print(f"Worker: Starting LLM Refinement Stage (Attempt {attempt+1})...")
+        # Step 2: Sentence-Level Micro-Generation
+        # Senior Architect: Instead of bulk-rewriting (which allows for smooth AI-like flow),
+        # we process 2 sentences at a time. This introduces "structural friction" and
+        # disrupts the global statistical signature while maintaining meaning via context injection.
+        
+        # Simple sentence splitter (splitting on period + space)
+        sentences = [s.strip() + "." for s in amr_processed_text.split('.') if s.strip()]
+        chunks = [" ".join(sentences[i:i+2]) for i in range(0, len(sentences), 2)]
+        
+        print(f"Worker: Starting Micro-Generation stage ({len(chunks)} chunks)...")
+        humanized_chunks = []
+        
+        for i, chunk in enumerate(chunks):
+            print(f"Worker: Processing humanization for Chunk {i+1}/{len(chunks)}...")
             
-            # Use the advanced Turnitin-optimized Dry Empirical prompt
-            prompt = f"""Rewrite the following text to evade AI detection. You MUST write like a dry, empirical, data-driven scientist reporting clinical facts. 
+            # Use the "Dry Empirical" prompt style with Global Context awareness
+            prompt = f"""Rewrite the following small chunk of technical text to evade AI detection. 
+
+GLOBAL CONTEXT (The full paragraph for reference - do NOT rewrite this):
+{amr_processed_text}
+
+LOCAL TARGET (Rewrite ONLY this specific part to be more human-like):
+{chunk}
 
 CRITICAL HEURISTIC INSTRUCTIONS:
-1. ZERO Metaphors or Ornate Language: NEVER use flowery adjectives, metaphors, or dramatic phrasing (e.g., absolutely no words like 'enigmatic', 'tapestry', 'dance', 'beacon'). Use plain, clinical, literal terminology.
-2. Clinical Imperfection & Asymmetry: Do not try to sound "smart" or "creative". Focus on the data. Mix very short, blunt factual statements with longer, purely functional clauses. It is okay if the flow feels slightly disjointed or dense, as is common in highly technical empirical reports.
-3. Abrupt Transitions: Forbid performative, smooth transitions like 'Contrastingly, one cannot overlook', 'Furthermore', or 'Moreover'. Use blunt, functional connectors ('However,', 'Results showed', 'In clinical practice,').
-4. Factual Anchoring without Fluff: State statistics plainly or attribute them to general clinical observation (e.g., 'Data indicates complication rates are ~1%'). Do not bury numbers in elaborate sentences.
-5. Absolute Objectivity: Remove all traces of narrative, storytelling, or rhetorical questions. 
+1. ZERO Metaphors or Ornate Language: NEVER use flowery adjectives, metaphors, or dramatic phrasing. Use plain, clinical, literal terminology.
+2. Clinical Imperfection: Focus on the data. Mix blunt factual statements with functional clauses. It is okay if the flow feels disjointed.
+3. Factual Anchoring: State statistics plainly (e.g., 'Data indicates rates are ~1%').
+4. Absolute Objectivity: Remove all traces of narrative or storytelling.
 
-Retain all core facts and metrics. Do NOT alter or paraphrase the following technical jargon: {acronym_list}
+Retain all core facts and metrics. Do NOT alter or paraphrase the following technical jargon: {acronym_list}"""
 
-Text: {final_text if attempt > 0 else amr_processed_text}"""
-
-            candidate_text = engine.generate_humanized(prompt, intensity=intensity)
-            print(f"Worker: LLM Stage Complete. Candidate: {candidate_text[:50]}...")
+            candidate_chunk = engine.generate_humanized(prompt, intensity=intensity)
+            humanized_chunks.append(candidate_chunk)
             
-            print("Worker: Starting Judge Stage...")
-            is_human, score = judge.judge(candidate_text, threshold=0.7)
-            final_text = candidate_text
-            confidence_score = score
-            print(f"Worker: Judge Stage Complete. Score: {score}")
-            
-            if is_human:
-                print("Worker: Human threshold met.")
-                break
+        final_text = " ".join(humanized_chunks)
+        print("Worker: Micro-Generation complete. Stitching result...")
+
+        # Final Judge stage on the stitched result
+        print("Worker: Starting Judge Stage...")
+        is_human, confidence_score = judge.judge(final_text, threshold=0.7)
+        print(f"Worker: Judge Stage Complete. Human Confidence Score: {confidence_score}")
                 
         # --- NEW: V1 Adversarial Post-Processing ---
         print("Worker: Applying Adversarial Post-Processing (v1 passes)...")
