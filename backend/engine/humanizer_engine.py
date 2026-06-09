@@ -72,18 +72,15 @@ class HumanizerEngine:
     def _generate_once(self, prompt: str, intensity: float, temperature: float) -> str:
         input_ids, input_len = self._encode_chat(prompt)
 
-        # min_p pushes sampling into the "human tail" of the distribution.
-        min_p = 0.04 + (intensity * 0.08)
-        top_p = max(0.82, 0.98 - (intensity * 0.12))
-        repetition_penalty = 1.08 + (intensity * 0.06)
+        top_p = 0.88 + (intensity * 0.06)
+        repetition_penalty = 1.03 + (intensity * 0.04)
 
         outputs = self.generator.generate(
             input_ids,
-            max_new_tokens=384,
+            max_new_tokens=320,
             do_sample=True,
             temperature=temperature,
             top_p=top_p,
-            min_p=min_p,
             repetition_penalty=repetition_penalty,
             use_cache=True,
             pad_token_id=self.tokenizer.pad_token_id,
@@ -117,21 +114,21 @@ class HumanizerEngine:
             text = text.split("\n\n")[0].strip()
         return text
 
-    def generate_humanized(self, prompt, intensity=0.5, judge=None, max_candidates=3):
-        """
-        Contrastive-style selection: sample multiple candidates with varied
-        temperatures, then pick the one with the best GPT-2 perplexity profile.
-        """
+    def generate_humanized(
+        self,
+        prompt,
+        intensity=0.5,
+        judge=None,
+        max_candidates=2,
+        reference="",
+    ):
+        """Sample multiple candidates and pick the best via the diagnostic judge."""
         if not self.generator:
             self.load_models()
 
         intensity = max(0.0, min(1.0, intensity))
-        base_temp = 1.0 + (intensity * 0.35)
-        temperatures = [
-            base_temp,
-            base_temp + 0.15,
-            base_temp + 0.3,
-        ][:max_candidates]
+        base_temp = 0.72 + (intensity * 0.18)
+        temperatures = [base_temp, base_temp + 0.08][:max_candidates]
 
         candidates = []
         for temp in temperatures:
@@ -145,5 +142,5 @@ class HumanizerEngine:
         if judge is None:
             return candidates[0]
 
-        best_text, _ = judge.pick_best_candidate(candidates)
+        best_text, _ = judge.pick_best_candidate(candidates, reference=reference)
         return best_text
