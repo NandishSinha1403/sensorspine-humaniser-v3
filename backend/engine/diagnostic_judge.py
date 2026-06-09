@@ -1,97 +1,138 @@
 import re
 import math
 import torch
-from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+from transformers import (
+    GPT2LMHeadModel,
+    GPT2TokenizerFast,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
 
-# GPTZero-style thresholds (empirical proxies for human academic prose)
-_MIN_HUMAN_PERPLEXITY = 18.0
-_MAX_HUMAN_PERPLEXITY = 280.0
-_MIN_BURSTINESS = 0.22
+_MIN_BURSTINESS = 0.18
+_AI_DETECTOR_ID = "roberta-base-openai-detector"
 
 
 class DiagnosticJudge:
     """
-    GPTZero-proxy scorer using GPT-2 sentence perplexity and burstiness.
-
-    GPTZero flags text when (a) average perplexity is too low (predictable tokens)
-    and (b) burstiness (variance of sentence-level perplexity) is too uniform.
+    Hybrid scorer aligned with external detectors:
+    - RoBERTa OpenAI detector (QuillBot/GPTZero-style classifier proxy)
+    - GPT-2 burstiness (sentence-level variance)
     """
 
-    def __init__(self, model_id="gpt2", device="cpu"):
-        self.model_id = model_id
+    def __init__(self, device="cpu"):
         self.device = device
-        self.tokenizer = None
-        self.model = None
+        self.gpt2_tokenizer = None
+        self.gpt2_model = None
+        self.detector_tokenizer = None
+        self.detector_model = None
 
     def load_model(self):
-        if self.model is not None:
+        if self.detector_model is not None:
             return
-        print(f"Loading Diagnostic Judge (GPT-2 perplexity proxy): {self.model_id}")
-        self.tokenizer = GPT2TokenizerFast.from_pretrained(self.model_id)
-        self.model = GPT2LMHeadModel.from_pretrained(self.model_id).to(self.device)
-        self.model.eval()
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        print(f"Loading AI Detector: {_AI_DETECTOR_ID}")
+        self.detector_tokenizer = AutoTokenizer.from_pretrained(_AI_DETECTOR_ID)
+        self.detector_model = AutoModelForSequenceClassification.from_pretrained(
+            _AI_DETECTOR_ID
+        ).to(self.device)
+        self.detector_model.eval()
+
+        print("Loading burstiness model: gpt2")
+        self.gpt2_tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+        self.gpt2_model = GPT2LMHeadModel.from_pretrained("gpt2").to(self.device)
+        self.gpt2_model.eval()
+        if self.gpt2_tokenizer.pad_token is None:
+            self.gpt2_tokenizer.pad_token = self.gpt2_tokenizer.eos_token
+
+    def _ai_probability(self, text: str) -> float:
+        """Probability text is AI-generated (0=human, 1=AI)."""
+        inputs = self.detector_tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512,
+            padding=True,
+        ).to(self.device)
+
+        with torch.no_grad():
+            logits = self.detector_model(**inputs).logits
+            probs = torch.softmax(logits, dim=-1)
+
+        # Label 1 = Fake/AI for roberta-base-openai-detector
+        return probs[0, 1].item()
 
     def _sentence_perplexity(self, sentence: str) -> float:
         if not sentence.strip():
             return 0.0
 
-        encodings = self.tokenizer(
-            sentence,
-            return_tensors="pt",
-            truncation=True,
-            max_length=512,
+        encodings = self.gpt2_tokenizer(
+            sentence, return_tensors="pt", truncation=True, max_length=512
         ).to(self.device)
-
-        input_ids = encodings.input_ids
-        if input_ids.shape[1] < 2:
+        if encodings.input_ids.shape[1] < 2:
             return 0.0
 
         with torch.no_grad():
-            outputs = self.model(input_ids, labels=input_ids)
-            loss = outputs.loss.item()
-
+            loss = self.gpt2_model(encodings.input_ids, labels=encodings.input_ids).loss.item()
         return math.exp(min(loss, 20.0))
 
     def _split_sentences(self, text: str) -> list[str]:
-        parts = re.split(r"(?<=[.!?])\s+(?=[A-Z\"'])", text.strip())
+        parts = re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(⟦])", text.strip())
         return [p.strip() for p in parts if p.strip()]
 
-    def score_metrics(self, text: str) -> dict:
-        """Return raw perplexity/burstiness metrics for logging and selection."""
-        if not self.model:
-            self.load_model()
-
+    def _burstiness_score(self, text: str) -> float:
         sentences = self._split_sentences(text)
-        if not sentences:
-            return {
-                "mean_perplexity": 0.0,
-                "burstiness": 0.0,
-                "sentence_count": 0,
-                "human_confidence": 0.0,
-            }
+        if len(sentences) < 2:
+            return 0.0
 
         perplexities = [self._sentence_perplexity(s) for s in sentences]
         mean_ppl = sum(perplexities) / len(perplexities)
-        if len(perplexities) > 1:
-            variance = sum((p - mean_ppl) ** 2 for p in perplexities) / len(perplexities)
-            burstiness = math.sqrt(variance) / (mean_ppl + 1e-6)
-        else:
-            burstiness = 0.0
+        variance = sum((p - mean_ppl) ** 2 for p in perplexities) / len(perplexities)
+        burstiness = math.sqrt(variance) / (mean_ppl + 1e-6)
+        return min(1.0, burstiness / _MIN_BURSTINESS)
 
-        # Penalize overly smooth (low PPL) and overly chaotic (extreme PPL) text.
-        if mean_ppl < _MIN_HUMAN_PERPLEXITY:
-            ppl_score = mean_ppl / _MIN_HUMAN_PERPLEXITY
-        elif mean_ppl > _MAX_HUMAN_PERPLEXITY:
-            ppl_score = max(0.0, 1.0 - (mean_ppl - _MAX_HUMAN_PERPLEXITY) / _MAX_HUMAN_PERPLEXITY)
-        else:
-            ppl_score = 1.0
+    def _corruption_penalty(self, text: str) -> float:
+        """Penalize AMR/LLM artifacts that increase detector suspicion."""
+        penalty = 0.0
+        corruption_markers = [
+            r"⟦PROT",                          # leaked placeholder
+            r"\bfrac\(",                       # mangled LaTeX
+            r"\b(?:sqrt|sigma|epsilon|rho)\(",  # mangled math commands
+            r"'s\s+law\b",                     # lowercased law name (sign of corruption)
+        ]
+        for pat in corruption_markers:
+            if re.search(pat, text, re.IGNORECASE):
+                penalty += 0.12
+        return min(0.45, penalty)
 
-        burst_score = min(1.0, burstiness / _MIN_BURSTINESS)
-        human_confidence = 0.45 * ppl_score + 0.55 * burst_score
+    def score_metrics(self, text: str) -> dict:
+        if not self.detector_model:
+            self.load_model()
+
+        ai_prob = self._ai_probability(text)
+        burst_score = self._burstiness_score(text)
+        corruption = self._corruption_penalty(text)
+
+        # Primary signal: classifier human probability
+        detector_human = 1.0 - ai_prob
+        human_confidence = (
+            0.80 * detector_human
+            + 0.20 * burst_score
+            - corruption
+        )
+        human_confidence = max(0.0, min(1.0, human_confidence))
+
+        sentences = self._split_sentences(text)
+        mean_ppl = 0.0
+        burstiness = 0.0
+        if sentences:
+            perplexities = [self._sentence_perplexity(s) for s in sentences]
+            mean_ppl = sum(perplexities) / len(perplexities)
+            if len(perplexities) > 1:
+                variance = sum((p - mean_ppl) ** 2 for p in perplexities) / len(perplexities)
+                burstiness = math.sqrt(variance) / (mean_ppl + 1e-6)
 
         return {
+            "ai_probability": round(ai_prob, 4),
             "mean_perplexity": round(mean_ppl, 2),
             "burstiness": round(burstiness, 3),
             "sentence_count": len(sentences),
@@ -103,21 +144,31 @@ class DiagnosticJudge:
 
     def judge(self, text, threshold=0.55):
         metrics = self.score_metrics(text)
-        score = metrics["human_confidence"]
-        return score >= threshold, score
+        return metrics["human_confidence"] >= threshold, metrics["human_confidence"]
 
-    def pick_best_candidate(self, candidates: list[str]) -> tuple[str, dict]:
-        """Select the candidate with the highest human-confidence score."""
+    def pick_best_candidate(self, candidates: list[str], reference: str = "") -> tuple[str, dict]:
         if not candidates:
             return "", {"human_confidence": 0.0}
 
         best_text = candidates[0]
         best_metrics = self.score_metrics(best_text)
+        best_score = best_metrics["human_confidence"]
+
+        ref_words = set(reference.lower().split()) if reference else set()
 
         for candidate in candidates[1:]:
             metrics = self.score_metrics(candidate)
-            if metrics["human_confidence"] > best_metrics["human_confidence"]:
+            score = metrics["human_confidence"]
+
+            # Prefer candidates that preserve reference vocabulary (less paraphraser drift)
+            if ref_words:
+                cand_words = set(candidate.lower().split())
+                overlap = len(ref_words & cand_words) / max(len(ref_words), 1)
+                score += 0.05 * overlap
+
+            if score > best_score:
                 best_text = candidate
                 best_metrics = metrics
+                best_score = score
 
         return best_text, best_metrics
