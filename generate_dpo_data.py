@@ -43,11 +43,8 @@ ADAPTER_PATH = "./qwen2-7b-pre-ai-clm"
 DPO_DATASET_PATH = "./dpo_dataset.json"
 
 def batched_judge_scoring(judge, candidate_list):
-    """Wrap judge scoring in a batching helper to speed up execution."""
-    try:
-        return judge.score_human_confidence(candidate_list)
-    except TypeError:
-        return [judge.score_human_confidence(c) for c in candidate_list]
+    """Score each candidate with the GPT-2 perplexity/burstiness proxy."""
+    return [judge.score_human_confidence(c) for c in candidate_list]
 
 def generate_and_save_dpo_dataset(model, tokenizer, judge, num_samples=500):
     print(f"Generating DPO dataset with {num_samples} valid samples...")
