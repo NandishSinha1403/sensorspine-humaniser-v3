@@ -364,8 +364,10 @@ export default function ConsolePage() {
                     <div className="text-indigo-400">&gt; Confidence: {result.confidence_score}</div>
                     {result.diagnostics && (
                       <>
-                        <div className="text-slate-400">&gt; AI Probability: {result.diagnostics.ai_probability}</div>
-                        <div className="text-slate-400">&gt; Perplexity: {result.diagnostics.mean_perplexity}</div>
+                        <div className="text-slate-400">&gt; AI Prob (post-NLP): {result.diagnostics.ai_probability}</div>
+                        {result.diagnostics.pre_nlp_ai_probability != null && (
+                          <div className="text-slate-500">&gt; AI Prob (post-LLM): {result.diagnostics.pre_nlp_ai_probability}</div>
+                        )}
                         <div className="text-slate-400">&gt; Burstiness: {result.diagnostics.burstiness}</div>
                       </>
                     )}
